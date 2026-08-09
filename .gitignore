@@ -14,6 +14,10 @@ dev-dist
 *.local
 .claude/settings.local.json
 
+# Wrangler (Cloudflare Workers)
+.wrangler
+.dev.vars*
+
 # Icônes PWA générées par scripts/generate-icons.cjs (voir npm postinstall)
 /public/icon-192.png
 /public/icon-512.png

@@ -22,6 +22,32 @@ Les données (catalogue, affiches, plateformes de streaming) viennent de [TMDB](
 
 4. Ouvre l'URL affichée (généralement http://localhost:5173).
 
+## Déploiement (Cloudflare Workers)
+
+Le projet est configuré pour être déployé sur Cloudflare via `wrangler.jsonc`
+(assets statiques + routing SPA). En connectant le repo GitHub dans le
+dashboard Cloudflare (**Workers & Pages → Create → Connect to Git**), chaque
+push sur `main` déclenche automatiquement :
+
+| Étape | Commande |
+|---|---|
+| Build | `npm run build` |
+| Déploiement | `npx wrangler deploy` |
+
+**Important** : avant le premier déploiement, ajoute la variable
+d'environnement `VITE_TMDB_API_KEY` dans les paramètres du projet côté
+dashboard Cloudflare (section *Variables and Secrets*), avec ta clé TMDB.
+Cette variable est utilisée par Vite **au moment du build**, donc elle doit
+être définie côté Cloudflare — elle n'est jamais commitée dans le repo
+(exactement comme `.env.local` en local).
+
+Pour tester la configuration Wrangler localement sans rien déployer :
+
+```bash
+npm run build
+npx wrangler deploy --dry-run
+```
+
 ## Fonctionnalités
 
 - **Découvrir** : parcourir films/séries, filtrable par genre, par durée max, et par n'importe laquelle des plateformes de streaming disponibles en France (liste complète tirée de TMDB, pas juste les grosses). Tri par popularité, note, ou date de sortie.
@@ -35,7 +61,7 @@ Les données (catalogue, affiches, plateformes de streaming) viennent de [TMDB](
 
 ## Notes techniques
 
-- React 19 + Vite + React Router + vite-plugin-pwa.
+- React 19 + Vite + React Router + vite-plugin-pwa + Wrangler (déploiement Cloudflare Workers, assets statiques uniquement, pas de backend).
 - Aucune base de données personnelle : le catalogue est interrogé en direct via l'API TMDB.
 - Le suivi "vu / envie de voir" est stocké uniquement dans le navigateur (`localStorage`). Vider les données du site ou changer de navigateur réinitialise la liste — utilise Export/Import pour la déplacer.
 - Les icônes PWA (`public/icon-*.png`) sont générées par `scripts/generate-icons.cjs` ; relance-le si tu veux changer le design.
