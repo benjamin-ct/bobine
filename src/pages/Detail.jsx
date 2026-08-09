@@ -8,18 +8,22 @@ import CastCard from "../components/CastCard";
 import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
 
+const MAIN_CAST_COUNT = 12;
+
 export default function Detail() {
   const { mediaType, id } = useParams();
   const [details, setDetails] = useState(null);
   const [providers, setProviders] = useState(null);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
+  const [showFullCast, setShowFullCast] = useState(false);
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
   const recommendationsRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
+    setShowFullCast(false);
     Promise.all([getDetails(mediaType, id), getWatchProviders(mediaType, id)])
       .then(([d, p]) => {
         if (cancelled) return;
@@ -55,6 +59,15 @@ export default function Detail() {
   const inWatchlist = isInWatchlist(mediaType, id);
 
   const cast = details.credits?.cast || [];
+  const visibleCast = showFullCast ? cast : cast.slice(0, MAIN_CAST_COUNT);
+  const remainingCastCount = cast.length - visibleCast.length;
+
+  // Films : le·s réalisateur·rices sont dans credits.crew. Séries : TMDB les
+  // expose directement via created_by (plus fiable que de fouiller le crew).
+  const directors =
+    mediaType === "movie"
+      ? (details.credits?.crew || []).filter((c) => c.job === "Director")
+      : details.created_by || [];
 
   const libItem = {
     id: Number(id),
@@ -110,14 +123,40 @@ export default function Detail() {
           </div>
         </div>
 
-        {cast.length > 0 && (
+        {(directors.length > 0 || cast.length > 0) && (
           <section className="detail-cast">
-            <h3>Casting</h3>
-            <div className="person-grid">
-              {cast.map((member) => (
-                <CastCard key={member.credit_id || `${member.id}-${member.character}`} member={member} />
-              ))}
-            </div>
+            {directors.length > 0 && (
+              <>
+                <h3>{mediaType === "movie" ? "Réalisation" : "Créé par"}</h3>
+                <div className="person-grid person-grid--compact">
+                  {directors.map((person) => (
+                    <CastCard
+                      key={person.credit_id || person.id}
+                      member={person}
+                      role={mediaType === "movie" ? "Réalisateur/Réalisatrice" : "Créateur/Créatrice"}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {cast.length > 0 && (
+              <>
+                <h3>Casting principal</h3>
+                <div className="person-grid">
+                  {visibleCast.map((member) => (
+                    <CastCard key={member.credit_id || `${member.id}-${member.character}`} member={member} />
+                  ))}
+                </div>
+                {remainingCastCount > 0 && (
+                  <div className="load-more">
+                    <button className="btn" onClick={() => setShowFullCast(true)}>
+                      Afficher tout le casting ({remainingCastCount} de plus)
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </section>
         )}
 
