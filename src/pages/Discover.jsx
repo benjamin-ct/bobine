@@ -9,16 +9,16 @@ export default function Discover() {
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
   const [sortBy, setSortBy] = useState("popularity.desc");
-  const [runtimeMax, setRuntimeMax] = useState("");
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
   const [page, setPage] = useState(1);
   const [results, setResults] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState("idle");
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
-  // Réinitialise les filtres dépendants et la pagination au changement de type.
+  // Réinitialise les filtres dépendants et la liste au changement de type.
   useEffect(() => {
     setGenreId("");
     setPage(1);
@@ -26,7 +26,7 @@ export default function Discover() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreId, providerId, sortBy, runtimeMax]);
+  }, [genreId, providerId, sortBy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,16 +41,11 @@ export default function Discover() {
     };
   }, [mediaType]);
 
+  // Recharge depuis le début quand les filtres changent (page revient à 1).
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
-    discover(mediaType, {
-      page,
-      genreId,
-      providerIds: providerId ? [providerId] : undefined,
-      sortBy,
-      runtimeMax,
-    })
+    discover(mediaType, { page: 1, genreId, providerIds: providerId ? [providerId] : undefined, sortBy })
       .then((data) => {
         if (cancelled) return;
         setResults(data.results || []);
@@ -65,7 +60,19 @@ export default function Discover() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, genreId, providerId, sortBy, runtimeMax, page]);
+  }, [mediaType, genreId, providerId, sortBy]);
+
+  function loadMore() {
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    discover(mediaType, { page: nextPage, genreId, providerIds: providerId ? [providerId] : undefined, sortBy })
+      .then((data) => {
+        setResults((prev) => [...prev, ...(data.results || [])]);
+        setPage(nextPage);
+      })
+      .catch((err) => setError(err))
+      .finally(() => setLoadingMore(false));
+  }
 
   return (
     <div className="page">
@@ -81,8 +88,6 @@ export default function Discover() {
         providers={providers}
         sortBy={sortBy}
         setSortBy={setSortBy}
-        runtimeMax={runtimeMax}
-        setRuntimeMax={setRuntimeMax}
       />
 
       {status === "loading" && <Loading />}
@@ -98,11 +103,13 @@ export default function Discover() {
               <MediaCard key={item.id} item={{ ...item, mediaType }} />
             ))}
           </div>
-          <div className="pagination">
-            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Précédent</button>
-            <span>Page {page} / {totalPages}</span>
-            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Suivant →</button>
-          </div>
+          {page < totalPages && (
+            <div className="load-more">
+              <button className="btn btn--lg" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "Chargement…" : "Afficher plus"}
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

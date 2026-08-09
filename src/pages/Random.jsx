@@ -14,7 +14,6 @@ export default function Random() {
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
   const [sortBy, setSortBy] = useState("popularity.desc");
-  const [runtimeMax, setRuntimeMax] = useState("");
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
   const [excludeWatched, setExcludeWatched] = useState(true);
@@ -50,7 +49,7 @@ export default function Random() {
     setPick(null);
     setPickDetails(null);
     try {
-      const discoverParams = { genreId, providerIds: providerId ? [providerId] : undefined, sortBy, runtimeMax };
+      const discoverParams = { genreId, providerIds: providerId ? [providerId] : undefined, sortBy };
       const first = await discover(mediaType, { page: 1, ...discoverParams });
       const totalPages = Math.min(first.total_pages || 1, 500);
       if (totalPages === 0 || !first.results?.length) {
@@ -114,8 +113,6 @@ export default function Random() {
         providers={providers}
         sortBy={sortBy}
         setSortBy={setSortBy}
-        runtimeMax={runtimeMax}
-        setRuntimeMax={setRuntimeMax}
       />
 
       <label className="checkbox-line">
@@ -148,13 +145,13 @@ export default function Random() {
             <div className="detail-actions">
               <Link className="btn" to={`/media/${mediaType}/${pick.id}`}>Voir la fiche</Link>
               <button
-                className={`btn ${inWatchlist ? "btn--active" : ""}`}
+                className={`btn ${inWatchlist ? "btn--gold" : ""}`}
                 onClick={() => toggleWatchlist({ id: pick.id, mediaType, title, posterPath: pick.poster_path, date, genreIds: pick.genre_ids || [] })}
               >
                 {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
               </button>
               <button
-                className={`btn ${watched ? "btn--active" : ""}`}
+                className={`btn ${watched ? "btn--green" : ""}`}
                 onClick={() => toggleWatched({ id: pick.id, mediaType, title, posterPath: pick.poster_path, date, genreIds: pick.genre_ids || [] })}
               >
                 {watched ? "✔ Déjà vu" : "○ Marquer comme vu"}

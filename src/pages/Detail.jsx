@@ -90,10 +90,10 @@ export default function Detail() {
             <p className="detail-overview">{details.overview || "Pas de synopsis disponible."}</p>
 
             <div className="detail-actions">
-              <button className={`btn ${inWatchlist ? "btn--active" : ""}`} onClick={() => toggleWatchlist(libItem)}>
+              <button className={`btn ${inWatchlist ? "btn--gold" : ""}`} onClick={() => toggleWatchlist(libItem)}>
                 {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
               </button>
-              <button className={`btn ${watched ? "btn--active" : ""}`} onClick={() => toggleWatched(libItem)}>
+              <button className={`btn ${watched ? "btn--green" : ""}`} onClick={() => toggleWatched(libItem)}>
                 {watched ? "✔ Déjà vu" : "○ Marquer comme vu"}
               </button>
               <TrailerButton videos={details.videos?.results} />

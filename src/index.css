@@ -8,6 +8,10 @@
   --accent: #e94560;
   --accent-dim: #b9334a;
   --success: #3ddc84;
+  --gold: #e0a52c;
+  --gold-dim: #a9791a;
+  --green: #2fbf6e;
+  --green-dim: #1f8a4e;
   color-scheme: dark;
 }
 
@@ -249,24 +253,118 @@ button, select, input {
 
 .media-card__actions {
   display: flex;
+  flex-direction: column;
   gap: 6px;
   padding: 0 10px 10px;
 }
 
+.media-card__actions .icon-btn {
+  flex: none;
+  width: 100%;
+}
+
 .icon-btn {
   flex: 1;
-  padding: 6px;
+  padding: 7px 6px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   color: var(--text-dim);
   cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  text-align: center;
+  display: block;
+  text-decoration: none;
 }
 
-.icon-btn--active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: white;
+/* "Envie de voir" (favoris) : toujours or quand actif. */
+.icon-btn--gold {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #1a1400;
+  font-weight: 600;
+}
+
+/* "Vu" : toujours vert quand actif. */
+.icon-btn--green {
+  background: var(--green);
+  border-color: var(--green);
+  color: #05170c;
+  font-weight: 600;
+}
+
+.icon-btn--text {
+  flex: none;
+  padding: 7px 12px;
+}
+
+/* Personnes (acteurs, réalisateurs) ------------------------------------- */
+
+.person-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 18px;
+}
+
+.person-card {
+  display: block;
+  text-align: center;
+}
+
+.person-card__photo {
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  margin-bottom: 8px;
+}
+
+.person-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.person-card__no-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 8px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.person-card__name {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.person-card__role {
+  margin: 2px 0 0;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+.person-header {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 36px;
+  flex-wrap: wrap;
+}
+
+.person-header__photo {
+  width: 180px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.person-header__bio {
+  max-width: 700px;
+  margin-top: 12px;
 }
 
 /* Buttons --------------------------------------------------------------- */
@@ -284,10 +382,16 @@ button, select, input {
   font-weight: 500;
 }
 
-.btn--active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: white;
+.btn--gold {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #1a1400;
+}
+
+.btn--green {
+  background: var(--green);
+  border-color: var(--green);
+  color: #05170c;
 }
 
 .btn--primary {
@@ -309,29 +413,12 @@ button, select, input {
   color: var(--text-dim);
 }
 
-/* Pagination -------------------------------------------------------------- */
+/* Afficher plus ------------------------------------------------------------ */
 
-.pagination {
+.load-more {
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 16px;
   margin-top: 28px;
-  color: var(--text-dim);
-}
-
-.pagination button {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  color: var(--text);
-  cursor: pointer;
-}
-
-.pagination button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* Detail page ------------------------------------------------------------- */
@@ -530,6 +617,10 @@ button, select, input {
   flex: none;
 }
 
+.list-row__actions .icon-btn--text {
+  width: auto;
+}
+
 /* Modal bande-annonce ------------------------------------------------------ */
 
 .modal-overlay {
@@ -620,6 +711,36 @@ button, select, input {
 .stat-tile__label {
   color: var(--text-dim);
   font-size: 0.8rem;
+}
+
+.stats-section {
+  margin-bottom: 28px;
+}
+
+.stats-recent {
+  margin-top: 18px;
+}
+
+.stats-recent__label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 0 0 10px;
+}
+
+.stats-recent__row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stats-recent__item img,
+.stats-recent__no-poster {
+  width: 60px;
+  height: 90px;
+  border-radius: 6px;
+  object-fit: cover;
+  display: block;
+  background: var(--bg-elevated);
 }
 
 @media (max-width: 640px) {
