@@ -482,6 +482,10 @@ button, select, input {
   margin-bottom: 28px;
 }
 
+.detail-cast {
+  margin-top: 48px;
+}
+
 .detail-recommendations {
   margin-top: 48px;
 }

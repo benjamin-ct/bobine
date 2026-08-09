@@ -4,6 +4,7 @@ import { backdropUrl, posterUrl, getDetails, getWatchProviders } from "../api/tm
 import ProviderBadges from "../components/ProviderBadges";
 import TrailerButton from "../components/TrailerButton";
 import MediaCard from "../components/MediaCard";
+import CastCard from "../components/CastCard";
 import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
 
@@ -52,6 +53,8 @@ export default function Detail() {
   const runtime = details.runtime || details.episode_run_time?.[0];
   const watched = isWatched(mediaType, id);
   const inWatchlist = isInWatchlist(mediaType, id);
+
+  const cast = details.credits?.cast || [];
 
   const libItem = {
     id: Number(id),
@@ -106,6 +109,17 @@ export default function Detail() {
             <ProviderBadges providers={providers} />
           </div>
         </div>
+
+        {cast.length > 0 && (
+          <section className="detail-cast">
+            <h3>Casting</h3>
+            <div className="person-grid">
+              {cast.map((member) => (
+                <CastCard key={member.credit_id || `${member.id}-${member.character}`} member={member} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {details.recommendations?.results?.length > 0 && (
           <section className="detail-recommendations" id="recommendations" ref={recommendationsRef}>
