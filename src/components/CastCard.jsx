@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { posterUrl } from "../api/tmdb";
 
-export default function CastCard({ member }) {
+export default function CastCard({ member, role }) {
+  const roleLabel = role || member.character;
   return (
     <Link to={`/personne/${member.id}`} className="person-card">
       <div className="person-card__photo">
@@ -12,7 +13,7 @@ export default function CastCard({ member }) {
         )}
       </div>
       <p className="person-card__name">{member.name}</p>
-      {member.character && <p className="person-card__role">{member.character}</p>}
+      {roleLabel && <p className="person-card__role">{roleLabel}</p>}
     </Link>
   );
 }
