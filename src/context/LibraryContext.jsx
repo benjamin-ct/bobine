@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "bobine.library.v1";
 
@@ -13,7 +13,13 @@ function loadInitialState() {
       watched: parsed.watched || {},
       watchlist: parsed.watchlist || {},
     };
-  } catch {
+  } catch (err) {
+    // Le contenu stocké n'est pas du JSON valide (écriture interrompue,
+    // corruption...). On repart sur une bibliothèque vide MAIS on se garde
+    // bien d'écraser tout de suite localStorage avec cet état vide (voir
+    // l'effet ci-dessous) : si les vraies données sont encore là sous une
+    // forme récupérable, mieux vaut ne pas les perdre définitivement.
+    console.warn("Bobine : lecture de la bibliothèque locale impossible, on repart à vide.", err);
     return { watched: {}, watchlist: {} };
   }
 }
@@ -24,9 +30,23 @@ function makeKey(mediaType, id) {
 
 export function LibraryProvider({ children }) {
   const [state, setState] = useState(loadInitialState);
+  // Évite d'écraser le localStorage dès le premier rendu : on ne persiste
+  // qu'à partir du moment où l'état change réellement suite à une action de
+  // l'utilisateur (toggle, import...). Sans ça, un simple souci de lecture
+  // au chargement (JSON corrompu, quota, etc.) écraserait silencieusement
+  // et immédiatement les vraies données par une bibliothèque vide.
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (err) {
+      console.error("Bobine : impossible de sauvegarder la bibliothèque locale.", err);
+    }
   }, [state]);
 
   const toggleWatched = useCallback((item) => {
