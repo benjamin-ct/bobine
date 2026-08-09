@@ -4,6 +4,7 @@ import { backdropUrl, posterUrl, getDetails, getWatchProviders } from "../api/tm
 import ProviderBadges from "../components/ProviderBadges";
 import TrailerButton from "../components/TrailerButton";
 import MediaCard from "../components/MediaCard";
+import CastCard from "../components/CastCard";
 import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
 
@@ -53,6 +54,8 @@ export default function Detail() {
   const watched = isWatched(mediaType, id);
   const inWatchlist = isInWatchlist(mediaType, id);
 
+  const cast = details.credits?.cast || [];
+
   const libItem = {
     id: Number(id),
     mediaType,
@@ -90,10 +93,10 @@ export default function Detail() {
             <p className="detail-overview">{details.overview || "Pas de synopsis disponible."}</p>
 
             <div className="detail-actions">
-              <button className={`btn ${inWatchlist ? "btn--active" : ""}`} onClick={() => toggleWatchlist(libItem)}>
+              <button className={`btn ${inWatchlist ? "btn--gold" : ""}`} onClick={() => toggleWatchlist(libItem)}>
                 {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
               </button>
-              <button className={`btn ${watched ? "btn--active" : ""}`} onClick={() => toggleWatched(libItem)}>
+              <button className={`btn ${watched ? "btn--green" : ""}`} onClick={() => toggleWatched(libItem)}>
                 {watched ? "✔ Déjà vu" : "○ Marquer comme vu"}
               </button>
               <TrailerButton videos={details.videos?.results} />
@@ -106,6 +109,17 @@ export default function Detail() {
             <ProviderBadges providers={providers} />
           </div>
         </div>
+
+        {cast.length > 0 && (
+          <section className="detail-cast">
+            <h3>Casting</h3>
+            <div className="person-grid">
+              {cast.map((member) => (
+                <CastCard key={member.credit_id || `${member.id}-${member.character}`} member={member} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {details.recommendations?.results?.length > 0 && (
           <section className="detail-recommendations" id="recommendations" ref={recommendationsRef}>

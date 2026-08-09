@@ -1,11 +1,10 @@
-import { SORT_OPTIONS, RUNTIME_OPTIONS } from "../api/tmdb";
+import { SORT_OPTIONS } from "../api/tmdb";
 
 export default function FilterBar({
   mediaType, setMediaType,
   genreId, setGenreId, genres,
   providerId, setProviderId, providers,
   sortBy, setSortBy,
-  runtimeMax, setRuntimeMax,
 }) {
   return (
     <div className="filter-bar">
@@ -37,14 +36,6 @@ export default function FilterBar({
           <option key={p.id} value={p.id}>{p.name}</option>
         ))}
       </select>
-
-      {setRuntimeMax && (
-        <select value={runtimeMax} onChange={(e) => setRuntimeMax(e.target.value)} className="filter-bar__select">
-          {RUNTIME_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      )}
 
       {setSortBy && (
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="filter-bar__select">

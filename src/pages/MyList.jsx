@@ -25,26 +25,28 @@ function Row({ item }) {
       </Link>
       <div className="list-row__actions">
         <button
-          className={`icon-btn ${inWatchlist ? "icon-btn--active" : ""}`}
+          className={`icon-btn ${inWatchlist ? "icon-btn--gold" : ""}`}
           onClick={() => toggleWatchlist(item)}
           title="Envie de voir"
         >
           {inWatchlist ? "★" : "☆"}
         </button>
         <button
-          className={`icon-btn ${watched ? "icon-btn--active" : ""}`}
+          className={`icon-btn ${watched ? "icon-btn--green" : ""}`}
           onClick={() => toggleWatched(item)}
           title="Marquer comme vu"
         >
           {watched ? "✔" : "○"}
         </button>
-        <Link
-          className="icon-btn"
-          to={`/media/${item.mediaType}/${item.id}#recommendations`}
-          title="Titres similaires"
-        >
-          🔁
-        </Link>
+        {watched && (
+          <Link
+            className="icon-btn icon-btn--text"
+            to={`/media/${item.mediaType}/${item.id}#recommendations`}
+            title="Trouver des titres similaires"
+          >
+            Similaire
+          </Link>
+        )}
       </div>
     </div>
   );

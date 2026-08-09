@@ -50,12 +50,12 @@ npx wrangler deploy --dry-run
 
 ## Fonctionnalités
 
-- **Découvrir** : parcourir films/séries, filtrable par genre, par durée max, et par n'importe laquelle des plateformes de streaming disponibles en France (liste complète tirée de TMDB, pas juste les grosses). Tri par popularité, note, ou date de sortie.
-- **Recherche** : barre de recherche globale (films + séries).
-- **Fiche détail** : synopsis, note, bande-annonce jouée en modal (sans quitter l'app), plateformes de streaming disponibles en France, titres similaires (`/recommendations` TMDB).
-- **Aléatoire** : tire un titre au hasard selon tes filtres (genre, plateforme, durée, tri), en excluant (optionnellement) ce que tu as déjà vu. Affiche aussi la bande-annonce.
-- **Ma liste** : deux listes séparées — "Envie de voir" (pile d'attente) et "Déjà vu" —, stockées localement dans le navigateur (localStorage), aucun compte requis.
-  - **Stats** dans l'onglet "Déjà vu" : nombre de titres vus, répartition films/séries, genres préférés.
+- **Découvrir** : parcourir films/séries, filtrable par genre et par n'importe laquelle des plateformes de streaming disponibles en France (liste complète tirée de TMDB, pas juste les grosses). Tri par popularité, note, ou date de sortie. Les résultats s'accumulent avec un bouton "Afficher plus" (pas de pagination).
+- **Recherche** : barre de recherche globale — films, séries, **et personnes** (acteurs, réalisateurs). Cliquer sur une personne ouvre sa fiche avec sa filmographie complète (comme acteur/actrice, et comme réalisateur/scénariste).
+- **Fiche détail** : synopsis, note, bande-annonce jouée en modal (sans quitter l'app), plateformes de streaming disponibles en France, bouton "🔁 Similaire" qui saute directement aux recommandations.
+- **Aléatoire** : tire un titre au hasard selon tes filtres (genre, plateforme, tri), en excluant (optionnellement) ce que tu as déjà vu. Affiche aussi la bande-annonce.
+- **Ma liste** : deux listes séparées — "Envie de voir" (pile d'attente, bouton **or** ★) et "Déjà vu" (bouton **vert** ✔) —, stockées localement dans le navigateur (localStorage), aucun compte requis.
+  - **Stats** dans l'onglet "Déjà vu" : nombre de titres vus, répartition films/séries, top 5 des genres préférés, et un aperçu "Vus récemment".
   - **Export / Import JSON** : bouton "Exporter" pour télécharger ta bibliothèque, "Importer" pour fusionner un fichier exporté (pratique pour changer d'appareil ou comparer ta liste avec quelqu'un d'autre).
 - **PWA installable** : icône dédiée, s'installe comme une app depuis le navigateur (Chrome/Edge : icône d'installation dans la barre d'adresse ; Android : "Ajouter à l'écran d'accueil" ; iOS Safari : partager → "Sur l'écran d'accueil").
 

@@ -29,7 +29,7 @@ export default function MediaCard({ item }) {
           ) : (
             <div className="media-card__no-poster">{title}</div>
           )}
-          {watched && <span className="badge badge--watched">Vu</span>}
+          {watched && <span className="badge badge--watched">✔ Vu</span>}
           <span className="media-card__type">{mediaType === "movie" ? "Film" : "Série"}</span>
         </div>
         <div className="media-card__info">
@@ -39,26 +39,19 @@ export default function MediaCard({ item }) {
       </Link>
       <div className="media-card__actions">
         <button
-          className={`icon-btn ${inWatchlist ? "icon-btn--active" : ""}`}
+          className={`icon-btn ${inWatchlist ? "icon-btn--gold" : ""}`}
           onClick={() => toggleWatchlist(libItem)}
           title="Envie de voir"
         >
-          {inWatchlist ? "★" : "☆"}
+          {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
         </button>
         <button
-          className={`icon-btn ${watched ? "icon-btn--active" : ""}`}
+          className={`icon-btn ${watched ? "icon-btn--green" : ""}`}
           onClick={() => toggleWatched(libItem)}
           title="Marquer comme vu"
         >
-          {watched ? "✔" : "○"}
+          {watched ? "✔ Vu" : "○ Vu"}
         </button>
-        <Link
-          className="icon-btn"
-          to={`/media/${mediaType}/${item.id}#recommendations`}
-          title="Titres similaires"
-        >
-          🔁
-        </Link>
       </div>
     </div>
   );

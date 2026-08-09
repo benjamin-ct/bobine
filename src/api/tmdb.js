@@ -50,7 +50,7 @@ export function getGenres(mediaType) {
 // 10/10 par 3 personnes remonte devant des classiques.
 const MIN_VOTES_FOR_RATING_SORT = 100;
 
-export function discover(mediaType, { page = 1, genreId, providerIds, sortBy = "popularity.desc", year, runtimeMax } = {}) {
+export function discover(mediaType, { page = 1, genreId, providerIds, sortBy = "popularity.desc", year } = {}) {
   const dateSortField = mediaType === "movie" ? "primary_release_date" : "first_air_date";
   const sortByFinal = sortBy === "recent.desc" ? `${dateSortField}.desc` : sortBy;
   return tmdbFetch(`/discover/${mediaType}`, {
@@ -60,7 +60,6 @@ export function discover(mediaType, { page = 1, genreId, providerIds, sortBy = "
     watch_region: providerIds?.length ? REGION : undefined,
     sort_by: sortByFinal,
     "vote_count.gte": sortBy === "vote_average.desc" ? MIN_VOTES_FOR_RATING_SORT : undefined,
-    "with_runtime.lte": runtimeMax || undefined,
     [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
     include_adult: false,
   });
@@ -72,16 +71,23 @@ export const SORT_OPTIONS = [
   { value: "recent.desc", label: "Plus récent" },
 ];
 
-export const RUNTIME_OPTIONS = [
-  { value: "", label: "Peu importe" },
-  { value: "60", label: "≤ 1h" },
-  { value: "90", label: "≤ 1h30" },
-  { value: "120", label: "≤ 2h" },
-  { value: "150", label: "≤ 2h30" },
-];
-
 export function searchMulti(query, page = 1) {
   return tmdbFetch("/search/multi", { query, page, include_adult: false });
+}
+
+// Personnes (acteurs, réalisateurs) --------------------------------------
+
+export function searchPerson(query, page = 1) {
+  return tmdbFetch("/search/person", { query, page, include_adult: false });
+}
+
+export function getPerson(id) {
+  return tmdbFetch(`/person/${id}`);
+}
+
+// Filmographie complète (apparitions devant ET derrière la caméra).
+export function getPersonCredits(id) {
+  return tmdbFetch(`/person/${id}/combined_credits`);
 }
 
 export function trending(mediaType = "all", window = "week") {
