@@ -1,10 +1,11 @@
-import { SORT_OPTIONS } from "../api/tmdb";
+import { SORT_FIELDS } from "../api/tmdb";
 
 export default function FilterBar({
   mediaType, setMediaType,
   genreId, setGenreId, genres,
   providerId, setProviderId, providers,
-  sortBy, setSortBy,
+  sortField, setSortField,
+  sortDirection, setSortDirection,
 }) {
   return (
     <div className="filter-bar">
@@ -37,12 +38,22 @@ export default function FilterBar({
         ))}
       </select>
 
-      {setSortBy && (
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="filter-bar__select">
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+      {setSortField && (
+        <div className="sort-control">
+          <select value={sortField} onChange={(e) => setSortField(e.target.value)} className="filter-bar__select">
+            {SORT_FIELDS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="sort-direction-btn"
+            onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
+            title={sortDirection === "desc" ? "Décroissant (cliquer pour croissant)" : "Croissant (cliquer pour décroissant)"}
+          >
+            {sortDirection === "desc" ? "↓" : "↑"}
+          </button>
+        </div>
       )}
     </div>
   );

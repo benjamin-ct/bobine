@@ -8,7 +8,8 @@ export default function Discover() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
-  const [sortBy, setSortBy] = useState("popularity.desc");
+  const [sortField, setSortField] = useState("popularity");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
   const [page, setPage] = useState(1);
@@ -26,7 +27,7 @@ export default function Discover() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreId, providerId, sortBy]);
+  }, [genreId, providerId, sortField, sortDirection]);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +46,7 @@ export default function Discover() {
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
-    discover(mediaType, { page: 1, genreId, providerIds: providerId ? [providerId] : undefined, sortBy })
+    discover(mediaType, { page: 1, genreId, providerIds: providerId ? [providerId] : undefined, sortField, sortDirection })
       .then((data) => {
         if (cancelled) return;
         setResults(data.results || []);
@@ -60,12 +61,12 @@ export default function Discover() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, genreId, providerId, sortBy]);
+  }, [mediaType, genreId, providerId, sortField, sortDirection]);
 
   function loadMore() {
     const nextPage = page + 1;
     setLoadingMore(true);
-    discover(mediaType, { page: nextPage, genreId, providerIds: providerId ? [providerId] : undefined, sortBy })
+    discover(mediaType, { page: nextPage, genreId, providerIds: providerId ? [providerId] : undefined, sortField, sortDirection })
       .then((data) => {
         setResults((prev) => [...prev, ...(data.results || [])]);
         setPage(nextPage);
@@ -86,8 +87,10 @@ export default function Discover() {
         providerId={providerId}
         setProviderId={setProviderId}
         providers={providers}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
+        sortField={sortField}
+        setSortField={setSortField}
+        sortDirection={sortDirection}
+        setSortDirection={setSortDirection}
       />
 
       {status === "loading" && <Loading />}

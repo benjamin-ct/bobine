@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { discover, getGenres, getWatchProvidersList, getDetails, getWatchProviders, posterUrl } from "../api/tmdb";
+import { discover, getGenres, getWatchProvidersList, getDetails, getWatchProviders, posterUrl, estimateRuntimeMinutes } from "../api/tmdb";
 import FilterBar from "../components/FilterBar";
 import ProviderBadges from "../components/ProviderBadges";
 import TrailerButton from "../components/TrailerButton";
@@ -13,7 +13,8 @@ export default function Random() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
-  const [sortBy, setSortBy] = useState("popularity.desc");
+  const [sortField, setSortField] = useState("popularity");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
   const [excludeWatched, setExcludeWatched] = useState(true);
@@ -49,7 +50,7 @@ export default function Random() {
     setPick(null);
     setPickDetails(null);
     try {
-      const discoverParams = { genreId, providerIds: providerId ? [providerId] : undefined, sortBy };
+      const discoverParams = { genreId, providerIds: providerId ? [providerId] : undefined, sortField, sortDirection };
       const first = await discover(mediaType, { page: 1, ...discoverParams });
       const totalPages = Math.min(first.total_pages || 1, 500);
       if (totalPages === 0 || !first.results?.length) {
@@ -95,6 +96,18 @@ export default function Random() {
   const watched = pick && isWatched(mediaType, pick.id);
   const inWatchlist = pick && isInWatchlist(mediaType, pick.id);
 
+  function buildLibItem() {
+    return {
+      id: pick.id,
+      mediaType,
+      title,
+      posterPath: pick.poster_path,
+      date,
+      genreIds: pick.genre_ids || [],
+      runtimeMinutes: estimateRuntimeMinutes(pickDetails, mediaType),
+    };
+  }
+
   return (
     <div className="page">
       <h1>Un film ou une série au hasard 🎲</h1>
@@ -111,8 +124,10 @@ export default function Random() {
         providerId={providerId}
         setProviderId={setProviderId}
         providers={providers}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
+        sortField={sortField}
+        setSortField={setSortField}
+        sortDirection={sortDirection}
+        setSortDirection={setSortDirection}
       />
 
       <label className="checkbox-line">
@@ -146,13 +161,13 @@ export default function Random() {
               <Link className="btn" to={`/media/${mediaType}/${pick.id}`}>Voir la fiche</Link>
               <button
                 className={`btn ${inWatchlist ? "btn--gold" : ""}`}
-                onClick={() => toggleWatchlist({ id: pick.id, mediaType, title, posterPath: pick.poster_path, date, genreIds: pick.genre_ids || [] })}
+                onClick={() => toggleWatchlist(buildLibItem())}
               >
                 {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
               </button>
               <button
                 className={`btn ${watched ? "btn--green" : ""}`}
-                onClick={() => toggleWatched({ id: pick.id, mediaType, title, posterPath: pick.poster_path, date, genreIds: pick.genre_ids || [] })}
+                onClick={() => toggleWatched(buildLibItem())}
               >
                 {watched ? "✔ Déjà vu" : "○ Marquer comme vu"}
               </button>

@@ -50,25 +50,33 @@ export function getGenres(mediaType) {
 // 10/10 par 3 personnes remonte devant des classiques.
 const MIN_VOTES_FOR_RATING_SORT = 100;
 
-export function discover(mediaType, { page = 1, genreId, providerIds, sortBy = "popularity.desc", year } = {}) {
-  const dateSortField = mediaType === "movie" ? "primary_release_date" : "first_air_date";
-  const sortByFinal = sortBy === "recent.desc" ? `${dateSortField}.desc` : sortBy;
+export function discover(mediaType, {
+  page = 1,
+  genreId,
+  providerIds,
+  sortField = "popularity",
+  sortDirection = "desc",
+  year,
+} = {}) {
+  const resolvedField = sortField === "year" ? (mediaType === "movie" ? "primary_release_date" : "first_air_date") : sortField;
   return tmdbFetch(`/discover/${mediaType}`, {
     page,
     with_genres: genreId || undefined,
     with_watch_providers: providerIds?.length ? providerIds.join("|") : undefined,
     watch_region: providerIds?.length ? REGION : undefined,
-    sort_by: sortByFinal,
-    "vote_count.gte": sortBy === "vote_average.desc" ? MIN_VOTES_FOR_RATING_SORT : undefined,
+    sort_by: `${resolvedField}.${sortDirection}`,
+    // Sans plancher de votes, un film noté 10/10 par 3 personnes remonte
+    // devant des classiques (ou, en croissant, un film à 0 vote squatte le haut).
+    "vote_count.gte": sortField === "vote_average" ? MIN_VOTES_FOR_RATING_SORT : undefined,
     [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
     include_adult: false,
   });
 }
 
-export const SORT_OPTIONS = [
-  { value: "popularity.desc", label: "Popularité" },
-  { value: "vote_average.desc", label: "Mieux noté" },
-  { value: "recent.desc", label: "Plus récent" },
+export const SORT_FIELDS = [
+  { value: "popularity", label: "Popularité" },
+  { value: "vote_average", label: "Note" },
+  { value: "year", label: "Année" },
 ];
 
 export function searchMulti(query, page = 1) {
@@ -92,6 +100,20 @@ export function getPersonCredits(id) {
 
 export function trending(mediaType = "all", window = "week") {
   return tmdbFetch(`/trending/${mediaType}/${window}`);
+}
+
+// Estime la durée d'un titre à partir de sa fiche détail TMDB.
+// Films : durée exacte (details.runtime). Séries : pas de suivi épisode par
+// épisode dans Bobine, donc approximation = durée moyenne d'un épisode ×
+// nombre total d'épisodes (compte toute la série comme "vue" d'un coup).
+export function estimateRuntimeMinutes(details, mediaType) {
+  if (mediaType === "movie") {
+    return details?.runtime || null;
+  }
+  const perEpisode = details?.episode_run_time?.[0];
+  const episodeCount = details?.number_of_episodes;
+  if (!perEpisode || !episodeCount) return null;
+  return perEpisode * episodeCount;
 }
 
 // Détails ---------------------------------------------------------------
