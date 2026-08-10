@@ -58,13 +58,24 @@ planifiée quotidienne et une base D1. Pour les activer :
    `bobine` : **Settings → Variables and Secrets** (accessible maintenant que
    le Worker a un script, pas seulement des assets statiques). Ajoute :
 
-   | Nom | Valeur |
-   |---|---|
-   | `TMDB_API_KEY` | ta clé TMDB (même clé que `VITE_TMDB_API_KEY`, mais c'est une variable distincte — le Worker ne lit pas les variables de build) |
-   | `VAPID_PUBLIC_KEY` | générée une fois avec `node -e "console.log(require('web-push').generateVAPIDKeys())"` |
-   | `VAPID_PRIVATE_KEY` | idem — **à garder secrète** |
-   | `VAPID_SUBJECT` | `mailto:ton-email@exemple.com` (contact requis par le protocole Web Push) |
-   | `DEBUG_TRIGGER_KEY` | optionnel — une chaîne aléatoire, permet de déclencher manuellement la vérification via `POST /api/run-check` avec l'en-tête `X-Debug-Key` (utile pour tester sans attendre le cron quotidien) |
+   | Nom | Type | Valeur |
+   |---|---|---|
+   | `TMDB_API_KEY` | **Secret** | ta clé TMDB (même clé que `VITE_TMDB_API_KEY`, mais c'est une variable distincte — le Worker ne lit pas les variables de build) |
+   | `VAPID_PRIVATE_KEY` | **Secret** | générée une fois avec `node -e "console.log(require('web-push').generateVAPIDKeys())"` |
+   | `DEBUG_TRIGGER_KEY` | **Secret** | optionnel — une chaîne aléatoire, permet de déclencher manuellement la vérification via `POST /api/run-check` (ou une notif de test via `POST /api/test-notification`) avec l'en-tête `X-Debug-Key` |
+
+   ⚠️ **Type "Secret" obligatoire**, pas "Texte" : Wrangler efface les
+   variables de type "Texte" configurées depuis le dashboard à *chaque*
+   déploiement si elles ne sont pas déclarées dans `wrangler.jsonc` (c'est le
+   comportement documenté de Cloudflare). Les secrets, eux, survivent
+   toujours aux déploiements.
+
+   `VAPID_PUBLIC_KEY` et `VAPID_SUBJECT` n'ont plus besoin d'être configurées
+   dans le dashboard : elles sont commitées directement dans `wrangler.jsonc`
+   (`VAPID_PUBLIC_KEY` est faite pour être publique — c'est justement ce
+   qu'on sert via `GET /api/vapid-public-key` — donc aucun risque à la
+   committer ; adapte `VAPID_SUBJECT` à ton email si tu régénères tes
+   propres clés).
 
 2. La base D1 (`bobine-notifications`) et le cron (tous les jours à 7h UTC)
    sont déclarés dans `wrangler.jsonc` et se provisionnent automatiquement au
