@@ -2,12 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getGenres, getDetails, estimateRuntimeMinutes, posterUrl } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
+import DonutChart from "./DonutChart";
 
 const RECENT_COUNT = 6;
 const TOP_GENRES_COUNT = 5;
 // Évite de partir en rafale sur des dizaines de requêtes si l'historique est
 // long ; le reste se complète tout seul aux prochaines visites de la page.
 const MAX_BACKFILL_PER_VISIT = 20;
+
+// Palette catégorielle validée (skill dataviz, slots 1 & 2 — colorblind-safe,
+// contraste ≥3:1 sur le fond des cartes) : bleu / orange.
+const DONUT_COLORS = { movie: "#3987e5", tv: "#d95926" };
 
 function makeKey(mediaType, id) {
   return `${mediaType}:${id}`;
@@ -90,35 +95,41 @@ export default function Stats({ watched }) {
 
   return (
     <div className="stats-section">
-      <div className="stats-panel">
-        <div className="stat-tile">
-          <span className="stat-tile__value">{watched.length}</span>
-          <span className="stat-tile__label">Titres vus</span>
+      <div className="stats-hero-row">
+        <div className="stats-hero-card">
+          <DonutChart
+            centerValue={watched.length}
+            centerLabel="vus"
+            segments={[
+              { label: "Films", value: movieCount, color: DONUT_COLORS.movie },
+              { label: "Séries", value: seriesCount, color: DONUT_COLORS.tv },
+            ]}
+          />
         </div>
-        <div className="stat-tile">
-          <span className="stat-tile__value">{movieCount}</span>
-          <span className="stat-tile__label">Films</span>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-tile__value">{seriesCount}</span>
-          <span className="stat-tile__label">Séries</span>
-        </div>
-        {topGenres.length > 0 && (
+
+        {totalMinutes > 0 && (
+          <div className="stats-hero-card stats-hero-card--time">
+            <span className="stats-hero-card__label">
+              Temps de visionnage total{mediaAndSeriesNote(movieCount, seriesCount)}
+            </span>
+            <span className="stats-hero-figure">{formatWatchTime(totalMinutes)}</span>
+            {missingRuntimeCount > 0 && (
+              <span className="stats-hero-card__note">
+                Estimation sur {knownRuntimeItems.length}/{watched.length} titres (le reste se complète tout seul)
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {topGenres.length > 0 && (
+        <div className="stats-panel">
           <div className="stat-tile stat-tile--wide">
             <span className="stat-tile__label">Genres préférés</span>
             <span className="stat-tile__value stat-tile__value--small">{topGenres.join(" · ")}</span>
           </div>
-        )}
-        {totalMinutes > 0 && (
-          <div className="stat-tile stat-tile--wide">
-            <span className="stat-tile__label">
-              Temps de visionnage{mediaAndSeriesNote(movieCount, seriesCount)}
-              {missingRuntimeCount > 0 ? ` · estimation sur ${knownRuntimeItems.length}/${watched.length} titres` : ""}
-            </span>
-            <span className="stat-tile__value stat-tile__value--small">{formatWatchTime(totalMinutes)}</span>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {recent.length > 0 && (
         <div className="stats-recent">

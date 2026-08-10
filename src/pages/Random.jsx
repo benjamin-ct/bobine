@@ -13,8 +13,6 @@ export default function Random() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
-  const [sortField, setSortField] = useState("popularity");
-  const [sortDirection, setSortDirection] = useState("desc");
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
   const [excludeWatched, setExcludeWatched] = useState(true);
@@ -50,7 +48,9 @@ export default function Random() {
     setPick(null);
     setPickDetails(null);
     try {
-      const discoverParams = { genreId, providerIds: providerId ? [providerId] : undefined, sortField, sortDirection };
+      // Pas de tri : un tirage au hasard pioche déjà dans une page aléatoire,
+      // trier n'a pas de sens ici (voir discover() pour le tri par défaut).
+      const discoverParams = { genreId, providerIds: providerId ? [providerId] : undefined };
       const first = await discover(mediaType, { page: 1, ...discoverParams });
       const totalPages = Math.min(first.total_pages || 1, 500);
       if (totalPages === 0 || !first.results?.length) {
@@ -124,10 +124,6 @@ export default function Random() {
         providerId={providerId}
         setProviderId={setProviderId}
         providers={providers}
-        sortField={sortField}
-        setSortField={setSortField}
-        sortDirection={sortDirection}
-        setSortDirection={setSortDirection}
       />
 
       <label className="checkbox-line">

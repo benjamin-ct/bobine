@@ -168,7 +168,7 @@ export default function Detail() {
 
         {details.recommendations?.results?.length > 0 && (
           <section className="detail-recommendations" id="recommendations" ref={recommendationsRef}>
-            <h3>Parce que tu as regardé « {title} »</h3>
+            <h3>Si tu as aimé « {title} »</h3>
             <div className="media-grid">
               {details.recommendations.results.slice(0, 12).map((item) => (
                 <MediaCard key={item.id} item={{ ...item, mediaType: item.media_type || mediaType }} />

@@ -2,7 +2,32 @@ import { useEffect, useState } from "react";
 import { discover, getGenres, getWatchProvidersList } from "../api/tmdb";
 import MediaCard from "../components/MediaCard";
 import FilterBar from "../components/FilterBar";
+import AdvancedFilters from "../components/AdvancedFilters";
 import { Loading, ErrorMessage, EmptyState } from "../components/StateMessage";
+
+const EMPTY_ADVANCED_FILTERS = {
+  yearMin: "", yearMax: "",
+  voteAverageMin: "", voteAverageMax: "",
+  voteCountMin: "",
+  originCountry: "",
+  runtimeMin: "", runtimeMax: "",
+};
+
+// Convertit les valeurs texte des <input> en nombres (ou undefined si vide)
+// pour discover().
+function toDiscoverParams(advanced) {
+  const num = (v) => (v === "" || v == null ? undefined : Number(v));
+  return {
+    yearMin: num(advanced.yearMin),
+    yearMax: num(advanced.yearMax),
+    voteAverageMin: num(advanced.voteAverageMin),
+    voteAverageMax: num(advanced.voteAverageMax),
+    voteCountMin: num(advanced.voteCountMin),
+    runtimeMin: num(advanced.runtimeMin),
+    runtimeMax: num(advanced.runtimeMax),
+    originCountry: advanced.originCountry || undefined,
+  };
+}
 
 export default function Discover() {
   const [mediaType, setMediaType] = useState("movie");
@@ -10,6 +35,7 @@ export default function Discover() {
   const [providerId, setProviderId] = useState("");
   const [sortField, setSortField] = useState("popularity");
   const [sortDirection, setSortDirection] = useState("desc");
+  const [advanced, setAdvanced] = useState(EMPTY_ADVANCED_FILTERS);
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
   const [page, setPage] = useState(1);
@@ -19,6 +45,8 @@ export default function Discover() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
+  const advancedKey = JSON.stringify(advanced);
+
   // Réinitialise les filtres dépendants et la liste au changement de type.
   useEffect(() => {
     setGenreId("");
@@ -27,7 +55,7 @@ export default function Discover() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreId, providerId, sortField, sortDirection]);
+  }, [genreId, providerId, sortField, sortDirection, advancedKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +74,14 @@ export default function Discover() {
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
-    discover(mediaType, { page: 1, genreId, providerIds: providerId ? [providerId] : undefined, sortField, sortDirection })
+    discover(mediaType, {
+      page: 1,
+      genreId,
+      providerIds: providerId ? [providerId] : undefined,
+      sortField,
+      sortDirection,
+      ...toDiscoverParams(advanced),
+    })
       .then((data) => {
         if (cancelled) return;
         setResults(data.results || []);
@@ -61,12 +96,20 @@ export default function Discover() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, genreId, providerId, sortField, sortDirection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaType, genreId, providerId, sortField, sortDirection, advancedKey]);
 
   function loadMore() {
     const nextPage = page + 1;
     setLoadingMore(true);
-    discover(mediaType, { page: nextPage, genreId, providerIds: providerId ? [providerId] : undefined, sortField, sortDirection })
+    discover(mediaType, {
+      page: nextPage,
+      genreId,
+      providerIds: providerId ? [providerId] : undefined,
+      sortField,
+      sortDirection,
+      ...toDiscoverParams(advanced),
+    })
       .then((data) => {
         setResults((prev) => [...prev, ...(data.results || [])]);
         setPage(nextPage);
@@ -92,6 +135,8 @@ export default function Discover() {
         sortDirection={sortDirection}
         setSortDirection={setSortDirection}
       />
+
+      <AdvancedFilters filters={advanced} setFilters={setAdvanced} />
 
       {status === "loading" && <Loading />}
       {status === "error" && <ErrorMessage error={error} />}

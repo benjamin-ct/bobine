@@ -57,17 +57,34 @@ export function discover(mediaType, {
   sortField = "popularity",
   sortDirection = "desc",
   year,
+  yearMin,
+  yearMax,
+  voteAverageMin,
+  voteAverageMax,
+  voteCountMin,
+  originCountry,
+  runtimeMin,
+  runtimeMax,
 } = {}) {
   const resolvedField = sortField === "year" ? (mediaType === "movie" ? "primary_release_date" : "first_air_date") : sortField;
+  const dateField = mediaType === "movie" ? "primary_release_date" : "first_air_date";
   return tmdbFetch(`/discover/${mediaType}`, {
     page,
     with_genres: genreId || undefined,
     with_watch_providers: providerIds?.length ? providerIds.join("|") : undefined,
     watch_region: providerIds?.length ? REGION : undefined,
     sort_by: `${resolvedField}.${sortDirection}`,
-    // Sans plancher de votes, un film noté 10/10 par 3 personnes remonte
-    // devant des classiques (ou, en croissant, un film à 0 vote squatte le haut).
-    "vote_count.gte": sortField === "vote_average" ? MIN_VOTES_FOR_RATING_SORT : undefined,
+    // Un plancher explicite (filtre avancé) prend le pas sur celui, implicite,
+    // qu'on applique par défaut quand on trie par note (sinon un film noté
+    // 10/10 par 3 personnes remonte devant des classiques).
+    "vote_count.gte": voteCountMin || (sortField === "vote_average" ? MIN_VOTES_FOR_RATING_SORT : undefined),
+    "vote_average.gte": voteAverageMin || undefined,
+    "vote_average.lte": voteAverageMax || undefined,
+    "with_runtime.gte": runtimeMin || undefined,
+    "with_runtime.lte": runtimeMax || undefined,
+    with_origin_country: originCountry || undefined,
+    [`${dateField}.gte`]: yearMin ? `${yearMin}-01-01` : undefined,
+    [`${dateField}.lte`]: yearMax ? `${yearMax}-12-31` : undefined,
     [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
     include_adult: false,
   });
@@ -78,6 +95,19 @@ export const SORT_FIELDS = [
   { value: "vote_average", label: "Note" },
   { value: "year", label: "Année" },
 ];
+
+// Liste des pays (code ISO 3166-1 + nom localisé), pour le filtre "pays de
+// production". Résultat quasi-statique côté TMDB, sans dépendance à une
+// région particulière.
+let countriesCache = null;
+export async function getCountries() {
+  if (countriesCache) return countriesCache;
+  const list = await tmdbFetch("/configuration/countries");
+  countriesCache = list
+    .slice()
+    .sort((a, b) => a.english_name.localeCompare(b.english_name));
+  return countriesCache;
+}
 
 export function searchMulti(query, page = 1) {
   return tmdbFetch("/search/multi", { query, page, include_adult: false });
