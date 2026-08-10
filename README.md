@@ -116,7 +116,7 @@ npx wrangler dev
   - **Filtres avancés** (repliables) : année de sortie (min/max — ex. "tous les films de 2025"), note (min/max), nombre de votes minimum, durée (min/max), pays de production.
 - **Recherche** : barre de recherche globale — films, séries, **et personnes** (acteurs, réalisateurs). Cliquer sur une personne ouvre sa fiche avec sa filmographie complète (comme acteur/actrice, et comme réalisateur/scénariste).
 - **Fiche détail** : synopsis, note, bande-annonce jouée en modal (sans quitter l'app), plateformes de streaming disponibles en France, bouton "🔁 Similaire" qui saute directement aux recommandations.
-- **Aléatoire** : tire un titre au hasard selon tes filtres (genre, plateforme), en excluant (optionnellement) ce que tu as déjà vu. Affiche aussi la bande-annonce.
+- **Aléatoire** : tire un titre au hasard selon tes filtres (genre, plateforme, année de sortie min/max), en excluant (optionnellement) ce que tu as déjà vu. Affiche aussi la bande-annonce.
 - **Ma liste** : deux listes séparées — "Envie de voir" (pile d'attente, bouton **or** ★) et "Déjà vu" (bouton **vert** ✔) —, stockées localement dans le navigateur (localStorage), aucun compte requis.
   - **Stats visuelles** dans l'onglet "Déjà vu" : donut films/séries, temps de visionnage total mis en avant, genres préférés, aperçu "Vus récemment".
   - **Stats** dans l'onglet "Déjà vu" : nombre de titres vus, répartition films/séries, top 5 des genres préférés, et un aperçu "Vus récemment".
