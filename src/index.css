@@ -161,6 +161,69 @@ button, select, input {
   color: var(--accent);
 }
 
+/* Filtres avancés -------------------------------------------------------- */
+
+.advanced-filters {
+  margin-bottom: 18px;
+}
+
+.advanced-filters__panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.advanced-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.advanced-filters__field label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.advanced-filters__field input,
+.advanced-filters__field select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  width: 100%;
+}
+
+.advanced-filters__range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.advanced-filters__range input {
+  min-width: 0;
+}
+
+.advanced-filters__range span {
+  color: var(--text-dim);
+}
+
+.advanced-filters__reset {
+  grid-column: 1 / -1;
+  justify-self: start;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 4px 0;
+}
+
 .chip {
   padding: 8px 16px;
   border-radius: 999px;
@@ -804,6 +867,94 @@ button, select, input {
 
 .stats-section {
   margin-bottom: 28px;
+}
+
+/* Cartes vedettes (donut + temps de visionnage) ---------------------------- */
+
+.stats-hero-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.stats-hero-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-hero-card--time {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+}
+
+.stats-hero-card__label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+/* Chiffres proportionnels (jamais tabular-nums) sur un grand nombre isolé. */
+.stats-hero-figure {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.stats-hero-card__note {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+/* Donut films/séries ------------------------------------------------------- */
+
+.donut-chart {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.donut-chart__value {
+  fill: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.donut-chart__label {
+  fill: var(--text-dim);
+  font-size: 11px;
+}
+
+.donut-chart__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.donut-chart__legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.donut-chart__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 .stats-recent {
