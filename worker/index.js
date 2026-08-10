@@ -4,7 +4,13 @@ import { runDailyCheck } from "./scheduled.js";
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      // Sans ça, iOS (en particulier en PWA installée sur l'écran d'accueil)
+      // peut mettre en cache une réponse d'erreur (ex: 503 avant que les
+      // secrets soient déployés) et continuer à la resservir après coup.
+      "cache-control": "no-store",
+    },
   });
 }
 
