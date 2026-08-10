@@ -10,6 +10,15 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
   },
+  // Non sensibles (VAPID_PUBLIC_KEY est justement faite pour être publique —
+  // on la sert nous-mêmes via GET /api/vapid-public-key) : commitées ici
+  // plutôt que configurées via le dashboard, pour ne pas dépendre de
+  // "keep_vars" et disparaître à chaque déploiement (voir TMDB_API_KEY et
+  // VAPID_PRIVATE_KEY, elles, en Secret dans le dashboard, qui survivent).
+  "vars": {
+    "VAPID_PUBLIC_KEY": "BJg-Rpv7wg8t4mSnGRG47SIhNovB4TEeB__fia4oyGe9opQ0lDT6z_aFWLBRZ3y1EMdbT8XE05uItXdsxiBufvY",
+    "VAPID_SUBJECT": "mailto:tcreusatbenjamin@gmail.com"
+  },
   "d1_databases": [
     {
       "binding": "DB",
