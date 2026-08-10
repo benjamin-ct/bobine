@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { posterUrl } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
 import Stats from "../components/Stats";
+import NotificationSettings from "../components/NotificationSettings";
 
 function Row({ item }) {
   const { toggleWatched, toggleWatchlist, isWatched, isInWatchlist } = useLibrary();
@@ -107,6 +108,8 @@ export default function MyList() {
         </div>
       </div>
       {importMessage && <p className="page-subtitle">{importMessage}</p>}
+
+      <NotificationSettings />
 
       <div className="filter-bar__group" style={{ marginBottom: 20 }}>
         <button className={tab === "watchlist" ? "chip chip--active" : "chip"} onClick={() => setTab("watchlist")}>

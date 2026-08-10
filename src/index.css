@@ -687,6 +687,21 @@ button, select, input {
   gap: 10px;
 }
 
+.notification-settings {
+  margin-bottom: 24px;
+}
+
+.notification-settings__hint {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+}
+
+.notification-settings__error {
+  color: var(--accent);
+  font-size: 0.85rem;
+  margin: 8px 0 0;
+}
+
 .stats-panel {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
