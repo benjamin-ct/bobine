@@ -74,6 +74,23 @@ planifiée quotidienne et une base D1. Pour les activer :
    (bouton "Activer les notifications"). Fonctionne même app fermée, tant que
    le navigateur autorise les notifications pour le site.
 
+**Pour tester qu'une notification arrive vraiment** (sans attendre le cron
+quotidien ni qu'un vrai événement se produise) : une fois les notifications
+activées dans l'app, avec `DEBUG_TRIGGER_KEY` configurée (voir tableau
+ci-dessus) —
+
+```bash
+curl -X POST https://bobine.creusatbenjamin.workers.dev/api/test-notification \
+  -H "X-Debug-Key: ta_valeur_de_DEBUG_TRIGGER_KEY"
+```
+
+Envoie une notification de test à tous les appareils abonnés, indépendamment
+de toute logique métier (utile car le tout premier passage de la
+vérification quotidienne ne notifie jamais rien : il se contente de prendre
+une référence de ce qui est déjà disponible). `POST /api/run-check` (même
+en-tête) déclenche à la place la vraie vérification quotidienne, si tu veux
+tester la logique métier elle-même plutôt que juste la chaîne d'envoi.
+
 Pour du développement local avec un Worker complet (D1 + secrets), crée un
 `.dev.vars` (jamais commité) avec les mêmes clés que ci-dessus, puis :
 
