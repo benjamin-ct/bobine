@@ -48,6 +48,40 @@ npm run build
 npx wrangler deploy --dry-run
 ```
 
+### Notifications push (optionnel)
+
+Le Worker gère aussi les notifications push (nouveautés en streaming, sorties
+dans tes genres préférés, grosses tendances du moment), via une tâche
+planifiée quotidienne et une base D1. Pour les activer :
+
+1. **Secrets du Worker** — dans le dashboard Cloudflare, sur le Worker
+   `bobine` : **Settings → Variables and Secrets** (accessible maintenant que
+   le Worker a un script, pas seulement des assets statiques). Ajoute :
+
+   | Nom | Valeur |
+   |---|---|
+   | `TMDB_API_KEY` | ta clé TMDB (même clé que `VITE_TMDB_API_KEY`, mais c'est une variable distincte — le Worker ne lit pas les variables de build) |
+   | `VAPID_PUBLIC_KEY` | générée une fois avec `node -e "console.log(require('web-push').generateVAPIDKeys())"` |
+   | `VAPID_PRIVATE_KEY` | idem — **à garder secrète** |
+   | `VAPID_SUBJECT` | `mailto:ton-email@exemple.com` (contact requis par le protocole Web Push) |
+   | `DEBUG_TRIGGER_KEY` | optionnel — une chaîne aléatoire, permet de déclencher manuellement la vérification via `POST /api/run-check` avec l'en-tête `X-Debug-Key` (utile pour tester sans attendre le cron quotidien) |
+
+2. La base D1 (`bobine-notifications`) et le cron (tous les jours à 7h UTC)
+   sont déclarés dans `wrangler.jsonc` et se provisionnent automatiquement au
+   déploiement — rien à faire côté dashboard pour ça.
+
+3. Côté app, l'utilisateur active les notifications depuis **Ma liste**
+   (bouton "Activer les notifications"). Fonctionne même app fermée, tant que
+   le navigateur autorise les notifications pour le site.
+
+Pour du développement local avec un Worker complet (D1 + secrets), crée un
+`.dev.vars` (jamais commité) avec les mêmes clés que ci-dessus, puis :
+
+```bash
+npx wrangler d1 execute bobine-notifications --local --file=worker/schema.sql
+npx wrangler dev
+```
+
 ## Fonctionnalités
 
 - **Découvrir** : parcourir films/séries, filtrable par genre et par n'importe laquelle des plateformes de streaming disponibles en France (liste complète tirée de TMDB, pas juste les grosses). Tri par popularité, note, ou date de sortie. Les résultats s'accumulent avec un bouton "Afficher plus" (pas de pagination).
@@ -58,10 +92,12 @@ npx wrangler deploy --dry-run
   - **Stats** dans l'onglet "Déjà vu" : nombre de titres vus, répartition films/séries, top 5 des genres préférés, et un aperçu "Vus récemment".
   - **Export / Import JSON** : bouton "Exporter" pour télécharger ta bibliothèque, "Importer" pour fusionner un fichier exporté (pratique pour changer d'appareil ou comparer ta liste avec quelqu'un d'autre).
 - **PWA installable** : icône dédiée, s'installe comme une app depuis le navigateur (Chrome/Edge : icône d'installation dans la barre d'adresse ; Android : "Ajouter à l'écran d'accueil" ; iOS Safari : partager → "Sur l'écran d'accueil").
+- **Notifications push** (optionnel, voir [Configuration des notifications push](#notifications-push-optionnel)) : préviens-toi quand un titre de ta liste "Envie de voir" arrive en streaming, pour les nouveautés dans tes genres préférés, et pour les grosses sorties du moment — même app fermée.
 
 ## Notes techniques
 
-- React 19 + Vite + React Router + vite-plugin-pwa + Wrangler (déploiement Cloudflare Workers, assets statiques uniquement, pas de backend).
-- Aucune base de données personnelle : le catalogue est interrogé en direct via l'API TMDB.
+- React 19 + Vite + React Router + vite-plugin-pwa + Wrangler (déploiement Cloudflare Workers).
+- Le catalogue est interrogé en direct via l'API TMDB, aucune donnée de catalogue n'est dupliquée côté serveur.
 - Le suivi "vu / envie de voir" est stocké uniquement dans le navigateur (`localStorage`). Vider les données du site ou changer de navigateur réinitialise la liste — utilise Export/Import pour la déplacer.
+- Seule exception au "tout côté client" : les **notifications push** ont besoin d'un minimum d'état côté serveur (base D1 `worker/schema.sql`) — abonnement push, copie de la liste "envie de voir" et des genres favoris, pour que la tâche planifiée quotidienne (`worker/scheduled.js`) puisse vérifier les nouveautés même quand l'app est fermée.
 - Les icônes PWA (`public/icon-*.png`) sont générées par `scripts/generate-icons.cjs` ; relance-le si tu veux changer le design.
