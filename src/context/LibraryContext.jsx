@@ -82,6 +82,38 @@ export function LibraryProvider({ children }) {
 
   const isWatched = useCallback((mediaType, id) => Boolean(state.watched[makeKey(mediaType, id)]), [state.watched]);
   const isInWatchlist = useCallback((mediaType, id) => Boolean(state.watchlist[makeKey(mediaType, id)]), [state.watchlist]);
+  const getRating = useCallback((mediaType, id) => state.watched[makeKey(mediaType, id)]?.rating ?? null, [state.watched]);
+
+  // Note sur 10, uniquement pour un titre déjà marqué comme vu.
+  const rateWatched = useCallback((mediaType, id, rating) => {
+    const key = makeKey(mediaType, id);
+    setState((prev) => {
+      if (!prev.watched[key]) return prev;
+      return {
+        ...prev,
+        watched: {
+          ...prev.watched,
+          [key]: { ...prev.watched[key], rating },
+        },
+      };
+    });
+  }, []);
+
+  // Complète après coup la durée d'un titre déjà marqué vu (cf. Stats.jsx),
+  // pour les cas où elle n'était pas connue au moment du toggle.
+  const setRuntime = useCallback((mediaType, id, runtimeMinutes) => {
+    const key = makeKey(mediaType, id);
+    setState((prev) => {
+      if (!prev.watched[key] || prev.watched[key].runtimeMinutes != null) return prev;
+      return {
+        ...prev,
+        watched: {
+          ...prev.watched,
+          [key]: { ...prev.watched[key], runtimeMinutes },
+        },
+      };
+    });
+  }, []);
 
   // Sérialise toute la bibliothèque (vu + envies) pour la sauvegarder ou la partager.
   const exportData = useCallback(
@@ -113,10 +145,13 @@ export function LibraryProvider({ children }) {
       toggleWatchlist,
       isWatched,
       isInWatchlist,
+      getRating,
+      rateWatched,
+      setRuntime,
       exportData,
       importData,
     }),
-    [state, toggleWatched, toggleWatchlist, isWatched, isInWatchlist, exportData, importData]
+    [state, toggleWatched, toggleWatchlist, isWatched, isInWatchlist, getRating, rateWatched, setRuntime, exportData, importData]
   );
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { backdropUrl, posterUrl, getDetails, getWatchProviders } from "../api/tmdb";
+import { backdropUrl, posterUrl, getDetails, getWatchProviders, estimateRuntimeMinutes } from "../api/tmdb";
 import ProviderBadges from "../components/ProviderBadges";
 import TrailerButton from "../components/TrailerButton";
 import MediaCard from "../components/MediaCard";
 import CastCard from "../components/CastCard";
+import RatingInput from "../components/RatingInput";
 import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
 
@@ -17,7 +18,7 @@ export default function Detail() {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
   const [showFullCast, setShowFullCast] = useState(false);
-  const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
+  const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist, getRating, rateWatched } = useLibrary();
   const recommendationsRef = useRef(null);
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export default function Detail() {
     posterPath: details.poster_path,
     date,
     genreIds: details.genres?.map((g) => g.id) || [],
+    runtimeMinutes: estimateRuntimeMinutes(details, mediaType),
   };
 
   function scrollToRecommendations() {
@@ -117,6 +119,10 @@ export default function Detail() {
                 <button className="btn" onClick={scrollToRecommendations}>🔁 Similaire</button>
               )}
             </div>
+
+            {watched && (
+              <RatingInput value={getRating(mediaType, id)} onRate={(rating) => rateWatched(mediaType, id, rating)} />
+            )}
 
             <h3>Où regarder en France</h3>
             <ProviderBadges providers={providers} />

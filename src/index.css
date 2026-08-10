@@ -140,6 +140,27 @@ button, select, input {
   color: var(--text);
 }
 
+.sort-control {
+  display: flex;
+  gap: 4px;
+}
+
+.sort-direction-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sort-direction-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .chip {
   padding: 8px 16px;
   border-radius: 999px;
@@ -486,6 +507,49 @@ button, select, input {
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 28px;
+}
+
+/* Notation ------------------------------------------------------------- */
+
+.rating-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.rating-input__stars {
+  display: flex;
+  gap: 2px;
+}
+
+.rating-input__star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  color: var(--border);
+  padding: 2px;
+  line-height: 1;
+}
+
+.rating-input__star--filled {
+  color: var(--gold);
+}
+
+.rating-input__value {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.rating-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--gold);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .detail-cast {

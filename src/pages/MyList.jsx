@@ -20,7 +20,10 @@ function Row({ item }) {
         )}
         <div>
           <p className="list-row__title">{item.title}</p>
-          <p className="list-row__meta">{item.mediaType === "movie" ? "Film" : "Série"} · {year}</p>
+          <p className="list-row__meta">
+            {item.mediaType === "movie" ? "Film" : "Série"} · {year}
+            {item.rating && <span className="rating-badge"> · ★ {item.rating}/10</span>}
+          </p>
         </div>
       </Link>
       <div className="list-row__actions">
