@@ -1,5 +1,13 @@
-import { upsertSubscription, deleteSubscription, replaceWatchlist, replaceGenrePreferences } from "./db.js";
+import {
+  upsertSubscription,
+  deleteSubscription,
+  deleteSubscriptionById,
+  replaceWatchlist,
+  replaceGenrePreferences,
+  getAllSubscriptions,
+} from "./db.js";
 import { runDailyCheck } from "./scheduled.js";
+import { sendPush, ExpiredSubscriptionError } from "./push.js";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -81,6 +89,42 @@ async function handleManualRun(request, env) {
   return json({ ok: true });
 }
 
+// Envoie une notification de test à tous les abonnements, pour vérifier que
+// toute la chaîne fonctionne (VAPID, service worker, permission navigateur)
+// sans dépendre de la logique métier — au premier passage, celle-ci ne
+// notifie jamais rien (elle se contente de prendre une référence).
+// Même protection que /api/run-check.
+async function handleTestNotification(request, env) {
+  const expected = env.DEBUG_TRIGGER_KEY;
+  if (!expected || request.headers.get("x-debug-key") !== expected) {
+    return json({ error: "Non autorisé." }, 401);
+  }
+
+  const subscriptions = await getAllSubscriptions(env.DB);
+  if (subscriptions.length === 0) {
+    return json({ error: "Aucun abonnement enregistré. Active d'abord les notifications dans l'app." }, 404);
+  }
+
+  const results = [];
+  for (const subscription of subscriptions) {
+    try {
+      await sendPush(
+        subscription,
+        { title: "Bobine 🎬", body: "Ceci est une notification de test — si tu la vois, tout fonctionne !", url: "/ma-liste" },
+        env
+      );
+      results.push({ id: subscription.id, ok: true });
+    } catch (err) {
+      if (err instanceof ExpiredSubscriptionError) {
+        await deleteSubscriptionById(env.DB, subscription.id);
+      }
+      results.push({ id: subscription.id, ok: false, error: err.message });
+    }
+  }
+
+  return json({ results });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -100,6 +144,10 @@ export default {
 
     if (url.pathname === "/api/run-check" && request.method === "POST") {
       return handleManualRun(request, env);
+    }
+
+    if (url.pathname === "/api/test-notification" && request.method === "POST") {
+      return handleTestNotification(request, env);
     }
 
     // `run_worker_first` (wrangler.jsonc) ne route ici que /api/*, mais on
