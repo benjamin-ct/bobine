@@ -13,6 +13,8 @@ export default function Random() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
+  const [yearMin, setYearMin] = useState("");
+  const [yearMax, setYearMax] = useState("");
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
   const [excludeWatched, setExcludeWatched] = useState(true);
@@ -50,7 +52,12 @@ export default function Random() {
     try {
       // Pas de tri : un tirage au hasard pioche déjà dans une page aléatoire,
       // trier n'a pas de sens ici (voir discover() pour le tri par défaut).
-      const discoverParams = { genreId, providerIds: providerId ? [providerId] : undefined };
+      const discoverParams = {
+        genreId,
+        providerIds: providerId ? [providerId] : undefined,
+        yearMin: yearMin ? Number(yearMin) : undefined,
+        yearMax: yearMax ? Number(yearMax) : undefined,
+      };
       const first = await discover(mediaType, { page: 1, ...discoverParams });
       const totalPages = Math.min(first.total_pages || 1, 500);
       if (totalPages === 0 || !first.results?.length) {
@@ -125,6 +132,29 @@ export default function Random() {
         setProviderId={setProviderId}
         providers={providers}
       />
+
+      <div className="advanced-filters__field random-year-filter">
+        <label>Année de sortie</label>
+        <div className="advanced-filters__range">
+          <input
+            type="number"
+            placeholder="Min"
+            min="1900"
+            max={new Date().getFullYear() + 5}
+            value={yearMin}
+            onChange={(e) => setYearMin(e.target.value)}
+          />
+          <span>–</span>
+          <input
+            type="number"
+            placeholder="Max"
+            min="1900"
+            max={new Date().getFullYear() + 5}
+            value={yearMax}
+            onChange={(e) => setYearMax(e.target.value)}
+          />
+        </div>
+      </div>
 
       <label className="checkbox-line">
         <input

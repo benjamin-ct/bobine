@@ -224,6 +224,12 @@ button, select, input {
   padding: 4px 0;
 }
 
+/* Filtre année autonome (hors panneau filtres avancés), ex: page Aléatoire. */
+.random-year-filter {
+  max-width: 220px;
+  margin-bottom: 18px;
+}
+
 .chip {
   padding: 8px 16px;
   border-radius: 999px;
