@@ -109,6 +109,22 @@ button, select, input {
   max-width: 320px;
 }
 
+.navbar__account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.navbar__account-email {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .navbar__search input {
   width: 100%;
   padding: 8px 12px;
@@ -1130,4 +1146,40 @@ button, select, input {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Connexion / compte ------------------------------------------------------ */
+
+.page--narrow {
+  max-width: 440px;
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.auth-card label {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.auth-card input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.auth-card__error {
+  color: var(--accent);
+  font-size: 0.9rem;
 }

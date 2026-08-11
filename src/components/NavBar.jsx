@@ -1,6 +1,7 @@
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { searchMulti, posterUrl } from "../api/tmdb";
+import { useAuth } from "../context/AuthContext";
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
@@ -13,6 +14,7 @@ export default function NavBar() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const wrapperRef = useRef(null);
+  const { status: authStatus, email, logout } = useAuth();
 
   // Recherche en direct, avec un léger anti-rebond pour ne pas spammer TMDB
   // à chaque frappe.
@@ -156,6 +158,22 @@ export default function NavBar() {
                 </Link>
               )}
             </div>
+          )}
+        </div>
+
+        <div className="navbar__account">
+          {authStatus === "authenticated" && (
+            <>
+              <span className="navbar__account-email" title={email}>{email}</span>
+              <button type="button" className="icon-btn icon-btn--text" onClick={logout}>
+                Déconnexion
+              </button>
+            </>
+          )}
+          {authStatus === "anonymous" && (
+            <Link to="/connexion" className="icon-btn icon-btn--text" onClick={scrollTop}>
+              Connexion
+            </Link>
           )}
         </div>
       </div>

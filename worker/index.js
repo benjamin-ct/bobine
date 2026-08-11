@@ -5,11 +5,24 @@ import {
   replaceWatchlist,
   replaceGenrePreferences,
   getAllSubscriptions,
+  getLibraryForUser,
+  replaceLibraryForUser,
 } from "./db.js";
 import { runDailyCheck } from "./scheduled.js";
 import { sendPush, ExpiredSubscriptionError } from "./push.js";
+import {
+  isValidEmail,
+  createMagicLink,
+  consumeMagicLink,
+  findOrCreateUser,
+  createSession,
+  deleteSession,
+  getUserFromRequest,
+  sessionCookieHeader,
+  sendMagicLinkEmail,
+} from "./auth.js";
 
-function json(data, status = 200) {
+function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -18,6 +31,7 @@ function json(data, status = 200) {
       // peut mettre en cache une réponse d'erreur (ex: 503 avant que les
       // secrets soient déployés) et continuer à la resservir après coup.
       "cache-control": "no-store",
+      ...extraHeaders,
     },
   });
 }
@@ -125,6 +139,90 @@ async function handleTestNotification(request, env) {
   return json({ results });
 }
 
+// Compte (lien magique) ---------------------------------------------------
+
+async function handleRequestLink(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const email = (body?.email || "").trim().toLowerCase();
+  if (!isValidEmail(email)) return json({ error: "Adresse email invalide." }, 400);
+
+  const token = await createMagicLink(env.DB, email);
+  const link = `${new URL(request.url).origin}/auth/verify?token=${token}`;
+
+  try {
+    const { skipped } = await sendMagicLinkEmail(env, email, link);
+    // Uniquement quand RESEND_API_KEY n'est pas configurée (dev local) : pas
+    // de vraie boîte mail à disposition, donc on renvoie le lien directement
+    // pour pouvoir tester le flux. Ne se produit jamais en production.
+    return json({ ok: true, devLink: skipped ? link : undefined });
+  } catch (err) {
+    return json({ error: err.message }, 502);
+  }
+}
+
+async function handleVerify(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const token = body?.token;
+  if (!token) return json({ error: "Jeton manquant." }, 400);
+
+  const email = await consumeMagicLink(env.DB, token);
+  if (!email) return json({ error: "Ce lien de connexion est invalide, expiré, ou déjà utilisé." }, 400);
+
+  const user = await findOrCreateUser(env.DB, email);
+  const sessionToken = await createSession(env.DB, user.id);
+
+  return json({ ok: true, email: user.email }, 200, {
+    "set-cookie": sessionCookieHeader(request, sessionToken),
+  });
+}
+
+async function handleMe(request, env) {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) return json({ error: "Non connecté." }, 401);
+  return json({ email: user.email });
+}
+
+async function handleLogout(request, env) {
+  const user = await getUserFromRequest(env.DB, request);
+  if (user) await deleteSession(env.DB, user.sessionToken);
+  return json({ ok: true }, 200, { "set-cookie": sessionCookieHeader(request, null, { clear: true }) });
+}
+
+// Bibliothèque synchronisée ------------------------------------------------
+
+async function handleGetLibrary(request, env) {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) return json({ error: "Non connecté." }, 401);
+  const library = await getLibraryForUser(env.DB, user.id);
+  return json(library);
+}
+
+async function handlePutLibrary(request, env) {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) return json({ error: "Non connecté." }, 401);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  await replaceLibraryForUser(env.DB, user.id, {
+    watched: body?.watched || {},
+    watchlist: body?.watchlist || {},
+  });
+  return json({ ok: true });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -148,6 +246,30 @@ export default {
 
     if (url.pathname === "/api/test-notification" && request.method === "POST") {
       return handleTestNotification(request, env);
+    }
+
+    if (url.pathname === "/api/auth/request-link" && request.method === "POST") {
+      return handleRequestLink(request, env);
+    }
+
+    if (url.pathname === "/api/auth/verify" && request.method === "POST") {
+      return handleVerify(request, env);
+    }
+
+    if (url.pathname === "/api/auth/me" && request.method === "GET") {
+      return handleMe(request, env);
+    }
+
+    if (url.pathname === "/api/auth/logout" && request.method === "POST") {
+      return handleLogout(request, env);
+    }
+
+    if (url.pathname === "/api/library" && request.method === "GET") {
+      return handleGetLibrary(request, env);
+    }
+
+    if (url.pathname === "/api/library" && request.method === "PUT") {
+      return handlePutLibrary(request, env);
     }
 
     // `run_worker_first` (wrangler.jsonc) ne route ici que /api/*, mais on

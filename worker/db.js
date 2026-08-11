@@ -78,6 +78,55 @@ export async function updateKnownProviders(db, subscriptionId, mediaType, tmdbId
     .run();
 }
 
+// Bibliothèque "vu / envie de voir" synchronisée par compte. -------------
+
+// Renvoie la bibliothèque au même format que l'état client (LibraryContext) :
+// { watched: { "movie:123": {...} }, watchlist: { "tv:456": {...} } }.
+export async function getLibraryForUser(db, userId) {
+  const { results } = await db
+    .prepare("SELECT media_type, tmdb_id, status, data, updated_at FROM library_items WHERE user_id = ?")
+    .bind(userId)
+    .all();
+  const watched = {};
+  const watchlist = {};
+  for (const row of results) {
+    const key = `${row.media_type}:${row.tmdb_id}`;
+    const item = { ...JSON.parse(row.data), updatedAt: row.updated_at };
+    if (row.status === "watched") watched[key] = item;
+    else watchlist[key] = item;
+  }
+  return { watched, watchlist };
+}
+
+// Remplace entièrement la bibliothèque du compte par l'état envoyé par le
+// client (le client fusionne avec le serveur avant d'appeler ceci — voir
+// LibraryContext — donc un simple remplacement complet est correct et
+// évite d'avoir à gérer des suppressions "orphelines" côté serveur).
+export async function replaceLibraryForUser(db, userId, { watched, watchlist }) {
+  await db.prepare("DELETE FROM library_items WHERE user_id = ?").bind(userId).run();
+
+  const rows = [];
+  for (const [key, item] of Object.entries(watched || {})) {
+    const [mediaType, tmdbId] = key.split(":");
+    rows.push({ mediaType, tmdbId, status: "watched", item });
+  }
+  for (const [key, item] of Object.entries(watchlist || {})) {
+    const [mediaType, tmdbId] = key.split(":");
+    rows.push({ mediaType, tmdbId, status: "watchlist", item });
+  }
+  if (rows.length === 0) return;
+
+  const stmt = db.prepare(
+    "INSERT INTO library_items (user_id, media_type, tmdb_id, status, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+  );
+  await db.batch(
+    rows.map(({ mediaType, tmdbId, status, item }) => {
+      const { updatedAt, ...rest } = item;
+      return stmt.bind(userId, mediaType, Number(tmdbId), status, JSON.stringify(rest), updatedAt || Date.now());
+    })
+  );
+}
+
 export async function wasAlreadyNotified(db, subscriptionId, mediaType, tmdbId, reason) {
   const row = await db
     .prepare(

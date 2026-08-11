@@ -8,6 +8,8 @@ import Random from "./pages/Random";
 import MyList from "./pages/MyList";
 import Search from "./pages/Search";
 import Person from "./pages/Person";
+import Login from "./pages/Login";
+import VerifyAuth from "./pages/VerifyAuth";
 
 export default function App() {
   return (
@@ -22,6 +24,8 @@ export default function App() {
           <Route path="/aleatoire" element={<Random />} />
           <Route path="/ma-liste" element={<MyList />} />
           <Route path="/recherche" element={<Search />} />
+          <Route path="/connexion" element={<Login />} />
+          <Route path="/auth/verify" element={<VerifyAuth />} />
         </Routes>
       </main>
       <ScrollToTopButton />
