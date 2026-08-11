@@ -204,27 +204,6 @@ export function LibraryProvider({ children }) {
     });
   }, []);
 
-  // Sérialise toute la bibliothèque (vu + envies) pour la sauvegarder ou la partager.
-  const exportData = useCallback(
-    () => JSON.stringify({ exportedAt: new Date().toISOString(), ...state }, null, 2),
-    [state]
-  );
-
-  // Fusionne des données importées avec la bibliothèque actuelle (ne remplace jamais silencieusement).
-  const importData = useCallback((jsonString) => {
-    const parsed = JSON.parse(jsonString);
-    const incomingWatched = parsed.watched || {};
-    const incomingWatchlist = parsed.watchlist || {};
-    setState((prev) => ({
-      watched: { ...prev.watched, ...incomingWatched },
-      watchlist: { ...prev.watchlist, ...incomingWatchlist },
-    }));
-    return {
-      watchedCount: Object.keys(incomingWatched).length,
-      watchlistCount: Object.keys(incomingWatchlist).length,
-    };
-  }, []);
-
   const value = useMemo(
     () => ({
       watched: Object.values(state.watched).sort((a, b) => b.addedAt - a.addedAt),
@@ -237,10 +216,8 @@ export function LibraryProvider({ children }) {
       getRating,
       rateWatched,
       setRuntime,
-      exportData,
-      importData,
     }),
-    [state, toggleWatched, toggleWatchlist, isWatched, isInWatchlist, getRating, rateWatched, setRuntime, exportData, importData]
+    [state, toggleWatched, toggleWatchlist, isWatched, isInWatchlist, getRating, rateWatched, setRuntime]
   );
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
