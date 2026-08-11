@@ -121,7 +121,14 @@ le problème persiste.
 Se connecter (bouton "Connexion" dans la barre de navigation) permet de
 retrouver sa liste "envie de voir" / "déjà vu" sur plusieurs navigateurs et
 appareils. Pas de mot de passe : un lien de connexion à usage unique est
-envoyé par email (valable 15 minutes).
+envoyé par email (valable 15 minutes), avec aussi un **code court** en
+alternative (ex. `AB2K9X`) à taper directement dans l'app.
+
+Le code existe spécifiquement pour les apps ajoutées à l'écran d'accueil
+(iOS surtout) : dans ce mode, l'app tourne dans un stockage isolé de
+Safari, donc cliquer le lien (qui s'ouvre dans le navigateur) ne connecte
+jamais l'app installée. Taper le code dans l'app déjà ouverte contourne le
+problème, sans jamais changer de contexte de stockage.
 
 1. **Service d'envoi d'email** — le Worker utilise [Resend](https://resend.com)
    (compte gratuit). Dans le dashboard Cloudflare, sur le Worker `bobine` :

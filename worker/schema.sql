@@ -46,8 +46,14 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Jetons à usage unique envoyés par email, consommés par /api/auth/verify.
+-- `code` est une alternative courte au jeton (voir auth.js) : sur iOS, une
+-- app ajoutée à l'écran d'accueil tourne dans un stockage isolé de Safari,
+-- donc cliquer le lien (qui s'ouvre dans Safari) ne connecte jamais l'app
+-- installée. Taper le code directement dans l'app, sans jamais quitter son
+-- contexte de stockage, contourne le problème.
 CREATE TABLE IF NOT EXISTS magic_links (
   token TEXT PRIMARY KEY,
+  code TEXT UNIQUE,
   email TEXT NOT NULL,
   expires_at INTEGER NOT NULL,
   used_at INTEGER
