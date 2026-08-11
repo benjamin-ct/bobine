@@ -1,5 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import NavBar from "./components/NavBar";
+import ScrollToTop from "./components/ScrollToTop";
+import ScrollToTopButton from "./components/ScrollToTopButton";
 import Discover from "./pages/Discover";
 import Detail from "./pages/Detail";
 import Random from "./pages/Random";
@@ -10,6 +12,7 @@ import Person from "./pages/Person";
 export default function App() {
   return (
     <>
+      <ScrollToTop />
       <NavBar />
       <main>
         <Routes>
@@ -21,6 +24,7 @@ export default function App() {
           <Route path="/recherche" element={<Search />} />
         </Routes>
       </main>
+      <ScrollToTopButton />
     </>
   );
 }

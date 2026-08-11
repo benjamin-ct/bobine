@@ -76,14 +76,21 @@ export default function NavBar() {
     navigate(path);
   }
 
+  // Cliquer sur le logo ou un onglet remonte toujours en haut de la page,
+  // y compris quand on est déjà sur cette page (auquel cas la navigation
+  // ne se déclenche pas et ne le ferait pas toute seule).
+  function scrollTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <header className="navbar">
       <div className="navbar__inner">
-        <NavLink to="/" className="navbar__brand">🎬 Bobine</NavLink>
+        <NavLink to="/" className="navbar__brand" onClick={scrollTop}>🎬 Bobine</NavLink>
         <nav className="navbar__links">
-          <NavLink to="/" end>Découvrir</NavLink>
-          <NavLink to="/aleatoire">Aléatoire</NavLink>
-          <NavLink to="/ma-liste">Ma liste</NavLink>
+          <NavLink to="/" end onClick={scrollTop}>Découvrir</NavLink>
+          <NavLink to="/aleatoire" onClick={scrollTop}>Aléatoire</NavLink>
+          <NavLink to="/ma-liste" onClick={scrollTop}>Ma liste</NavLink>
         </nav>
         <div className="navbar__search" ref={wrapperRef}>
           <form onSubmit={onSubmit}>

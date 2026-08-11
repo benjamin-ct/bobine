@@ -123,6 +123,7 @@ npx wrangler dev
   - **Export / Import JSON** : bouton "Exporter" pour télécharger ta bibliothèque, "Importer" pour fusionner un fichier exporté (pratique pour changer d'appareil ou comparer ta liste avec quelqu'un d'autre).
 - **PWA installable** : icône dédiée, s'installe comme une app depuis le navigateur (Chrome/Edge : icône d'installation dans la barre d'adresse ; Android : "Ajouter à l'écran d'accueil" ; iOS Safari : partager → "Sur l'écran d'accueil").
 - **Notifications push** (optionnel, voir [Configuration des notifications push](#notifications-push-optionnel)) : préviens-toi quand un titre de ta liste "Envie de voir" arrive en streaming, pour les nouveautés dans tes genres préférés, et pour les grosses sorties du moment — même app fermée.
+- **Retour en haut de page** : un bouton flottant "↑" apparaît après un peu de scroll sur n'importe quelle page. La page remonte aussi automatiquement en haut en changeant d'onglet, et cliquer sur l'onglet actif (ou le logo "Bobine" depuis l'accueil) remonte en haut même sans changer de page.
 
 ## Notes techniques
 
