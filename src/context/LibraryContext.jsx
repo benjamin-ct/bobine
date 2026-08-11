@@ -1,6 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "./AuthContext";
 
 const STORAGE_KEY = "bobine.library.v1";
+// Mémorise, par email, si on a déjà fait la fusion initiale local ↔ serveur
+// sur CET appareil (voir l'effet de synchronisation plus bas).
+const SYNCED_FOR_KEY = "bobine.library.syncedFor";
+const SYNC_DEBOUNCE_MS = 1200;
 
 const LibraryContext = createContext(null);
 
@@ -28,7 +33,25 @@ function makeKey(mediaType, id) {
   return `${mediaType}:${id}`;
 }
 
+// Fusionne deux bibliothèques (locale + serveur) : pour chaque titre présent
+// des deux côtés, on garde la version la plus récente (updatedAt) ; sinon on
+// garde celle qui existe. Utilisé uniquement lors de la toute première
+// synchronisation sur un appareil (voir l'effet ci-dessous) — au-delà, le
+// serveur fait autorité pour éviter de faire réapparaître des titres
+// supprimés ailleurs.
+function mergeLists(local, remote) {
+  const merged = {};
+  for (const key of new Set([...Object.keys(local), ...Object.keys(remote)])) {
+    const a = local[key];
+    const b = remote[key];
+    if (a && b) merged[key] = (a.updatedAt || a.addedAt || 0) >= (b.updatedAt || b.addedAt || 0) ? a : b;
+    else merged[key] = a || b;
+  }
+  return merged;
+}
+
 export function LibraryProvider({ children }) {
+  const { status: authStatus, email } = useAuth();
   const [state, setState] = useState(loadInitialState);
   // Évite d'écraser le localStorage dès le premier rendu : on ne persiste
   // qu'à partir du moment où l'état change réellement suite à une action de
@@ -36,6 +59,10 @@ export function LibraryProvider({ children }) {
   // au chargement (JSON corrompu, quota, etc.) écraserait silencieusement
   // et immédiatement les vraies données par une bibliothèque vide.
   const isFirstRender = useRef(true);
+  // Le pull de synchronisation modifie `state` via setState : on met cette
+  // ref à true pendant l'opération pour que l'effet de push (plus bas) ne
+  // renvoie pas aussitôt au serveur les données qu'on vient de recevoir.
+  const syncingRef = useRef(false);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -49,6 +76,68 @@ export function LibraryProvider({ children }) {
     }
   }, [state]);
 
+  // Synchronisation avec le compte : au moment où l'utilisateur devient
+  // authentifié (connexion, ou session déjà active au chargement de la
+  // page), on récupère la bibliothèque du serveur.
+  //  - Première fois sur cet appareil pour ce compte : on fusionne avec les
+  //    données locales existantes (rien n'est perdu) puis on renvoie le
+  //    résultat fusionné au serveur.
+  //  - Les fois suivantes : le serveur fait autorité (il reflète le dernier
+  //    appareil ayant synchronisé), on remplace l'état local.
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !email) return;
+    let cancelled = false;
+    syncingRef.current = true;
+
+    fetch("/api/library")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("sync failed"))))
+      .then((remote) => {
+        if (cancelled) return;
+        const alreadySyncedFor = localStorage.getItem(SYNCED_FOR_KEY);
+        if (alreadySyncedFor === email) {
+          setState({ watched: remote.watched || {}, watchlist: remote.watchlist || {} });
+          return null;
+        }
+        // Première synchro sur cet appareil pour ce compte : fusion.
+        const merged = {
+          watched: mergeLists(state.watched, remote.watched || {}),
+          watchlist: mergeLists(state.watchlist, remote.watchlist || {}),
+        };
+        setState(merged);
+        localStorage.setItem(SYNCED_FOR_KEY, email);
+        return fetch("/api/library", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(merged),
+        });
+      })
+      .catch((err) => console.warn("Bobine : synchronisation de la bibliothèque impossible.", err))
+      .finally(() => {
+        if (!cancelled) syncingRef.current = false;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // On ne veut relancer la synchro que quand le statut d'auth ou le
+    // compte change, pas à chaque changement de `state` (sinon boucle).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus, email]);
+
+  // Renvoie l'état complet au serveur à chaque changement, une fois connecté
+  // (avec un léger anti-rebond pour ne pas spammer l'API à chaque clic).
+  useEffect(() => {
+    if (authStatus !== "authenticated" || syncingRef.current) return;
+    const timeoutId = setTimeout(() => {
+      fetch("/api/library", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(state),
+      }).catch((err) => console.warn("Bobine : envoi de la bibliothèque au serveur impossible.", err));
+    }, SYNC_DEBOUNCE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [state, authStatus]);
+
   const toggleWatched = useCallback((item) => {
     const key = makeKey(item.mediaType, item.id);
     setState((prev) => {
@@ -56,7 +145,7 @@ export function LibraryProvider({ children }) {
       if (next.watched[key]) {
         delete next.watched[key];
       } else {
-        next.watched[key] = { ...item, addedAt: Date.now() };
+        next.watched[key] = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
         // Un film vu n'a plus besoin d'être dans la liste à voir.
         if (next.watchlist[key]) {
           next.watchlist = { ...next.watchlist };
@@ -74,7 +163,7 @@ export function LibraryProvider({ children }) {
       if (next.watchlist[key]) {
         delete next.watchlist[key];
       } else {
-        next.watchlist[key] = { ...item, addedAt: Date.now() };
+        next.watchlist[key] = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
       }
       return next;
     });
@@ -93,7 +182,7 @@ export function LibraryProvider({ children }) {
         ...prev,
         watched: {
           ...prev.watched,
-          [key]: { ...prev.watched[key], rating },
+          [key]: { ...prev.watched[key], rating, updatedAt: Date.now() },
         },
       };
     });
@@ -109,7 +198,7 @@ export function LibraryProvider({ children }) {
         ...prev,
         watched: {
           ...prev.watched,
-          [key]: { ...prev.watched[key], runtimeMinutes },
+          [key]: { ...prev.watched[key], runtimeMinutes, updatedAt: Date.now() },
         },
       };
     });
