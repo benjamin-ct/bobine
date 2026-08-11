@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { posterUrl } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
@@ -57,60 +57,13 @@ function Row({ item }) {
 }
 
 export default function MyList() {
-  const { watched, watchlist, exportData, importData } = useLibrary();
+  const { watched, watchlist } = useLibrary();
   const [tab, setTab] = useState("watchlist");
-  const [importMessage, setImportMessage] = useState(null);
-  const fileInputRef = useRef(null);
   const items = tab === "watchlist" ? watchlist : watched;
-
-  function handleExport() {
-    const blob = new Blob([exportData()], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const date = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `bobine-export-${date}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function handleImportClick() {
-    fileInputRef.current?.click();
-  }
-
-  function handleFileChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const { watchedCount, watchlistCount } = importData(reader.result);
-        setImportMessage(`Import réussi : ${watchedCount} titre(s) vu(s), ${watchlistCount} envie(s) fusionné(s).`);
-      } catch {
-        setImportMessage("Le fichier n'est pas un export Bobine valide.");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  }
 
   return (
     <div className="page">
-      <div className="mylist-header">
-        <h1>Ma liste</h1>
-        <div className="mylist-actions">
-          <button className="btn" onClick={handleExport}>⬇ Exporter</button>
-          <button className="btn" onClick={handleImportClick}>⬆ Importer</button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json"
-            onChange={handleFileChange}
-            style={{ display: "none" }}
-          />
-        </div>
-      </div>
-      {importMessage && <p className="page-subtitle">{importMessage}</p>}
+      <h1>Ma liste</h1>
 
       <NotificationSettings />
 

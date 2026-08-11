@@ -914,20 +914,6 @@ button, select, input {
 
 /* Ma liste : en-tête + stats ------------------------------------------------ */
 
-.mylist-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 4px;
-}
-
-.mylist-actions {
-  display: flex;
-  gap: 10px;
-}
-
 .notification-settings {
   margin-bottom: 24px;
 }
