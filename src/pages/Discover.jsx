@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { discover, getGenres, getWatchProvidersList } from "../api/tmdb";
 import MediaCard from "../components/MediaCard";
 import FilterBar from "../components/FilterBar";
@@ -99,7 +99,8 @@ export default function Discover() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaType, genreId, providerId, sortField, sortDirection, advancedKey]);
 
-  function loadMore() {
+  const loadMore = useCallback(() => {
+    if (loadingMore || page >= totalPages) return;
     const nextPage = page + 1;
     setLoadingMore(true);
     discover(mediaType, {
@@ -111,12 +112,38 @@ export default function Discover() {
       ...toDiscoverParams(advanced),
     })
       .then((data) => {
-        setResults((prev) => [...prev, ...(data.results || [])]);
+        // TMDB peut renvoyer un même titre sur deux pages consécutives
+        // (le classement bouge légèrement pendant qu'on enchaîne les
+        // requêtes) : on déduplique pour éviter les doublons à l'écran
+        // et les clés React en double.
+        setResults((prev) => {
+          const seenIds = new Set(prev.map((item) => item.id));
+          const fresh = (data.results || []).filter((item) => !seenIds.has(item.id));
+          return [...prev, ...fresh];
+        });
         setPage(nextPage);
       })
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, sortField, sortDirection, advancedKey]);
+
+  // Sentinelle observée pour déclencher le chargement de la page suivante
+  // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
+  const sentinelRef = useRef(null);
+  useEffect(() => {
+    if (status !== "success") return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore();
+      },
+      { rootMargin: "600px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [status, loadMore]);
 
   return (
     <div className="page">
@@ -152,10 +179,8 @@ export default function Discover() {
             ))}
           </div>
           {page < totalPages && (
-            <div className="load-more">
-              <button className="btn btn--lg" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? "Chargement…" : "Afficher plus"}
-              </button>
+            <div ref={sentinelRef} className="load-more">
+              {loadingMore && <span className="page-subtitle">Chargement…</span>}
             </div>
           )}
         </>

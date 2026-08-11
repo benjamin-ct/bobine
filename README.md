@@ -112,7 +112,7 @@ npx wrangler dev
 
 ## Fonctionnalités
 
-- **Découvrir** : parcourir films/séries, filtrable par genre et par n'importe laquelle des plateformes de streaming disponibles en France (liste complète tirée de TMDB, pas juste les grosses). Tri par popularité, note, ou année (croissant/décroissant). Les résultats s'accumulent avec un bouton "Afficher plus" (pas de pagination).
+- **Découvrir** : parcourir films/séries, filtrable par genre et par n'importe laquelle des plateformes de streaming disponibles en France (liste complète tirée de TMDB, pas juste les grosses). Tri par popularité, note, ou année (croissant/décroissant). Les résultats s'accumulent en **scroll infini** : la page suivante se charge automatiquement en approchant du bas (pas de bouton, pas de pagination).
   - **Filtres avancés** (repliables) : année de sortie (min/max — ex. "tous les films de 2025"), note (min/max), nombre de votes minimum, durée (min/max), pays de production.
 - **Recherche** : barre de recherche globale — films, séries, **et personnes** (acteurs, réalisateurs). Cliquer sur une personne ouvre sa fiche avec sa filmographie complète (comme acteur/actrice, et comme réalisateur/scénariste).
 - **Fiche détail** : synopsis, note, bande-annonce jouée en modal (sans quitter l'app), plateformes de streaming disponibles en France, bouton "🔁 Similaire" qui saute directement aux recommandations.
