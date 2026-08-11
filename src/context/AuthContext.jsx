@@ -61,20 +61,33 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
-  // Consomme le jeton reçu par email, établit la session.
-  const verify = useCallback(async (token) => {
+  // Consomme le jeton (lien cliqué) ou le code (saisi à la main — voir
+  // Login.jsx, utile quand le lien s'ouvre dans le navigateur au lieu de
+  // l'app installée sur l'écran d'accueil, notamment sur iOS) et établit
+  // la session.
+  const verifyWith = useCallback(async (body, fallbackError) => {
     const res = await fetch("/api/auth/verify", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "Ce lien de connexion n'est plus valide.");
+    if (!res.ok) throw new Error(data.error || fallbackError);
     pinnedRef.current = true;
     setEmail(data.email);
     setStatus("authenticated");
     return data;
   }, []);
+
+  const verify = useCallback(
+    (token) => verifyWith({ token }, "Ce lien de connexion n'est plus valide."),
+    [verifyWith]
+  );
+
+  const verifyCode = useCallback(
+    (code) => verifyWith({ code }, "Ce code n'est plus valide."),
+    [verifyWith]
+  );
 
   const logout = useCallback(async () => {
     pinnedRef.current = false;
@@ -84,7 +97,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ status, email, requestLink, verify, logout }}>
+    <AuthContext.Provider value={{ status, email, requestLink, verify, verifyCode, logout }}>
       {children}
     </AuthContext.Provider>
   );

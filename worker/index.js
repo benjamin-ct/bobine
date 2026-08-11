@@ -14,6 +14,7 @@ import {
   isValidEmail,
   createMagicLink,
   consumeMagicLink,
+  consumeMagicLinkByCode,
   findOrCreateUser,
   createSession,
   deleteSession,
@@ -151,15 +152,16 @@ async function handleRequestLink(request, env) {
   const email = (body?.email || "").trim().toLowerCase();
   if (!isValidEmail(email)) return json({ error: "Adresse email invalide." }, 400);
 
-  const token = await createMagicLink(env.DB, email);
+  const { token, code } = await createMagicLink(env.DB, email);
   const link = `${new URL(request.url).origin}/auth/verify?token=${token}`;
 
   try {
-    const { skipped } = await sendMagicLinkEmail(env, email, link);
+    const { skipped } = await sendMagicLinkEmail(env, email, link, code);
     // Uniquement quand RESEND_API_KEY n'est pas configurée (dev local) : pas
-    // de vraie boîte mail à disposition, donc on renvoie le lien directement
-    // pour pouvoir tester le flux. Ne se produit jamais en production.
-    return json({ ok: true, devLink: skipped ? link : undefined });
+    // de vraie boîte mail à disposition, donc on renvoie le lien et le code
+    // directement pour pouvoir tester le flux. Ne se produit jamais en
+    // production.
+    return json({ ok: true, devLink: skipped ? link : undefined, devCode: skipped ? code : undefined });
   } catch (err) {
     return json({ error: err.message }, 502);
   }
@@ -173,10 +175,16 @@ async function handleVerify(request, env) {
     return json({ error: "JSON invalide." }, 400);
   }
   const token = body?.token;
-  if (!token) return json({ error: "Jeton manquant." }, 400);
+  const code = body?.code;
+  if (!token && !code) return json({ error: "Jeton ou code manquant." }, 400);
 
-  const email = await consumeMagicLink(env.DB, token);
-  if (!email) return json({ error: "Ce lien de connexion est invalide, expiré, ou déjà utilisé." }, 400);
+  const email = token ? await consumeMagicLink(env.DB, token) : await consumeMagicLinkByCode(env.DB, code);
+  if (!email) {
+    return json(
+      { error: code ? "Ce code est invalide, expiré, ou déjà utilisé." : "Ce lien de connexion est invalide, expiré, ou déjà utilisé." },
+      400
+    );
+  }
 
   const user = await findOrCreateUser(env.DB, email);
   const sessionToken = await createSession(env.DB, user.id);

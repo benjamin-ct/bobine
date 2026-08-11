@@ -1169,3 +1169,11 @@ button, select, input {
   color: var(--accent);
   font-size: 0.9rem;
 }
+
+.auth-card__code-input {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 1.4rem;
+  letter-spacing: 6px;
+  text-align: center;
+  text-transform: uppercase;
+}
