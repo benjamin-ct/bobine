@@ -543,8 +543,11 @@ button, select, input {
 
 .person-header__photo {
   width: 180px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
   border-radius: 12px;
   flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .person-header__bio {
