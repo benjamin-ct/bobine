@@ -402,7 +402,7 @@ async function handleLibrarySync(request, env) {
 // front (src/api/tmdb.js) appelle /api/tmdb/<chemin TMDB> ; ce handler
 // relaie vers l'API TMDB en y injectant la clé côté serveur, en ignorant
 // toute valeur `api_key` que le client aurait pu fournir.
-async function handleTmdbProxy(request, env) {
+async function handleTmdbProxy(request, env, ctx) {
   const ip = getClientIp(request);
   if (!(await checkRateLimit(env.DB, `tmdb:ip:${ip}`, { limit: 120, windowMs: 60_000 }))) {
     return RATE_LIMIT_RESPONSE();
@@ -410,6 +410,22 @@ async function handleTmdbProxy(request, env) {
   if (!env.TMDB_API_KEY) return json({ error: "TMDB_API_KEY non configurée côté serveur." }, 503);
 
   const url = new URL(request.url);
+
+  // Cache d'edge Cloudflare : l'en-tête cache-control posé plus bas ne
+  // suffit PAS à lui seul à faire mettre une réponse de Worker en cache —
+  // sans un appel explicite à caches.default, chaque requête (même
+  // identique, même émise à quelques secondes d'écart par deux visiteurs
+  // différents) repart taper l'API TMDB. Sous charge, ça épuise le quota de
+  // la clé API partagée côté serveur (429 TMDB observé en prod, notamment
+  // depuis l'ajout de getTheatricalStatusIndex : 10 requêtes TMDB à chaque
+  // chargement de page, par visiteur, sans ce cache). La clé de cache se
+  // base sur l'URL entrante (sans api_key, jamais transmise par le client
+  // de toute façon) pour rester stable quel que soit le visiteur.
+  const cache = caches.default;
+  const cacheKey = new Request(url.toString(), request);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
   const tmdbPath = url.pathname.replace(/^\/api\/tmdb/, "");
   const tmdbUrl = new URL(`https://api.themoviedb.org/3${tmdbPath}`);
   for (const [key, value] of url.searchParams) {
@@ -420,7 +436,7 @@ async function handleTmdbProxy(request, env) {
 
   const res = await fetch(tmdbUrl.toString());
   const body = await res.text();
-  return new Response(body, {
+  const response = new Response(body, {
     status: res.status,
     headers: {
       "content-type": "application/json; charset=utf-8",
@@ -429,10 +445,15 @@ async function handleTmdbProxy(request, env) {
       "cache-control": "public, max-age=300",
     },
   });
+  // Ne met en cache que les réponses réussies : une erreur (429 y compris)
+  // ne doit jamais être figée pour tout le monde pendant 5 minutes.
+  // waitUntil : n'ajoute pas la latence de l'écriture cache à la réponse.
+  if (res.ok) ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     // `run_worker_first` (wrangler.jsonc) ne route que /api/* ici : les
     // assets statiques (dont le service worker /sw.js) sont servis
@@ -443,7 +464,7 @@ export default {
     // `navigator.serviceWorker.register()`). Leurs en-têtes de sécurité
     // sont donc posés nativement via public/_headers plutôt qu'ici.
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
-    const response = await routeRequest(request, env, url);
+    const response = await routeRequest(request, env, url, ctx);
     return withSecurityHeaders(response);
   },
 
@@ -452,7 +473,7 @@ export default {
   },
 };
 
-async function routeRequest(request, env, url) {
+async function routeRequest(request, env, url, ctx) {
   if (url.pathname === "/api/vapid-public-key" && request.method === "GET") {
     if (!env.VAPID_PUBLIC_KEY) return json({ error: "VAPID_PUBLIC_KEY non configurée." }, 503);
     return json({ publicKey: env.VAPID_PUBLIC_KEY });
@@ -521,7 +542,7 @@ async function routeRequest(request, env, url) {
   }
 
   if (url.pathname.startsWith("/api/tmdb/") && request.method === "GET") {
-    return handleTmdbProxy(request, env);
+    return handleTmdbProxy(request, env, ctx);
   }
 
   // Pays du visiteur, déduit par Cloudflare au niveau du edge (aucun appel
