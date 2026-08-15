@@ -6,6 +6,7 @@ import ProviderBadges from "../components/ProviderBadges";
 import TrailerButton from "../components/TrailerButton";
 import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
+import { useRegion } from "../context/RegionContext";
 
 const MAX_ATTEMPTS = 6;
 
@@ -26,6 +27,7 @@ export default function Random() {
   const [error, setError] = useState(null);
 
   const { watchedIds, isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
+  const { region, regionName } = useRegion();
 
   useEffect(() => {
     setGenreId("");
@@ -36,13 +38,13 @@ export default function Random() {
     getGenres(mediaType)
       .then((data) => !cancelled && setGenres(data.genres || []))
       .catch(() => !cancelled && setGenres([]));
-    getWatchProvidersList(mediaType)
+    getWatchProvidersList(mediaType, region)
       .then((list) => !cancelled && setProviders(list))
       .catch(() => !cancelled && setProviders([]));
     return () => {
       cancelled = true;
     };
-  }, [mediaType]);
+  }, [mediaType, region]);
 
   async function drawRandom() {
     setStatus("loading");
@@ -55,6 +57,7 @@ export default function Random() {
       const discoverParams = {
         genreId,
         providerIds: providerId ? [providerId] : undefined,
+        region,
         yearMin: yearMin ? Number(yearMin) : undefined,
         yearMax: yearMax ? Number(yearMax) : undefined,
       };
@@ -85,7 +88,7 @@ export default function Random() {
 
       const [fullDetails, providersData] = await Promise.all([
         getDetails(mediaType, candidate.id),
-        getWatchProviders(mediaType, candidate.id),
+        getWatchProviders(mediaType, candidate.id, region),
       ]);
       setPick({ ...candidate, mediaType });
       setPickDetails(fullDetails);
@@ -200,7 +203,7 @@ export default function Random() {
               <TrailerButton videos={pickDetails?.videos?.results} />
               <Link className="btn" to={`/media/${mediaType}/${pick.id}#recommendations`}>🔁 Similaire</Link>
             </div>
-            <h3>Où regarder en France</h3>
+            <h3>Où regarder{regionName ? ` (${regionName})` : ""}</h3>
             <ProviderBadges providers={providersResult} />
           </div>
         </div>

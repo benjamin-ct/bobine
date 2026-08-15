@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { discover, getGenres, getWatchProvidersList } from "../api/tmdb";
 import MediaCard from "../components/MediaCard";
 import FilterBar from "../components/FilterBar";
+import CountryLanguageFilter from "../components/CountryLanguageFilter";
 import { Loading, ErrorMessage, EmptyState } from "../components/StateMessage";
+import { useRegion } from "../context/RegionContext";
 
 const WINDOWS = [
   { value: 7, label: "7 prochains jours" },
@@ -30,6 +32,8 @@ export default function ComingSoon() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
+  const [country, setCountry] = useState("");
+  const [language, setLanguage] = useState("");
   const [windowDays, setWindowDays] = useState(30);
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
@@ -39,6 +43,7 @@ export default function ComingSoon() {
   const [status, setStatus] = useState("idle");
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const { region } = useRegion();
 
   // Réinitialise les filtres dépendants et la liste au changement de type.
   useEffect(() => {
@@ -48,20 +53,20 @@ export default function ComingSoon() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreId, providerId, windowDays]);
+  }, [genreId, providerId, country, language, windowDays]);
 
   useEffect(() => {
     let cancelled = false;
     getGenres(mediaType)
       .then((data) => !cancelled && setGenres(data.genres || []))
       .catch(() => !cancelled && setGenres([]));
-    getWatchProvidersList(mediaType)
+    getWatchProvidersList(mediaType, region)
       .then((list) => !cancelled && setProviders(list))
       .catch(() => !cancelled && setProviders([]));
     return () => {
       cancelled = true;
     };
-  }, [mediaType]);
+  }, [mediaType, region]);
 
   // Recharge depuis le début quand les filtres changent (page revient à 1).
   useEffect(() => {
@@ -71,6 +76,9 @@ export default function ComingSoon() {
       page: 1,
       genreId,
       providerIds: providerId ? [providerId] : undefined,
+      region,
+      originCountry: country || undefined,
+      originalLanguage: language || undefined,
       sortField: "popularity",
       sortDirection: "desc",
       ...dateRangeFor(windowDays),
@@ -89,7 +97,7 @@ export default function ComingSoon() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, genreId, providerId, windowDays]);
+  }, [mediaType, genreId, providerId, region, country, language, windowDays]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || page >= totalPages) return;
@@ -99,6 +107,9 @@ export default function ComingSoon() {
       page: nextPage,
       genreId,
       providerIds: providerId ? [providerId] : undefined,
+      region,
+      originCountry: country || undefined,
+      originalLanguage: language || undefined,
       sortField: "popularity",
       sortDirection: "desc",
       ...dateRangeFor(windowDays),
@@ -117,7 +128,7 @@ export default function ComingSoon() {
       })
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
-  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, windowDays]);
+  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, region, country, language, windowDays]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
@@ -150,6 +161,13 @@ export default function ComingSoon() {
         providerId={providerId}
         setProviderId={setProviderId}
         providers={providers}
+      />
+
+      <CountryLanguageFilter
+        country={country}
+        setCountry={setCountry}
+        language={language}
+        setLanguage={setLanguage}
       />
 
       <div className="filter-bar__group" style={{ marginBottom: 18 }}>
