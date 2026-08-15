@@ -4,13 +4,9 @@ import {
   deleteSubscriptionById,
   replaceWatchlist,
   replaceGenrePreferences,
-  applyWatchlistChanges,
-  applyGenrePreferenceChanges,
-  getSubscriptionIdByEndpoint,
   getAllSubscriptions,
   getLibraryForUser,
   replaceLibraryForUser,
-  applyLibraryChanges,
 } from "./db.js";
 import { runDailyCheck } from "./scheduled.js";
 import { sendPush, ExpiredSubscriptionError } from "./push.js";
@@ -27,13 +23,7 @@ import {
   sendMagicLinkEmail,
 } from "./auth.js";
 import { checkRateLimit, getClientIp } from "./rate-limit.js";
-import {
-  sanitizeLibraryPayload,
-  sanitizeLibrarySyncPayload,
-  sanitizeWatchlistItems,
-  sanitizeGenrePrefs,
-  sanitizeKeyList,
-} from "./validate.js";
+import { sanitizeLibraryPayload } from "./validate.js";
 import { verifyRecaptcha } from "./recaptcha.js";
 
 function json(data, status = 200, extraHeaders = {}) {
@@ -123,52 +113,29 @@ async function handleSubscribe(request, env) {
     auth: keys.auth,
   });
 
-  // Remplacement complet : correct et volontaire ici, cet appel n'a lieu
-  // qu'à l'activation des notifications (une fois par appareil), jamais à
-  // chaque changement — voir handleSubscribeSync ci-dessous pour la
-  // resynchronisation incrémentale qui, elle, se déclenche à chaque toggle.
-  await replaceWatchlist(env.DB, subscriptionId, sanitizeWatchlistItems(watchlist, MAX_WATCHLIST_ITEMS));
-  await replaceGenrePreferences(env.DB, subscriptionId, sanitizeGenrePrefs(favoriteGenres, MAX_GENRE_PREFS));
+  await replaceWatchlist(
+    env.DB,
+    subscriptionId,
+    (Array.isArray(watchlist) ? watchlist : [])
+      .slice(0, MAX_WATCHLIST_ITEMS)
+      .map((item) => ({
+        mediaType: item.mediaType,
+        tmdbId: item.tmdbId,
+        title: String(item.title || "").slice(0, 300),
+        posterPath: item.posterPath,
+      }))
+  );
+
+  await replaceGenrePreferences(
+    env.DB,
+    subscriptionId,
+    (Array.isArray(favoriteGenres) ? favoriteGenres : []).slice(0, MAX_GENRE_PREFS).map((g) => ({
+      mediaType: g.mediaType,
+      genreId: g.genreId,
+    }))
+  );
 
   return json({ ok: true, subscriptionId });
-}
-
-// Resynchronisation incrémentale du mirroir des notifications push : appelée
-// à chaque changement de la watchlist/des genres favoris tant que les
-// notifications sont actives (voir NotificationSettings.jsx), avec
-// uniquement le delta depuis le dernier envoi calculé côté client — aucune
-// lecture de l'état actuel n'est nécessaire ici, contrairement à
-// handleSubscribe (remplacement complet, mais rare : une fois par
-// activation).
-async function handleSubscribeSync(request, env) {
-  const ip = getClientIp(request);
-  if (!(await checkRateLimit(env.DB, `subscribe-sync:ip:${ip}`, { limit: 30, windowMs: 60_000 }))) {
-    return RATE_LIMIT_RESPONSE();
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: "JSON invalide." }, 400);
-  }
-
-  const { endpoint, watchlistToAdd, watchlistToRemove, genresToAdd, genresToRemove } = body || {};
-  if (typeof endpoint !== "string") return json({ error: "endpoint manquant." }, 400);
-
-  const subscriptionId = await getSubscriptionIdByEndpoint(env.DB, endpoint);
-  if (!subscriptionId) return json({ error: "Abonnement introuvable." }, 404);
-
-  await applyWatchlistChanges(env.DB, subscriptionId, {
-    add: sanitizeWatchlistItems(watchlistToAdd, MAX_WATCHLIST_ITEMS),
-    remove: sanitizeKeyList(watchlistToRemove, MAX_WATCHLIST_ITEMS).map((k) => ({ mediaType: k.mediaType, tmdbId: k.id })),
-  });
-  await applyGenrePreferenceChanges(env.DB, subscriptionId, {
-    add: sanitizeGenrePrefs(genresToAdd, MAX_GENRE_PREFS),
-    remove: sanitizeKeyList(genresToRemove, MAX_GENRE_PREFS).map((k) => ({ mediaType: k.mediaType, genreId: k.id })),
-  });
-
-  return json({ ok: true });
 }
 
 async function handleUnsubscribe(request, env) {
@@ -367,33 +334,7 @@ async function handlePutLibrary(request, env) {
   // Le client est la source de vérité fonctionnelle (voir replaceLibraryForUser),
   // mais jamais la seule ligne de défense sur ce qui est écrit en base :
   // types coercés/validés, clés non prévues supprimées, tailles bornées.
-  // Remplacement complet volontaire ici : cet endpoint ne sert plus qu'à la
-  // fusion initiale lors d'une première connexion sur un nouvel appareil
-  // (voir LibraryContext.jsx, SYNCED_FOR_KEY) — un vrai remplacement complet
-  // y est correct et rare. Chaque toggle/notation/case cochée régulier passe
-  // désormais par handleLibrarySync ci-dessous (delta uniquement).
   await replaceLibraryForUser(env.DB, user.id, sanitizeLibraryPayload(body));
-  return json({ ok: true });
-}
-
-// Synchronisation incrémentale : le client envoie uniquement ce qui a
-// changé depuis le dernier envoi (voir LibraryContext.jsx, pendingOpsRef) —
-// aucune lecture de l'état actuel n'est nécessaire, contrairement à une
-// diffusion de l'état complet qui devrait d'abord lire l'existant pour
-// savoir quoi écrire. Même garde IDOR que handleGetLibrary/handlePutLibrary
-// ci-dessus : user.id vient uniquement du cookie de session.
-async function handleLibrarySync(request, env) {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) return json({ error: "Non connecté." }, 401);
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: "JSON invalide." }, 400);
-  }
-  const { upserts, deletes } = sanitizeLibrarySyncPayload(body);
-  if (upserts.length === 0 && deletes.length === 0) return json({ ok: true });
-  await applyLibraryChanges(env.DB, user.id, { upserts, deletes });
   return json({ ok: true });
 }
 
@@ -480,10 +421,6 @@ async function routeRequest(request, env, url) {
     return handleUnsubscribe(request, env);
   }
 
-  if (url.pathname === "/api/subscribe/sync" && request.method === "POST") {
-    return handleSubscribeSync(request, env);
-  }
-
   if (url.pathname === "/api/run-check" && request.method === "POST") {
     return handleManualRun(request, env);
   }
@@ -514,10 +451,6 @@ async function routeRequest(request, env, url) {
 
   if (url.pathname === "/api/library" && request.method === "PUT") {
     return handlePutLibrary(request, env);
-  }
-
-  if (url.pathname === "/api/library/sync" && request.method === "POST") {
-    return handleLibrarySync(request, env);
   }
 
   if (url.pathname.startsWith("/api/tmdb/") && request.method === "GET") {

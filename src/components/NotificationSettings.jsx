@@ -35,66 +35,23 @@ function computeFavoriteGenres(watched) {
     });
 }
 
-function toWatchlistPayload(item) {
-  return { mediaType: item.mediaType, tmdbId: item.id, title: item.title, posterPath: item.posterPath };
-}
-
-// Remplacement complet : correct et volontaire, réservé à l'activation
-// (une fois par appareil) — voir syncSubscriptionDelta plus bas pour la
-// resynchronisation à chaque changement, qui n'envoie que le delta.
-async function fullSyncSubscription(endpoint, keys, watchlist, watched) {
+async function syncSubscription(endpoint, keys, watchlist, watched) {
   const res = await fetch("/api/subscribe", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       endpoint,
       keys,
-      watchlist: watchlist.map(toWatchlistPayload),
+      watchlist: watchlist.map((item) => ({
+        mediaType: item.mediaType,
+        tmdbId: item.id,
+        title: item.title,
+        posterPath: item.posterPath,
+      })),
       favoriteGenres: computeFavoriteGenres(watched),
     }),
   });
   if (!res.ok) throw new Error(`Synchronisation échouée (${res.status})`);
-}
-
-function keysOf(watchlist, watched) {
-  return {
-    watchlistKeys: new Set(watchlist.map((item) => `${item.mediaType}:${item.id}`)),
-    genreKeys: new Set(computeFavoriteGenres(watched).map((g) => `${g.mediaType}:${g.genreId}`)),
-  };
-}
-
-// Resynchronisation appelée à chaque changement de la watchlist/des genres
-// favoris tant que les notifications sont actives : calcule le delta par
-// rapport au dernier envoi (lastSyncedRef) et n'envoie que ça — pas toute la
-// watchlist à chaque toggle. `favoriteGenres` est un agrégat recalculé
-// entièrement à chaque appel (top genres sur tout l'historique vu), donc le
-// diff se fait ici, côté client, plutôt que d'espérer un delta "naturel".
-async function syncSubscriptionDelta(endpoint, watchlist, watched, lastSyncedRef) {
-  const desiredWatchlist = watchlist.map(toWatchlistPayload);
-  const desiredGenres = computeFavoriteGenres(watched);
-  const { watchlistKeys: desiredWatchlistKeys, genreKeys: desiredGenreKeys } = keysOf(watchlist, watched);
-
-  const watchlistToAdd = desiredWatchlist.filter(
-    (item) => !lastSyncedRef.current.watchlistKeys.has(`${item.mediaType}:${item.tmdbId}`)
-  );
-  const watchlistToRemove = [...lastSyncedRef.current.watchlistKeys].filter((key) => !desiredWatchlistKeys.has(key));
-  const genresToAdd = desiredGenres.filter(
-    (g) => !lastSyncedRef.current.genreKeys.has(`${g.mediaType}:${g.genreId}`)
-  );
-  const genresToRemove = [...lastSyncedRef.current.genreKeys].filter((key) => !desiredGenreKeys.has(key));
-
-  if (!watchlistToAdd.length && !watchlistToRemove.length && !genresToAdd.length && !genresToRemove.length) {
-    return; // rien n'a changé depuis le dernier envoi
-  }
-
-  const res = await fetch("/api/subscribe/sync", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ endpoint, watchlistToAdd, watchlistToRemove, genresToAdd, genresToRemove }),
-  });
-  if (!res.ok) throw new Error(`Synchronisation échouée (${res.status})`);
-
-  lastSyncedRef.current = { watchlistKeys: desiredWatchlistKeys, genreKeys: desiredGenreKeys };
 }
 
 export default function NotificationSettings() {
@@ -103,13 +60,10 @@ export default function NotificationSettings() {
   const [status, setStatus] = useState("idle"); // idle | working | error
   const [error, setError] = useState(null);
   const isFirstSync = useRef(true);
-  // Dernier état effectivement envoyé au serveur — voir syncSubscriptionDelta.
-  const lastSyncedRef = useRef({ watchlistKeys: new Set(), genreKeys: new Set() });
 
   // Re-synchronise la watchlist / les genres favoris côté serveur à chaque
   // changement, tant que les notifications sont actives — sans quoi le cron
-  // travaillerait sur une liste figée au moment de l'activation. N'envoie
-  // que le delta (voir syncSubscriptionDelta), pas la watchlist entière.
+  // travaillerait sur une liste figée au moment de l'activation.
   useEffect(() => {
     if (!endpoint) return;
     if (isFirstSync.current) {
@@ -119,9 +73,8 @@ export default function NotificationSettings() {
     navigator.serviceWorker?.ready.then((registration) =>
       registration.pushManager.getSubscription().then((sub) => {
         if (!sub) return;
-        syncSubscriptionDelta(endpoint, watchlist, watched, lastSyncedRef).catch((err) =>
-          console.error("Bobine : resync notifications échouée.", err)
-        );
+        const keys = sub.toJSON().keys;
+        syncSubscription(endpoint, keys, watchlist, watched).catch((err) => console.error("Bobine : resync notifications échouée.", err));
       })
     );
   }, [endpoint, watchlist, watched]);
@@ -155,11 +108,7 @@ export default function NotificationSettings() {
       });
 
       const { endpoint: subEndpoint, keys } = subscription.toJSON();
-      await fullSyncSubscription(subEndpoint, keys, watchlist, watched);
-      // La synchro complète ci-dessus couvre déjà l'état actuel : on amorce
-      // lastSyncedRef pour que la prochaine resync (voir l'effet plus haut)
-      // n'envoie pas à nouveau tout ce qui vient d'être écrit.
-      lastSyncedRef.current = keysOf(watchlist, watched);
+      await syncSubscription(subEndpoint, keys, watchlist, watched);
 
       localStorage.setItem(ENDPOINT_STORAGE_KEY, subEndpoint);
       setEndpoint(subEndpoint);

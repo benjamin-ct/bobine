@@ -194,31 +194,14 @@ export function estimateRuntimeMinutes(details, mediaType) {
 
 // Détails ---------------------------------------------------------------
 
-// Cache mémoire (durée de vie de la session, comme countriesCache/
-// languagesCache ci-dessus) : les métadonnées d'un titre sont statiques à
-// l'échelle d'une session, donc revoir plusieurs fois la même fiche détail
-// (retour arrière, recommandation pointant vers un titre déjà consulté...)
-// ne doit pas refaire l'appel réseau. On met en cache la promesse elle-même
-// (pas seulement le résultat résolu) : un second appel concurrent pour le
-// même titre pendant que le premier est encore en vol (navigation rapide
-// entre deux fiches) réutilise la requête en cours plutôt que d'en émettre
-// une seconde. En cas d'échec, l'entrée est retirée pour permettre un
-// nouvel essai au prochain appel.
-const detailsCache = new Map();
 export function getDetails(mediaType, id) {
-  const key = `${mediaType}:${id}`;
-  if (detailsCache.has(key)) return detailsCache.get(key);
-  const promise = tmdbFetch(`/${mediaType}/${id}`, {
+  return tmdbFetch(`/${mediaType}/${id}`, {
     // release_dates : sorties par pays (dont FR), pour le statut "au
     // cinéma" — inclus ici pour ne pas faire un second appel sur la fiche
-    // détail.
+    // détail (voir getFrenchTheatricalDate plus bas pour les vignettes,
+    // où un appel dédié par titre est nécessaire).
     append_to_response: "credits,videos,recommendations,release_dates",
-  }).catch((err) => {
-    detailsCache.delete(key);
-    throw err;
   });
-  detailsCache.set(key, promise);
-  return promise;
 }
 
 // Statut "au cinéma" (France) --------------------------------------------
@@ -244,61 +227,33 @@ export function getFrenchTheatricalDateFromDetails(details) {
   return extractFrenchTheatricalDate(details?.release_dates);
 }
 
+// Pour les vignettes (grilles) : un appel dédié par film, avec cache en
+// mémoire pour éviter de le refaire si le même titre réapparaît dans une
+// autre liste pendant la session.
+const frTheatricalDateCache = new Map();
+export async function getFrenchTheatricalDate(movieId) {
+  if (frTheatricalDateCache.has(movieId)) return frTheatricalDateCache.get(movieId);
+  let date = null;
+  try {
+    const data = await tmdbFetch(`/movie/${movieId}/release_dates`);
+    date = extractFrenchTheatricalDate(data);
+  } catch {
+    date = null;
+  }
+  frTheatricalDateCache.set(movieId, date);
+  return date;
+}
+
 // "upcoming" (pas encore sorti), "in_theaters" (sorti il y a moins de
 // THEATRICAL_WINDOW_DAYS), "past" (sorti plus tôt), ou null si aucune date
 // de sortie cinéma FR n'est connue pour ce titre (VOD/streaming direct,
-// film jamais distribué en salle en France...). Utilisé sur la fiche détail
-// (une seule date, déjà connue précisément via extractFrenchTheatricalDate).
+// film jamais distribué en salle en France...).
 export function theatricalStatusFromDate(dateString) {
   if (!dateString) return null;
   const diffDays = (Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24);
   if (diffDays < 0) return "upcoming";
   if (diffDays <= THEATRICAL_WINDOW_DAYS) return "in_theaters";
   return "past";
-}
-
-// Statut "au cinéma" pour les vignettes (grilles) --------------------------
-//
-// Contrairement à la fiche détail (une fiche = un appel /release_dates déjà
-// inclus via append_to_response, donc gratuit), une grille affiche des
-// dizaines de titres à la fois : faire un appel /release_dates par vignette
-// enverrait autant de requêtes que de cartes affichées. TMDB expose deux
-// listes dédiées, région-conscientes et déjà filtrées aux sorties en
-// salle — /movie/now_playing et /movie/upcoming — qu'on récupère
-// entièrement une fois par région (mise en cache mémoire, comme
-// countriesCache ci-dessus) pour en faire un index consultable en O(1),
-// sans aucun appel réseau par carte.
-const MAX_THEATRICAL_PAGES = 10; // now_playing + upcoming restent largement sous ce plafond en pratique (~10 pages à eux deux)
-
-async function fetchAllPages(path, region, maxPages) {
-  const first = await tmdbFetch(path, { region, page: 1 });
-  const totalPages = Math.min(first.total_pages || 1, maxPages);
-  const rest = await Promise.all(
-    Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => tmdbFetch(path, { region, page: i + 2 }))
-  );
-  return [first, ...rest].flatMap((page) => page.results || []);
-}
-
-let theatricalIndexCache = null; // { region, promise }
-export function getTheatricalStatusIndex(region = DEFAULT_REGION) {
-  if (theatricalIndexCache?.region === region) return theatricalIndexCache.promise;
-  const promise = (async () => {
-    const [nowPlaying, upcoming] = await Promise.all([
-      fetchAllPages("/movie/now_playing", region, MAX_THEATRICAL_PAGES),
-      fetchAllPages("/movie/upcoming", region, MAX_THEATRICAL_PAGES),
-    ]);
-    const index = new Map();
-    for (const movie of upcoming) index.set(movie.id, "upcoming");
-    // now_playing en dernier : si un titre apparaît dans les deux listes
-    // (bascule en cours), "en salles" prime sur "bientôt".
-    for (const movie of nowPlaying) index.set(movie.id, "in_theaters");
-    return index;
-  })().catch((err) => {
-    theatricalIndexCache = null;
-    throw err;
-  });
-  theatricalIndexCache = { region, promise };
-  return promise;
 }
 
 // Détail d'une saison (liste des épisodes) — appel séparé de getDetails()
