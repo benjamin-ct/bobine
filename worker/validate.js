@@ -8,17 +8,36 @@ const MAX_STRING_LENGTH = 300;
 const MAX_ITEMS_PER_LIST = 5000; // large marge au-dessus d'un usage réel, évite un abus qui gonflerait la base indéfiniment
 const VALID_MEDIA_TYPES = new Set(["movie", "tv"]);
 
-const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const HTML_ENTITY_DECODES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&apos;": "'" };
+const HTML_ENTITY_PATTERN = /&amp;|&lt;|&gt;|&quot;|&#39;|&apos;/g;
+const MAX_DECODE_PASSES = 50;
 
-// Échappe les caractères HTML plutôt que de tenter de repérer/retirer des
-// balises (une liste noire de motifs se contourne facilement). Même si rien
-// dans l'UI actuelle ne réinjecte ce texte tel quel (les titres viennent de
-// TMDB par id, jamais de ce champ), ce champ est écrit par le client sans
-// contrôle — mieux vaut que la valeur stockée soit sûre à afficher telle
-// quelle dans n'importe quel contexte futur (notifications, export...).
+// Décode les entités HTML jusqu'à stabilité. Ce champ était auparavant
+// HTML-échappé à l'écriture (voir git blame) — mais comme le client renvoie
+// systématiquement la bibliothèque entière à chaque toggle, y compris les
+// titres déjà échappés reçus du serveur au tour précédent, chaque sync
+// réappliquait l'échappement sur du texte déjà échappé et faisait grossir
+// indéfiniment les entités (ex. "L'Aube" → "L&#39;Aube" → "L&amp;#39;Aube"
+// → ... → "L&amp;amp;amp;...#39;Aube" après des dizaines de syncs). On ne
+// stocke plus que du texte brut : React échappe déjà tout ce qui est
+// affiché en JSX (aucun composant n'utilise dangerouslySetInnerHTML avec
+// ces champs), donc l'échappement ici n'apportait aucune protection réelle
+// tout en corrompant les données. Ce décodage répété sert aussi à réparer
+// les titres déjà corrompus par l'ancien comportement, dès la prochaine
+// écriture.
+export function decodeHtmlEntities(value) {
+  let out = value;
+  for (let i = 0; i < MAX_DECODE_PASSES; i++) {
+    const next = out.replace(HTML_ENTITY_PATTERN, (m) => HTML_ENTITY_DECODES[m]);
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+}
+
 function cleanString(value, maxLength = MAX_STRING_LENGTH) {
   if (typeof value !== "string") return null;
-  const trimmed = value.slice(0, maxLength).replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
+  const trimmed = decodeHtmlEntities(value.slice(0, maxLength));
   return trimmed || null;
 }
 

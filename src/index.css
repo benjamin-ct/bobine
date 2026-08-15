@@ -22,6 +22,12 @@
 html, body {
   margin: 0;
   padding: 0;
+  /* Garde-fou : si un élément déborde malgré tout (contenu imprévu, futur
+     bug), il défonce sa propre boîte plutôt que d'élargir le document et de
+     forcer le navigateur mobile à dézoomer toute la page pour le faire
+     tenir (symptôme observé : interface entière minuscule et collée à
+     gauche sur iPhone). */
+  overflow-x: hidden;
 }
 
 body {
@@ -892,6 +898,14 @@ button, select, input {
   background: var(--bg-elevated);
   border-radius: 6px;
   flex-shrink: 0;
+}
+
+.list-row__info {
+  /* Sans ça, cet enfant flex ne peut pas rétrécir sous la largeur de son
+     contenu (min-width: auto par défaut) : un titre long ne serait alors
+     jamais tronqué par .list-row__title, débordant du conteneur et forçant
+     toute la page à dézoomer sur mobile pour faire tenir cette largeur. */
+  min-width: 0;
 }
 
 .list-row__title {
