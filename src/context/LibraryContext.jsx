@@ -75,6 +75,15 @@ export function LibraryProvider({ children }) {
   // ref à true pendant l'opération pour que l'effet de push (plus bas) ne
   // renvoie pas aussitôt au serveur les données qu'on vient de recevoir.
   const syncingRef = useRef(false);
+  // File des changements pas encore envoyés au serveur : clé "mediaType:id"
+  // -> opération finale à appliquer (upsert avec l'item complet, ou delete).
+  // Chaque fonction de mutation (toggleWatched, rateWatched...) y ajoute
+  // l'état final de la clé qu'elle vient de modifier, en plus de mettre à
+  // jour `state` — l'effet de push plus bas n'envoie alors que ce qui a
+  // réellement changé, jamais toute la bibliothèque (voir POST
+  // /api/library/sync côté Worker, qui écrit sans jamais avoir à relire
+  // l'existant).
+  const pendingOpsRef = useRef(new Map());
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -108,6 +117,12 @@ export function LibraryProvider({ children }) {
         const alreadySyncedFor = localStorage.getItem(SYNCED_FOR_KEY);
         if (alreadySyncedFor === email) {
           setState({ watched: remote.watched || {}, watchlist: remote.watchlist || {} });
+          // Le serveur fait autorité et remplace tout `state` : toute
+          // opération en attente référence forcément un instantané pré-fusion
+          // désormais obsolète (voir le commentaire sur pendingOpsRef plus
+          // haut) — l'envoyer telle quelle pourrait écraser une valeur plus
+          // récente venue d'un autre appareil.
+          pendingOpsRef.current.clear();
           return null;
         }
         // Première synchro sur cet appareil pour ce compte : fusion.
@@ -116,6 +131,7 @@ export function LibraryProvider({ children }) {
           watchlist: mergeLists(state.watchlist, remote.watchlist || {}),
         };
         setState(merged);
+        pendingOpsRef.current.clear(); // le PUT complet ci-dessous couvre déjà tout `merged`
         localStorage.setItem(SYNCED_FOR_KEY, email);
         return fetch("/api/library", {
           method: "PUT",
@@ -136,16 +152,39 @@ export function LibraryProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authStatus, email]);
 
-  // Renvoie l'état complet au serveur à chaque changement, une fois connecté
-  // (avec un léger anti-rebond pour ne pas spammer l'API à chaque clic).
+  // Envoie au serveur uniquement ce qui a changé depuis le dernier envoi
+  // (voir pendingOpsRef), avec un léger anti-rebond pour regrouper les
+  // actions rapprochées (ex. "tout marquer vu" sur une saison) en un seul
+  // appel plutôt qu'un par item.
   useEffect(() => {
     if (authStatus !== "authenticated" || syncingRef.current) return;
     const timeoutId = setTimeout(() => {
-      fetch("/api/library", {
-        method: "PUT",
+      if (pendingOpsRef.current.size === 0) return;
+      const opsSnapshot = new Map(pendingOpsRef.current);
+      const upserts = [];
+      const deletes = [];
+      for (const op of opsSnapshot.values()) {
+        if (op.action === "upsert") upserts.push({ mediaType: op.mediaType, id: op.id, status: op.status, item: op.item });
+        else deletes.push({ mediaType: op.mediaType, id: op.id });
+      }
+      fetch("/api/library/sync", {
+        method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(state),
-      }).catch((err) => console.warn("Bobine : envoi de la bibliothèque au serveur impossible.", err));
+        body: JSON.stringify({ upserts, deletes }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("sync failed");
+          // Ne retire que ce qui vient d'être envoyé ET n'a pas été modifié
+          // entre-temps (comparaison par référence) : une nouvelle action
+          // survenue pendant que la requête était en vol ne doit pas être
+          // perdue, elle reste en file pour le prochain envoi.
+          for (const [key, op] of opsSnapshot) {
+            if (pendingOpsRef.current.get(key) === op) pendingOpsRef.current.delete(key);
+          }
+        })
+        .catch((err) =>
+          console.warn("Bobine : synchronisation incrémentale impossible, nouvelle tentative au prochain changement.", err)
+        );
     }, SYNC_DEBOUNCE_MS);
     return () => clearTimeout(timeoutId);
   }, [state, authStatus]);
@@ -156,13 +195,22 @@ export function LibraryProvider({ children }) {
       const next = { ...prev, watched: { ...prev.watched } };
       if (next.watched[key]) {
         delete next.watched[key];
+        pendingOpsRef.current.set(key, { action: "delete", mediaType: item.mediaType, id: item.id });
       } else {
-        next.watched[key] = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
+        const newItem = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
+        next.watched[key] = newItem;
         // Un film vu n'a plus besoin d'être dans la liste à voir.
         if (next.watchlist[key]) {
           next.watchlist = { ...next.watchlist };
           delete next.watchlist[key];
         }
+        pendingOpsRef.current.set(key, {
+          action: "upsert",
+          mediaType: item.mediaType,
+          id: item.id,
+          status: "watched",
+          item: newItem,
+        });
       }
       return next;
     });
@@ -174,8 +222,17 @@ export function LibraryProvider({ children }) {
       const next = { ...prev, watchlist: { ...prev.watchlist } };
       if (next.watchlist[key]) {
         delete next.watchlist[key];
+        pendingOpsRef.current.set(key, { action: "delete", mediaType: item.mediaType, id: item.id });
       } else {
-        next.watchlist[key] = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
+        const newItem = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
+        next.watchlist[key] = newItem;
+        pendingOpsRef.current.set(key, {
+          action: "upsert",
+          mediaType: item.mediaType,
+          id: item.id,
+          status: "watchlist",
+          item: newItem,
+        });
       }
       return next;
     });
@@ -190,13 +247,9 @@ export function LibraryProvider({ children }) {
     const key = makeKey(mediaType, id);
     setState((prev) => {
       if (!prev.watched[key]) return prev;
-      return {
-        ...prev,
-        watched: {
-          ...prev.watched,
-          [key]: { ...prev.watched[key], rating, updatedAt: Date.now() },
-        },
-      };
+      const updated = { ...prev.watched[key], rating, updatedAt: Date.now() };
+      pendingOpsRef.current.set(key, { action: "upsert", mediaType, id, status: "watched", item: updated });
+      return { ...prev, watched: { ...prev.watched, [key]: updated } };
     });
   }, []);
 
@@ -206,13 +259,9 @@ export function LibraryProvider({ children }) {
     const key = makeKey(mediaType, id);
     setState((prev) => {
       if (!prev.watched[key] || prev.watched[key].runtimeMinutes != null) return prev;
-      return {
-        ...prev,
-        watched: {
-          ...prev.watched,
-          [key]: { ...prev.watched[key], runtimeMinutes, updatedAt: Date.now() },
-        },
-      };
+      const updated = { ...prev.watched[key], runtimeMinutes, updatedAt: Date.now() };
+      pendingOpsRef.current.set(key, { action: "upsert", mediaType, id, status: "watched", item: updated });
+      return { ...prev, watched: { ...prev.watched, [key]: updated } };
     });
   }, []);
 
@@ -246,6 +295,13 @@ export function LibraryProvider({ children }) {
       if (nextEpisodes.has(epKey)) nextEpisodes.delete(epKey);
       else nextEpisodes.add(epKey);
       const updated = { ...existing, watchedEpisodes: Array.from(nextEpisodes), updatedAt: Date.now() };
+      pendingOpsRef.current.set(key, {
+        action: "upsert",
+        mediaType: item.mediaType,
+        id: item.id,
+        status: listName,
+        item: updated,
+      });
       return { ...prev, [listName]: { ...prev[listName], [key]: updated } };
     });
   }, []);
@@ -263,6 +319,13 @@ export function LibraryProvider({ children }) {
         else nextEpisodes.delete(epKey);
       }
       const updated = { ...existing, watchedEpisodes: Array.from(nextEpisodes), updatedAt: Date.now() };
+      pendingOpsRef.current.set(key, {
+        action: "upsert",
+        mediaType: item.mediaType,
+        id: item.id,
+        status: listName,
+        item: updated,
+      });
       return { ...prev, [listName]: { ...prev[listName], [key]: updated } };
     });
   }, []);
