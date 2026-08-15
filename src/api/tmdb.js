@@ -256,6 +256,15 @@ export function theatricalStatusFromDate(dateString) {
   return "past";
 }
 
+// Détail d'une saison (liste des épisodes) — appel séparé de getDetails()
+// car TMDB ne renvoie pas les épisodes dans la fiche série elle-même
+// (seulement le résumé `seasons[]` : nombre d'épisodes, pas leur liste).
+// Chargé à la demande (saison dépliée) plutôt que tout d'un coup pour une
+// série avec beaucoup de saisons.
+export function getSeasonDetails(tvId, seasonNumber) {
+  return tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`);
+}
+
 export async function getWatchProviders(mediaType, id, region = DEFAULT_REGION) {
   const data = await tmdbFetch(`/${mediaType}/${id}/watch/providers`);
   return data.results?.[region] || null;

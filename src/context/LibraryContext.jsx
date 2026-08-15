@@ -33,6 +33,18 @@ function makeKey(mediaType, id) {
   return `${mediaType}:${id}`;
 }
 
+function makeEpisodeKey(season, episode) {
+  return `${season}-${episode}`;
+}
+
+// Un titre a au plus une entrée (soit "watched", soit "watchlist" — voir
+// toggleWatched/toggleWatchlist) : c'est là que vit `watchedEpisodes` s'il
+// existe, quelle que soit la liste concernée.
+function findShowEntry(state, mediaType, id) {
+  const key = makeKey(mediaType, id);
+  return state.watched[key] || state.watchlist[key] || null;
+}
+
 // Fusionne deux bibliothèques (locale + serveur) : pour chaque titre présent
 // des deux côtés, on garde la version la plus récente (updatedAt) ; sinon on
 // garde celle qui existe. Utilisé uniquement lors de la toute première
@@ -204,6 +216,57 @@ export function LibraryProvider({ children }) {
     });
   }, []);
 
+  // Suivi épisode par épisode (séries uniquement). L'entrée du titre est
+  // cherchée dans watched puis watchlist (voir findShowEntry) ; si aucune
+  // des deux n'existe encore (rien coché sur la fiche), on en crée une dans
+  // watchlist — cocher un épisode revient à dire "je suis en train de
+  // regarder ça", ce qui est plus proche d'"envie de voir" que de "déjà vu"
+  // pour la série entière.
+  const getWatchedEpisodes = useCallback(
+    (mediaType, id) => new Set(findShowEntry(state, mediaType, id)?.watchedEpisodes || []),
+    [state]
+  );
+
+  const isEpisodeWatched = useCallback(
+    (mediaType, id, season, episode) =>
+      Boolean(findShowEntry(state, mediaType, id)?.watchedEpisodes?.includes(makeEpisodeKey(season, episode))),
+    [state]
+  );
+
+  // `item` : forme minimale attendue par toggleWatched/toggleWatchlist
+  // (id, mediaType, title, posterPath, date, genreIds...), utilisée pour
+  // créer l'entrée si le titre n'est encore dans aucune des deux listes.
+  const toggleEpisodeWatched = useCallback((item, season, episode) => {
+    const key = makeKey(item.mediaType, item.id);
+    const epKey = makeEpisodeKey(season, episode);
+    setState((prev) => {
+      const listName = prev.watched[key] ? "watched" : "watchlist";
+      const existing = prev[listName][key] || { ...item, addedAt: Date.now() };
+      const nextEpisodes = new Set(existing.watchedEpisodes || []);
+      if (nextEpisodes.has(epKey)) nextEpisodes.delete(epKey);
+      else nextEpisodes.add(epKey);
+      const updated = { ...existing, watchedEpisodes: Array.from(nextEpisodes), updatedAt: Date.now() };
+      return { ...prev, [listName]: { ...prev[listName], [key]: updated } };
+    });
+  }, []);
+
+  // Coche/décoche toute une saison d'un coup (bouton "Tout marquer comme vu").
+  const setSeasonEpisodesWatched = useCallback((item, season, episodeNumbers, watched) => {
+    const key = makeKey(item.mediaType, item.id);
+    setState((prev) => {
+      const listName = prev.watched[key] ? "watched" : "watchlist";
+      const existing = prev[listName][key] || { ...item, addedAt: Date.now() };
+      const nextEpisodes = new Set(existing.watchedEpisodes || []);
+      for (const episode of episodeNumbers) {
+        const epKey = makeEpisodeKey(season, episode);
+        if (watched) nextEpisodes.add(epKey);
+        else nextEpisodes.delete(epKey);
+      }
+      const updated = { ...existing, watchedEpisodes: Array.from(nextEpisodes), updatedAt: Date.now() };
+      return { ...prev, [listName]: { ...prev[listName], [key]: updated } };
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       watched: Object.values(state.watched).sort((a, b) => b.addedAt - a.addedAt),
@@ -216,8 +279,25 @@ export function LibraryProvider({ children }) {
       getRating,
       rateWatched,
       setRuntime,
+      getWatchedEpisodes,
+      isEpisodeWatched,
+      toggleEpisodeWatched,
+      setSeasonEpisodesWatched,
     }),
-    [state, toggleWatched, toggleWatchlist, isWatched, isInWatchlist, getRating, rateWatched, setRuntime]
+    [
+      state,
+      toggleWatched,
+      toggleWatchlist,
+      isWatched,
+      isInWatchlist,
+      getRating,
+      rateWatched,
+      setRuntime,
+      getWatchedEpisodes,
+      isEpisodeWatched,
+      toggleEpisodeWatched,
+      setSeasonEpisodesWatched,
+    ]
   );
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;

@@ -7,6 +7,11 @@
 const MAX_STRING_LENGTH = 300;
 const MAX_ITEMS_PER_LIST = 5000; // large marge au-dessus d'un usage réel, évite un abus qui gonflerait la base indéfiniment
 const VALID_MEDIA_TYPES = new Set(["movie", "tv"]);
+// "saison-épisode" (ex. "1-5") : suivi épisode par épisode pour les séries.
+// Aucune série connue ne dépasse quelques centaines d'épisodes, 5000 laisse
+// une large marge sans permettre un payload disproportionné.
+const MAX_WATCHED_EPISODES = 5000;
+const EPISODE_KEY_PATTERN = /^\d{1,4}-\d{1,4}$/;
 
 const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 
@@ -48,8 +53,14 @@ function sanitizeItem(mediaType, tmdbId, raw) {
   const updatedAt = cleanNumber(raw.updatedAt) ?? addedAt;
   const rating = raw.rating == null ? undefined : Math.min(10, Math.max(0, cleanNumber(raw.rating) ?? 0));
   const runtimeMinutes = raw.runtimeMinutes == null ? undefined : Math.max(0, cleanNumber(raw.runtimeMinutes) ?? 0);
+  // Uniquement pertinent pour les séries, mais on ne restreint pas à
+  // mediaType === "tv" ici : un champ absent/vide pour un film ne coûte rien
+  // et évite un cas particulier de plus à maintenir.
+  const watchedEpisodes = Array.isArray(raw.watchedEpisodes)
+    ? [...new Set(raw.watchedEpisodes.filter((e) => typeof e === "string" && EPISODE_KEY_PATTERN.test(e)))].slice(0, MAX_WATCHED_EPISODES)
+    : [];
 
-  return { id, mediaType, title, posterPath, date, genreIds, addedAt, updatedAt, rating, runtimeMinutes };
+  return { id, mediaType, title, posterPath, date, genreIds, addedAt, updatedAt, rating, runtimeMinutes, watchedEpisodes };
 }
 
 // `watched`/`watchlist` : { "movie:123": {...}, "tv:456": {...} }. Renvoie

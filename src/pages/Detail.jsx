@@ -14,6 +14,7 @@ import TrailerButton from "../components/TrailerButton";
 import MediaCard from "../components/MediaCard";
 import CastCard from "../components/CastCard";
 import RatingInput from "../components/RatingInput";
+import EpisodeTracker from "../components/EpisodeTracker";
 import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
 import { useRegion } from "../context/RegionContext";
@@ -126,7 +127,11 @@ export default function Detail() {
             <h1>{title} {date && <span className="detail-year">({date.slice(0, 4)})</span>}</h1>
             <p className="detail-meta">
               {details.genres?.map((g) => g.name).join(" · ")}
-              {runtime ? ` · ${runtime} min` : ""}
+              {mediaType === "tv" && details.number_of_seasons
+                ? ` · ${details.number_of_seasons} saison${details.number_of_seasons > 1 ? "s" : ""}`
+                : ""}
+              {mediaType === "tv" && details.number_of_episodes ? ` · ${details.number_of_episodes} épisodes` : ""}
+              {runtime ? ` · ${runtime} min${mediaType === "tv" ? "/épisode" : ""}` : ""}
               {details.vote_average ? ` · ⭐ ${details.vote_average.toFixed(1)}` : ""}
             </p>
             {theatricalMessage && <p className="detail-theatrical">{theatricalMessage}</p>}
@@ -153,6 +158,10 @@ export default function Detail() {
             <ProviderBadges providers={providers} />
           </div>
         </div>
+
+        {mediaType === "tv" && details.seasons?.length > 0 && (
+          <EpisodeTracker item={libItem} seasons={details.seasons} />
+        )}
 
         {(directors.length > 0 || cast.length > 0) && (
           <section className="detail-cast">
