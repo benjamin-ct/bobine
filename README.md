@@ -13,6 +13,15 @@ Les données (catalogue, affiches, plateformes de streaming) viennent de [TMDB](
    VITE_TMDB_API_KEY=ta_cle_ici
    ```
 
+   Cette variable ne sert qu'en **développement local** (`npm run dev`, Vite
+   seul sans Worker) : elle permet d'appeler TMDB directement depuis le
+   navigateur pour itérer vite, sans dépendre d'un Worker qui tourne. Elle
+   ne quitte jamais ta machine, donc aucun enjeu de sécurité à la garder
+   simple. **En production, c'est `TMDB_API_KEY` (secret du Worker, voir
+   plus bas) qui est utilisée** — le navigateur ne voit jamais la clé
+   (toutes les requêtes TMDB passent par un proxy `/api/tmdb/...` côté
+   Worker).
+
 3. Installe les dépendances puis lance le serveur de dev :
 
    ```bash
@@ -34,12 +43,20 @@ push sur `main` déclenche automatiquement :
 | Build | `npm run build` |
 | Déploiement | `npx wrangler deploy` |
 
-**Important** : avant le premier déploiement, ajoute la variable
-d'environnement `VITE_TMDB_API_KEY` dans les paramètres du projet côté
-dashboard Cloudflare (section *Variables and Secrets*), avec ta clé TMDB.
-Cette variable est utilisée par Vite **au moment du build**, donc elle doit
-être définie côté Cloudflare — elle n'est jamais commitée dans le repo
-(exactement comme `.env.local` en local).
+**Important** : avant le premier déploiement, configure les secrets du
+Worker (dashboard Cloudflare, Worker `bobine` → **Settings → Variables and
+Secrets**, accessible une fois que le Worker a un script, pas seulement des
+assets statiques) :
+
+| Nom | Type | Valeur |
+|---|---|---|
+| `TMDB_API_KEY` | **Secret** | ta clé TMDB — **obligatoire**, sert à la fois au proxy `/api/tmdb/...` (tout le catalogue de l'app) et à la tâche planifiée des notifications push |
+
+⚠️ **Type "Secret" obligatoire**, pas "Texte" : Wrangler efface les
+variables de type "Texte" configurées depuis le dashboard à *chaque*
+déploiement si elles ne sont pas déclarées dans `wrangler.jsonc` (c'est le
+comportement documenté de Cloudflare). Les secrets, eux, survivent
+toujours aux déploiements.
 
 Pour tester la configuration Wrangler localement sans rien déployer :
 
@@ -52,23 +69,17 @@ npx wrangler deploy --dry-run
 
 Le Worker gère aussi les notifications push (nouveautés en streaming, sorties
 dans tes genres préférés, grosses tendances du moment), via une tâche
-planifiée quotidienne et une base D1. Pour les activer :
+planifiée quotidienne et une base D1. Pour les activer, en plus de
+`TMDB_API_KEY` (voir ci-dessus, déjà nécessaire pour le reste de l'app) :
 
-1. **Secrets du Worker** — dans le dashboard Cloudflare, sur le Worker
-   `bobine` : **Settings → Variables and Secrets** (accessible maintenant que
-   le Worker a un script, pas seulement des assets statiques). Ajoute :
+1. **Secrets supplémentaires du Worker** :
 
    | Nom | Type | Valeur |
    |---|---|---|
-   | `TMDB_API_KEY` | **Secret** | ta clé TMDB (même clé que `VITE_TMDB_API_KEY`, mais c'est une variable distincte — le Worker ne lit pas les variables de build) |
    | `VAPID_PRIVATE_KEY` | **Secret** | générée une fois avec `node -e "console.log(require('web-push').generateVAPIDKeys())"` |
    | `DEBUG_TRIGGER_KEY` | **Secret** | optionnel — une chaîne aléatoire, permet de déclencher manuellement la vérification via `POST /api/run-check` (ou une notif de test via `POST /api/test-notification`) avec l'en-tête `X-Debug-Key` |
 
-   ⚠️ **Type "Secret" obligatoire**, pas "Texte" : Wrangler efface les
-   variables de type "Texte" configurées depuis le dashboard à *chaque*
-   déploiement si elles ne sont pas déclarées dans `wrangler.jsonc` (c'est le
-   comportement documenté de Cloudflare). Les secrets, eux, survivent
-   toujours aux déploiements.
+   (Type "Secret" obligatoire ici aussi, pas "Texte" — voir l'avertissement plus haut.)
 
    `VAPID_PUBLIC_KEY` et `VAPID_SUBJECT` n'ont plus besoin d'être configurées
    dans le dashboard : elles sont commitées directement dans `wrangler.jsonc`
@@ -181,3 +192,4 @@ problème, sans jamais changer de contexte de stockage.
 - Le suivi "vu / envie de voir" est stocké dans le navigateur (`localStorage`) — ça reste la source de vérité hors connexion. Vider les données du site ou changer de navigateur sans être connecté réinitialise la liste — connecte-toi (voir [Comptes et synchronisation](#comptes-et-synchronisation-optionnel)) pour une synchronisation automatique entre appareils.
 - Exceptions au "tout côté client" : les **notifications push** ont besoin d'un minimum d'état côté serveur (base D1 `worker/schema.sql`) — abonnement push, copie de la liste "envie de voir" et des genres favoris, pour que la tâche planifiée quotidienne (`worker/scheduled.js`) puisse vérifier les nouveautés même quand l'app est fermée. Les **comptes** (même base D1) stockent l'email, les liens de connexion à usage unique, les sessions, et — pour les utilisateurs connectés seulement — une copie de la bibliothèque pour la synchronisation.
 - Les icônes PWA (`public/icon-*.png`) sont générées par `scripts/generate-icons.cjs` ; relance-le si tu veux changer le design.
+- **Sécurité côté Worker** : limitation de débit (par email/IP) sur l'authentification et les endpoints d'abonnement push, validation de schéma côté serveur sur la bibliothèque synchronisée (types, longueur, whitelist des clés), en-têtes de durcissement HTTP (CSP, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) sur toutes les réponses — voir `worker/rate-limit.js` et `worker/validate.js`.

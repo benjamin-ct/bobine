@@ -81,3 +81,14 @@ CREATE TABLE IF NOT EXISTS library_items (
   updated_at INTEGER NOT NULL,
   PRIMARY KEY (user_id, media_type, tmdb_id)
 );
+
+-- Limitation de débit (fenêtre fixe) sur les endpoints sensibles — voir
+-- worker/rate-limit.js. Une ligne par (clé, fenêtre) ; les vieilles lignes
+-- ne sont jamais purgées explicitement (volume négligeable pour une app à
+-- usage personnel, chaque ligne ne pesant que quelques octets).
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT NOT NULL,
+  window_start INTEGER NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (key, window_start)
+);
