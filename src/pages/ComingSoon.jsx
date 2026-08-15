@@ -2,40 +2,35 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { discover, getGenres, getWatchProvidersList } from "../api/tmdb";
 import MediaCard from "../components/MediaCard";
 import FilterBar from "../components/FilterBar";
-import AdvancedFilters from "../components/AdvancedFilters";
 import { Loading, ErrorMessage, EmptyState } from "../components/StateMessage";
 
-const EMPTY_ADVANCED_FILTERS = {
-  yearMin: "", yearMax: "",
-  voteAverageMin: "", voteAverageMax: "",
-  voteCountMin: "",
-  originCountry: "",
-  runtimeMin: "", runtimeMax: "",
-};
+const WINDOWS = [
+  { value: 7, label: "7 prochains jours" },
+  { value: 30, label: "30 prochains jours" },
+  { value: 90, label: "3 prochains mois" },
+];
 
-// Convertit les valeurs texte des <input> en nombres (ou undefined si vide)
-// pour discover().
-function toDiscoverParams(advanced) {
-  const num = (v) => (v === "" || v == null ? undefined : Number(v));
-  return {
-    yearMin: num(advanced.yearMin),
-    yearMax: num(advanced.yearMax),
-    voteAverageMin: num(advanced.voteAverageMin),
-    voteAverageMax: num(advanced.voteAverageMax),
-    voteCountMin: num(advanced.voteCountMin),
-    runtimeMin: num(advanced.runtimeMin),
-    runtimeMax: num(advanced.runtimeMax),
-    originCountry: advanced.originCountry || undefined,
-  };
+function toIsoDate(date) {
+  return date.toISOString().slice(0, 10);
 }
 
-export default function Discover() {
+// Fenêtre [demain ; aujourd'hui + windowDays] : uniquement des titres pas
+// encore sortis (démarre à demain pour ne pas chevaucher "Nouveautés", qui
+// couvre jusqu'à aujourd'hui inclus).
+function dateRangeFor(windowDays) {
+  const today = new Date();
+  const from = new Date(today);
+  from.setDate(from.getDate() + 1);
+  const to = new Date(today);
+  to.setDate(to.getDate() + windowDays);
+  return { dateFrom: toIsoDate(from), dateTo: toIsoDate(to) };
+}
+
+export default function ComingSoon() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
-  const [sortField, setSortField] = useState("popularity");
-  const [sortDirection, setSortDirection] = useState("desc");
-  const [advanced, setAdvanced] = useState(EMPTY_ADVANCED_FILTERS);
+  const [windowDays, setWindowDays] = useState(30);
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
   const [page, setPage] = useState(1);
@@ -45,8 +40,6 @@ export default function Discover() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
-  const advancedKey = JSON.stringify(advanced);
-
   // Réinitialise les filtres dépendants et la liste au changement de type.
   useEffect(() => {
     setGenreId("");
@@ -55,7 +48,7 @@ export default function Discover() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreId, providerId, sortField, sortDirection, advancedKey]);
+  }, [genreId, providerId, windowDays]);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,10 +71,9 @@ export default function Discover() {
       page: 1,
       genreId,
       providerIds: providerId ? [providerId] : undefined,
-      sortField,
-      sortDirection,
-      excludeUpcoming: true,
-      ...toDiscoverParams(advanced),
+      sortField: "popularity",
+      sortDirection: "desc",
+      ...dateRangeFor(windowDays),
     })
       .then((data) => {
         if (cancelled) return;
@@ -97,8 +89,7 @@ export default function Discover() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaType, genreId, providerId, sortField, sortDirection, advancedKey]);
+  }, [mediaType, genreId, providerId, windowDays]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || page >= totalPages) return;
@@ -108,10 +99,9 @@ export default function Discover() {
       page: nextPage,
       genreId,
       providerIds: providerId ? [providerId] : undefined,
-      sortField,
-      sortDirection,
-      excludeUpcoming: true,
-      ...toDiscoverParams(advanced),
+      sortField: "popularity",
+      sortDirection: "desc",
+      ...dateRangeFor(windowDays),
     })
       .then((data) => {
         // TMDB peut renvoyer un même titre sur deux pages consécutives
@@ -127,8 +117,7 @@ export default function Discover() {
       })
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, sortField, sortDirection, advancedKey]);
+  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, windowDays]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
@@ -149,7 +138,9 @@ export default function Discover() {
 
   return (
     <div className="page">
-      <h1>Découvrir</h1>
+      <h1>Prochainement</h1>
+      <p className="page-subtitle">Les films et séries pas encore sortis, les plus attendus d'abord.</p>
+
       <FilterBar
         mediaType={mediaType}
         setMediaType={setMediaType}
@@ -159,18 +150,24 @@ export default function Discover() {
         providerId={providerId}
         setProviderId={setProviderId}
         providers={providers}
-        sortField={sortField}
-        setSortField={setSortField}
-        sortDirection={sortDirection}
-        setSortDirection={setSortDirection}
       />
 
-      <AdvancedFilters filters={advanced} setFilters={setAdvanced} />
+      <div className="filter-bar__group" style={{ marginBottom: 18 }}>
+        {WINDOWS.map((w) => (
+          <button
+            key={w.value}
+            className={windowDays === w.value ? "chip chip--active" : "chip"}
+            onClick={() => setWindowDays(w.value)}
+          >
+            {w.label}
+          </button>
+        ))}
+      </div>
 
       {status === "loading" && <Loading />}
       {status === "error" && <ErrorMessage error={error} />}
       {status === "success" && results.length === 0 && (
-        <EmptyState label="Aucun résultat pour ces filtres." />
+        <EmptyState label="Aucune sortie prévue sur cette période pour ces filtres." />
       )}
 
       {status === "success" && results.length > 0 && (

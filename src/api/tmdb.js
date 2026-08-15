@@ -64,6 +64,10 @@ export function discover(mediaType, {
   // paramètre TMDB sous-jacent).
   dateFrom,
   dateTo,
+  // Exclut les titres pas encore sortis, quels que soient les autres
+  // filtres de date (Découvrir doit toujours l'utiliser : par défaut TMDB
+  // renvoie aussi des sorties déjà programmées dans le futur).
+  excludeUpcoming,
   voteAverageMin,
   voteAverageMax,
   voteCountMin,
@@ -73,6 +77,9 @@ export function discover(mediaType, {
 } = {}) {
   const resolvedField = sortField === "year" ? (mediaType === "movie" ? "primary_release_date" : "first_air_date") : sortField;
   const dateField = mediaType === "movie" ? "primary_release_date" : "first_air_date";
+  const todayIso = new Date().toISOString().slice(0, 10);
+  let dateLte = dateTo || (yearMax ? `${yearMax}-12-31` : undefined);
+  if (excludeUpcoming && (!dateLte || dateLte > todayIso)) dateLte = todayIso;
   return tmdbFetch(`/discover/${mediaType}`, {
     page,
     with_genres: genreId || undefined,
@@ -89,7 +96,7 @@ export function discover(mediaType, {
     "with_runtime.lte": runtimeMax || undefined,
     with_origin_country: originCountry || undefined,
     [`${dateField}.gte`]: dateFrom || (yearMin ? `${yearMin}-01-01` : undefined),
-    [`${dateField}.lte`]: dateTo || (yearMax ? `${yearMax}-12-31` : undefined),
+    [`${dateField}.lte`]: dateLte,
     [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
     include_adult: false,
   });

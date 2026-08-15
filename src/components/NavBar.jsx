@@ -92,6 +92,7 @@ export default function NavBar() {
         <nav className="navbar__links">
           <NavLink to="/" end onClick={scrollTop}>Découvrir</NavLink>
           <NavLink to="/nouveautes" onClick={scrollTop}>Nouveautés</NavLink>
+          <NavLink to="/prochainement" onClick={scrollTop}>Prochainement</NavLink>
           <NavLink to="/aleatoire" onClick={scrollTop}>Aléatoire</NavLink>
           <NavLink to="/ma-liste" onClick={scrollTop}>Ma liste</NavLink>
         </nav>
