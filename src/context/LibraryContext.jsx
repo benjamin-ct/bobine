@@ -6,6 +6,12 @@ const STORAGE_KEY = "bobine.library.v1";
 // sur CET appareil (voir l'effet de synchronisation plus bas).
 const SYNCED_FOR_KEY = "bobine.library.syncedFor";
 const SYNC_DEBOUNCE_MS = 1200;
+// Listes personnalisées ("Soirée avec X", "Halloween"...) — stockage local
+// uniquement, comme les plateformes favorites : pas de sync compte pour
+// l'instant (décision volontaire, cf. session). Le pattern de sync
+// incrémental déjà en place pour library_items pourrait être répliqué plus
+// tard si besoin, sans rien casser ici.
+const CUSTOM_LISTS_STORAGE_KEY = "bobine.customLists.v1";
 
 const LibraryContext = createContext(null);
 
@@ -31,6 +37,22 @@ function loadInitialState() {
 
 function makeKey(mediaType, id) {
   return `${mediaType}:${id}`;
+}
+
+function loadInitialCustomLists() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_LISTS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (err) {
+    console.warn("Bobine : lecture des listes personnalisées impossible, on repart à vide.", err);
+    return {};
+  }
+}
+
+function makeListId() {
+  return `list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function makeEpisodeKey(season, episode) {
@@ -84,6 +106,13 @@ export function LibraryProvider({ children }) {
   // /api/library/sync côté Worker, qui écrit sans jamais avoir à relire
   // l'existant).
   const pendingOpsRef = useRef(new Map());
+  // Listes personnalisées : { [listId]: { id, name, itemKeys, createdAt } }.
+  // `itemKeys` référence uniquement des titres déjà présents dans
+  // watched/watchlist (pas de "tag" libre sur un titre jamais suivi) —
+  // getListItems ci-dessous résout ces clés en objets complets et ignore
+  // silencieusement celles dont l'item a depuis été retiré des deux listes.
+  const [customLists, setCustomLists] = useState(loadInitialCustomLists);
+  const isFirstCustomListsRender = useRef(true);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -96,6 +125,18 @@ export function LibraryProvider({ children }) {
       console.error("Bobine : impossible de sauvegarder la bibliothèque locale.", err);
     }
   }, [state]);
+
+  useEffect(() => {
+    if (isFirstCustomListsRender.current) {
+      isFirstCustomListsRender.current = false;
+      return;
+    }
+    try {
+      localStorage.setItem(CUSTOM_LISTS_STORAGE_KEY, JSON.stringify(customLists));
+    } catch (err) {
+      console.error("Bobine : impossible de sauvegarder les listes personnalisées.", err);
+    }
+  }, [customLists]);
 
   // Synchronisation avec le compte : au moment où l'utilisateur devient
   // authentifié (connexion, ou session déjà active au chargement de la
@@ -330,6 +371,68 @@ export function LibraryProvider({ children }) {
     });
   }, []);
 
+  // Listes personnalisées ------------------------------------------------
+
+  const createList = useCallback((name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const id = makeListId();
+    setCustomLists((prev) => ({ ...prev, [id]: { id, name: trimmed, itemKeys: [], createdAt: Date.now() } }));
+    return id;
+  }, []);
+
+  const renameList = useCallback((listId, name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setCustomLists((prev) => (prev[listId] ? { ...prev, [listId]: { ...prev[listId], name: trimmed } } : prev));
+  }, []);
+
+  const deleteList = useCallback((listId) => {
+    setCustomLists((prev) => {
+      if (!prev[listId]) return prev;
+      const next = { ...prev };
+      delete next[listId];
+      return next;
+    });
+  }, []);
+
+  const addToList = useCallback((listId, mediaType, id) => {
+    const key = makeKey(mediaType, id);
+    setCustomLists((prev) => {
+      const list = prev[listId];
+      if (!list || list.itemKeys.includes(key)) return prev;
+      return { ...prev, [listId]: { ...list, itemKeys: [...list.itemKeys, key] } };
+    });
+  }, []);
+
+  const removeFromList = useCallback((listId, mediaType, id) => {
+    const key = makeKey(mediaType, id);
+    setCustomLists((prev) => {
+      const list = prev[listId];
+      if (!list) return prev;
+      return { ...prev, [listId]: { ...list, itemKeys: list.itemKeys.filter((k) => k !== key) } };
+    });
+  }, []);
+
+  const isInList = useCallback(
+    (listId, mediaType, id) => Boolean(customLists[listId]?.itemKeys.includes(makeKey(mediaType, id))),
+    [customLists]
+  );
+
+  // Résout itemKeys en objets complets depuis watched/watchlist — une clé
+  // dont l'item a depuis été retiré des deux (ex: décoché "Envie de voir"
+  // ET jamais marqué vu) est simplement omise plutôt que de laisser un état
+  // incohérent à gérer explicitement ailleurs.
+  const getListItems = useCallback(
+    (listId) => (customLists[listId]?.itemKeys || []).map((key) => state.watched[key] || state.watchlist[key]).filter(Boolean),
+    [customLists, state]
+  );
+
+  const customListsArray = useMemo(
+    () => Object.values(customLists).sort((a, b) => a.createdAt - b.createdAt),
+    [customLists]
+  );
+
   const value = useMemo(
     () => ({
       watched: Object.values(state.watched).sort((a, b) => b.addedAt - a.addedAt),
@@ -346,6 +449,14 @@ export function LibraryProvider({ children }) {
       isEpisodeWatched,
       toggleEpisodeWatched,
       setSeasonEpisodesWatched,
+      customLists: customListsArray,
+      createList,
+      renameList,
+      deleteList,
+      addToList,
+      removeFromList,
+      isInList,
+      getListItems,
     }),
     [
       state,
@@ -360,6 +471,14 @@ export function LibraryProvider({ children }) {
       isEpisodeWatched,
       toggleEpisodeWatched,
       setSeasonEpisodesWatched,
+      customListsArray,
+      createList,
+      renameList,
+      deleteList,
+      addToList,
+      removeFromList,
+      isInList,
+      getListItems,
     ]
   );
 
