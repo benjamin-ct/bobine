@@ -1,8 +1,16 @@
 // Client léger pour l'API TMDB (The Movie Database).
 // Doc : https://developer.themoviedb.org/reference/intro/getting-started
-
+//
+// En production, les requêtes passent par /api/tmdb/... (proxy côté
+// Worker, voir worker/index.js) : la clé API TMDB n'est injectée que
+// côté serveur, jamais visible depuis le navigateur d'un visiteur. En
+// dev local (`npm run dev`, Vite seul, pas de Worker qui tourne), on
+// continue d'appeler TMDB directement avec la clé locale — elle ne
+// quitte jamais la machine du développeur, donc pas d'enjeu de sécurité
+// à la garder simple pour l'itération rapide.
+const IS_DEV = import.meta.env.DEV;
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-const BASE_URL = "https://api.themoviedb.org/3";
+const BASE_URL = IS_DEV ? "https://api.themoviedb.org/3" : "/api/tmdb";
 const REGION = "FR";
 const LANGUAGE = "fr-FR";
 
@@ -17,13 +25,15 @@ export const logoUrl = (path, size = "w92") =>
 export class TmdbConfigError extends Error {}
 
 async function tmdbFetch(path, params = {}) {
-  if (!API_KEY || API_KEY === "REMPLACE_MOI_AVEC_TA_CLE_TMDB") {
+  if (IS_DEV && (!API_KEY || API_KEY === "REMPLACE_MOI_AVEC_TA_CLE_TMDB")) {
     throw new TmdbConfigError(
       "Clé API TMDB manquante. Ajoute VITE_TMDB_API_KEY dans .env.local puis redémarre le serveur."
     );
   }
-  const url = new URL(`${BASE_URL}${path}`);
-  url.searchParams.set("api_key", API_KEY);
+  // Base explicite : nécessaire pour que `new URL()` accepte un chemin
+  // relatif (/api/tmdb/...) en plus de l'URL absolue utilisée en dev.
+  const url = new URL(`${BASE_URL}${path}`, window.location.origin);
+  if (IS_DEV) url.searchParams.set("api_key", API_KEY);
   url.searchParams.set("language", LANGUAGE);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== "") {
