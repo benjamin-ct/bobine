@@ -1,6 +1,12 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { posterUrl } from "../api/tmdb";
+import { posterUrl, getFrenchTheatricalDate, theatricalStatusFromDate } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
+
+const THEATRICAL_BADGES = {
+  in_theaters: "🎬 En salles",
+  upcoming: "🗓️ Bientôt au cinéma",
+};
 
 export default function MediaCard({ item }) {
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
@@ -10,6 +16,20 @@ export default function MediaCard({ item }) {
   const year = date ? date.slice(0, 4) : "—";
   const watched = isWatched(mediaType, item.id);
   const inWatchlist = isInWatchlist(mediaType, item.id);
+
+  // Statut "au cinéma" (France) : uniquement pour les films (les séries
+  // n'ont pas de notion de sortie en salle).
+  const [theatricalStatus, setTheatricalStatus] = useState(null);
+  useEffect(() => {
+    if (mediaType !== "movie") return;
+    let cancelled = false;
+    getFrenchTheatricalDate(item.id).then((theatricalDate) => {
+      if (!cancelled) setTheatricalStatus(theatricalStatusFromDate(theatricalDate));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mediaType, item.id]);
 
   const libItem = {
     id: item.id,
@@ -31,6 +51,9 @@ export default function MediaCard({ item }) {
           )}
           {watched && <span className="badge badge--watched">✔ Vu</span>}
           <span className="media-card__type">{mediaType === "movie" ? "Film" : "Série"}</span>
+          {THEATRICAL_BADGES[theatricalStatus] && (
+            <span className="media-card__theatrical">{THEATRICAL_BADGES[theatricalStatus]}</span>
+          )}
         </div>
         <div className="media-card__info">
           <p className="media-card__title" title={title}>{title}</p>

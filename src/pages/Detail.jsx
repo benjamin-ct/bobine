@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { backdropUrl, posterUrl, getDetails, getWatchProviders, estimateRuntimeMinutes } from "../api/tmdb";
+import {
+  backdropUrl,
+  posterUrl,
+  getDetails,
+  getWatchProviders,
+  estimateRuntimeMinutes,
+  getFrenchTheatricalDateFromDetails,
+  theatricalStatusFromDate,
+} from "../api/tmdb";
 import ProviderBadges from "../components/ProviderBadges";
 import TrailerButton from "../components/TrailerButton";
 import MediaCard from "../components/MediaCard";
@@ -59,6 +67,20 @@ export default function Detail() {
   const watched = isWatched(mediaType, id);
   const inWatchlist = isInWatchlist(mediaType, id);
 
+  // Statut "au cinéma" (France) : uniquement pour les films. release_dates
+  // est déjà inclus dans `details` (voir getDetails côté tmdb.js), pas
+  // d'appel réseau supplémentaire ici.
+  const theatricalDate = mediaType === "movie" ? getFrenchTheatricalDateFromDetails(details) : null;
+  const theatricalStatus = theatricalStatusFromDate(theatricalDate);
+  const theatricalDateFormatted = theatricalDate
+    ? new Date(theatricalDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+  const theatricalMessage = {
+    in_theaters: `🎬 Actuellement au cinéma (sorti le ${theatricalDateFormatted})`,
+    upcoming: `🗓️ Sortie au cinéma prévue le ${theatricalDateFormatted}`,
+    past: `Sorti au cinéma le ${theatricalDateFormatted}`,
+  }[theatricalStatus];
+
   const cast = details.credits?.cast || [];
   const visibleCast = showFullCast ? cast : cast.slice(0, MAIN_CAST_COUNT);
   const remainingCastCount = cast.length - visibleCast.length;
@@ -105,6 +127,7 @@ export default function Detail() {
               {runtime ? ` · ${runtime} min` : ""}
               {details.vote_average ? ` · ⭐ ${details.vote_average.toFixed(1)}` : ""}
             </p>
+            {theatricalMessage && <p className="detail-theatrical">{theatricalMessage}</p>}
             <p className="detail-overview">{details.overview || "Pas de synopsis disponible."}</p>
 
             <div className="detail-actions">
