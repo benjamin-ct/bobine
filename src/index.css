@@ -1272,6 +1272,51 @@ button, select, input {
   background: var(--bg-elevated);
 }
 
+/* "Vus par année" (voir Stats.jsx) — barres horizontales faites main, même
+   esprit que DonutChart.jsx : pas de dépendance de graphique. */
+
+.stats-years {
+  margin-top: 18px;
+}
+
+.stats-years__label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 0 0 10px;
+}
+
+.stats-years__row {
+  display: grid;
+  grid-template-columns: 52px 1fr 32px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.stats-years__year {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.stats-years__bar-track {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.stats-years__bar {
+  height: 100%;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.stats-years__count {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
 @media (max-width: 860px) {
   .navbar__inner {
     row-gap: 8px;

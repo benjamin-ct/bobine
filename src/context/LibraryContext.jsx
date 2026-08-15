@@ -265,6 +265,20 @@ export function LibraryProvider({ children }) {
     });
   }, []);
 
+  // Complète après coup le·s réalisateur·rice·s/créateur·rice·s d'un titre
+  // déjà marqué vu (cf. Stats.jsx, "réalisateurs récurrents"), pour les cas
+  // où ce n'était pas connu au moment du toggle — même principe que
+  // setRuntime : ne pose la valeur qu'une fois, remplissage progressif.
+  const setDirectors = useCallback((mediaType, id, directors) => {
+    const key = makeKey(mediaType, id);
+    setState((prev) => {
+      if (!prev.watched[key] || prev.watched[key].directors?.length) return prev;
+      const updated = { ...prev.watched[key], directors, updatedAt: Date.now() };
+      pendingOpsRef.current.set(key, { action: "upsert", mediaType, id, status: "watched", item: updated });
+      return { ...prev, watched: { ...prev.watched, [key]: updated } };
+    });
+  }, []);
+
   // Suivi épisode par épisode (séries uniquement). L'entrée du titre est
   // cherchée dans watched puis watchlist (voir findShowEntry) ; si aucune
   // des deux n'existe encore (rien coché sur la fiche), on en crée une dans
@@ -342,6 +356,7 @@ export function LibraryProvider({ children }) {
       getRating,
       rateWatched,
       setRuntime,
+      setDirectors,
       getWatchedEpisodes,
       isEpisodeWatched,
       toggleEpisodeWatched,
@@ -356,6 +371,7 @@ export function LibraryProvider({ children }) {
       getRating,
       rateWatched,
       setRuntime,
+      setDirectors,
       getWatchedEpisodes,
       isEpisodeWatched,
       toggleEpisodeWatched,

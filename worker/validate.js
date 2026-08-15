@@ -12,6 +12,11 @@ const VALID_MEDIA_TYPES = new Set(["movie", "tv"]);
 // une large marge sans permettre un payload disproportionné.
 const MAX_WATCHED_EPISODES = 5000;
 const EPISODE_KEY_PATTERN = /^\d{1,4}-\d{1,4}$/;
+// Réalisateur·rices/créateur·rices d'un titre (voir Stats.jsx, "réalisateurs
+// récurrents") — un film a rarement plus de 2-3 co-réalisateurs, une série
+// peut avoir plusieurs créateurs ; 10 laisse une large marge.
+const MAX_DIRECTORS = 10;
+const DIRECTOR_NAME_MAX_LENGTH = 150;
 
 const HTML_ENTITY_DECODES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&apos;": "'" };
 const HTML_ENTITY_PATTERN = /&amp;|&lt;|&gt;|&quot;|&#39;|&apos;/g;
@@ -51,6 +56,20 @@ function cleanNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+// Un élément de `directors` : { id, name }. `id` sert à dédupliquer/compter
+// les occurrences (voir Stats.jsx), `name` n'est affiché que via JSX (React
+// échappe déjà tout ce qui est rendu — même raisonnement que cleanString
+// pour title/date) donc pas besoin d'un traitement plus strict que le
+// nettoyage/troncature déjà appliqué aux autres champs texte.
+function cleanDirector(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const id = cleanNumber(raw.id);
+  if (id === null || id <= 0) return null;
+  const name = cleanString(raw.name, DIRECTOR_NAME_MAX_LENGTH);
+  if (!name) return null;
+  return { id, name };
+}
+
 // Renvoie l'item nettoyé (sous-ensemble whitelisté, types coercés/validés),
 // ou null si l'item n'est pas exploitable (id/mediaType manquants ou
 // invalides — le reste a des valeurs de repli raisonnables).
@@ -78,8 +97,14 @@ function sanitizeItem(mediaType, tmdbId, raw) {
   const watchedEpisodes = Array.isArray(raw.watchedEpisodes)
     ? [...new Set(raw.watchedEpisodes.filter((e) => typeof e === "string" && EPISODE_KEY_PATTERN.test(e)))].slice(0, MAX_WATCHED_EPISODES)
     : [];
+  // Rempli progressivement par le backfill de Stats.jsx (voir setDirectors
+  // dans LibraryContext) — absent tant que l'item n'a pas encore été
+  // "revu" par ce backfill.
+  const directors = Array.isArray(raw.directors)
+    ? raw.directors.map(cleanDirector).filter(Boolean).slice(0, MAX_DIRECTORS)
+    : [];
 
-  return { id, mediaType, title, posterPath, date, genreIds, addedAt, updatedAt, rating, runtimeMinutes, watchedEpisodes };
+  return { id, mediaType, title, posterPath, date, genreIds, addedAt, updatedAt, rating, runtimeMinutes, watchedEpisodes, directors };
 }
 
 // `watched`/`watchlist` : { "movie:123": {...}, "tv:456": {...} }. Renvoie
