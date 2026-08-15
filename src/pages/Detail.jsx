@@ -16,6 +16,7 @@ import CastCard from "../components/CastCard";
 import RatingInput from "../components/RatingInput";
 import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
+import { useRegion } from "../context/RegionContext";
 
 const MAIN_CAST_COUNT = 12;
 
@@ -27,13 +28,14 @@ export default function Detail() {
   const [error, setError] = useState(null);
   const [showFullCast, setShowFullCast] = useState(false);
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist, getRating, rateWatched } = useLibrary();
+  const { region, regionName } = useRegion();
   const recommendationsRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
     setShowFullCast(false);
-    Promise.all([getDetails(mediaType, id), getWatchProviders(mediaType, id)])
+    Promise.all([getDetails(mediaType, id), getWatchProviders(mediaType, id, region)])
       .then(([d, p]) => {
         if (cancelled) return;
         setDetails(d);
@@ -48,7 +50,7 @@ export default function Detail() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, id]);
+  }, [mediaType, id, region]);
 
   // Saute directement aux titres similaires si on arrive via le bouton "🔁".
   useEffect(() => {
@@ -147,7 +149,7 @@ export default function Detail() {
               <RatingInput value={getRating(mediaType, id)} onRate={(rating) => rateWatched(mediaType, id, rating)} />
             )}
 
-            <h3>Où regarder en France</h3>
+            <h3>Où regarder{regionName ? ` (${regionName})` : ""}</h3>
             <ProviderBadges providers={providers} />
           </div>
         </div>

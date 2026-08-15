@@ -11,7 +11,9 @@
 const IS_DEV = import.meta.env.DEV;
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const BASE_URL = IS_DEV ? "https://api.themoviedb.org/3" : "/api/tmdb";
-const REGION = "FR";
+// Repli si la région réelle du visiteur (voir RegionContext, /api/region)
+// n'est pas encore connue ou n'a pas pu être déterminée.
+export const DEFAULT_REGION = "FR";
 const LANGUAGE = "fr-FR";
 
 export const IMG_BASE = "https://image.tmdb.org/t/p/";
@@ -64,6 +66,10 @@ export function discover(mediaType, {
   page = 1,
   genreId,
   providerIds,
+  // Région utilisée pour filtrer par plateforme (watch_region — n'a de
+  // sens que combinée à providerIds, TMDB l'ignore sinon). Voir
+  // RegionContext pour la région réelle du visiteur.
+  region = DEFAULT_REGION,
   sortField = "popularity",
   sortDirection = "desc",
   year,
@@ -82,6 +88,7 @@ export function discover(mediaType, {
   voteAverageMax,
   voteCountMin,
   originCountry,
+  originalLanguage,
   runtimeMin,
   runtimeMax,
 } = {}) {
@@ -94,7 +101,7 @@ export function discover(mediaType, {
     page,
     with_genres: genreId || undefined,
     with_watch_providers: providerIds?.length ? providerIds.join("|") : undefined,
-    watch_region: providerIds?.length ? REGION : undefined,
+    watch_region: providerIds?.length ? region : undefined,
     sort_by: `${resolvedField}.${sortDirection}`,
     // Un plancher explicite (filtre avancé) prend le pas sur celui, implicite,
     // qu'on applique par défaut quand on trie par note (sinon un film noté
@@ -105,6 +112,7 @@ export function discover(mediaType, {
     "with_runtime.gte": runtimeMin || undefined,
     "with_runtime.lte": runtimeMax || undefined,
     with_origin_country: originCountry || undefined,
+    with_original_language: originalLanguage || undefined,
     [`${dateField}.gte`]: dateFrom || (yearMin ? `${yearMin}-01-01` : undefined),
     [`${dateField}.lte`]: dateLte,
     [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
@@ -129,6 +137,22 @@ export async function getCountries() {
     .slice()
     .sort((a, b) => a.english_name.localeCompare(b.english_name));
   return countriesCache;
+}
+
+// Liste des langues (code ISO 639-1 + nom natif), pour le filtre "langue
+// originale". `name` est le nom natif renvoyé par TMDB (ex. "Español",
+// "日本語") — plus reconnaissable qu'une traduction, et TMDB ne fournit de
+// toute façon pas de traduction par langue pour cette liste précise.
+// Résultat quasi-statique, mis en cache comme getCountries().
+let languagesCache = null;
+export async function getLanguages() {
+  if (languagesCache) return languagesCache;
+  const list = await tmdbFetch("/configuration/languages");
+  languagesCache = list
+    .filter((l) => l.iso_639_1 && (l.name || l.english_name))
+    .slice()
+    .sort((a, b) => (a.english_name || a.name).localeCompare(b.english_name || b.name));
+  return languagesCache;
 }
 
 export function searchMulti(query, page = 1) {
@@ -232,20 +256,20 @@ export function theatricalStatusFromDate(dateString) {
   return "past";
 }
 
-export async function getWatchProviders(mediaType, id) {
+export async function getWatchProviders(mediaType, id, region = DEFAULT_REGION) {
   const data = await tmdbFetch(`/${mediaType}/${id}/watch/providers`);
-  return data.results?.[REGION] || null;
+  return data.results?.[region] || null;
 }
 
-// Fournisseurs de streaming disponibles en France ------------------------
-// Renvoie TOUTES les plateformes connues de TMDB pour la région FR
-// (abonnement, location, achat confondus), triées par pertinence.
+// Fournisseurs de streaming disponibles dans la région donnée -------------
+// Renvoie TOUTES les plateformes connues de TMDB pour cette région
+// (abonnement, location, achat confondus), triées par pertinence locale.
 
-export async function getWatchProvidersList(mediaType) {
-  const data = await tmdbFetch(`/watch/providers/${mediaType}`, { watch_region: REGION });
+export async function getWatchProvidersList(mediaType, region = DEFAULT_REGION) {
+  const data = await tmdbFetch(`/watch/providers/${mediaType}`, { watch_region: region });
   const results = data.results || [];
   return results
     .slice()
-    .sort((a, b) => (a.display_priorities?.[REGION] ?? 999) - (b.display_priorities?.[REGION] ?? 999))
+    .sort((a, b) => (a.display_priorities?.[region] ?? 999) - (b.display_priorities?.[region] ?? 999))
     .map((p) => ({ id: p.provider_id, name: p.provider_name }));
 }

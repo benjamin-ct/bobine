@@ -457,6 +457,16 @@ async function routeRequest(request, env, url) {
     return handleTmdbProxy(request, env);
   }
 
+  // Pays du visiteur, déduit par Cloudflare au niveau du edge (aucun appel
+  // à un service tiers, aucune permission navigateur à demander) — sert à
+  // adapter "Où regarder" et le filtre plateformes à sa région réelle
+  // plutôt qu'à supposer la France pour tout le monde. `request.cf` n'est
+  // disponible que sur le vrai réseau Cloudflare (absent en `wrangler dev`
+  // local sans `--local` désactivé) ; repli sur FR sinon.
+  if (url.pathname === "/api/region" && request.method === "GET") {
+    return json({ country: request.cf?.country || "FR" });
+  }
+
   // `run_worker_first` (wrangler.jsonc) ne route ici que /api/*, mais on
   // garde un filet : toute autre requête retombe sur les assets statiques.
   return env.ASSETS.fetch(request);

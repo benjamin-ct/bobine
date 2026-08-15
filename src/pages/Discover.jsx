@@ -4,6 +4,7 @@ import MediaCard from "../components/MediaCard";
 import FilterBar from "../components/FilterBar";
 import AdvancedFilters from "../components/AdvancedFilters";
 import { Loading, ErrorMessage, EmptyState } from "../components/StateMessage";
+import { useRegion } from "../context/RegionContext";
 
 const EMPTY_ADVANCED_FILTERS = {
   yearMin: "", yearMax: "",
@@ -44,6 +45,7 @@ export default function Discover() {
   const [status, setStatus] = useState("idle");
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const { region } = useRegion();
 
   const advancedKey = JSON.stringify(advanced);
 
@@ -62,13 +64,13 @@ export default function Discover() {
     getGenres(mediaType)
       .then((data) => !cancelled && setGenres(data.genres || []))
       .catch(() => !cancelled && setGenres([]));
-    getWatchProvidersList(mediaType)
+    getWatchProvidersList(mediaType, region)
       .then((list) => !cancelled && setProviders(list))
       .catch(() => !cancelled && setProviders([]));
     return () => {
       cancelled = true;
     };
-  }, [mediaType]);
+  }, [mediaType, region]);
 
   // Recharge depuis le début quand les filtres changent (page revient à 1).
   useEffect(() => {
@@ -78,6 +80,7 @@ export default function Discover() {
       page: 1,
       genreId,
       providerIds: providerId ? [providerId] : undefined,
+      region,
       sortField,
       sortDirection,
       excludeUpcoming: true,
@@ -98,7 +101,7 @@ export default function Discover() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaType, genreId, providerId, sortField, sortDirection, advancedKey]);
+  }, [mediaType, genreId, providerId, region, sortField, sortDirection, advancedKey]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || page >= totalPages) return;
@@ -108,6 +111,7 @@ export default function Discover() {
       page: nextPage,
       genreId,
       providerIds: providerId ? [providerId] : undefined,
+      region,
       sortField,
       sortDirection,
       excludeUpcoming: true,
@@ -128,7 +132,7 @@ export default function Discover() {
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, sortField, sortDirection, advancedKey]);
+  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, region, sortField, sortDirection, advancedKey]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
