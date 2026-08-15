@@ -6,7 +6,27 @@ export default function FilterBar({
   providerId, setProviderId, providers,
   sortField, setSortField,
   sortDirection, setSortDirection,
+  // Optionnels : n'apparaissent que si l'appelant a configuré des
+  // plateformes favorites (voir FavoriteProvidersContext) — un seul mode
+  // "plateforme" actif à la fois, comme le <select> ci-dessous ne permet
+  // qu'un seul provider à la fois.
+  favoriteProviderIds,
+  useFavoriteProviders,
+  setUseFavoriteProviders,
 }) {
+  const hasFavorites = favoriteProviderIds?.length > 0;
+
+  function onProviderSelect(value) {
+    setProviderId(value);
+    if (value && useFavoriteProviders) setUseFavoriteProviders(false);
+  }
+
+  function onToggleFavorites() {
+    const next = !useFavoriteProviders;
+    setUseFavoriteProviders(next);
+    if (next && providerId) setProviderId("");
+  }
+
   return (
     <div className="filter-bar">
       <div className="filter-bar__group">
@@ -31,12 +51,28 @@ export default function FilterBar({
         ))}
       </select>
 
-      <select value={providerId} onChange={(e) => setProviderId(e.target.value)} className="filter-bar__select">
+      <select
+        value={providerId}
+        onChange={(e) => onProviderSelect(e.target.value)}
+        className="filter-bar__select"
+        disabled={useFavoriteProviders}
+      >
         <option value="">Toutes les plateformes</option>
         {providers.map((p) => (
           <option key={p.id} value={p.id}>{p.name}</option>
         ))}
       </select>
+
+      {hasFavorites && (
+        <button
+          type="button"
+          className={useFavoriteProviders ? "chip chip--active" : "chip"}
+          onClick={onToggleFavorites}
+          title="Filtrer sur les plateformes que tu as cochées dans Ma liste"
+        >
+          🎯 Mes plateformes
+        </button>
+      )}
 
       {setSortField && (
         <div className="sort-control">
