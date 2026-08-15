@@ -43,14 +43,22 @@ function json(data, status = 200, extraHeaders = {}) {
 // statiques) — voir la fin de fetch() ci-dessous. `frame-src` autorise les
 // bandes-annonces YouTube embarquées (TrailerButton) ; `style-src
 // 'unsafe-inline'` est nécessaire pour les styles inline posés par React
-// (style={{...}}), largement utilisés dans l'app.
+// (style={{...}}), largement utilisés dans l'app. `connect-src` inclut
+// https://image.tmdb.org : le service worker (src/sw.js) met les affiches
+// en cache via un `fetch()` interne (stratégie Workbox CacheFirst) — ce
+// fetch-là est un appel programmatique classifié sous `connect-src`, pas
+// `img-src` (qui ne couvre que les chargements natifs d'<img>). Sans ça,
+// les affiches se chargent au premier accès (page pas encore contrôlée par
+// le SW) mais échouent dès qu'on recharge la page (SW actif, requêtes
+// interceptées et bloquées) — bug constaté en prod, reproductible en
+// rechargeant après une première visite.
 const SECURITY_HEADERS = {
   "content-security-policy": [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https://image.tmdb.org https://i.ytimg.com data:",
-    "connect-src 'self'",
+    "connect-src 'self' https://image.tmdb.org",
     "frame-src https://www.youtube.com",
     "worker-src 'self'",
     "frame-ancestors 'none'",
