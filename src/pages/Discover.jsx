@@ -5,6 +5,7 @@ import FilterBar from "../components/FilterBar";
 import AdvancedFilters from "../components/AdvancedFilters";
 import { Loading, ErrorMessage, EmptyState } from "../components/StateMessage";
 import { useRegion } from "../context/RegionContext";
+import { useFavoriteProviders } from "../context/FavoriteProvidersContext";
 
 const EMPTY_ADVANCED_FILTERS = {
   yearMin: "", yearMax: "",
@@ -34,6 +35,7 @@ export default function Discover() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
+  const [useMyPlatforms, setUseMyPlatforms] = useState(false);
   const [sortField, setSortField] = useState("popularity");
   const [sortDirection, setSortDirection] = useState("desc");
   const [advanced, setAdvanced] = useState(EMPTY_ADVANCED_FILTERS);
@@ -46,8 +48,12 @@ export default function Discover() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const { region } = useRegion();
+  const { favoriteProviderIds } = useFavoriteProviders();
 
   const advancedKey = JSON.stringify(advanced);
+  // Actif ("Mes plateformes") : plusieurs ids OR-joints ; sinon le <select>
+  // classique, au plus un provider à la fois — voir FilterBar.jsx.
+  const activeProviderIds = useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined;
 
   // Réinitialise les filtres dépendants et la liste au changement de type.
   useEffect(() => {
@@ -57,7 +63,7 @@ export default function Discover() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreId, providerId, sortField, sortDirection, advancedKey]);
+  }, [genreId, providerId, useMyPlatforms, sortField, sortDirection, advancedKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +85,7 @@ export default function Discover() {
     discover(mediaType, {
       page: 1,
       genreId,
-      providerIds: providerId ? [providerId] : undefined,
+      providerIds: activeProviderIds,
       region,
       sortField,
       sortDirection,
@@ -101,7 +107,7 @@ export default function Discover() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaType, genreId, providerId, region, sortField, sortDirection, advancedKey]);
+  }, [mediaType, genreId, providerId, useMyPlatforms, favoriteProviderIds, region, sortField, sortDirection, advancedKey]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || page >= totalPages) return;
@@ -110,7 +116,7 @@ export default function Discover() {
     discover(mediaType, {
       page: nextPage,
       genreId,
-      providerIds: providerId ? [providerId] : undefined,
+      providerIds: activeProviderIds,
       region,
       sortField,
       sortDirection,
@@ -132,7 +138,7 @@ export default function Discover() {
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, region, sortField, sortDirection, advancedKey]);
+  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, useMyPlatforms, favoriteProviderIds, region, sortField, sortDirection, advancedKey]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
@@ -163,6 +169,9 @@ export default function Discover() {
         providerId={providerId}
         setProviderId={setProviderId}
         providers={providers}
+        favoriteProviderIds={favoriteProviderIds}
+        useFavoriteProviders={useMyPlatforms}
+        setUseFavoriteProviders={setUseMyPlatforms}
         sortField={sortField}
         setSortField={setSortField}
         sortDirection={sortDirection}

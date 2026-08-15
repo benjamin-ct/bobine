@@ -6,16 +6,19 @@ import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { LibraryProvider } from './context/LibraryContext.jsx'
 import { RegionProvider } from './context/RegionContext.jsx'
+import { FavoriteProvidersProvider } from './context/FavoriteProvidersContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <RegionProvider>
-        <AuthProvider>
-          <LibraryProvider>
-            <App />
-          </LibraryProvider>
-        </AuthProvider>
+        <FavoriteProvidersProvider>
+          <AuthProvider>
+            <LibraryProvider>
+              <App />
+            </LibraryProvider>
+          </AuthProvider>
+        </FavoriteProvidersProvider>
       </RegionProvider>
     </BrowserRouter>
   </StrictMode>,

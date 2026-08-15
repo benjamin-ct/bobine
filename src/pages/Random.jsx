@@ -7,6 +7,7 @@ import TrailerButton from "../components/TrailerButton";
 import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
 import { useRegion } from "../context/RegionContext";
+import { useFavoriteProviders } from "../context/FavoriteProvidersContext";
 
 const MAX_ATTEMPTS = 6;
 
@@ -14,6 +15,7 @@ export default function Random() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
+  const [useMyPlatforms, setUseMyPlatforms] = useState(false);
   const [yearMin, setYearMin] = useState("");
   const [yearMax, setYearMax] = useState("");
   const [genres, setGenres] = useState([]);
@@ -28,6 +30,7 @@ export default function Random() {
 
   const { watchedIds, isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
   const { region, regionName } = useRegion();
+  const { favoriteProviderIds } = useFavoriteProviders();
 
   useEffect(() => {
     setGenreId("");
@@ -56,7 +59,7 @@ export default function Random() {
       // trier n'a pas de sens ici (voir discover() pour le tri par défaut).
       const discoverParams = {
         genreId,
-        providerIds: providerId ? [providerId] : undefined,
+        providerIds: useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined,
         region,
         yearMin: yearMin ? Number(yearMin) : undefined,
         yearMax: yearMax ? Number(yearMax) : undefined,
@@ -134,6 +137,9 @@ export default function Random() {
         providerId={providerId}
         setProviderId={setProviderId}
         providers={providers}
+        favoriteProviderIds={favoriteProviderIds}
+        useFavoriteProviders={useMyPlatforms}
+        setUseFavoriteProviders={setUseMyPlatforms}
       />
 
       <div className="advanced-filters__field random-year-filter">

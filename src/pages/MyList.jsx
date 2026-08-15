@@ -4,6 +4,7 @@ import { posterUrl } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
 import Stats from "../components/Stats";
 import NotificationSettings from "../components/NotificationSettings";
+import FavoriteProvidersSettings from "../components/FavoriteProvidersSettings";
 
 function Row({ item }) {
   const { toggleWatched, toggleWatchlist, isWatched, isInWatchlist } = useLibrary();
@@ -66,6 +67,7 @@ export default function MyList() {
       <h1>Ma liste</h1>
 
       <NotificationSettings />
+      <FavoriteProvidersSettings />
 
       <div className="filter-bar__group" style={{ marginBottom: 20 }}>
         <button className={tab === "watchlist" ? "chip chip--active" : "chip"} onClick={() => setTab("watchlist")}>

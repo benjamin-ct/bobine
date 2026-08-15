@@ -5,6 +5,7 @@ import FilterBar from "../components/FilterBar";
 import CountryLanguageFilter from "../components/CountryLanguageFilter";
 import { Loading, ErrorMessage, EmptyState } from "../components/StateMessage";
 import { useRegion } from "../context/RegionContext";
+import { useFavoriteProviders } from "../context/FavoriteProvidersContext";
 
 const WINDOWS = [
   { value: 7, label: "7 prochains jours" },
@@ -32,6 +33,7 @@ export default function ComingSoon() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
   const [providerId, setProviderId] = useState("");
+  const [useMyPlatforms, setUseMyPlatforms] = useState(false);
   const [country, setCountry] = useState("");
   const [language, setLanguage] = useState("");
   const [windowDays, setWindowDays] = useState(30);
@@ -44,6 +46,8 @@ export default function ComingSoon() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const { region } = useRegion();
+  const { favoriteProviderIds } = useFavoriteProviders();
+  const activeProviderIds = useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined;
 
   // Réinitialise les filtres dépendants et la liste au changement de type.
   useEffect(() => {
@@ -53,7 +57,7 @@ export default function ComingSoon() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreId, providerId, country, language, windowDays]);
+  }, [genreId, providerId, useMyPlatforms, country, language, windowDays]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,7 +79,7 @@ export default function ComingSoon() {
     discover(mediaType, {
       page: 1,
       genreId,
-      providerIds: providerId ? [providerId] : undefined,
+      providerIds: activeProviderIds,
       region,
       originCountry: country || undefined,
       originalLanguage: language || undefined,
@@ -97,7 +101,7 @@ export default function ComingSoon() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, genreId, providerId, region, country, language, windowDays]);
+  }, [mediaType, genreId, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || page >= totalPages) return;
@@ -106,7 +110,7 @@ export default function ComingSoon() {
     discover(mediaType, {
       page: nextPage,
       genreId,
-      providerIds: providerId ? [providerId] : undefined,
+      providerIds: activeProviderIds,
       region,
       originCountry: country || undefined,
       originalLanguage: language || undefined,
@@ -128,7 +132,7 @@ export default function ComingSoon() {
       })
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
-  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, region, country, language, windowDays]);
+  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
@@ -161,6 +165,9 @@ export default function ComingSoon() {
         providerId={providerId}
         setProviderId={setProviderId}
         providers={providers}
+        favoriteProviderIds={favoriteProviderIds}
+        useFavoriteProviders={useMyPlatforms}
+        setUseFavoriteProviders={setUseMyPlatforms}
       />
 
       <CountryLanguageFilter
