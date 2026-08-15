@@ -46,14 +46,19 @@ function json(data, status = 200, extraHeaders = {}) {
 // de reCAPTCHA v3 ; `script-src`/`connect-src` autorisent le script
 // reCAPTCHA et ses appels réseau ; `style-src 'unsafe-inline'` est
 // nécessaire pour les styles inline posés par React (style={{...}}),
-// largement utilisés dans l'app.
+// largement utilisés dans l'app. `connect-src` inclut aussi
+// https://image.tmdb.org : le service worker (src/sw.js) met les affiches
+// en cache via un fetch() interne (Workbox CacheFirst), classifié sous
+// connect-src (pas img-src, qui ne couvre que les <img> natifs) — sans ça,
+// les affiches se chargent au premier accès mais disparaissent partout dès
+// qu'on recharge la page (SW actif, requêtes interceptées et bloquées).
 const SECURITY_HEADERS = {
   "content-security-policy": [
     "default-src 'self'",
     "script-src 'self' https://www.google.com https://www.gstatic.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https://image.tmdb.org https://i.ytimg.com data:",
-    "connect-src 'self' https://www.google.com",
+    "connect-src 'self' https://www.google.com https://image.tmdb.org",
     "frame-src https://www.youtube.com https://www.google.com",
     "worker-src 'self'",
     "frame-ancestors 'none'",
