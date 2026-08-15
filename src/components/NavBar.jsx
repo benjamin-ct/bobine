@@ -12,6 +12,7 @@ export default function NavBar() {
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const wrapperRef = useRef(null);
   const { status: authStatus, email, logout } = useAuth();
@@ -54,7 +55,10 @@ export default function NavBar() {
       }
     }
     function onKeyDown(e) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        setMenuOpen(false);
+      }
     }
     document.addEventListener("mousedown", onClickOutside);
     document.addEventListener("keydown", onKeyDown);
@@ -85,16 +89,34 @@ export default function NavBar() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  // Utilisé sur les liens de nav : remonte en haut et referme le menu
+  // mobile (utile puisqu'un clic sur un onglet ne démonte pas la navbar).
+  function onNavClick() {
+    scrollTop();
+    setMenuOpen(false);
+  }
+
   return (
     <header className="navbar">
       <div className="navbar__inner">
-        <NavLink to="/" className="navbar__brand" onClick={scrollTop}>🎬 Bobine</NavLink>
-        <nav className="navbar__links">
-          <NavLink to="/" end onClick={scrollTop}>Découvrir</NavLink>
-          <NavLink to="/nouveautes" onClick={scrollTop}>Nouveautés</NavLink>
-          <NavLink to="/prochainement" onClick={scrollTop}>Prochainement</NavLink>
-          <NavLink to="/aleatoire" onClick={scrollTop}>Aléatoire</NavLink>
-          <NavLink to="/ma-liste" onClick={scrollTop}>Ma liste</NavLink>
+        <div className="navbar__top">
+          <NavLink to="/" className="navbar__brand" onClick={onNavClick}>🎬 Bobine</NavLink>
+          <button
+            type="button"
+            className="navbar__toggle"
+            aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            {menuOpen ? "✕" : "☰"}
+          </button>
+        </div>
+        <nav className={`navbar__links${menuOpen ? " navbar__links--open" : ""}`}>
+          <NavLink to="/" end onClick={onNavClick}>Découvrir</NavLink>
+          <NavLink to="/nouveautes" onClick={onNavClick}>Nouveautés</NavLink>
+          <NavLink to="/prochainement" onClick={onNavClick}>Prochainement</NavLink>
+          <NavLink to="/aleatoire" onClick={onNavClick}>Aléatoire</NavLink>
+          <NavLink to="/ma-liste" onClick={onNavClick}>Ma liste</NavLink>
         </nav>
         <div className="navbar__search" ref={wrapperRef}>
           <form onSubmit={onSubmit}>
@@ -173,7 +195,7 @@ export default function NavBar() {
             </>
           )}
           {authStatus === "anonymous" && (
-            <Link to="/connexion" className="icon-btn icon-btn--text" onClick={scrollTop}>
+            <Link to="/connexion" className="icon-btn icon-btn--text" onClick={onNavClick}>
               Connexion
             </Link>
           )}
