@@ -19,7 +19,7 @@ function Row({ item }) {
         ) : (
           <div className="list-row__no-poster" />
         )}
-        <div>
+        <div className="list-row__info">
           <p className="list-row__title">{item.title}</p>
           <p className="list-row__meta">
             {item.mediaType === "movie" ? "Film" : "Série"} · {year}

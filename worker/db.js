@@ -1,6 +1,8 @@
 // Petites fonctions d'accès à D1. Pas d'ORM : le schéma est simple (voir
 // scripts/schema.sql) et les requêtes préparées suffisent largement.
 
+import { decodeHtmlEntities } from "./validate.js";
+
 export async function upsertSubscription(db, { endpoint, p256dh, auth }) {
   const existing = await db
     .prepare("SELECT id FROM subscriptions WHERE endpoint = ?")
@@ -92,6 +94,12 @@ export async function getLibraryForUser(db, userId) {
   for (const row of results) {
     const key = `${row.media_type}:${row.tmdb_id}`;
     const item = { ...JSON.parse(row.data), updatedAt: row.updated_at };
+    // Répare à la volée les titres encore corrompus par l'ancien bug de
+    // double-échappement (voir decodeHtmlEntities dans validate.js) sans
+    // attendre une prochaine écriture — la version propre est réécrite en
+    // base dès le prochain PUT (toggle) puisque le client renvoie l'état
+    // reçu ici tel quel.
+    if (typeof item.title === "string") item.title = decodeHtmlEntities(item.title);
     if (row.status === "watched") watched[key] = item;
     else watchlist[key] = item;
   }
