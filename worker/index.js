@@ -24,6 +24,7 @@ import {
 } from "./auth.js";
 import { checkRateLimit, getClientIp } from "./rate-limit.js";
 import { sanitizeLibraryPayload } from "./validate.js";
+import { verifyRecaptcha } from "./recaptcha.js";
 
 function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -41,17 +42,24 @@ function json(data, status = 200, extraHeaders = {}) {
 
 // En-têtes de durcissement HTTP, appliqués à TOUTE réponse (API et assets
 // statiques) — voir la fin de fetch() ci-dessous. `frame-src` autorise les
-// bandes-annonces YouTube embarquées (TrailerButton) ; `style-src
-// 'unsafe-inline'` est nécessaire pour les styles inline posés par React
-// (style={{...}}), largement utilisés dans l'app.
+// bandes-annonces YouTube embarquées (TrailerButton) et l'iframe invisible
+// de reCAPTCHA v3 ; `script-src`/`connect-src` autorisent le script
+// reCAPTCHA et ses appels réseau ; `style-src 'unsafe-inline'` est
+// nécessaire pour les styles inline posés par React (style={{...}}),
+// largement utilisés dans l'app. `connect-src` inclut aussi
+// https://image.tmdb.org : le service worker (src/sw.js) met les affiches
+// en cache via un fetch() interne (Workbox CacheFirst), classifié sous
+// connect-src (pas img-src, qui ne couvre que les <img> natifs) — sans ça,
+// les affiches se chargent au premier accès mais disparaissent partout dès
+// qu'on recharge la page (SW actif, requêtes interceptées et bloquées).
 const SECURITY_HEADERS = {
   "content-security-policy": [
     "default-src 'self'",
-    "script-src 'self'",
+    "script-src 'self' https://www.google.com https://www.gstatic.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https://image.tmdb.org https://i.ytimg.com data:",
-    "connect-src 'self'",
-    "frame-src https://www.youtube.com",
+    "connect-src 'self' https://www.google.com https://image.tmdb.org",
+    "frame-src https://www.youtube.com https://www.google.com",
     "worker-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -208,6 +216,9 @@ async function handleRequestLink(request, env) {
   const email = (body?.email || "").trim().toLowerCase();
   if (!isValidEmail(email)) return json({ error: "Adresse email invalide." }, 400);
 
+  const recaptcha = await verifyRecaptcha(env, body?.recaptchaToken, "request_link");
+  if (!recaptcha.ok) return json({ error: "Vérification anti-robot échouée. Réessaie." }, 403);
+
   // Par email (empêche de spammer la boîte mail d'un tiers) ET par IP
   // (empêche un seul client de solliciter l'endpoint en boucle avec des
   // emails différents).
@@ -260,6 +271,9 @@ async function handleVerify(request, env) {
   const code = body?.code;
   if (!token && !code) return json({ error: "Jeton ou code manquant." }, 400);
 
+  const recaptcha = await verifyRecaptcha(env, body?.recaptchaToken, "verify");
+  if (!recaptcha.ok) return json({ error: "Vérification anti-robot échouée. Réessaie." }, 403);
+
   const email = token ? await consumeMagicLink(env.DB, token) : await consumeMagicLinkByCode(env.DB, code);
   if (!email) {
     return json(
@@ -289,7 +303,18 @@ async function handleLogout(request, env) {
 }
 
 // Bibliothèque synchronisée ------------------------------------------------
-
+//
+// Isolation entre comptes (IDOR) : `user.id` vient UNIQUEMENT de
+// getUserFromRequest (jointure sessions/users sur le cookie httpOnly), et
+// c'est le seul identifiant jamais utilisé pour lire/écrire une bibliothèque
+// — ni le corps de la requête, ni la query string, ni aucun header ne sont
+// consultés pour ça. Un compte A ne peut donc pas cibler les données d'un
+// compte B, quoi qu'il mette dans le payload (vérifié empiriquement : un
+// PUT avec un `userId`/`user_id` arbitraire dans le corps est simplement
+// ignoré, sanitizeLibraryPayload ne whiteliste que watched/watchlist).
+// ⚠️ Si un jour un paramètre d'id explicite est ajouté ici (ex. pour une
+// vue admin), il doit être validé contre `user.id` et jamais faire
+// confiance à une valeur fournie par le client sans ce contrôle.
 async function handleGetLibrary(request, env) {
   const user = await getUserFromRequest(env.DB, request);
   if (!user) return json({ error: "Non connecté." }, 401);
@@ -372,6 +397,20 @@ async function routeRequest(request, env, url) {
   if (url.pathname === "/api/vapid-public-key" && request.method === "GET") {
     if (!env.VAPID_PUBLIC_KEY) return json({ error: "VAPID_PUBLIC_KEY non configurée." }, 503);
     return json({ publicKey: env.VAPID_PUBLIC_KEY });
+  }
+
+  // Clé "site" reCAPTCHA v3 : faite pour être publique (elle apparaît de
+  // toute façon en clair dans le HTML/JS de n'importe quel site qui
+  // l'utilise) — servie ici plutôt que codée en dur côté client pour ne
+  // pas dépendre d'une variable d'environnement Vite à configurer
+  // séparément côté Cloudflare (même raisonnement que VAPID_PUBLIC_KEY,
+  // voir wrangler.jsonc). `null` si pas encore configurée : le client
+  // saute alors la vérification anti-robot (le serveur, lui, saute aussi
+  // la vérification côté verifyRecaptcha tant que RECAPTCHA_SECRET_KEY
+  // n'est pas configurée — ne bloque jamais avant que les deux clés
+  // soient en place).
+  if (url.pathname === "/api/recaptcha-site-key" && request.method === "GET") {
+    return json({ siteKey: env.RECAPTCHA_SITE_KEY || null });
   }
 
   if (url.pathname === "/api/subscribe" && request.method === "POST") {

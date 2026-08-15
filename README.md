@@ -167,6 +167,38 @@ problème, sans jamais changer de contexte de stockage.
    synchronisé). Se déconnecter ne supprime rien en local : les données
    restent disponibles hors connexion.
 
+4. **reCAPTCHA v3** (optionnel, mais recommandé) — filtre les bots/scripts
+   qui tapent directement sur `/api/auth/request-link` et `/api/auth/verify`
+   sans jamais passer par un vrai navigateur. Invisible pour l'utilisateur
+   (pas de case à cocher).
+
+   1. Crée un site sur [google.com/recaptcha/admin](https://www.google.com/recaptcha/admin) — type **reCAPTCHA v3**, domaine `bobine.creusatbenjamin.workers.dev` (+ `localhost` si tu veux aussi l'activer en dev).
+   2. Renseigne la **clé de site** (publique) dans `wrangler.jsonc`, champ `vars.RECAPTCHA_SITE_KEY`.
+   3. Ajoute la **clé secrète** dans le dashboard Cloudflare, Worker `bobine` → **Settings → Variables and Secrets** :
+
+      | Nom | Type | Valeur |
+      |---|---|---|
+      | `RECAPTCHA_SECRET_KEY` | **Secret** | ta clé secrète reCAPTCHA |
+
+   Tant que ces deux valeurs ne sont pas configurées, la vérification est
+   entièrement sautée (côté client ET serveur) — l'authentification continue
+   de fonctionner normalement, juste sans cette couche.
+
+## Sécurité
+
+- **Isolation entre comptes** : `PUT`/`GET /api/library` déterminent
+  toujours le compte à partir du cookie de session (jointure `sessions` ↔
+  `users` en base), jamais d'un identifiant fourni par le client (aucun
+  paramètre de ce type n'est même lu). Un compte A n'a donc aucun moyen de
+  lire ou modifier les données d'un compte B, quoi qu'il envoie dans la
+  requête — vérifié empiriquement (deux comptes réels, tentative d'injection
+  d'un `userId` arbitraire dans le payload : sans effet, la bibliothèque du
+  second compte reste intacte). Voir le commentaire au-dessus de
+  `handleGetLibrary`/`handlePutLibrary` dans `worker/index.js`.
+- **Rate-limiting, validation de schéma, en-têtes HTTP, proxy TMDB** : voir
+  `worker/rate-limit.js`, `worker/validate.js`, `public/_headers` — mis en
+  place suite à un test de sécurité externe (voir historique des PR).
+
 ## Fonctionnalités
 
 - **Découvrir** : parcourir films/séries, filtrable par genre et par n'importe laquelle des plateformes de streaming disponibles en France (liste complète tirée de TMDB, pas juste les grosses). Tri par popularité, note, ou année (croissant/décroissant). Les résultats s'accumulent en **scroll infini** : la page suivante se charge automatiquement en approchant du bas (pas de bouton, pas de pagination). N'affiche que des titres déjà sortis (les sorties à venir sont dans l'onglet **Prochainement**).
@@ -192,4 +224,3 @@ problème, sans jamais changer de contexte de stockage.
 - Le suivi "vu / envie de voir" est stocké dans le navigateur (`localStorage`) — ça reste la source de vérité hors connexion. Vider les données du site ou changer de navigateur sans être connecté réinitialise la liste — connecte-toi (voir [Comptes et synchronisation](#comptes-et-synchronisation-optionnel)) pour une synchronisation automatique entre appareils.
 - Exceptions au "tout côté client" : les **notifications push** ont besoin d'un minimum d'état côté serveur (base D1 `worker/schema.sql`) — abonnement push, copie de la liste "envie de voir" et des genres favoris, pour que la tâche planifiée quotidienne (`worker/scheduled.js`) puisse vérifier les nouveautés même quand l'app est fermée. Les **comptes** (même base D1) stockent l'email, les liens de connexion à usage unique, les sessions, et — pour les utilisateurs connectés seulement — une copie de la bibliothèque pour la synchronisation.
 - Les icônes PWA (`public/icon-*.png`) sont générées par `scripts/generate-icons.cjs` ; relance-le si tu veux changer le design.
-- **Sécurité côté Worker** : limitation de débit (par email/IP) sur l'authentification et les endpoints d'abonnement push, validation de schéma côté serveur sur la bibliothèque synchronisée (types, longueur, whitelist des clés), en-têtes de durcissement HTTP (CSP, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) sur toutes les réponses — voir `worker/rate-limit.js` et `worker/validate.js`.

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { getRecaptchaToken } from "../lib/recaptcha";
 
 const AuthContext = createContext(null);
 
@@ -51,10 +52,11 @@ export function AuthProvider({ children }) {
   // Demande un lien de connexion par email. Renvoie la réponse du serveur
   // (peut contenir `devLink` en local sans service d'email configuré).
   const requestLink = useCallback(async (emailToSend) => {
+    const recaptchaToken = await getRecaptchaToken("request_link");
     const res = await fetch("/api/auth/request-link", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: emailToSend }),
+      body: JSON.stringify({ email: emailToSend, recaptchaToken }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || "Impossible d'envoyer le lien de connexion.");
@@ -66,10 +68,11 @@ export function AuthProvider({ children }) {
   // l'app installée sur l'écran d'accueil, notamment sur iOS) et établit
   // la session.
   const verifyWith = useCallback(async (body, fallbackError) => {
+    const recaptchaToken = await getRecaptchaToken("verify");
     const res = await fetch("/api/auth/verify", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, recaptchaToken }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || fallbackError);

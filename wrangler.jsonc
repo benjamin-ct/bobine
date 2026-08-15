@@ -17,7 +17,13 @@
   // VAPID_PRIVATE_KEY, elles, en Secret dans le dashboard, qui survivent).
   "vars": {
     "VAPID_PUBLIC_KEY": "BJg-Rpv7wg8t4mSnGRG47SIhNovB4TEeB__fia4oyGe9opQ0lDT6z_aFWLBRZ3y1EMdbT8XE05uItXdsxiBufvY",
-    "VAPID_SUBJECT": "mailto:tcreusatbenjamin@gmail.com"
+    "VAPID_SUBJECT": "mailto:tcreusatbenjamin@gmail.com",
+    // Clé "site" reCAPTCHA v3 (publique par nature, comme VAPID_PUBLIC_KEY
+    // ci-dessus) — vide par défaut : tant qu'elle n'est pas renseignée, le
+    // client saute la vérification anti-robot sans rien casser. Vide-la
+    // avec ta clé depuis google.com/recaptcha/admin (voir README), et
+    // ajoute RECAPTCHA_SECRET_KEY en Secret côté dashboard Cloudflare.
+    "RECAPTCHA_SITE_KEY": "6Ldgj4ctAAAAACH345AamgXKs4vXMlF1D1p1HHxz"
   },
   "d1_databases": [
     {
