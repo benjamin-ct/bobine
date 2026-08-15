@@ -85,6 +85,28 @@ button, select, input {
   white-space: nowrap;
 }
 
+.navbar__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.navbar__toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .navbar__links {
   display: flex;
   gap: 18px;
@@ -662,12 +684,15 @@ button, select, input {
 
 .detail-main {
   display: flex;
+  align-items: flex-start;
   gap: 28px;
   flex-wrap: wrap;
 }
 
 .detail-poster {
   width: 240px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   flex-shrink: 0;
@@ -817,6 +842,7 @@ button, select, input {
 
 .random-result {
   display: flex;
+  align-items: flex-start;
   gap: 28px;
   flex-wrap: wrap;
   margin-top: 32px;
@@ -1106,6 +1132,46 @@ button, select, input {
   object-fit: cover;
   display: block;
   background: var(--bg-elevated);
+}
+
+@media (max-width: 860px) {
+  .navbar__inner {
+    row-gap: 8px;
+  }
+  .navbar__top {
+    flex: 1 1 100%;
+  }
+  .navbar__toggle {
+    display: flex;
+  }
+  .navbar__links {
+    display: none;
+    flex: 1 1 100%;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .navbar__links--open {
+    display: flex;
+  }
+  .navbar__links a {
+    padding: 10px 6px;
+    border-bottom: none;
+    border-radius: 8px;
+  }
+  .navbar__links a.active {
+    background: var(--bg-elevated);
+  }
+  .navbar__search {
+    flex: 1 1 100%;
+    max-width: none;
+    margin-left: 0;
+  }
+  .navbar__account {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 640px) {
