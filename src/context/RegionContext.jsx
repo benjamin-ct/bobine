@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { DEFAULT_REGION } from "../api/tmdb";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { DEFAULT_REGION, getTheatricalStatusIndex } from "../api/tmdb";
 
 const RegionContext = createContext(null);
 
@@ -26,6 +26,10 @@ export function regionName(code) {
 // supposer la France pour tout le monde.
 export function RegionProvider({ children }) {
   const [region, setRegion] = useState(DEFAULT_REGION);
+  // Index "au cinéma"/"bientôt" (voir getTheatricalStatusIndex, src/api/tmdb.js)
+  // consulté par MediaCard pour la pastille de grille, sans appel réseau par
+  // carte. Vide tant que le premier chargement n'est pas terminé.
+  const [theatricalIndex, setTheatricalIndex] = useState(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +47,27 @@ export function RegionProvider({ children }) {
     };
   }, []);
 
-  const value = useMemo(() => ({ region, regionName: regionName(region) }), [region]);
+  useEffect(() => {
+    let cancelled = false;
+    getTheatricalStatusIndex(region)
+      .then((index) => {
+        if (!cancelled) setTheatricalIndex(index);
+      })
+      .catch(() => {
+        // Repli silencieux : les cartes affichent alors simplement l'absence
+        // de pastille "au cinéma", pas une erreur bloquante.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [region]);
+
+  const getTheatricalStatus = useCallback((movieId) => theatricalIndex.get(movieId) || null, [theatricalIndex]);
+
+  const value = useMemo(
+    () => ({ region, regionName: regionName(region), getTheatricalStatus }),
+    [region, getTheatricalStatus]
+  );
 
   return <RegionContext.Provider value={value}>{children}</RegionContext.Provider>;
 }

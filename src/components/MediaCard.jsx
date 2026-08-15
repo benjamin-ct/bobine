@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { posterUrl, getFrenchTheatricalDate, theatricalStatusFromDate } from "../api/tmdb";
+import { posterUrl } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
+import { useRegion } from "../context/RegionContext";
 
 const THEATRICAL_BADGES = {
   in_theaters: "🎬 En salles",
@@ -10,6 +10,7 @@ const THEATRICAL_BADGES = {
 
 export default function MediaCard({ item }) {
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
+  const { getTheatricalStatus } = useRegion();
   const mediaType = item.mediaType || item.media_type;
   const title = item.title || item.name;
   const date = item.release_date || item.first_air_date;
@@ -18,18 +19,10 @@ export default function MediaCard({ item }) {
   const inWatchlist = isInWatchlist(mediaType, item.id);
 
   // Statut "au cinéma" (France) : uniquement pour les films (les séries
-  // n'ont pas de notion de sortie en salle).
-  const [theatricalStatus, setTheatricalStatus] = useState(null);
-  useEffect(() => {
-    if (mediaType !== "movie") return;
-    let cancelled = false;
-    getFrenchTheatricalDate(item.id).then((theatricalDate) => {
-      if (!cancelled) setTheatricalStatus(theatricalStatusFromDate(theatricalDate));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [mediaType, item.id]);
+  // n'ont pas de notion de sortie en salle). Lookup synchrone dans l'index
+  // chargé une fois par RegionContext (voir getTheatricalStatusIndex,
+  // src/api/tmdb.js) — aucun appel réseau par carte.
+  const theatricalStatus = mediaType === "movie" ? getTheatricalStatus(item.id) : null;
 
   const libItem = {
     id: item.id,

@@ -88,3 +88,88 @@ export function sanitizeLibraryPayload(body) {
     watchlist: sanitizeList(body?.watchlist),
   };
 }
+
+// Lot incrémental (voir POST /api/library/sync) : contrairement à
+// sanitizeLibraryPayload ci-dessus (état complet, clés = "mediaType:id"),
+// chaque entrée porte déjà mediaType/id séparément — le client envoie
+// exactement ce qui a changé, pas tout l'état. Plafonné bas : une salve
+// débattue côté client ne dépasse jamais qu'une poignée d'items en usage
+// normal (ex. "tout marquer vu" sur une saison), ceci n'est qu'un
+// garde-fou anti-abus.
+const MAX_SYNC_BATCH = 500;
+
+function sanitizeSyncUpsert(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  if (!VALID_MEDIA_TYPES.has(raw.mediaType)) return null;
+  if (raw.status !== "watched" && raw.status !== "watchlist") return null;
+  const item = sanitizeItem(raw.mediaType, raw.id, raw.item);
+  if (!item) return null;
+  return { mediaType: raw.mediaType, tmdbId: item.id, status: raw.status, item };
+}
+
+function sanitizeSyncDelete(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  if (!VALID_MEDIA_TYPES.has(raw.mediaType)) return null;
+  const id = cleanNumber(raw.id);
+  if (id === null || id <= 0) return null;
+  return { mediaType: raw.mediaType, tmdbId: id };
+}
+
+export function sanitizeLibrarySyncPayload(body) {
+  return {
+    upserts: Array.isArray(body?.upserts)
+      ? body.upserts.slice(0, MAX_SYNC_BATCH).map(sanitizeSyncUpsert).filter(Boolean)
+      : [],
+    deletes: Array.isArray(body?.deletes)
+      ? body.deletes.slice(0, MAX_SYNC_BATCH).map(sanitizeSyncDelete).filter(Boolean)
+      : [],
+  };
+}
+
+// Items "envie de voir" pour le mirroir des notifications push (voir
+// POST /api/subscribe et /api/subscribe/sync) — `maxItems` est passé par
+// l'appelant (MAX_WATCHLIST_ITEMS dans worker/index.js) plutôt que dupliqué
+// ici.
+export function sanitizeWatchlistItems(rawItems, maxItems) {
+  return (Array.isArray(rawItems) ? rawItems : [])
+    .slice(0, maxItems)
+    .map((item) => {
+      if (!VALID_MEDIA_TYPES.has(item?.mediaType)) return null;
+      const tmdbId = cleanNumber(item?.tmdbId);
+      if (tmdbId === null || tmdbId <= 0) return null;
+      const title = cleanString(item?.title) || "Titre inconnu";
+      const posterPath =
+        typeof item?.posterPath === "string" && item.posterPath.startsWith("/")
+          ? item.posterPath.slice(0, 200)
+          : null;
+      return { mediaType: item.mediaType, tmdbId, title, posterPath };
+    })
+    .filter(Boolean);
+}
+
+export function sanitizeGenrePrefs(rawGenres, maxItems) {
+  return (Array.isArray(rawGenres) ? rawGenres : [])
+    .slice(0, maxItems)
+    .map((g) => {
+      if (!VALID_MEDIA_TYPES.has(g?.mediaType)) return null;
+      const genreId = cleanNumber(g?.genreId);
+      if (genreId === null || genreId <= 0) return null;
+      return { mediaType: g.mediaType, genreId };
+    })
+    .filter(Boolean);
+}
+
+// Listes de retrait : juste des clés "mediaType:id" (tmdbId ou genreId
+// selon l'appelant), pas de payload au-delà du format.
+export function sanitizeKeyList(rawKeys, maxItems) {
+  return (Array.isArray(rawKeys) ? rawKeys : [])
+    .slice(0, maxItems)
+    .map((key) => {
+      const [mediaType, idStr] = String(key).split(":");
+      if (!VALID_MEDIA_TYPES.has(mediaType)) return null;
+      const id = cleanNumber(idStr);
+      if (id === null || id <= 0) return null;
+      return { mediaType, id };
+    })
+    .filter(Boolean);
+}
