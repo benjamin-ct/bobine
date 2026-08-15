@@ -3,6 +3,8 @@ import NavBar from "./components/NavBar";
 import ScrollToTop from "./components/ScrollToTop";
 import ScrollToTopButton from "./components/ScrollToTopButton";
 import Discover from "./pages/Discover";
+import NewReleases from "./pages/NewReleases";
+import ComingSoon from "./pages/ComingSoon";
 import Detail from "./pages/Detail";
 import Random from "./pages/Random";
 import MyList from "./pages/MyList";
@@ -19,6 +21,8 @@ export default function App() {
       <main>
         <Routes>
           <Route path="/" element={<Discover />} />
+          <Route path="/nouveautes" element={<NewReleases />} />
+          <Route path="/prochainement" element={<ComingSoon />} />
           <Route path="/media/:mediaType/:id" element={<Detail />} />
           <Route path="/personne/:id" element={<Person />} />
           <Route path="/aleatoire" element={<Random />} />
