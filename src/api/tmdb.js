@@ -162,8 +162,64 @@ export function estimateRuntimeMinutes(details, mediaType) {
 
 export function getDetails(mediaType, id) {
   return tmdbFetch(`/${mediaType}/${id}`, {
-    append_to_response: "credits,videos,recommendations",
+    // release_dates : sorties par pays (dont FR), pour le statut "au
+    // cinéma" — inclus ici pour ne pas faire un second appel sur la fiche
+    // détail (voir getFrenchTheatricalDate plus bas pour les vignettes,
+    // où un appel dédié par titre est nécessaire).
+    append_to_response: "credits,videos,recommendations,release_dates",
   });
+}
+
+// Statut "au cinéma" (France) --------------------------------------------
+// TMDB ne donne pas de date de fin d'exploitation en salle : on considère
+// un film "encore au cinéma" s'il est sorti il y a moins de 6 semaines.
+const THEATRICAL_WINDOW_DAYS = 42;
+
+// Type de sortie TMDB : 3 = sortie nationale en salles, 2 = sortie limitée
+// en salles. On préfère la sortie nationale ; à défaut, la limitée.
+function extractFrenchTheatricalDate(releaseDatesResponse) {
+  const fr = releaseDatesResponse?.results?.find((r) => r.iso_3166_1 === "FR");
+  if (!fr) return null;
+  const theatrical = fr.release_dates
+    .filter((rd) => rd.type === 3)
+    .concat(fr.release_dates.filter((rd) => rd.type === 2))
+    .sort((a, b) => a.release_date.localeCompare(b.release_date))[0];
+  return theatrical ? theatrical.release_date.slice(0, 10) : null;
+}
+
+// Pour la fiche détail : `details` vient de getDetails() ci-dessus, qui
+// inclut déjà release_dates (pas d'appel réseau supplémentaire).
+export function getFrenchTheatricalDateFromDetails(details) {
+  return extractFrenchTheatricalDate(details?.release_dates);
+}
+
+// Pour les vignettes (grilles) : un appel dédié par film, avec cache en
+// mémoire pour éviter de le refaire si le même titre réapparaît dans une
+// autre liste pendant la session.
+const frTheatricalDateCache = new Map();
+export async function getFrenchTheatricalDate(movieId) {
+  if (frTheatricalDateCache.has(movieId)) return frTheatricalDateCache.get(movieId);
+  let date = null;
+  try {
+    const data = await tmdbFetch(`/movie/${movieId}/release_dates`);
+    date = extractFrenchTheatricalDate(data);
+  } catch {
+    date = null;
+  }
+  frTheatricalDateCache.set(movieId, date);
+  return date;
+}
+
+// "upcoming" (pas encore sorti), "in_theaters" (sorti il y a moins de
+// THEATRICAL_WINDOW_DAYS), "past" (sorti plus tôt), ou null si aucune date
+// de sortie cinéma FR n'est connue pour ce titre (VOD/streaming direct,
+// film jamais distribué en salle en France...).
+export function theatricalStatusFromDate(dateString) {
+  if (!dateString) return null;
+  const diffDays = (Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24);
+  if (diffDays < 0) return "upcoming";
+  if (diffDays <= THEATRICAL_WINDOW_DAYS) return "in_theaters";
+  return "past";
 }
 
 export async function getWatchProviders(mediaType, id) {

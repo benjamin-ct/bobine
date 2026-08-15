@@ -427,6 +427,21 @@ button, select, input {
   font-weight: 700;
 }
 
+.media-card__theatrical {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.72);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .media-card__info {
   padding: 10px 10px 6px;
 }
@@ -671,6 +686,16 @@ button, select, input {
 .detail-meta {
   color: var(--text-dim);
   margin: 6px 0 16px;
+}
+
+.detail-theatrical {
+  display: inline-block;
+  margin: -8px 0 16px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
 }
 
 .detail-overview {
