@@ -59,6 +59,11 @@ export function discover(mediaType, {
   year,
   yearMin,
   yearMax,
+  // Bornes précises au jour (YYYY-MM-DD), pour "derniers sortis" par ex.
+  // Prennent le pas sur yearMin/yearMax si les deux sont fournis (même
+  // paramètre TMDB sous-jacent).
+  dateFrom,
+  dateTo,
   voteAverageMin,
   voteAverageMax,
   voteCountMin,
@@ -83,8 +88,8 @@ export function discover(mediaType, {
     "with_runtime.gte": runtimeMin || undefined,
     "with_runtime.lte": runtimeMax || undefined,
     with_origin_country: originCountry || undefined,
-    [`${dateField}.gte`]: yearMin ? `${yearMin}-01-01` : undefined,
-    [`${dateField}.lte`]: yearMax ? `${yearMax}-12-31` : undefined,
+    [`${dateField}.gte`]: dateFrom || (yearMin ? `${yearMin}-01-01` : undefined),
+    [`${dateField}.lte`]: dateTo || (yearMax ? `${yearMax}-12-31` : undefined),
     [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
     include_adult: false,
   });
