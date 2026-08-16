@@ -26,6 +26,44 @@ export const logoUrl = (path, size = "w92") =>
 
 export class TmdbConfigError extends Error {}
 
+// Plafond de requêtes TMDB réellement simultanées, tous appels confondus,
+// pour CET onglet. Sans ça, chaque nouvelle fonctionnalité qui ajoute un
+// appel "par carte" (badge plateforme, badge prochaine sortie/diffusion...)
+// peut faire repartir en parallèle autant de requêtes que de cartes
+// visibles d'un coup dès qu'elles entrent dans le viewport — même avec un
+// chargement paresseux par carte (IntersectionObserver), rien n'empêchait
+// jusqu'ici 10-20 cartes d'entrer dans le viewport quasi simultanément au
+// premier rendu d'une grille. Le cache d'edge et les TTL plus longs (voir
+// worker/index.js) protègent contre la RÉPÉTITION dans le temps, pas
+// contre un pic instantané — ce plafond agit sur le pic lui-même, quelle
+// que soit la fonctionnalité qui l'a déclenché aujourd'hui ou demain. Les
+// requêtes en trop patientent dans une file plutôt que d'échouer.
+const MAX_CONCURRENT_REQUESTS = 6;
+let activeRequests = 0;
+const pendingQueue = [];
+
+function runNextQueued() {
+  if (activeRequests >= MAX_CONCURRENT_REQUESTS || pendingQueue.length === 0) return;
+  const next = pendingQueue.shift();
+  activeRequests++;
+  next();
+}
+
+function withConcurrencyLimit(fn) {
+  return new Promise((resolve, reject) => {
+    const run = () => {
+      fn()
+        .then(resolve, reject)
+        .finally(() => {
+          activeRequests--;
+          runNextQueued();
+        });
+    };
+    pendingQueue.push(run);
+    runNextQueued();
+  });
+}
+
 async function tmdbFetch(path, params = {}) {
   if (IS_DEV && (!API_KEY || API_KEY === "REMPLACE_MOI_AVEC_TA_CLE_TMDB")) {
     throw new TmdbConfigError(
@@ -42,12 +80,14 @@ async function tmdbFetch(path, params = {}) {
       url.searchParams.set(key, value);
     }
   }
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.status_message || `Erreur TMDB (${res.status})`);
-  }
-  return res.json();
+  return withConcurrencyLimit(async () => {
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.status_message || `Erreur TMDB (${res.status})`);
+    }
+    return res.json();
+  });
 }
 
 // Genres --------------------------------------------------------------
