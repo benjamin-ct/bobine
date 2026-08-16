@@ -457,10 +457,30 @@ async function handleTmdbProxy(request, env, ctx) {
       "cache-control": `public, max-age=${maxAge}`,
     },
   });
-  // Ne met en cache que les réponses réussies : une erreur (429 y compris)
-  // ne doit jamais être figée pour tout le monde pendant 5 minutes.
-  // waitUntil : n'ajoute pas la latence de l'écriture cache à la réponse.
-  if (res.ok) ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  if (res.ok) {
+    // waitUntil : n'ajoute pas la latence de l'écriture cache à la réponse.
+    ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  } else if (res.status === 429) {
+    // Sans ceci, un vrai dépassement de quota TMDB fait que CHAQUE requête
+    // suivante (tous visiteurs, toutes pages confondues) repart taper TMDB
+    // et se reprend un 429 individuellement — le pic qui a déclenché le
+    // quota ne retombe jamais, et l'erreur se propage à des pages qui
+    // n'ont rien à voir avec la carte qui a saturé le quota. Un cache
+    // négatif très court (10s, très inférieur aux 5 min du cache normal)
+    // absorbe cette rafale : le temps que la fenêtre de rate-limit TMDB se
+    // libère, on sert la même erreur 429 depuis l'edge au lieu de la
+    // retaper — sans figer un vrai 429 ponctuel pour 5 minutes comme le
+    // ferait le cache normal.
+    ctx.waitUntil(
+      cache.put(
+        cacheKey,
+        new Response(body, {
+          status: 429,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=10" },
+        })
+      )
+    );
+  }
   return response;
 }
 
