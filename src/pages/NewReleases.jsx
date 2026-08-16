@@ -197,7 +197,7 @@ export default function NewReleases() {
         <>
           <div className="media-grid">
             {results.map((item) => (
-              <MediaCard key={item.id} item={{ ...item, mediaType }} />
+              <MediaCard key={item.id} item={{ ...item, mediaType }} showProviderBadge />
             ))}
           </div>
           {page < totalPages && (

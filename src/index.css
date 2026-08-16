@@ -527,6 +527,31 @@ button, select, input {
   text-overflow: ellipsis;
 }
 
+/* Logo de la plateforme de diffusion (Nouveautés/Prochainement, voir
+   MediaCard.jsx showProviderBadge) — petit rond en bas à droite, au-dessus
+   du bandeau théâtral s'il est aussi présent (les deux ne se gênent pas :
+   bandeau texte centré + petit rond en bordure). */
+.media-card__provider {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+
+.media-card__provider img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .media-card__info {
   padding: 10px 10px 6px;
 }
