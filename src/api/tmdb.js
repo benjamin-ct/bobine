@@ -321,9 +321,23 @@ export function getSeasonDetails(tvId, seasonNumber) {
   return tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`);
 }
 
-export async function getWatchProviders(mediaType, id, region = DEFAULT_REGION) {
-  const data = await tmdbFetch(`/${mediaType}/${id}/watch/providers`);
-  return data.results?.[region] || null;
+// Cache mémoire (durée de vie de la session, même pattern que detailsCache
+// ci-dessus) : évite un second appel réseau si le même titre est demandé
+// deux fois dans la session — la fiche détail, le tirage aléatoire, et
+// désormais les vignettes de Nouveautés/Prochainement (voir MediaCard,
+// showProviderBadge) peuvent chacun redemander le même titre.
+const watchProvidersCache = new Map();
+export function getWatchProviders(mediaType, id, region = DEFAULT_REGION) {
+  const key = `${mediaType}:${id}:${region}`;
+  if (watchProvidersCache.has(key)) return watchProvidersCache.get(key);
+  const promise = tmdbFetch(`/${mediaType}/${id}/watch/providers`)
+    .then((data) => data.results?.[region] || null)
+    .catch((err) => {
+      watchProvidersCache.delete(key);
+      throw err;
+    });
+  watchProvidersCache.set(key, promise);
+  return promise;
 }
 
 // Fournisseurs de streaming "principaux" ----------------------------------

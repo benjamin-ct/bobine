@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { posterUrl, formatFullDate } from "../api/tmdb";
+import { posterUrl, logoUrl, getWatchProviders, formatFullDate } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
 import { useRegion } from "../context/RegionContext";
 
@@ -8,9 +9,16 @@ const THEATRICAL_BADGES = {
   upcoming: "🗓️ Bientôt au cinéma",
 };
 
-export default function MediaCard({ item }) {
+// `showProviderBadge` : opt-in, seules Nouveautés/Prochainement l'activent.
+// Contrairement à la pastille théâtrale (indexée une fois pour toute la
+// grille, voir getTheatricalStatusIndex), TMDB n'a pas d'équivalent en
+// masse pour "quelles plateformes pour ces N titres" — un appel par carte
+// est ici incontournable. Le scope opt-in limite où ce coût est payé ; le
+// cache mémoire de getWatchProviders() et le cache d'edge du proxy TMDB
+// (voir worker/index.js) atténuent le reste.
+export default function MediaCard({ item, showProviderBadge = false }) {
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
-  const { getTheatricalStatus } = useRegion();
+  const { getTheatricalStatus, region } = useRegion();
   const mediaType = item.mediaType || item.media_type;
   const title = item.title || item.name;
   const date = item.release_date || item.first_air_date;
@@ -31,6 +39,24 @@ export default function MediaCard({ item }) {
   const todayIso = new Date().toISOString().slice(0, 10);
   const theatricalStatus =
     inTheatricalIndex && date ? (date <= todayIso ? "in_theaters" : "upcoming") : inTheatricalIndex;
+
+  const [provider, setProvider] = useState(null);
+  useEffect(() => {
+    if (!showProviderBadge) return;
+    let cancelled = false;
+    getWatchProviders(mediaType, item.id, region)
+      .then((data) => {
+        if (cancelled) return;
+        // Abonnement en priorité (le plus pertinent pour "où le regarder"),
+        // sinon location/achat ; rien si le titre n'est encore distribué
+        // nulle part (fréquent sur Prochainement) — pas de badge affiché.
+        setProvider(data?.flatrate?.[0] || data?.rent?.[0] || data?.buy?.[0] || null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [showProviderBadge, mediaType, item.id, region]);
 
   const libItem = {
     id: item.id,
@@ -54,6 +80,11 @@ export default function MediaCard({ item }) {
           <span className="media-card__type">{mediaType === "movie" ? "Film" : "Série"}</span>
           {THEATRICAL_BADGES[theatricalStatus] && (
             <span className="media-card__theatrical">{THEATRICAL_BADGES[theatricalStatus]}</span>
+          )}
+          {provider?.logo_path && (
+            <span className="media-card__provider" title={provider.provider_name}>
+              <img src={logoUrl(provider.logo_path, "w45")} alt={provider.provider_name} />
+            </span>
           )}
         </div>
         <div className="media-card__info">
