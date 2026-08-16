@@ -413,8 +413,13 @@ export function getMovieReleaseDates(movieId) {
 // Type de sortie TMDB → libellé de repli quand `note` est vide. 2 et 3
 // sont respectivement une sortie limitée et une sortie nationale en
 // salles — les deux valent "Cinéma" pour l'utilisateur, la distinction
-// n'a pas de sens côté badge.
+// n'a pas de sens côté badge. 1 (avant-première) n'a normalement pas
+// vocation à finir ici — il est écarté dès qu'une autre sortie existe
+// (voir excludePremiereUnlessOnlyOption) — mais doit tout de même
+// résoudre à un libellé plutôt que de rendre le badge muet quand c'est la
+// SEULE information connue : le plus proche de nos catégories existantes.
 const RELEASE_TYPE_LABELS = {
+  1: "Cinéma",
   2: "Cinéma",
   3: "Cinéma",
   4: "VOD numérique",
@@ -431,25 +436,79 @@ function isStrictlyFutureDate(dateString, todayIso) {
   return dateString.slice(0, 10) > todayIso;
 }
 
-// Film : prochaine sortie strictement future dans la région donnée, avec
-// son libellé. `note` TMDB (ex. "Prime Video") est prioritaire sur le
-// type de sortie, même si le type est renseigné par ailleurs — un service
-// explicitement nommé est toujours plus fiable qu'une catégorie générique.
+function futureReleases(releaseDates, todayIso) {
+  return (releaseDates || []).filter((rd) => isStrictlyFutureDate(rd.release_date, todayIso));
+}
+
+// Type 1 = avant-première (festival, gala...) : pas une sortie publique.
+// On l'écarte dès qu'un autre type est disponible dans le même lot ; on le
+// garde seulement s'il n'y a rien d'autre — mieux qu'une absence totale
+// d'information sur un titre qui n'a, pour l'instant, qu'une avant-première
+// de connue.
+function excludePremiereUnlessOnlyOption(releaseDates) {
+  const nonPremiere = releaseDates.filter((rd) => rd.type !== 1);
+  return nonPremiere.length > 0 ? nonPremiere : releaseDates;
+}
+
+// Film : prochaine sortie/diffusion strictement future, avec son libellé.
 // `releaseDatesResponse` : résultat brut de getMovieReleaseDates() ci-dessus.
-// Renvoie `null` si aucune sortie future exploitable n'est trouvée pour
-// cette région (à charge de l'appelant de retomber sur un repli, voir
-// MediaCard.jsx).
+//
+// 1-2. Région cible trouvée dans release_dates : parmi ses sorties
+//    publiques futures (avant-premières écartées si autre chose existe),
+//    on prend la plus proche chronologiquement. `note` TMDB (ex. "Prime
+//    Video") est prioritaire sur le type, même si le type est renseigné
+//    par ailleurs — un service explicitement nommé est toujours plus
+//    fiable qu'une catégorie générique.
+// 3. Région cible absente de release_dates (TMDB n'a rien pour ce pays en
+//    particulier, fréquent pour les films non encore distribués en
+//    France) : on analyse toutes les sorties publiques futures connues,
+//    toutes régions confondues, on détermine le TYPE majoritaire parmi
+//    elles, et on n'utilise une `note` que si elle correspond à ce type
+//    majoritaire (une note isolée sur un type minoritaire ne doit pas
+//    l'emporter sur le signal majoritaire) ; sinon le libellé générique du
+//    type majoritaire. La date affichée est la plus proche parmi les
+//    sorties de ce type majoritaire, pour rester cohérente avec le badge.
+//
+// Ne s'appuie jamais sur /watch/providers (disponibilité actuelle, pas
+// sortie annoncée — voir MediaCard.jsx). Renvoie `null` si rien
+// d'exploitable n'est trouvé (à charge de l'appelant de retomber sur un
+// repli, voir MediaCard.jsx).
 export function getUpcomingMovieRelease(releaseDatesResponse, region = DEFAULT_REGION) {
   const todayIso = new Date().toISOString().slice(0, 10);
-  const entry = releaseDatesResponse?.results?.find((r) => r.iso_3166_1 === region);
-  const future = (entry?.release_dates || [])
-    .filter((rd) => isStrictlyFutureDate(rd.release_date, todayIso))
+  const results = releaseDatesResponse?.results || [];
+  const regionEntry = results.find((r) => r.iso_3166_1 === region);
+
+  if (regionEntry) {
+    const candidates = excludePremiereUnlessOnlyOption(futureReleases(regionEntry.release_dates, todayIso)).sort(
+      (a, b) => a.release_date.localeCompare(b.release_date)
+    );
+    const next = candidates[0];
+    if (!next) return null;
+    const label = next.note?.trim() || RELEASE_TYPE_LABELS[next.type] || null;
+    return label ? { label, date: next.release_date.slice(0, 10) } : null;
+  }
+
+  const allFuture = results.flatMap((r) => futureReleases(r.release_dates, todayIso));
+  const candidates = excludePremiereUnlessOnlyOption(allFuture);
+  if (candidates.length === 0) return null;
+
+  const countByType = new Map();
+  for (const rd of candidates) countByType.set(rd.type, (countByType.get(rd.type) || 0) + 1);
+  let majorityType = null;
+  let majorityCount = -1;
+  for (const [type, count] of countByType) {
+    if (count > majorityCount) {
+      majorityType = type;
+      majorityCount = count;
+    }
+  }
+
+  const majorityEntries = candidates
+    .filter((rd) => rd.type === majorityType)
     .sort((a, b) => a.release_date.localeCompare(b.release_date));
-  const next = future[0];
-  if (!next) return null;
-  const label = next.note?.trim() || RELEASE_TYPE_LABELS[next.type] || null;
-  if (!label) return null;
-  return { label, date: next.release_date.slice(0, 10) };
+  const noteForMajorityType = majorityEntries.find((rd) => rd.note?.trim())?.note?.trim();
+  const label = noteForMajorityType || RELEASE_TYPE_LABELS[majorityType] || null;
+  return label ? { label, date: majorityEntries[0].release_date.slice(0, 10) } : null;
 }
 
 // Série : le diffuseur de première diffusion (networks[].name — peut être
