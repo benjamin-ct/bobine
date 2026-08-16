@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "verify:upcoming-badge": "node scripts/verify-upcoming-badge.mjs",
+    "verify:tmdb-concurrency-cap": "node scripts/verify-tmdb-concurrency-cap.mjs",
     "postinstall": "node scripts/generate-icons.cjs"
   },
   "dependencies": {
