@@ -38,9 +38,9 @@ Le projet est configuré pour être déployé sur Cloudflare via `wrangler.jsonc
 dashboard Cloudflare (**Workers & Pages → Create → Connect to Git**), chaque
 push sur `main` déclenche automatiquement :
 
-| Étape | Commande |
-|---|---|
-| Build | `npm run build` |
+| Étape       | Commande              |
+| ----------- | --------------------- |
+| Build       | `npm run build`       |
 | Déploiement | `npx wrangler deploy` |
 
 **Important** : avant le premier déploiement, configure les secrets du
@@ -48,12 +48,12 @@ Worker (dashboard Cloudflare, Worker `bobine` → **Settings → Variables and
 Secrets**, accessible une fois que le Worker a un script, pas seulement des
 assets statiques) :
 
-| Nom | Type | Valeur |
-|---|---|---|
+| Nom            | Type       | Valeur                                                                                                                                             |
+| -------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TMDB_API_KEY` | **Secret** | ta clé TMDB — **obligatoire**, sert à la fois au proxy `/api/tmdb/...` (tout le catalogue de l'app) et à la tâche planifiée des notifications push |
 
 ⚠️ **Type "Secret" obligatoire**, pas "Texte" : Wrangler efface les
-variables de type "Texte" configurées depuis le dashboard à *chaque*
+variables de type "Texte" configurées depuis le dashboard à _chaque_
 déploiement si elles ne sont pas déclarées dans `wrangler.jsonc` (c'est le
 comportement documenté de Cloudflare). Les secrets, eux, survivent
 toujours aux déploiements.
@@ -74,9 +74,9 @@ planifiée quotidienne et une base D1. Pour les activer, en plus de
 
 1. **Secrets supplémentaires du Worker** :
 
-   | Nom | Type | Valeur |
-   |---|---|---|
-   | `VAPID_PRIVATE_KEY` | **Secret** | générée une fois avec `node -e "console.log(require('web-push').generateVAPIDKeys())"` |
+   | Nom                 | Type       | Valeur                                                                                                                                                                                              |
+   | ------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `VAPID_PRIVATE_KEY` | **Secret** | générée une fois avec `node -e "console.log(require('web-push').generateVAPIDKeys())"`                                                                                                              |
    | `DEBUG_TRIGGER_KEY` | **Secret** | optionnel — une chaîne aléatoire, permet de déclencher manuellement la vérification via `POST /api/run-check` (ou une notif de test via `POST /api/test-notification`) avec l'en-tête `X-Debug-Key` |
 
    (Type "Secret" obligatoire ici aussi, pas "Texte" — voir l'avertissement plus haut.)
@@ -145,9 +145,9 @@ problème, sans jamais changer de contexte de stockage.
    (compte gratuit). Dans le dashboard Cloudflare, sur le Worker `bobine` :
    **Settings → Variables and Secrets**, ajoute :
 
-   | Nom | Type | Valeur |
-   |---|---|---|
-   | `RESEND_API_KEY` | **Secret** | ta clé API Resend |
+   | Nom                 | Type              | Valeur                                                                                                                                                                                                                 |
+   | ------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `RESEND_API_KEY`    | **Secret**        | ta clé API Resend                                                                                                                                                                                                      |
    | `RESEND_FROM_EMAIL` | Texte (optionnel) | adresse d'envoi, ex. `Bobine <connexion@tondomaine.com>` — nécessite un domaine vérifié dans Resend. Sans cette variable, l'app utilise `onboarding@resend.dev` (fonctionne sans domaine vérifié, en test uniquement). |
 
    Sans `RESEND_API_KEY` configurée (ex. en local sans `.dev.vars`), aucun
@@ -176,8 +176,8 @@ problème, sans jamais changer de contexte de stockage.
    2. Renseigne la **clé de site** (publique) dans `wrangler.jsonc`, champ `vars.RECAPTCHA_SITE_KEY`.
    3. Ajoute la **clé secrète** dans le dashboard Cloudflare, Worker `bobine` → **Settings → Variables and Secrets** :
 
-      | Nom | Type | Valeur |
-      |---|---|---|
+      | Nom                    | Type       | Valeur                   |
+      | ---------------------- | ---------- | ------------------------ |
       | `RECAPTCHA_SECRET_KEY` | **Secret** | ta clé secrète reCAPTCHA |
 
    Tant que ces deux valeurs ne sont pas configurées, la vérification est

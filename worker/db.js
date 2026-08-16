@@ -8,7 +8,9 @@ export async function upsertSubscription(db, { endpoint, p256dh, auth }) {
     .prepare("SELECT id FROM subscriptions WHERE endpoint = ?")
     .bind(endpoint)
     .first();
-  if (existing) return existing.id;
+  if (existing) {
+    return existing.id;
+  }
 
   const result = await db
     .prepare("INSERT INTO subscriptions (endpoint, p256dh, auth, created_at) VALUES (?, ?, ?, ?)")
@@ -29,21 +31,38 @@ export async function deleteSubscriptionById(db, id) {
 // abonnement (le client est la source de vérité ; on synchronise à chaque
 // changement plutôt que de tenter un diff incrémental côté serveur).
 export async function replaceWatchlist(db, subscriptionId, items) {
-  await db.prepare("DELETE FROM watchlist_items WHERE subscription_id = ?").bind(subscriptionId).run();
-  if (!items.length) return;
+  await db
+    .prepare("DELETE FROM watchlist_items WHERE subscription_id = ?")
+    .bind(subscriptionId)
+    .run();
+  if (!items.length) {
+    return;
+  }
   const stmt = db.prepare(
     "INSERT INTO watchlist_items (subscription_id, media_type, tmdb_id, title, poster_path, known_providers) VALUES (?, ?, ?, ?, ?, ?)"
   );
   await db.batch(
     items.map((item) =>
-      stmt.bind(subscriptionId, item.mediaType, item.tmdbId, item.title, item.posterPath || null, null)
+      stmt.bind(
+        subscriptionId,
+        item.mediaType,
+        item.tmdbId,
+        item.title,
+        item.posterPath || null,
+        null
+      )
     )
   );
 }
 
 export async function replaceGenrePreferences(db, subscriptionId, genres) {
-  await db.prepare("DELETE FROM genre_preferences WHERE subscription_id = ?").bind(subscriptionId).run();
-  if (!genres.length) return;
+  await db
+    .prepare("DELETE FROM genre_preferences WHERE subscription_id = ?")
+    .bind(subscriptionId)
+    .run();
+  if (!genres.length) {
+    return;
+  }
   const stmt = db.prepare(
     "INSERT INTO genre_preferences (subscription_id, media_type, genre_id) VALUES (?, ?, ?)"
   );
@@ -55,7 +74,10 @@ export async function replaceGenrePreferences(db, subscriptionId, genres) {
 // "lire toute la table pour diffs" : c'est une jointure FK normale, pas le
 // pattern qu'on cherche à éliminer ci-dessous.
 export async function getSubscriptionIdByEndpoint(db, endpoint) {
-  const row = await db.prepare("SELECT id FROM subscriptions WHERE endpoint = ?").bind(endpoint).first();
+  const row = await db
+    .prepare("SELECT id FROM subscriptions WHERE endpoint = ?")
+    .bind(endpoint)
+    .first();
   return row?.id ?? null;
 }
 
@@ -79,7 +101,15 @@ export async function applyWatchlistChanges(db, subscriptionId, { add, remove })
          poster_path = excluded.poster_path`
     );
     for (const item of add) {
-      statements.push(upsertStmt.bind(subscriptionId, item.mediaType, item.tmdbId, item.title, item.posterPath || null));
+      statements.push(
+        upsertStmt.bind(
+          subscriptionId,
+          item.mediaType,
+          item.tmdbId,
+          item.title,
+          item.posterPath || null
+        )
+      );
     }
   }
   if (remove.length > 0) {
@@ -90,7 +120,9 @@ export async function applyWatchlistChanges(db, subscriptionId, { add, remove })
       statements.push(deleteStmt.bind(subscriptionId, mediaType, tmdbId));
     }
   }
-  if (statements.length > 0) await db.batch(statements);
+  if (statements.length > 0) {
+    await db.batch(statements);
+  }
 }
 
 export async function applyGenrePreferenceChanges(db, subscriptionId, { add, remove }) {
@@ -103,15 +135,21 @@ export async function applyGenrePreferenceChanges(db, subscriptionId, { add, rem
       `INSERT INTO genre_preferences (subscription_id, media_type, genre_id) VALUES (?, ?, ?)
        ON CONFLICT(subscription_id, media_type, genre_id) DO NOTHING`
     );
-    for (const g of add) statements.push(insertStmt.bind(subscriptionId, g.mediaType, g.genreId));
+    for (const g of add) {
+      statements.push(insertStmt.bind(subscriptionId, g.mediaType, g.genreId));
+    }
   }
   if (remove.length > 0) {
     const deleteStmt = db.prepare(
       "DELETE FROM genre_preferences WHERE subscription_id = ? AND media_type = ? AND genre_id = ?"
     );
-    for (const g of remove) statements.push(deleteStmt.bind(subscriptionId, g.mediaType, g.genreId));
+    for (const g of remove) {
+      statements.push(deleteStmt.bind(subscriptionId, g.mediaType, g.genreId));
+    }
   }
-  if (statements.length > 0) await db.batch(statements);
+  if (statements.length > 0) {
+    await db.batch(statements);
+  }
 }
 
 export async function getAllSubscriptions(db) {
@@ -150,7 +188,9 @@ export async function updateKnownProviders(db, subscriptionId, mediaType, tmdbId
 // { watched: { "movie:123": {...} }, watchlist: { "tv:456": {...} } }.
 export async function getLibraryForUser(db, userId) {
   const { results } = await db
-    .prepare("SELECT media_type, tmdb_id, status, data, updated_at FROM library_items WHERE user_id = ?")
+    .prepare(
+      "SELECT media_type, tmdb_id, status, data, updated_at FROM library_items WHERE user_id = ?"
+    )
     .bind(userId)
     .all();
   const watched = {};
@@ -163,9 +203,14 @@ export async function getLibraryForUser(db, userId) {
     // attendre une prochaine écriture — la version propre est réécrite en
     // base dès le prochain PUT (toggle) puisque le client renvoie l'état
     // reçu ici tel quel.
-    if (typeof item.title === "string") item.title = decodeHtmlEntities(item.title);
-    if (row.status === "watched") watched[key] = item;
-    else watchlist[key] = item;
+    if (typeof item.title === "string") {
+      item.title = decodeHtmlEntities(item.title);
+    }
+    if (row.status === "watched") {
+      watched[key] = item;
+    } else {
+      watchlist[key] = item;
+    }
   }
   return { watched, watchlist };
 }
@@ -186,7 +231,9 @@ export async function replaceLibraryForUser(db, userId, { watched, watchlist }) 
     const [mediaType, tmdbId] = key.split(":");
     rows.push({ mediaType, tmdbId, status: "watchlist", item });
   }
-  if (rows.length === 0) return;
+  if (rows.length === 0) {
+    return;
+  }
 
   const stmt = db.prepare(
     "INSERT INTO library_items (user_id, media_type, tmdb_id, status, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
@@ -194,7 +241,14 @@ export async function replaceLibraryForUser(db, userId, { watched, watchlist }) 
   await db.batch(
     rows.map(({ mediaType, tmdbId, status, item }) => {
       const { updatedAt, ...rest } = item;
-      return stmt.bind(userId, mediaType, Number(tmdbId), status, JSON.stringify(rest), updatedAt || Date.now());
+      return stmt.bind(
+        userId,
+        mediaType,
+        Number(tmdbId),
+        status,
+        JSON.stringify(rest),
+        updatedAt || Date.now()
+      );
     })
   );
 }
@@ -220,7 +274,14 @@ export async function applyLibraryChanges(db, userId, { upserts, deletes }) {
     for (const u of upserts) {
       const { updatedAt, ...rest } = u.item;
       statements.push(
-        upsertStmt.bind(userId, u.mediaType, u.tmdbId, u.status, JSON.stringify(rest), updatedAt || Date.now())
+        upsertStmt.bind(
+          userId,
+          u.mediaType,
+          u.tmdbId,
+          u.status,
+          JSON.stringify(rest),
+          updatedAt || Date.now()
+        )
       );
     }
   }
@@ -235,7 +296,9 @@ export async function applyLibraryChanges(db, userId, { upserts, deletes }) {
       statements.push(deleteStmt.bind(userId, d.mediaType, d.tmdbId));
     }
   }
-  if (statements.length > 0) await db.batch(statements);
+  if (statements.length > 0) {
+    await db.batch(statements);
+  }
 }
 
 export async function wasAlreadyNotified(db, subscriptionId, mediaType, tmdbId, reason) {

@@ -40,7 +40,8 @@ async function checkWatchlistAvailability(env, db, subscription) {
     }
 
     const knownProviders = item.known_providers ? JSON.parse(item.known_providers) : null;
-    const newlyAvailable = knownProviders !== null && currentProviders.some((id) => !knownProviders.includes(id));
+    const newlyAvailable =
+      knownProviders !== null && currentProviders.some((id) => !knownProviders.includes(id));
 
     if (newlyAvailable) {
       await notify(env, db, subscription, {
@@ -54,7 +55,13 @@ async function checkWatchlistAvailability(env, db, subscription) {
     // (knownProviders === null), on se contente d'enregistrer sans notifier,
     // sinon tout ce qui était déjà là au moment de l'ajout déclencherait une
     // notification.
-    await updateKnownProviders(db, subscription.id, item.media_type, item.tmdb_id, currentProviders);
+    await updateKnownProviders(
+      db,
+      subscription.id,
+      item.media_type,
+      item.tmdb_id,
+      currentProviders
+    );
   }
 }
 
@@ -65,7 +72,9 @@ async function checkFavoriteGenreReleases(env, db, subscription) {
 
   for (const { media_type, genre_id } of genres) {
     const key = `${media_type}:${genre_id}`;
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
 
     let results;
@@ -77,7 +86,9 @@ async function checkFavoriteGenreReleases(env, db, subscription) {
     }
 
     for (const item of results.slice(0, 5)) {
-      if (await wasAlreadyNotified(db, subscription.id, media_type, item.id, "genre")) continue;
+      if (await wasAlreadyNotified(db, subscription.id, media_type, item.id, "genre")) {
+        continue;
+      }
       await notify(env, db, subscription, {
         title: "Bobine : nouveauté dans tes genres préférés 🍿",
         body: `« ${item.title || item.name} » vient de sortir.`,
@@ -92,9 +103,13 @@ async function checkFavoriteGenreReleases(env, db, subscription) {
 async function checkTrendingReleases(env, db, subscription, trending) {
   let sentThisRun = 0;
   for (const item of trending) {
-    if (sentThisRun >= TRENDING_MAX_PER_RUN) break;
+    if (sentThisRun >= TRENDING_MAX_PER_RUN) {
+      break;
+    }
     const mediaType = item.media_type;
-    if (await wasAlreadyNotified(db, subscription.id, mediaType, item.id, "trending")) continue;
+    if (await wasAlreadyNotified(db, subscription.id, mediaType, item.id, "trending")) {
+      continue;
+    }
 
     await notify(env, db, subscription, {
       title: "Bobine : ça sort en ce moment 🔥",
@@ -108,7 +123,9 @@ async function checkTrendingReleases(env, db, subscription, trending) {
 
 function isRecentRelease(item) {
   const date = item.release_date || item.first_air_date;
-  if (!date) return false;
+  if (!date) {
+    return false;
+  }
   const ageDays = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24);
   return ageDays >= 0 && ageDays <= TRENDING_WINDOW_DAYS;
 }
@@ -116,7 +133,9 @@ function isRecentRelease(item) {
 export async function runDailyCheck(env) {
   const db = env.DB;
   const subscriptions = await getAllSubscriptions(db);
-  if (subscriptions.length === 0) return;
+  if (subscriptions.length === 0) {
+    return;
+  }
 
   let trending = [];
   try {

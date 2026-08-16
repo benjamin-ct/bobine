@@ -15,11 +15,15 @@ export default function Login() {
   const [verifying, setVerifying] = useState(false);
   const [codeError, setCodeError] = useState(null);
 
-  if (status === "authenticated") return <Navigate to="/ma-liste" replace />;
+  if (status === "authenticated") {
+    return <Navigate to="/ma-liste" replace />;
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim()) {
+      return;
+    }
     setSending(true);
     setError(null);
     try {
@@ -36,7 +40,9 @@ export default function Login() {
 
   async function onSubmitCode(e) {
     e.preventDefault();
-    if (!code.trim()) return;
+    if (!code.trim()) {
+      return;
+    }
     setVerifying(true);
     setCodeError(null);
     try {
@@ -54,30 +60,31 @@ export default function Login() {
     <div className="page page--narrow">
       <h1>Se connecter</h1>
       <p className="page-subtitle">
-        Connecte-toi pour retrouver ta liste "envie de voir" / "déjà vu" sur tous tes appareils.
-        Pas de mot de passe : on t'envoie un lien de connexion par email.
+        Connecte-toi pour retrouver ta liste "envie de voir" / "déjà vu" sur tous tes appareils. Pas
+        de mot de passe : on t'envoie un lien de connexion par email.
       </p>
 
       {sent ? (
         <>
           <div className="auth-card">
-            <p>📬 Un lien de connexion a été envoyé à <strong>{email.trim()}</strong>.</p>
-            <p className="page-subtitle">Vérifie ta boîte mail (et tes spams) — le lien est valable 15 minutes.</p>
+            <p>
+              📬 Un lien de connexion a été envoyé à <strong>{email.trim()}</strong>.
+            </p>
+            <p className="page-subtitle">
+              Vérifie ta boîte mail (et tes spams) — le lien est valable 15 minutes.
+            </p>
             {devLink && (
               <p className="page-subtitle">
-                Mode développement (pas d'email configuré) :{" "}
-                <a href={devLink}>{devLink}</a>
+                Mode développement (pas d'email configuré) : <a href={devLink}>{devLink}</a>
               </p>
             )}
           </div>
 
           <form className="auth-card" onSubmit={onSubmitCode}>
-            <label htmlFor="login-code">
-              Ou entre le code reçu par email
-            </label>
+            <label htmlFor="login-code">Ou entre le code reçu par email</label>
             <p className="page-subtitle" style={{ marginTop: -6, marginBottom: 0 }}>
-              Si Bobine est installée sur ton écran d'accueil, le lien risque de s'ouvrir dans
-              le navigateur au lieu de l'app — le code, lui, fonctionne toujours ici.
+              Si Bobine est installée sur ton écran d'accueil, le lien risque de s'ouvrir dans le
+              navigateur au lieu de l'app — le code, lui, fonctionne toujours ici.
             </p>
             <input
               id="login-code"
@@ -92,9 +99,7 @@ export default function Login() {
               onChange={(e) => setCode(e.target.value.toUpperCase())}
             />
             {codeError && <p className="auth-card__error">{codeError}</p>}
-            {devCode && (
-              <p className="page-subtitle">Mode développement : code {devCode}</p>
-            )}
+            {devCode && <p className="page-subtitle">Mode développement : code {devCode}</p>}
             <button className="btn btn--primary" type="submit" disabled={verifying}>
               {verifying ? "Vérification…" : "Valider le code"}
             </button>

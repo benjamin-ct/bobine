@@ -11,18 +11,38 @@
 const IS_DEV = import.meta.env.DEV;
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const BASE_URL = IS_DEV ? "https://api.themoviedb.org/3" : "/api/tmdb";
-// Repli si la région réelle du visiteur (voir RegionContext, /api/region)
-// n'est pas encore connue ou n'a pas pu être déterminée.
-export const DEFAULT_REGION = "FR";
 const LANGUAGE = "fr-FR";
 
+// Logique PURE du badge dynamique "Prochainement" : extraite dans
+// releaseBadge.js (aucune dépendance à `import.meta.env` ni au réseau)
+// pour être testable directement sous Node ET partagée sans copie. On la
+// réexporte ici pour que les appelants (MediaCard.jsx...) continuent de
+// l'importer depuis un point d'entrée unique. DEFAULT_REGION y est
+// également défini (repli de région, voir RegionContext / /api/region) et
+// réexporté car utilisé un peu partout dans ce module.
+export {
+  DEFAULT_REGION,
+  getUpcomingMovieRelease,
+  getUpcomingSeriesRelease,
+} from "./releaseBadge.js";
+import { DEFAULT_REGION } from "./releaseBadge.js";
+
+// Limiteur de concurrence (algorithme pur, testable sous Node) et
+// utilitaires purs de métadonnées film/série : même principe d'extraction
+// que releaseBadge.js. Les utilitaires sont réexportés pour préserver les
+// points d'import existants (Detail.jsx, MediaCard.jsx, Random.jsx...).
+import { createConcurrencyLimiter } from "./concurrencyLimiter.js";
+export {
+  estimateRuntimeMinutes,
+  getFrenchTheatricalDateFromDetails,
+  formatFullDate,
+  theatricalStatusFromDate,
+} from "./movieMeta.js";
+
 export const IMG_BASE = "https://image.tmdb.org/t/p/";
-export const posterUrl = (path, size = "w342") =>
-  path ? `${IMG_BASE}${size}${path}` : null;
-export const backdropUrl = (path, size = "w780") =>
-  path ? `${IMG_BASE}${size}${path}` : null;
-export const logoUrl = (path, size = "w92") =>
-  path ? `${IMG_BASE}${size}${path}` : null;
+export const posterUrl = (path, size = "w342") => (path ? `${IMG_BASE}${size}${path}` : null);
+export const backdropUrl = (path, size = "w780") => (path ? `${IMG_BASE}${size}${path}` : null);
+export const logoUrl = (path, size = "w92") => (path ? `${IMG_BASE}${size}${path}` : null);
 
 export class TmdbConfigError extends Error {}
 
@@ -38,31 +58,10 @@ export class TmdbConfigError extends Error {}
 // contre un pic instantané — ce plafond agit sur le pic lui-même, quelle
 // que soit la fonctionnalité qui l'a déclenché aujourd'hui ou demain. Les
 // requêtes en trop patientent dans une file plutôt que d'échouer.
-const MAX_CONCURRENT_REQUESTS = 6;
-let activeRequests = 0;
-const pendingQueue = [];
-
-function runNextQueued() {
-  if (activeRequests >= MAX_CONCURRENT_REQUESTS || pendingQueue.length === 0) return;
-  const next = pendingQueue.shift();
-  activeRequests++;
-  next();
-}
-
-function withConcurrencyLimit(fn) {
-  return new Promise((resolve, reject) => {
-    const run = () => {
-      fn()
-        .then(resolve, reject)
-        .finally(() => {
-          activeRequests--;
-          runNextQueued();
-        });
-    };
-    pendingQueue.push(run);
-    runNextQueued();
-  });
-}
+// L'algorithme du limiteur vit dans concurrencyLimiter.js (module pur,
+// testable sous Node) ; on n'instancie ici que le limiteur partagé de
+// l'onglet.
+const tmdbRequestLimiter = createConcurrencyLimiter(6);
 
 async function tmdbFetch(path, params = {}) {
   if (IS_DEV && (!API_KEY || API_KEY === "REMPLACE_MOI_AVEC_TA_CLE_TMDB")) {
@@ -73,14 +72,16 @@ async function tmdbFetch(path, params = {}) {
   // Base explicite : nécessaire pour que `new URL()` accepte un chemin
   // relatif (/api/tmdb/...) en plus de l'URL absolue utilisée en dev.
   const url = new URL(`${BASE_URL}${path}`, window.location.origin);
-  if (IS_DEV) url.searchParams.set("api_key", API_KEY);
+  if (IS_DEV) {
+    url.searchParams.set("api_key", API_KEY);
+  }
   url.searchParams.set("language", LANGUAGE);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== "") {
       url.searchParams.set(key, value);
     }
   }
-  return withConcurrencyLimit(async () => {
+  return tmdbRequestLimiter.run(async () => {
     const res = await fetch(url.toString());
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -102,45 +103,55 @@ export function getGenres(mediaType) {
 // 10/10 par 3 personnes remonte devant des classiques.
 const MIN_VOTES_FOR_RATING_SORT = 100;
 
-export function discover(mediaType, {
-  page = 1,
-  genreId,
-  // Genres à ne jamais suggérer (réglage "Genres à exclure", ExcludedGenresContext).
-  // Paramètre TMDB natif without_genres, virgule = exclusion si le titre a
-  // l'un de ces genres.
-  excludeGenreIds,
-  providerIds,
-  // Région utilisée pour filtrer par plateforme (watch_region — n'a de
-  // sens que combinée à providerIds, TMDB l'ignore sinon). Voir
-  // RegionContext pour la région réelle du visiteur.
-  region = DEFAULT_REGION,
-  sortField = "popularity",
-  sortDirection = "desc",
-  year,
-  yearMin,
-  yearMax,
-  // Bornes précises au jour (YYYY-MM-DD), pour "derniers sortis" par ex.
-  // Prennent le pas sur yearMin/yearMax si les deux sont fournis (même
-  // paramètre TMDB sous-jacent).
-  dateFrom,
-  dateTo,
-  // Exclut les titres pas encore sortis, quels que soient les autres
-  // filtres de date (Découvrir doit toujours l'utiliser : par défaut TMDB
-  // renvoie aussi des sorties déjà programmées dans le futur).
-  excludeUpcoming,
-  voteAverageMin,
-  voteAverageMax,
-  voteCountMin,
-  originCountry,
-  originalLanguage,
-  runtimeMin,
-  runtimeMax,
-} = {}) {
-  const resolvedField = sortField === "year" ? (mediaType === "movie" ? "primary_release_date" : "first_air_date") : sortField;
+export function discover(
+  mediaType,
+  {
+    page = 1,
+    genreId,
+    // Genres à ne jamais suggérer (réglage "Genres à exclure", ExcludedGenresContext).
+    // Paramètre TMDB natif without_genres, virgule = exclusion si le titre a
+    // l'un de ces genres.
+    excludeGenreIds,
+    providerIds,
+    // Région utilisée pour filtrer par plateforme (watch_region — n'a de
+    // sens que combinée à providerIds, TMDB l'ignore sinon). Voir
+    // RegionContext pour la région réelle du visiteur.
+    region = DEFAULT_REGION,
+    sortField = "popularity",
+    sortDirection = "desc",
+    year,
+    yearMin,
+    yearMax,
+    // Bornes précises au jour (YYYY-MM-DD), pour "derniers sortis" par ex.
+    // Prennent le pas sur yearMin/yearMax si les deux sont fournis (même
+    // paramètre TMDB sous-jacent).
+    dateFrom,
+    dateTo,
+    // Exclut les titres pas encore sortis, quels que soient les autres
+    // filtres de date (Découvrir doit toujours l'utiliser : par défaut TMDB
+    // renvoie aussi des sorties déjà programmées dans le futur).
+    excludeUpcoming,
+    voteAverageMin,
+    voteAverageMax,
+    voteCountMin,
+    originCountry,
+    originalLanguage,
+    runtimeMin,
+    runtimeMax,
+  } = {}
+) {
+  const resolvedField =
+    sortField === "year"
+      ? mediaType === "movie"
+        ? "primary_release_date"
+        : "first_air_date"
+      : sortField;
   const dateField = mediaType === "movie" ? "primary_release_date" : "first_air_date";
   const todayIso = new Date().toISOString().slice(0, 10);
   let dateLte = dateTo || (yearMax ? `${yearMax}-12-31` : undefined);
-  if (excludeUpcoming && (!dateLte || dateLte > todayIso)) dateLte = todayIso;
+  if (excludeUpcoming && (!dateLte || dateLte > todayIso)) {
+    dateLte = todayIso;
+  }
   return tmdbFetch(`/discover/${mediaType}`, {
     page,
     with_genres: genreId || undefined,
@@ -151,7 +162,8 @@ export function discover(mediaType, {
     // Un plancher explicite (filtre avancé) prend le pas sur celui, implicite,
     // qu'on applique par défaut quand on trie par note (sinon un film noté
     // 10/10 par 3 personnes remonte devant des classiques).
-    "vote_count.gte": voteCountMin || (sortField === "vote_average" ? MIN_VOTES_FOR_RATING_SORT : undefined),
+    "vote_count.gte":
+      voteCountMin || (sortField === "vote_average" ? MIN_VOTES_FOR_RATING_SORT : undefined),
     "vote_average.gte": voteAverageMin || undefined,
     "vote_average.lte": voteAverageMax || undefined,
     "with_runtime.gte": runtimeMin || undefined,
@@ -176,11 +188,11 @@ export const SORT_FIELDS = [
 // région particulière.
 let countriesCache = null;
 export async function getCountries() {
-  if (countriesCache) return countriesCache;
+  if (countriesCache) {
+    return countriesCache;
+  }
   const list = await tmdbFetch("/configuration/countries");
-  countriesCache = list
-    .slice()
-    .sort((a, b) => a.english_name.localeCompare(b.english_name));
+  countriesCache = list.slice().sort((a, b) => a.english_name.localeCompare(b.english_name));
   return countriesCache;
 }
 
@@ -191,7 +203,9 @@ export async function getCountries() {
 // Résultat quasi-statique, mis en cache comme getCountries().
 let languagesCache = null;
 export async function getLanguages() {
-  if (languagesCache) return languagesCache;
+  if (languagesCache) {
+    return languagesCache;
+  }
   const list = await tmdbFetch("/configuration/languages");
   languagesCache = list
     .filter((l) => l.iso_639_1 && (l.name || l.english_name))
@@ -223,20 +237,6 @@ export function trending(mediaType = "all", window = "week") {
   return tmdbFetch(`/trending/${mediaType}/${window}`);
 }
 
-// Estime la durée d'un titre à partir de sa fiche détail TMDB.
-// Films : durée exacte (details.runtime). Séries : pas de suivi épisode par
-// épisode dans Bobine, donc approximation = durée moyenne d'un épisode ×
-// nombre total d'épisodes (compte toute la série comme "vue" d'un coup).
-export function estimateRuntimeMinutes(details, mediaType) {
-  if (mediaType === "movie") {
-    return details?.runtime || null;
-  }
-  const perEpisode = details?.episode_run_time?.[0];
-  const episodeCount = details?.number_of_episodes;
-  if (!perEpisode || !episodeCount) return null;
-  return perEpisode * episodeCount;
-}
-
 // Détails ---------------------------------------------------------------
 
 // Cache mémoire (durée de vie de la session, comme countriesCache/
@@ -252,7 +252,9 @@ export function estimateRuntimeMinutes(details, mediaType) {
 const detailsCache = new Map();
 export function getDetails(mediaType, id) {
   const key = `${mediaType}:${id}`;
-  if (detailsCache.has(key)) return detailsCache.get(key);
+  if (detailsCache.has(key)) {
+    return detailsCache.get(key);
+  }
   const promise = tmdbFetch(`/${mediaType}/${id}`, {
     // release_dates : sorties par pays (dont FR), pour le statut "au
     // cinéma" — inclus ici pour ne pas faire un second appel sur la fiche
@@ -267,51 +269,10 @@ export function getDetails(mediaType, id) {
 }
 
 // Statut "au cinéma" (France) --------------------------------------------
-// TMDB ne donne pas de date de fin d'exploitation en salle : on considère
-// un film "encore au cinéma" s'il est sorti il y a moins de 6 semaines.
-const THEATRICAL_WINDOW_DAYS = 42;
-
-// Type de sortie TMDB : 3 = sortie nationale en salles, 2 = sortie limitée
-// en salles. On préfère la sortie nationale ; à défaut, la limitée.
-function extractFrenchTheatricalDate(releaseDatesResponse) {
-  const fr = releaseDatesResponse?.results?.find((r) => r.iso_3166_1 === "FR");
-  if (!fr) return null;
-  const theatrical = fr.release_dates
-    .filter((rd) => rd.type === 3)
-    .concat(fr.release_dates.filter((rd) => rd.type === 2))
-    .sort((a, b) => a.release_date.localeCompare(b.release_date))[0];
-  return theatrical ? theatrical.release_date.slice(0, 10) : null;
-}
-
-// Pour la fiche détail : `details` vient de getDetails() ci-dessus, qui
-// inclut déjà release_dates (pas d'appel réseau supplémentaire).
-export function getFrenchTheatricalDateFromDetails(details) {
-  return extractFrenchTheatricalDate(details?.release_dates);
-}
-
-// Date complète lisible (ex. "12 septembre 2026"), films et séries — plus
-// précis que l'année seule affichée jusqu'ici sur les cartes/lignes de
-// liste. `null` si la date est absente ou invalide (repli sur l'année seule
-// côté appelant).
-export function formatFullDate(dateString) {
-  if (!dateString) return null;
-  const d = new Date(dateString);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-}
-
-// "upcoming" (pas encore sorti), "in_theaters" (sorti il y a moins de
-// THEATRICAL_WINDOW_DAYS), "past" (sorti plus tôt), ou null si aucune date
-// de sortie cinéma FR n'est connue pour ce titre (VOD/streaming direct,
-// film jamais distribué en salle en France...). Utilisé sur la fiche détail
-// (une seule date, déjà connue précisément via extractFrenchTheatricalDate).
-export function theatricalStatusFromDate(dateString) {
-  if (!dateString) return null;
-  const diffDays = (Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24);
-  if (diffDays < 0) return "upcoming";
-  if (diffDays <= THEATRICAL_WINDOW_DAYS) return "in_theaters";
-  return "past";
-}
+// Les helpers purs de date/statut (extractFrenchTheatricalDate,
+// getFrenchTheatricalDateFromDetails, formatFullDate,
+// theatricalStatusFromDate, THEATRICAL_WINDOW_DAYS) vivent dans
+// movieMeta.js (testables sous Node) et sont réexportés en tête de fichier.
 
 // Statut "au cinéma" pour les vignettes (grilles) --------------------------
 //
@@ -330,24 +291,32 @@ async function fetchAllPages(path, region, maxPages) {
   const first = await tmdbFetch(path, { region, page: 1 });
   const totalPages = Math.min(first.total_pages || 1, maxPages);
   const rest = await Promise.all(
-    Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => tmdbFetch(path, { region, page: i + 2 }))
+    Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) =>
+      tmdbFetch(path, { region, page: i + 2 })
+    )
   );
   return [first, ...rest].flatMap((page) => page.results || []);
 }
 
 let theatricalIndexCache = null; // { region, promise }
 export function getTheatricalStatusIndex(region = DEFAULT_REGION) {
-  if (theatricalIndexCache?.region === region) return theatricalIndexCache.promise;
+  if (theatricalIndexCache?.region === region) {
+    return theatricalIndexCache.promise;
+  }
   const promise = (async () => {
     const [nowPlaying, upcoming] = await Promise.all([
       fetchAllPages("/movie/now_playing", region, MAX_THEATRICAL_PAGES),
       fetchAllPages("/movie/upcoming", region, MAX_THEATRICAL_PAGES),
     ]);
     const index = new Map();
-    for (const movie of upcoming) index.set(movie.id, "upcoming");
+    for (const movie of upcoming) {
+      index.set(movie.id, "upcoming");
+    }
     // now_playing en dernier : si un titre apparaît dans les deux listes
     // (bascule en cours), "en salles" prime sur "bientôt".
-    for (const movie of nowPlaying) index.set(movie.id, "in_theaters");
+    for (const movie of nowPlaying) {
+      index.set(movie.id, "in_theaters");
+    }
     return index;
   })().catch((err) => {
     theatricalIndexCache = null;
@@ -374,7 +343,9 @@ export function getSeasonDetails(tvId, seasonNumber) {
 const watchProvidersCache = new Map();
 export function getWatchProviders(mediaType, id, region = DEFAULT_REGION) {
   const key = `${mediaType}:${id}:${region}`;
-  if (watchProvidersCache.has(key)) return watchProvidersCache.get(key);
+  if (watchProvidersCache.has(key)) {
+    return watchProvidersCache.get(key);
+  }
   const promise = tmdbFetch(`/${mediaType}/${id}/watch/providers`)
     .then((data) => data.results?.[region] || null)
     .catch((err) => {
@@ -401,125 +372,15 @@ export function getWatchProviders(mediaType, id, region = DEFAULT_REGION) {
 // en mémoire pour la session.
 const movieReleaseDatesCache = new Map();
 export function getMovieReleaseDates(movieId) {
-  if (movieReleaseDatesCache.has(movieId)) return movieReleaseDatesCache.get(movieId);
+  if (movieReleaseDatesCache.has(movieId)) {
+    return movieReleaseDatesCache.get(movieId);
+  }
   const promise = tmdbFetch(`/movie/${movieId}/release_dates`).catch((err) => {
     movieReleaseDatesCache.delete(movieId);
     throw err;
   });
   movieReleaseDatesCache.set(movieId, promise);
   return promise;
-}
-
-// Comparaison de dates calendaires en chaîne (YYYY-MM-DD), pas d'objet
-// Date : évite tout décalage de fuseau horaire au moment de la
-// comparaison (un `new Date("2026-08-17")` UTC minuit comparé à un `Date`
-// local peut basculer d'un jour selon l'heure et le fuseau du visiteur).
-function isStrictlyFutureDate(dateString, todayIso) {
-  if (!dateString) return false;
-  return dateString.slice(0, 10) > todayIso;
-}
-
-function futureReleases(releaseDates, todayIso) {
-  return (releaseDates || []).filter((rd) => isStrictlyFutureDate(rd.release_date, todayIso));
-}
-
-// Ordre de priorité explicite des types de sortie TMDB pour choisir LE
-// type à afficher quand plusieurs sont connus : 3 (sortie nationale en
-// salles) est le signal le plus définitif, puis 4 (numérique), 2 (sortie
-// limitée en salles), 6 (télévision), 5 (physique — souvent tardif,
-// signal le moins pertinent comme sortie "principale" à annoncer).
-const RELEASE_TYPE_PRIORITY = [3, 4, 2, 6, 5];
-
-// Libellé de badge pour un type de sortie retenu. Seul le type 4
-// (numérique) regarde `note` : c'est le seul type où TMDB y place de
-// façon fiable un nom de service exploitable (Netflix, Prime Video...)
-// quand il est renseigné — sur les autres types, `note` est généralement
-// vide ou un texte générique sans valeur ajoutée pour le badge.
-function labelForRelease(type, note) {
-  if (type === 2 || type === 3) return "Cinéma";
-  if (type === 4) return note?.trim() || "Sortie numérique";
-  if (type === 5) return "Sortie physique";
-  if (type === 6) return "Télévision";
-  return null;
-}
-
-// Parmi un lot de release_dates, sélectionne le type le plus prioritaire
-// réellement présent (futur, type 1/avant-première toujours écarté — pas
-// une sortie grand public), puis toutes ses entrées triées par date
-// croissante. `null` si rien d'exploitable dans ce lot.
-function pickReleaseByTypePriority(releaseDates, todayIso) {
-  const candidates = futureReleases(releaseDates, todayIso).filter((rd) => rd.type !== 1);
-  for (const type of RELEASE_TYPE_PRIORITY) {
-    const ofType = candidates.filter((rd) => rd.type === type);
-    if (ofType.length > 0) {
-      return { type, entries: ofType.sort((a, b) => a.release_date.localeCompare(b.release_date)) };
-    }
-  }
-  return null;
-}
-
-// Film : prochaine sortie/diffusion strictement future, avec son libellé.
-// `releaseDatesResponse` : résultat brut de getMovieReleaseDates()
-// ci-dessus. `primaryReleaseDate` : date de sortie déjà connue côté
-// appelant (item.release_date — la même donnée que /search/movie ou
-// /discover/movie renvoient), utilisée comme repli quand la région cible
-// n'a pas d'entrée dans release_dates.
-//
-// 1-2. Région cible trouvée dans release_dates : parmi ses sorties
-//    publiques futures, on retient le type présent le plus prioritaire
-//    (RELEASE_TYPE_PRIORITY), puis la date la plus proche parmi les
-//    sorties de ce type — cette date, tirée de /release_dates, est celle
-//    affichée.
-// 3. Région cible absente (TMDB n'a rien pour ce pays précisément,
-//    fréquent pour un film pas encore distribué en France) : le film
-//    n'est retenu que si `primaryReleaseDate` est lui-même strictement
-//    futur. On analyse alors les sorties publiques futures connues,
-//    toutes régions confondues, on retient le type le plus prioritaire
-//    présent, et `note` (pour le type 4) n'est utilisée que si elle
-//    appartient à une entrée de ce type retenu. La date affichée est
-//    TOUJOURS `primaryReleaseDate` dans ce cas — jamais la date d'un pays
-//    en particulier, qui n'a pas de sens comme "date locale" pour un
-//    visiteur français.
-//
-// Ne s'appuie jamais sur /watch/providers (disponibilité actuelle, pas
-// sortie annoncée — voir MediaCard.jsx). Renvoie `null` si rien
-// d'exploitable n'est trouvé (à charge de l'appelant de retomber sur un
-// repli, voir MediaCard.jsx).
-export function getUpcomingMovieRelease(releaseDatesResponse, region = DEFAULT_REGION, primaryReleaseDate = null) {
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const results = releaseDatesResponse?.results || [];
-  const regionEntry = results.find((r) => r.iso_3166_1 === region);
-
-  if (regionEntry) {
-    const picked = pickReleaseByTypePriority(regionEntry.release_dates, todayIso);
-    if (!picked) return null;
-    const next = picked.entries[0];
-    const label = labelForRelease(picked.type, next.note);
-    return label ? { label, date: next.release_date.slice(0, 10) } : null;
-  }
-
-  if (!isStrictlyFutureDate(primaryReleaseDate, todayIso)) return null;
-
-  const allReleaseDates = results.flatMap((r) => r.release_dates || []);
-  const picked = pickReleaseByTypePriority(allReleaseDates, todayIso);
-  if (!picked) return null;
-  const noteForType = picked.entries.find((rd) => rd.note?.trim())?.note;
-  const label = labelForRelease(picked.type, noteForType);
-  return label ? { label, date: primaryReleaseDate.slice(0, 10) } : null;
-}
-
-// Série : le diffuseur de première diffusion (networks[].name — peut être
-// une plateforme de streaming comme Netflix/Disney+ ou une chaîne
-// classique comme ABC/BBC, TMDB ne distingue pas les deux dans ce champ,
-// et il n'y a pas lieu de le faire ici non plus : le badge représente le
-// canal de diffusion connu, quelle que soit sa nature). Jamais déduit de
-// /watch/providers, qui reflète la disponibilité actuelle, pas la
-// diffusion à venir. "Série à venir" si aucun network connu — jamais
-// d'invention de plateforme. `details` : résultat de getDetails("tv", id).
-export function getUpcomingSeriesRelease(details) {
-  const label = details?.networks?.find((n) => n?.name)?.name || "Série à venir";
-  const date = details?.first_air_date || null;
-  return { label, date };
 }
 
 // Fournisseurs de streaming "principaux" ----------------------------------
@@ -561,6 +422,8 @@ export async function getWatchProvidersList(mediaType, region = DEFAULT_REGION) 
   const results = data.results || [];
   return results
     .filter((p) => MAIN_PROVIDER_IDS.has(p.provider_id))
-    .sort((a, b) => (a.display_priorities?.[region] ?? 999) - (b.display_priorities?.[region] ?? 999))
+    .sort(
+      (a, b) => (a.display_priorities?.[region] ?? 999) - (b.display_priorities?.[region] ?? 999)
+    )
     .map((p) => ({ id: p.provider_id, name: p.provider_name }));
 }

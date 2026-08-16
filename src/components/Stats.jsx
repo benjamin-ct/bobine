@@ -26,8 +26,12 @@ function formatWatchTime(totalMinutes) {
   const days = hours / 24;
   const months = days / 30.44;
   const parts = [`${Math.round(hours)} h`];
-  if (days >= 1) parts.push(`${days.toFixed(1)} j`);
-  if (months >= 1) parts.push(`${months.toFixed(2)} mois`);
+  if (days >= 1) {
+    parts.push(`${days.toFixed(1)} j`);
+  }
+  if (months >= 1) {
+    parts.push(`${months.toFixed(2)} mois`);
+  }
   return parts.join(" · ");
 }
 
@@ -50,9 +54,13 @@ export default function Stats({ watched }) {
     let cancelled = false;
     Promise.all([getGenres("movie"), getGenres("tv")])
       .then(([m, t]) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         const map = {};
-        for (const g of [...(m.genres || []), ...(t.genres || [])]) map[g.id] = g.name;
+        for (const g of [...(m.genres || []), ...(t.genres || [])]) {
+          map[g.id] = g.name;
+        }
         setGenreMap(map);
       })
       .catch(() => {});
@@ -77,7 +85,9 @@ export default function Stats({ watched }) {
           !attemptedRef.current.has(makeKey(item.mediaType, item.id))
       )
       .slice(0, MAX_BACKFILL_PER_VISIT);
-    if (toFetch.length === 0) return;
+    if (toFetch.length === 0) {
+      return;
+    }
 
     toFetch.forEach((item) => {
       attemptedRef.current.add(makeKey(item.mediaType, item.id));
@@ -85,18 +95,24 @@ export default function Stats({ watched }) {
         .then((details) => {
           if (item.runtimeMinutes == null) {
             const minutes = estimateRuntimeMinutes(details, item.mediaType);
-            if (minutes) setRuntime(item.mediaType, item.id, minutes);
+            if (minutes) {
+              setRuntime(item.mediaType, item.id, minutes);
+            }
           }
           if (!item.directors?.length) {
             const directors = extractDirectors(details, item.mediaType);
-            if (directors.length) setDirectors(item.mediaType, item.id, directors);
+            if (directors.length) {
+              setDirectors(item.mediaType, item.id, directors);
+            }
           }
         })
         .catch(() => {});
     });
   }, [watched, setRuntime, setDirectors]);
 
-  if (watched.length === 0) return null;
+  if (watched.length === 0) {
+    return null;
+  }
 
   const movieCount = watched.filter((w) => w.mediaType === "movie").length;
   const seriesCount = watched.length - movieCount;
@@ -143,7 +159,9 @@ export default function Stats({ watched }) {
   const yearCounts = {};
   for (const item of watched) {
     const year = new Date(item.addedAt).getFullYear();
-    if (Number.isFinite(year)) yearCounts[year] = (yearCounts[year] || 0) + 1;
+    if (Number.isFinite(year)) {
+      yearCounts[year] = (yearCounts[year] || 0) + 1;
+    }
   }
   const yearsSorted = Object.entries(yearCounts).sort((a, b) => Number(b[0]) - Number(a[0]));
   const maxYearCount = Math.max(1, ...yearsSorted.map(([, count]) => count));
@@ -173,7 +191,8 @@ export default function Stats({ watched }) {
             <span className="stats-hero-figure">{formatWatchTime(totalMinutes)}</span>
             {missingRuntimeCount > 0 && (
               <span className="stats-hero-card__note">
-                Estimation sur {knownRuntimeItems.length}/{watched.length} titres (le reste se complète tout seul)
+                Estimation sur {knownRuntimeItems.length}/{watched.length} titres (le reste se
+                complète tout seul)
               </span>
             )}
           </div>
@@ -185,7 +204,9 @@ export default function Stats({ watched }) {
           {topGenres.length > 0 && (
             <div className="stat-tile stat-tile--wide">
               <span className="stat-tile__label">Genres préférés</span>
-              <span className="stat-tile__value stat-tile__value--small">{topGenres.join(" · ")}</span>
+              <span className="stat-tile__value stat-tile__value--small">
+                {topGenres.join(" · ")}
+              </span>
             </div>
           )}
 
@@ -214,7 +235,10 @@ export default function Stats({ watched }) {
             <div key={year} className="stats-years__row">
               <span className="stats-years__year">{year}</span>
               <div className="stats-years__bar-track">
-                <div className="stats-years__bar" style={{ width: `${(count / maxYearCount) * 100}%` }} />
+                <div
+                  className="stats-years__bar"
+                  style={{ width: `${(count / maxYearCount) * 100}%` }}
+                />
               </div>
               <span className="stats-years__count">{count}</span>
             </div>

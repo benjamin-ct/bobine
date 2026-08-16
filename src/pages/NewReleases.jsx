@@ -47,7 +47,11 @@ export default function NewReleases() {
   const { region } = useRegion();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
-  const activeProviderIds = useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined;
+  const activeProviderIds = useMyPlatforms
+    ? favoriteProviderIds
+    : providerId
+      ? [providerId]
+      : undefined;
 
   // Réinitialise les filtres dépendants et la liste au changement de type.
   useEffect(() => {
@@ -89,23 +93,40 @@ export default function NewReleases() {
       ...dateRangeFor(windowDays),
     })
       .then((data) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setResults(data.results || []);
         setTotalPages(Math.min(data.total_pages || 1, 500));
         setStatus("success");
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError(err);
         setStatus("error");
       });
     return () => {
       cancelled = true;
     };
-  }, [mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
+  }, [
+    mediaType,
+    genreId,
+    excludedGenreIds,
+    providerId,
+    useMyPlatforms,
+    favoriteProviderIds,
+    region,
+    country,
+    language,
+    windowDays,
+  ]);
 
   const loadMore = useCallback(() => {
-    if (loadingMore || page >= totalPages) return;
+    if (loadingMore || page >= totalPages) {
+      return;
+    }
     const nextPage = page + 1;
     setLoadingMore(true);
     discover(mediaType, {
@@ -134,18 +155,38 @@ export default function NewReleases() {
       })
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
-  }, [loadingMore, page, totalPages, mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
+  }, [
+    loadingMore,
+    page,
+    totalPages,
+    mediaType,
+    genreId,
+    excludedGenreIds,
+    providerId,
+    useMyPlatforms,
+    favoriteProviderIds,
+    region,
+    country,
+    language,
+    windowDays,
+  ]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
   const sentinelRef = useRef(null);
   useEffect(() => {
-    if (status !== "success") return;
+    if (status !== "success") {
+      return;
+    }
     const el = sentinelRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) loadMore();
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
       },
       { rootMargin: "600px" }
     );
@@ -156,7 +197,9 @@ export default function NewReleases() {
   return (
     <div className="page">
       <h1>Nouveautés</h1>
-      <p className="page-subtitle">Les films et séries sortis récemment, les plus populaires d'abord.</p>
+      <p className="page-subtitle">
+        Les films et séries sortis récemment, les plus populaires d'abord.
+      </p>
 
       <FilterBar
         mediaType={mediaType}

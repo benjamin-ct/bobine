@@ -85,10 +85,15 @@ function withSecurityHeaders(response) {
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     headers.set(key, value);
   }
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
-const RATE_LIMIT_RESPONSE = () => json({ error: "Trop de requêtes. Réessaie dans quelques minutes." }, 429);
+const RATE_LIMIT_RESPONSE = () =>
+  json({ error: "Trop de requêtes. Réessaie dans quelques minutes." }, 429);
 
 // Ces deux endpoints restent volontairement accessibles sans compte (les
 // notifications push fonctionnent pour n'importe quel visiteur, connecté ou
@@ -113,7 +118,12 @@ async function handleSubscribe(request, env) {
   }
 
   const { endpoint, keys, watchlist, favoriteGenres } = body || {};
-  if (typeof endpoint !== "string" || !endpoint.startsWith("https://") || !keys?.p256dh || !keys?.auth) {
+  if (
+    typeof endpoint !== "string" ||
+    !endpoint.startsWith("https://") ||
+    !keys?.p256dh ||
+    !keys?.auth
+  ) {
     return json({ error: "Abonnement push incomplet ou invalide (endpoint/keys manquants)." }, 400);
   }
 
@@ -127,8 +137,16 @@ async function handleSubscribe(request, env) {
   // qu'à l'activation des notifications (une fois par appareil), jamais à
   // chaque changement — voir handleSubscribeSync ci-dessous pour la
   // resynchronisation incrémentale qui, elle, se déclenche à chaque toggle.
-  await replaceWatchlist(env.DB, subscriptionId, sanitizeWatchlistItems(watchlist, MAX_WATCHLIST_ITEMS));
-  await replaceGenrePreferences(env.DB, subscriptionId, sanitizeGenrePrefs(favoriteGenres, MAX_GENRE_PREFS));
+  await replaceWatchlist(
+    env.DB,
+    subscriptionId,
+    sanitizeWatchlistItems(watchlist, MAX_WATCHLIST_ITEMS)
+  );
+  await replaceGenrePreferences(
+    env.DB,
+    subscriptionId,
+    sanitizeGenrePrefs(favoriteGenres, MAX_GENRE_PREFS)
+  );
 
   return json({ ok: true, subscriptionId });
 }
@@ -154,18 +172,28 @@ async function handleSubscribeSync(request, env) {
   }
 
   const { endpoint, watchlistToAdd, watchlistToRemove, genresToAdd, genresToRemove } = body || {};
-  if (typeof endpoint !== "string") return json({ error: "endpoint manquant." }, 400);
+  if (typeof endpoint !== "string") {
+    return json({ error: "endpoint manquant." }, 400);
+  }
 
   const subscriptionId = await getSubscriptionIdByEndpoint(env.DB, endpoint);
-  if (!subscriptionId) return json({ error: "Abonnement introuvable." }, 404);
+  if (!subscriptionId) {
+    return json({ error: "Abonnement introuvable." }, 404);
+  }
 
   await applyWatchlistChanges(env.DB, subscriptionId, {
     add: sanitizeWatchlistItems(watchlistToAdd, MAX_WATCHLIST_ITEMS),
-    remove: sanitizeKeyList(watchlistToRemove, MAX_WATCHLIST_ITEMS).map((k) => ({ mediaType: k.mediaType, tmdbId: k.id })),
+    remove: sanitizeKeyList(watchlistToRemove, MAX_WATCHLIST_ITEMS).map((k) => ({
+      mediaType: k.mediaType,
+      tmdbId: k.id,
+    })),
   });
   await applyGenrePreferenceChanges(env.DB, subscriptionId, {
     add: sanitizeGenrePrefs(genresToAdd, MAX_GENRE_PREFS),
-    remove: sanitizeKeyList(genresToRemove, MAX_GENRE_PREFS).map((k) => ({ mediaType: k.mediaType, genreId: k.id })),
+    remove: sanitizeKeyList(genresToRemove, MAX_GENRE_PREFS).map((k) => ({
+      mediaType: k.mediaType,
+      genreId: k.id,
+    })),
   });
 
   return json({ ok: true });
@@ -173,7 +201,9 @@ async function handleSubscribeSync(request, env) {
 
 async function handleUnsubscribe(request, env) {
   const ip = getClientIp(request);
-  if (!(await checkRateLimit(env.DB, `unsubscribe:ip:${ip}`, { limit: 10, windowMs: 60 * 60_000 }))) {
+  if (
+    !(await checkRateLimit(env.DB, `unsubscribe:ip:${ip}`, { limit: 10, windowMs: 60 * 60_000 }))
+  ) {
     return RATE_LIMIT_RESPONSE();
   }
 
@@ -183,7 +213,9 @@ async function handleUnsubscribe(request, env) {
   } catch {
     return json({ error: "JSON invalide." }, 400);
   }
-  if (!body?.endpoint) return json({ error: "endpoint manquant." }, 400);
+  if (!body?.endpoint) {
+    return json({ error: "endpoint manquant." }, 400);
+  }
   await deleteSubscription(env.DB, body.endpoint);
   return json({ ok: true });
 }
@@ -214,7 +246,10 @@ async function handleTestNotification(request, env) {
 
   const subscriptions = await getAllSubscriptions(env.DB);
   if (subscriptions.length === 0) {
-    return json({ error: "Aucun abonnement enregistré. Active d'abord les notifications dans l'app." }, 404);
+    return json(
+      { error: "Aucun abonnement enregistré. Active d'abord les notifications dans l'app." },
+      404
+    );
   }
 
   const results = [];
@@ -222,7 +257,11 @@ async function handleTestNotification(request, env) {
     try {
       await sendPush(
         subscription,
-        { title: "Bobine 🎬", body: "Ceci est une notification de test — si tu la vois, tout fonctionne !", url: "/ma-liste" },
+        {
+          title: "Bobine 🎬",
+          body: "Ceci est une notification de test — si tu la vois, tout fonctionne !",
+          url: "/ma-liste",
+        },
         env
       );
       results.push({ id: subscription.id, ok: true });
@@ -247,10 +286,14 @@ async function handleRequestLink(request, env) {
     return json({ error: "JSON invalide." }, 400);
   }
   const email = (body?.email || "").trim().toLowerCase();
-  if (!isValidEmail(email)) return json({ error: "Adresse email invalide." }, 400);
+  if (!isValidEmail(email)) {
+    return json({ error: "Adresse email invalide." }, 400);
+  }
 
   const recaptcha = await verifyRecaptcha(env, body?.recaptchaToken, "request_link");
-  if (!recaptcha.ok) return json({ error: "Vérification anti-robot échouée. Réessaie." }, 403);
+  if (!recaptcha.ok) {
+    return json({ error: "Vérification anti-robot échouée. Réessaie." }, 403);
+  }
 
   // Par email (empêche de spammer la boîte mail d'un tiers) ET par IP
   // (empêche un seul client de solliciter l'endpoint en boucle avec des
@@ -261,7 +304,9 @@ async function handleRequestLink(request, env) {
     checkRateLimit(env.DB, `link:email:${email}:h`, { limit: 5, windowMs: 60 * 60_000 }),
     checkRateLimit(env.DB, `link:ip:${ip}:h`, { limit: 20, windowMs: 60 * 60_000 }),
   ]);
-  if (withinLimits.some((ok) => !ok)) return RATE_LIMIT_RESPONSE();
+  if (withinLimits.some((ok) => !ok)) {
+    return RATE_LIMIT_RESPONSE();
+  }
 
   const { token, code } = await createMagicLink(env.DB, email);
   const link = `${new URL(request.url).origin}/auth/verify?token=${token}`;
@@ -272,14 +317,21 @@ async function handleRequestLink(request, env) {
     // de vraie boîte mail à disposition, donc on renvoie le lien et le code
     // directement pour pouvoir tester le flux. Ne se produit jamais en
     // production.
-    return json({ ok: true, devLink: skipped ? link : undefined, devCode: skipped ? code : undefined });
+    return json({
+      ok: true,
+      devLink: skipped ? link : undefined,
+      devCode: skipped ? code : undefined,
+    });
   } catch (err) {
     // L'erreur brute d'un service tiers (Resend) ne doit jamais atteindre le
     // client : elle peut révéler des détails de config (mode test, domaine
     // vérifié...) voire, selon le cas, l'email associé au compte. On la
     // journalise côté serveur et on renvoie un message générique.
     console.error("Échec de l'envoi du lien de connexion :", err.message);
-    return json({ error: "Impossible d'envoyer le lien de connexion pour le moment. Réessaie plus tard." }, 502);
+    return json(
+      { error: "Impossible d'envoyer le lien de connexion pour le moment. Réessaie plus tard." },
+      502
+    );
   }
 }
 
@@ -302,15 +354,25 @@ async function handleVerify(request, env) {
   }
   const token = body?.token;
   const code = body?.code;
-  if (!token && !code) return json({ error: "Jeton ou code manquant." }, 400);
+  if (!token && !code) {
+    return json({ error: "Jeton ou code manquant." }, 400);
+  }
 
   const recaptcha = await verifyRecaptcha(env, body?.recaptchaToken, "verify");
-  if (!recaptcha.ok) return json({ error: "Vérification anti-robot échouée. Réessaie." }, 403);
+  if (!recaptcha.ok) {
+    return json({ error: "Vérification anti-robot échouée. Réessaie." }, 403);
+  }
 
-  const email = token ? await consumeMagicLink(env.DB, token) : await consumeMagicLinkByCode(env.DB, code);
+  const email = token
+    ? await consumeMagicLink(env.DB, token)
+    : await consumeMagicLinkByCode(env.DB, code);
   if (!email) {
     return json(
-      { error: code ? "Ce code est invalide, expiré, ou déjà utilisé." : "Ce lien de connexion est invalide, expiré, ou déjà utilisé." },
+      {
+        error: code
+          ? "Ce code est invalide, expiré, ou déjà utilisé."
+          : "Ce lien de connexion est invalide, expiré, ou déjà utilisé.",
+      },
       400
     );
   }
@@ -325,14 +387,20 @@ async function handleVerify(request, env) {
 
 async function handleMe(request, env) {
   const user = await getUserFromRequest(env.DB, request);
-  if (!user) return json({ error: "Non connecté." }, 401);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
   return json({ email: user.email });
 }
 
 async function handleLogout(request, env) {
   const user = await getUserFromRequest(env.DB, request);
-  if (user) await deleteSession(env.DB, user.sessionToken);
-  return json({ ok: true }, 200, { "set-cookie": sessionCookieHeader(request, null, { clear: true }) });
+  if (user) {
+    await deleteSession(env.DB, user.sessionToken);
+  }
+  return json({ ok: true }, 200, {
+    "set-cookie": sessionCookieHeader(request, null, { clear: true }),
+  });
 }
 
 // Bibliothèque synchronisée ------------------------------------------------
@@ -350,14 +418,18 @@ async function handleLogout(request, env) {
 // confiance à une valeur fournie par le client sans ce contrôle.
 async function handleGetLibrary(request, env) {
   const user = await getUserFromRequest(env.DB, request);
-  if (!user) return json({ error: "Non connecté." }, 401);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
   const library = await getLibraryForUser(env.DB, user.id);
   return json(library);
 }
 
 async function handlePutLibrary(request, env) {
   const user = await getUserFromRequest(env.DB, request);
-  if (!user) return json({ error: "Non connecté." }, 401);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
   let body;
   try {
     body = await request.json();
@@ -384,7 +456,9 @@ async function handlePutLibrary(request, env) {
 // ci-dessus : user.id vient uniquement du cookie de session.
 async function handleLibrarySync(request, env) {
   const user = await getUserFromRequest(env.DB, request);
-  if (!user) return json({ error: "Non connecté." }, 401);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
   let body;
   try {
     body = await request.json();
@@ -392,7 +466,9 @@ async function handleLibrarySync(request, env) {
     return json({ error: "JSON invalide." }, 400);
   }
   const { upserts, deletes } = sanitizeLibrarySyncPayload(body);
-  if (upserts.length === 0 && deletes.length === 0) return json({ ok: true });
+  if (upserts.length === 0 && deletes.length === 0) {
+    return json({ ok: true });
+  }
   await applyLibraryChanges(env.DB, user.id, { upserts, deletes });
   return json({ ok: true });
 }
@@ -407,7 +483,9 @@ async function handleTmdbProxy(request, env, ctx) {
   if (!(await checkRateLimit(env.DB, `tmdb:ip:${ip}`, { limit: 120, windowMs: 60_000 }))) {
     return RATE_LIMIT_RESPONSE();
   }
-  if (!env.TMDB_API_KEY) return json({ error: "TMDB_API_KEY non configurée côté serveur." }, 503);
+  if (!env.TMDB_API_KEY) {
+    return json({ error: "TMDB_API_KEY non configurée côté serveur." }, 503);
+  }
 
   const url = new URL(request.url);
 
@@ -424,12 +502,16 @@ async function handleTmdbProxy(request, env, ctx) {
   const cache = caches.default;
   const cacheKey = new Request(url.toString(), request);
   const cached = await cache.match(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   const tmdbPath = url.pathname.replace(/^\/api\/tmdb/, "");
   const tmdbUrl = new URL(`https://api.themoviedb.org/3${tmdbPath}`);
   for (const [key, value] of url.searchParams) {
-    if (key === "api_key") continue; // ignoré : seule la clé serveur est utilisée
+    if (key === "api_key") {
+      continue;
+    } // ignoré : seule la clé serveur est utilisée
     tmdbUrl.searchParams.set(key, value);
   }
   tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY);
@@ -478,7 +560,10 @@ async function handleTmdbProxy(request, env, ctx) {
         cacheKey,
         new Response(body, {
           status: 429,
-          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=10" },
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "public, max-age=10",
+          },
         })
       )
     );
@@ -497,7 +582,9 @@ export default {
     // par le Worker, ou juste re-wrapper la réponse d'assets, fait échouer
     // `navigator.serviceWorker.register()`). Leurs en-têtes de sécurité
     // sont donc posés nativement via public/_headers plutôt qu'ici.
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (!url.pathname.startsWith("/api/")) {
+      return env.ASSETS.fetch(request);
+    }
     const response = await routeRequest(request, env, url, ctx);
     return withSecurityHeaders(response);
   },
@@ -509,7 +596,9 @@ export default {
 
 async function routeRequest(request, env, url, ctx) {
   if (url.pathname === "/api/vapid-public-key" && request.method === "GET") {
-    if (!env.VAPID_PUBLIC_KEY) return json({ error: "VAPID_PUBLIC_KEY non configurée." }, 503);
+    if (!env.VAPID_PUBLIC_KEY) {
+      return json({ error: "VAPID_PUBLIC_KEY non configurée." }, 503);
+    }
     return json({ publicKey: env.VAPID_PUBLIC_KEY });
   }
 

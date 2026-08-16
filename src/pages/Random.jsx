@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { discover, getGenres, getWatchProvidersList, getDetails, getWatchProviders, posterUrl, estimateRuntimeMinutes, formatFullDate } from "../api/tmdb";
+import {
+  discover,
+  getGenres,
+  getWatchProvidersList,
+  getDetails,
+  getWatchProviders,
+  posterUrl,
+  estimateRuntimeMinutes,
+  formatFullDate,
+} from "../api/tmdb";
 import FilterBar from "../components/FilterBar";
 import ProviderBadges from "../components/ProviderBadges";
 import TrailerButton from "../components/TrailerButton";
@@ -177,18 +186,33 @@ export default function Random() {
         Exclure ce que j'ai déjà vu
       </label>
 
-      <button className="btn btn--primary btn--lg" onClick={drawRandom} disabled={status === "loading"}>
-        {status === "loading" ? "Tirage en cours…" : pick ? "🎲 Retirer au sort" : "🎲 Tirer un titre"}
+      <button
+        className="btn btn--primary btn--lg"
+        onClick={drawRandom}
+        disabled={status === "loading"}
+      >
+        {status === "loading"
+          ? "Tirage en cours…"
+          : pick
+            ? "🎲 Retirer au sort"
+            : "🎲 Tirer un titre"}
       </button>
 
       {status === "error" && <ErrorMessage error={error} />}
-      {status === "empty" && <p className="page-subtitle">Aucun titre ne correspond à ces filtres.</p>}
+      {status === "empty" && (
+        <p className="page-subtitle">Aucun titre ne correspond à ces filtres.</p>
+      )}
 
       {pick && (
         <div className="random-result">
           <img className="detail-poster" src={posterUrl(pick.poster_path, "w342")} alt={title} />
           <div className="detail-info">
-            <h2>{title} {date && <span className="detail-year">({formatFullDate(date) || date.slice(0, 4)})</span>}</h2>
+            <h2>
+              {title}{" "}
+              {date && (
+                <span className="detail-year">({formatFullDate(date) || date.slice(0, 4)})</span>
+              )}
+            </h2>
             <p className="detail-meta">
               {pickDetails?.genres?.map((g) => g.name).join(" · ")}
               {runtime ? ` · ${runtime} min` : ""}
@@ -196,7 +220,9 @@ export default function Random() {
             </p>
             <p className="detail-overview">{pick.overview}</p>
             <div className="detail-actions">
-              <Link className="btn" to={`/media/${mediaType}/${pick.id}`}>Voir la fiche</Link>
+              <Link className="btn" to={`/media/${mediaType}/${pick.id}`}>
+                Voir la fiche
+              </Link>
               <button
                 className={`btn ${inWatchlist ? "btn--gold" : ""}`}
                 onClick={() => toggleWatchlist(buildLibItem())}
@@ -210,7 +236,9 @@ export default function Random() {
                 {watched ? "✔ Déjà vu" : "○ Marquer comme vu"}
               </button>
               <TrailerButton videos={pickDetails?.videos?.results} />
-              <Link className="btn" to={`/media/${mediaType}/${pick.id}#recommendations`}>🔁 Similaire</Link>
+              <Link className="btn" to={`/media/${mediaType}/${pick.id}#recommendations`}>
+                🔁 Similaire
+              </Link>
             </div>
             <h3>Où regarder{regionName ? ` (${regionName})` : ""}</h3>
             <ProviderBadges providers={providersResult} />

@@ -18,7 +18,14 @@ const EPISODE_KEY_PATTERN = /^\d{1,4}-\d{1,4}$/;
 const MAX_DIRECTORS = 10;
 const DIRECTOR_NAME_MAX_LENGTH = 150;
 
-const HTML_ENTITY_DECODES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&apos;": "'" };
+const HTML_ENTITY_DECODES = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+};
 const HTML_ENTITY_PATTERN = /&amp;|&lt;|&gt;|&quot;|&#39;|&apos;/g;
 const MAX_DECODE_PASSES = 50;
 
@@ -39,14 +46,18 @@ export function decodeHtmlEntities(value) {
   let out = value;
   for (let i = 0; i < MAX_DECODE_PASSES; i++) {
     const next = out.replace(HTML_ENTITY_PATTERN, (m) => HTML_ENTITY_DECODES[m]);
-    if (next === out) break;
+    if (next === out) {
+      break;
+    }
     out = next;
   }
   return out;
 }
 
 function cleanString(value, maxLength = MAX_STRING_LENGTH) {
-  if (typeof value !== "string") return null;
+  if (typeof value !== "string") {
+    return null;
+  }
   const trimmed = decodeHtmlEntities(value.slice(0, maxLength));
   return trimmed || null;
 }
@@ -62,11 +73,17 @@ function cleanNumber(value) {
 // pour title/date) donc pas besoin d'un traitement plus strict que le
 // nettoyage/troncature déjà appliqué aux autres champs texte.
 function cleanDirector(raw) {
-  if (!raw || typeof raw !== "object") return null;
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
   const id = cleanNumber(raw.id);
-  if (id === null || id <= 0) return null;
+  if (id === null || id <= 0) {
+    return null;
+  }
   const name = cleanString(raw.name, DIRECTOR_NAME_MAX_LENGTH);
-  if (!name) return null;
+  if (!name) {
+    return null;
+  }
   return { id, name };
 }
 
@@ -74,28 +91,44 @@ function cleanDirector(raw) {
 // ou null si l'item n'est pas exploitable (id/mediaType manquants ou
 // invalides — le reste a des valeurs de repli raisonnables).
 function sanitizeItem(mediaType, tmdbId, raw) {
-  if (!VALID_MEDIA_TYPES.has(mediaType)) return null;
+  if (!VALID_MEDIA_TYPES.has(mediaType)) {
+    return null;
+  }
   const id = cleanNumber(tmdbId);
-  if (id === null || id <= 0) return null;
-  if (!raw || typeof raw !== "object") return null;
+  if (id === null || id <= 0) {
+    return null;
+  }
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
 
   const title = cleanString(raw.title) || "Titre inconnu";
-  const posterPath = typeof raw.posterPath === "string" && raw.posterPath.startsWith("/")
-    ? raw.posterPath.slice(0, 200)
-    : null;
+  const posterPath =
+    typeof raw.posterPath === "string" && raw.posterPath.startsWith("/")
+      ? raw.posterPath.slice(0, 200)
+      : null;
   const date = cleanString(raw.date, 20);
   const genreIds = Array.isArray(raw.genreIds)
-    ? raw.genreIds.map(cleanNumber).filter((n) => n !== null).slice(0, 20)
+    ? raw.genreIds
+        .map(cleanNumber)
+        .filter((n) => n !== null)
+        .slice(0, 20)
     : [];
   const addedAt = cleanNumber(raw.addedAt) ?? Date.now();
   const updatedAt = cleanNumber(raw.updatedAt) ?? addedAt;
-  const rating = raw.rating == null ? undefined : Math.min(10, Math.max(0, cleanNumber(raw.rating) ?? 0));
-  const runtimeMinutes = raw.runtimeMinutes == null ? undefined : Math.max(0, cleanNumber(raw.runtimeMinutes) ?? 0);
+  const rating =
+    raw.rating == null ? undefined : Math.min(10, Math.max(0, cleanNumber(raw.rating) ?? 0));
+  const runtimeMinutes =
+    raw.runtimeMinutes == null ? undefined : Math.max(0, cleanNumber(raw.runtimeMinutes) ?? 0);
   // Uniquement pertinent pour les séries, mais on ne restreint pas à
   // mediaType === "tv" ici : un champ absent/vide pour un film ne coûte rien
   // et évite un cas particulier de plus à maintenir.
   const watchedEpisodes = Array.isArray(raw.watchedEpisodes)
-    ? [...new Set(raw.watchedEpisodes.filter((e) => typeof e === "string" && EPISODE_KEY_PATTERN.test(e)))].slice(0, MAX_WATCHED_EPISODES)
+    ? [
+        ...new Set(
+          raw.watchedEpisodes.filter((e) => typeof e === "string" && EPISODE_KEY_PATTERN.test(e))
+        ),
+      ].slice(0, MAX_WATCHED_EPISODES)
     : [];
   // Rempli progressivement par le backfill de Stats.jsx (voir setDirectors
   // dans LibraryContext) — absent tant que l'item n'a pas encore été
@@ -104,7 +137,20 @@ function sanitizeItem(mediaType, tmdbId, raw) {
     ? raw.directors.map(cleanDirector).filter(Boolean).slice(0, MAX_DIRECTORS)
     : [];
 
-  return { id, mediaType, title, posterPath, date, genreIds, addedAt, updatedAt, rating, runtimeMinutes, watchedEpisodes, directors };
+  return {
+    id,
+    mediaType,
+    title,
+    posterPath,
+    date,
+    genreIds,
+    addedAt,
+    updatedAt,
+    rating,
+    runtimeMinutes,
+    watchedEpisodes,
+    directors,
+  };
 }
 
 // `watched`/`watchlist` : { "movie:123": {...}, "tv:456": {...} }. Renvoie
@@ -113,13 +159,19 @@ function sanitizeItem(mediaType, tmdbId, raw) {
 // le payload — un client legit ne devrait jamais approcher cette limite).
 function sanitizeList(rawList) {
   const out = {};
-  if (!rawList || typeof rawList !== "object") return out;
+  if (!rawList || typeof rawList !== "object") {
+    return out;
+  }
   let count = 0;
   for (const [key, raw] of Object.entries(rawList)) {
-    if (count >= MAX_ITEMS_PER_LIST) break;
+    if (count >= MAX_ITEMS_PER_LIST) {
+      break;
+    }
     const [mediaType, tmdbId] = String(key).split(":");
     const item = sanitizeItem(mediaType, tmdbId, raw);
-    if (!item) continue;
+    if (!item) {
+      continue;
+    }
     out[`${mediaType}:${item.id}`] = item;
     count += 1;
   }
@@ -143,19 +195,33 @@ export function sanitizeLibraryPayload(body) {
 const MAX_SYNC_BATCH = 500;
 
 function sanitizeSyncUpsert(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  if (!VALID_MEDIA_TYPES.has(raw.mediaType)) return null;
-  if (raw.status !== "watched" && raw.status !== "watchlist") return null;
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  if (!VALID_MEDIA_TYPES.has(raw.mediaType)) {
+    return null;
+  }
+  if (raw.status !== "watched" && raw.status !== "watchlist") {
+    return null;
+  }
   const item = sanitizeItem(raw.mediaType, raw.id, raw.item);
-  if (!item) return null;
+  if (!item) {
+    return null;
+  }
   return { mediaType: raw.mediaType, tmdbId: item.id, status: raw.status, item };
 }
 
 function sanitizeSyncDelete(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  if (!VALID_MEDIA_TYPES.has(raw.mediaType)) return null;
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  if (!VALID_MEDIA_TYPES.has(raw.mediaType)) {
+    return null;
+  }
   const id = cleanNumber(raw.id);
-  if (id === null || id <= 0) return null;
+  if (id === null || id <= 0) {
+    return null;
+  }
   return { mediaType: raw.mediaType, tmdbId: id };
 }
 
@@ -178,9 +244,13 @@ export function sanitizeWatchlistItems(rawItems, maxItems) {
   return (Array.isArray(rawItems) ? rawItems : [])
     .slice(0, maxItems)
     .map((item) => {
-      if (!VALID_MEDIA_TYPES.has(item?.mediaType)) return null;
+      if (!VALID_MEDIA_TYPES.has(item?.mediaType)) {
+        return null;
+      }
       const tmdbId = cleanNumber(item?.tmdbId);
-      if (tmdbId === null || tmdbId <= 0) return null;
+      if (tmdbId === null || tmdbId <= 0) {
+        return null;
+      }
       const title = cleanString(item?.title) || "Titre inconnu";
       const posterPath =
         typeof item?.posterPath === "string" && item.posterPath.startsWith("/")
@@ -195,9 +265,13 @@ export function sanitizeGenrePrefs(rawGenres, maxItems) {
   return (Array.isArray(rawGenres) ? rawGenres : [])
     .slice(0, maxItems)
     .map((g) => {
-      if (!VALID_MEDIA_TYPES.has(g?.mediaType)) return null;
+      if (!VALID_MEDIA_TYPES.has(g?.mediaType)) {
+        return null;
+      }
       const genreId = cleanNumber(g?.genreId);
-      if (genreId === null || genreId <= 0) return null;
+      if (genreId === null || genreId <= 0) {
+        return null;
+      }
       return { mediaType: g.mediaType, genreId };
     })
     .filter(Boolean);
@@ -210,9 +284,13 @@ export function sanitizeKeyList(rawKeys, maxItems) {
     .slice(0, maxItems)
     .map((key) => {
       const [mediaType, idStr] = String(key).split(":");
-      if (!VALID_MEDIA_TYPES.has(mediaType)) return null;
+      if (!VALID_MEDIA_TYPES.has(mediaType)) {
+        return null;
+      }
       const id = cleanNumber(idStr);
-      if (id === null || id <= 0) return null;
+      if (id === null || id <= 0) {
+        return null;
+      }
       return { mediaType, id };
     })
     .filter(Boolean);

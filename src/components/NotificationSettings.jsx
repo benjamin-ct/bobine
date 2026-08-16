@@ -12,7 +12,12 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 function isSupported() {
-  return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  return (
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
 }
 
 // Reprend la même logique que Stats.jsx (genres dominants de l'historique),
@@ -36,7 +41,12 @@ function computeFavoriteGenres(watched) {
 }
 
 function toWatchlistPayload(item) {
-  return { mediaType: item.mediaType, tmdbId: item.id, title: item.title, posterPath: item.posterPath };
+  return {
+    mediaType: item.mediaType,
+    tmdbId: item.id,
+    title: item.title,
+    posterPath: item.posterPath,
+  };
 }
 
 // Remplacement complet : correct et volontaire, réservé à l'activation
@@ -53,7 +63,9 @@ async function fullSyncSubscription(endpoint, keys, watchlist, watched) {
       favoriteGenres: computeFavoriteGenres(watched),
     }),
   });
-  if (!res.ok) throw new Error(`Synchronisation échouée (${res.status})`);
+  if (!res.ok) {
+    throw new Error(`Synchronisation échouée (${res.status})`);
+  }
 }
 
 function keysOf(watchlist, watched) {
@@ -72,27 +84,47 @@ function keysOf(watchlist, watched) {
 async function syncSubscriptionDelta(endpoint, watchlist, watched, lastSyncedRef) {
   const desiredWatchlist = watchlist.map(toWatchlistPayload);
   const desiredGenres = computeFavoriteGenres(watched);
-  const { watchlistKeys: desiredWatchlistKeys, genreKeys: desiredGenreKeys } = keysOf(watchlist, watched);
+  const { watchlistKeys: desiredWatchlistKeys, genreKeys: desiredGenreKeys } = keysOf(
+    watchlist,
+    watched
+  );
 
   const watchlistToAdd = desiredWatchlist.filter(
     (item) => !lastSyncedRef.current.watchlistKeys.has(`${item.mediaType}:${item.tmdbId}`)
   );
-  const watchlistToRemove = [...lastSyncedRef.current.watchlistKeys].filter((key) => !desiredWatchlistKeys.has(key));
+  const watchlistToRemove = [...lastSyncedRef.current.watchlistKeys].filter(
+    (key) => !desiredWatchlistKeys.has(key)
+  );
   const genresToAdd = desiredGenres.filter(
     (g) => !lastSyncedRef.current.genreKeys.has(`${g.mediaType}:${g.genreId}`)
   );
-  const genresToRemove = [...lastSyncedRef.current.genreKeys].filter((key) => !desiredGenreKeys.has(key));
+  const genresToRemove = [...lastSyncedRef.current.genreKeys].filter(
+    (key) => !desiredGenreKeys.has(key)
+  );
 
-  if (!watchlistToAdd.length && !watchlistToRemove.length && !genresToAdd.length && !genresToRemove.length) {
+  if (
+    !watchlistToAdd.length &&
+    !watchlistToRemove.length &&
+    !genresToAdd.length &&
+    !genresToRemove.length
+  ) {
     return; // rien n'a changé depuis le dernier envoi
   }
 
   const res = await fetch("/api/subscribe/sync", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ endpoint, watchlistToAdd, watchlistToRemove, genresToAdd, genresToRemove }),
+    body: JSON.stringify({
+      endpoint,
+      watchlistToAdd,
+      watchlistToRemove,
+      genresToAdd,
+      genresToRemove,
+    }),
   });
-  if (!res.ok) throw new Error(`Synchronisation échouée (${res.status})`);
+  if (!res.ok) {
+    throw new Error(`Synchronisation échouée (${res.status})`);
+  }
 
   lastSyncedRef.current = { watchlistKeys: desiredWatchlistKeys, genreKeys: desiredGenreKeys };
 }
@@ -111,14 +143,18 @@ export default function NotificationSettings() {
   // travaillerait sur une liste figée au moment de l'activation. N'envoie
   // que le delta (voir syncSubscriptionDelta), pas la watchlist entière.
   useEffect(() => {
-    if (!endpoint) return;
+    if (!endpoint) {
+      return;
+    }
     if (isFirstSync.current) {
       isFirstSync.current = false;
       return;
     }
     navigator.serviceWorker?.ready.then((registration) =>
       registration.pushManager.getSubscription().then((sub) => {
-        if (!sub) return;
+        if (!sub) {
+          return;
+        }
         syncSubscriptionDelta(endpoint, watchlist, watched, lastSyncedRef).catch((err) =>
           console.error("Bobine : resync notifications échouée.", err)
         );
@@ -140,13 +176,17 @@ export default function NotificationSettings() {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        throw new Error("Permission refusée. Autorise les notifications dans les réglages du navigateur pour ce site.");
+        throw new Error(
+          "Permission refusée. Autorise les notifications dans les réglages du navigateur pour ce site."
+        );
       }
 
       const registration = await navigator.serviceWorker.ready;
 
       const keyRes = await fetch("/api/vapid-public-key");
-      if (!keyRes.ok) throw new Error("Impossible de récupérer la clé du serveur.");
+      if (!keyRes.ok) {
+        throw new Error("Impossible de récupérer la clé du serveur.");
+      }
       const { publicKey } = await keyRes.json();
 
       const subscription = await registration.pushManager.subscribe({
@@ -201,8 +241,8 @@ export default function NotificationSettings() {
             🔔 Notifications activées — désactiver
           </button>
           <p className="page-subtitle notification-settings__hint">
-            Tu seras prévenu·e quand un titre de ta liste "Envie de voir" arrive en streaming, pour les
-            nouveautés dans tes genres préférés, et pour les grosses sorties du moment.
+            Tu seras prévenu·e quand un titre de ta liste "Envie de voir" arrive en streaming, pour
+            les nouveautés dans tes genres préférés, et pour les grosses sorties du moment.
           </p>
         </>
       ) : (

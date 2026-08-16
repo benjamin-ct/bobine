@@ -32,7 +32,12 @@ export default function NavBar() {
       searchMulti(trimmed)
         .then((data) => {
           const filtered = (data.results || [])
-            .filter((item) => item.media_type === "movie" || item.media_type === "tv" || item.media_type === "person")
+            .filter(
+              (item) =>
+                item.media_type === "movie" ||
+                item.media_type === "tv" ||
+                item.media_type === "person"
+            )
             .slice(0, MAX_LIVE_RESULTS);
           setResults(filtered);
           setStatus("success");
@@ -71,7 +76,9 @@ export default function NavBar() {
   function onSubmit(e) {
     e.preventDefault();
     const q = query.trim();
-    if (!q) return;
+    if (!q) {
+      return;
+    }
     setOpen(false);
     navigate(`/recherche?q=${encodeURIComponent(q)}`);
   }
@@ -100,7 +107,9 @@ export default function NavBar() {
     <header className="navbar">
       <div className="navbar__inner">
         <div className="navbar__top">
-          <NavLink to="/" className="navbar__brand" onClick={onNavClick}>🎬 Bobine</NavLink>
+          <NavLink to="/" className="navbar__brand" onClick={onNavClick}>
+            🎬 Bobine
+          </NavLink>
           <button
             type="button"
             className="navbar__toggle"
@@ -112,11 +121,21 @@ export default function NavBar() {
           </button>
         </div>
         <nav className={`navbar__links${menuOpen ? " navbar__links--open" : ""}`}>
-          <NavLink to="/" end onClick={onNavClick}>Découvrir</NavLink>
-          <NavLink to="/nouveautes" onClick={onNavClick}>Nouveautés</NavLink>
-          <NavLink to="/prochainement" onClick={onNavClick}>Prochainement</NavLink>
-          <NavLink to="/aleatoire" onClick={onNavClick}>Aléatoire</NavLink>
-          <NavLink to="/ma-liste" onClick={onNavClick}>Ma liste</NavLink>
+          <NavLink to="/" end onClick={onNavClick}>
+            Découvrir
+          </NavLink>
+          <NavLink to="/nouveautes" onClick={onNavClick}>
+            Nouveautés
+          </NavLink>
+          <NavLink to="/prochainement" onClick={onNavClick}>
+            Prochainement
+          </NavLink>
+          <NavLink to="/aleatoire" onClick={onNavClick}>
+            Aléatoire
+          </NavLink>
+          <NavLink to="/ma-liste" onClick={onNavClick}>
+            Ma liste
+          </NavLink>
         </nav>
         <div className="navbar__search" ref={wrapperRef}>
           <form onSubmit={onSubmit}>
@@ -145,7 +164,11 @@ export default function NavBar() {
                       onClick={() => goTo(`/personne/${item.id}`)}
                     >
                       {item.profile_path ? (
-                        <img src={posterUrl(item.profile_path, "w92")} alt={item.name} className="live-search__avatar" />
+                        <img
+                          src={posterUrl(item.profile_path, "w92")}
+                          alt={item.name}
+                          className="live-search__avatar"
+                        />
                       ) : (
                         <div className="live-search__avatar live-search__avatar--empty" />
                       )}
@@ -160,9 +183,18 @@ export default function NavBar() {
                 const date = item.release_date || item.first_air_date;
                 const path = `/media/${item.media_type}/${item.id}`;
                 return (
-                  <Link key={`${item.media_type}-${item.id}`} to={path} className="live-search__item" onClick={() => goTo(path)}>
+                  <Link
+                    key={`${item.media_type}-${item.id}`}
+                    to={path}
+                    className="live-search__item"
+                    onClick={() => goTo(path)}
+                  >
                     {item.poster_path ? (
-                      <img src={posterUrl(item.poster_path, "w92")} alt={title} className="live-search__poster" />
+                      <img
+                        src={posterUrl(item.poster_path, "w92")}
+                        alt={title}
+                        className="live-search__poster"
+                      />
                     ) : (
                       <div className="live-search__poster live-search__poster--empty" />
                     )}
@@ -177,7 +209,11 @@ export default function NavBar() {
                 );
               })}
               {results.length > 0 && (
-                <Link to={`/recherche?q=${encodeURIComponent(query.trim())}`} className="live-search__all" onClick={() => setOpen(false)}>
+                <Link
+                  to={`/recherche?q=${encodeURIComponent(query.trim())}`}
+                  className="live-search__all"
+                  onClick={() => setOpen(false)}
+                >
                   Voir tous les résultats pour « {query.trim()} » →
                 </Link>
               )}
@@ -188,7 +224,9 @@ export default function NavBar() {
         <div className="navbar__account">
           {authStatus === "authenticated" && (
             <>
-              <span className="navbar__account-email" title={email}>{email}</span>
+              <span className="navbar__account-email" title={email}>
+                {email}
+              </span>
               <button type="button" className="icon-btn icon-btn--text" onClick={logout}>
                 Déconnexion
               </button>

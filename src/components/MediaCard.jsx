@@ -35,7 +35,11 @@ const THEATRICAL_BADGES = {
 // getUpcomingSeriesRelease dans tmdb.js). Réutilise le même badge
 // (`.media-card__theatrical`, même position/style) que showProviderBadge,
 // juste avec un texte calculé différemment.
-export default function MediaCard({ item, showProviderBadge = false, showFutureReleaseBadge = false }) {
+export default function MediaCard({
+  item,
+  showProviderBadge = false,
+  showFutureReleaseBadge = false,
+}) {
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
   const { getTheatricalStatus, region } = useRegion();
   const mediaType = item.mediaType || item.media_type;
@@ -71,9 +75,13 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
   const posterRef = useRef(null);
   const [isNearViewport, setIsNearViewport] = useState(false);
   useEffect(() => {
-    if (!showProviderBadge && !showFutureReleaseBadge) return;
+    if (!showProviderBadge && !showFutureReleaseBadge) {
+      return;
+    }
     const el = posterRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -93,12 +101,16 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
   // "on ne sait pas encore où" ou juste le fetch pas encore résolu.
   const [providerStatus, setProviderStatus] = useState("idle");
   useEffect(() => {
-    if (!showProviderBadge || !isNearViewport) return;
+    if (!showProviderBadge || !isNearViewport) {
+      return;
+    }
     let cancelled = false;
     setProviderStatus("loading");
     getWatchProviders(mediaType, item.id, region)
       .then((data) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         // Abonnement en priorité (le plus pertinent pour "où le regarder"),
         // sinon location/achat ; rien si le titre n'est encore distribué
         // nulle part (fréquent sur Prochainement) — pas de badge affiché.
@@ -106,7 +118,9 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
         setProviderStatus("done");
       })
       .catch(() => {
-        if (!cancelled) setProviderStatus("done");
+        if (!cancelled) {
+          setProviderStatus("done");
+        }
       });
     return () => {
       cancelled = true;
@@ -132,7 +146,9 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
   const [upcomingRelease, setUpcomingRelease] = useState(null);
   const [upcomingStatus, setUpcomingStatus] = useState("idle");
   useEffect(() => {
-    if (!showFutureReleaseBadge || !isNearViewport) return;
+    if (!showFutureReleaseBadge || !isNearViewport) {
+      return;
+    }
     let cancelled = false;
     setUpcomingStatus("loading");
     const fetchUpcoming =
@@ -141,12 +157,16 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
         : getDetails("tv", item.id).then((data) => getUpcomingSeriesRelease(data));
     fetchUpcoming
       .then((result) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setUpcomingRelease(result);
         setUpcomingStatus("done");
       })
       .catch(() => {
-        if (!cancelled) setUpcomingStatus("done");
+        if (!cancelled) {
+          setUpcomingStatus("done");
+        }
       });
     return () => {
       cancelled = true;
@@ -163,12 +183,15 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
   // remplacer par un libellé plus précis une fois release_dates résolu.
   const futureReleaseLabel =
     upcomingRelease?.label ||
-    (mediaType === "movie" && theatricalStatus === "upcoming" && upcomingStatus === "done" ? "Cinéma" : null);
+    (mediaType === "movie" && theatricalStatus === "upcoming" && upcomingStatus === "done"
+      ? "Cinéma"
+      : null);
   // La date affichée doit correspondre à la sortie utilisée pour calculer
   // le badge (une série/un film peut avoir plusieurs dates régionales
   // différentes de sa date "primaire" utilisée par la liste Découvrir).
   const effectiveDate = (showFutureReleaseBadge && upcomingRelease?.date) || date;
-  const displayDate = formatFullDate(effectiveDate) || (effectiveDate ? effectiveDate.slice(0, 4) : "—");
+  const displayDate =
+    formatFullDate(effectiveDate) || (effectiveDate ? effectiveDate.slice(0, 4) : "—");
 
   const libItem = {
     id: item.id,
@@ -199,7 +222,9 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
           ) : (
             <>
               {hasTheatricalBadge && (
-                <span className="media-card__theatrical">{THEATRICAL_BADGES[theatricalStatus]}</span>
+                <span className="media-card__theatrical">
+                  {THEATRICAL_BADGES[theatricalStatus]}
+                </span>
               )}
               {showUnknownStatus && (
                 <span className="media-card__theatrical media-card__theatrical--unknown">
@@ -215,7 +240,9 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
           )}
         </div>
         <div className="media-card__info">
-          <p className="media-card__title" title={title}>{title}</p>
+          <p className="media-card__title" title={title}>
+            {title}
+          </p>
           <p className="media-card__year">{displayDate}</p>
         </div>
       </Link>

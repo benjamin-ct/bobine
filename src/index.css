@@ -19,7 +19,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   /* Garde-fou : si un élément déborde malgré tout (contenu imprévu, futur
@@ -33,7 +34,11 @@ html, body {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
   min-height: 100vh;
 }
 
@@ -42,7 +47,9 @@ a {
   text-decoration: none;
 }
 
-button, select, input {
+button,
+select,
+input {
   font-family: inherit;
 }
 

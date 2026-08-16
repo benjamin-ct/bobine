@@ -1,11 +1,18 @@
 import { SORT_FIELDS } from "../api/tmdb";
 
 export default function FilterBar({
-  mediaType, setMediaType,
-  genreId, setGenreId, genres,
-  providerId, setProviderId, providers,
-  sortField, setSortField,
-  sortDirection, setSortDirection,
+  mediaType,
+  setMediaType,
+  genreId,
+  setGenreId,
+  genres,
+  providerId,
+  setProviderId,
+  providers,
+  sortField,
+  setSortField,
+  sortDirection,
+  setSortDirection,
   // Optionnels : n'apparaissent que si l'appelant a configuré des
   // plateformes favorites (voir FavoriteProvidersContext) — un seul mode
   // "plateforme" actif à la fois, comme le <select> ci-dessous ne permet
@@ -18,13 +25,17 @@ export default function FilterBar({
 
   function onProviderSelect(value) {
     setProviderId(value);
-    if (value && useFavoriteProviders) setUseFavoriteProviders(false);
+    if (value && useFavoriteProviders) {
+      setUseFavoriteProviders(false);
+    }
   }
 
   function onToggleFavorites() {
     const next = !useFavoriteProviders;
     setUseFavoriteProviders(next);
-    if (next && providerId) setProviderId("");
+    if (next && providerId) {
+      setProviderId("");
+    }
   }
 
   return (
@@ -44,10 +55,16 @@ export default function FilterBar({
         </button>
       </div>
 
-      <select value={genreId} onChange={(e) => setGenreId(e.target.value)} className="filter-bar__select">
+      <select
+        value={genreId}
+        onChange={(e) => setGenreId(e.target.value)}
+        className="filter-bar__select"
+      >
         <option value="">Tous les genres</option>
         {genres.map((g) => (
-          <option key={g.id} value={g.id}>{g.name}</option>
+          <option key={g.id} value={g.id}>
+            {g.name}
+          </option>
         ))}
       </select>
 
@@ -59,7 +76,9 @@ export default function FilterBar({
       >
         <option value="">Toutes les plateformes</option>
         {providers.map((p) => (
-          <option key={p.id} value={p.id}>{p.name}</option>
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
         ))}
       </select>
 
@@ -76,16 +95,26 @@ export default function FilterBar({
 
       {setSortField && (
         <div className="sort-control">
-          <select value={sortField} onChange={(e) => setSortField(e.target.value)} className="filter-bar__select">
+          <select
+            value={sortField}
+            onChange={(e) => setSortField(e.target.value)}
+            className="filter-bar__select"
+          >
             {SORT_FIELDS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
           <button
             type="button"
             className="sort-direction-btn"
             onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
-            title={sortDirection === "desc" ? "Décroissant (cliquer pour croissant)" : "Croissant (cliquer pour décroissant)"}
+            title={
+              sortDirection === "desc"
+                ? "Décroissant (cliquer pour croissant)"
+                : "Croissant (cliquer pour décroissant)"
+            }
           >
             {sortDirection === "desc" ? "↓" : "↑"}
           </button>

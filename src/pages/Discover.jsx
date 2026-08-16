@@ -9,11 +9,14 @@ import { useFavoriteProviders } from "../context/FavoriteProvidersContext";
 import { useExcludedGenres } from "../context/ExcludedGenresContext";
 
 const EMPTY_ADVANCED_FILTERS = {
-  yearMin: "", yearMax: "",
-  voteAverageMin: "", voteAverageMax: "",
+  yearMin: "",
+  yearMax: "",
+  voteAverageMin: "",
+  voteAverageMax: "",
   voteCountMin: "",
   originCountry: "",
-  runtimeMin: "", runtimeMax: "",
+  runtimeMin: "",
+  runtimeMax: "",
 };
 
 // Convertit les valeurs texte des <input> en nombres (ou undefined si vide)
@@ -55,7 +58,11 @@ export default function Discover() {
   const advancedKey = JSON.stringify(advanced);
   // Actif ("Mes plateformes") : plusieurs ids OR-joints ; sinon le <select>
   // classique, au plus un provider à la fois — voir FilterBar.jsx.
-  const activeProviderIds = useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined;
+  const activeProviderIds = useMyPlatforms
+    ? favoriteProviderIds
+    : providerId
+      ? [providerId]
+      : undefined;
 
   // Réinitialise les filtres dépendants et la liste au changement de type.
   useEffect(() => {
@@ -96,13 +103,17 @@ export default function Discover() {
       ...toDiscoverParams(advanced),
     })
       .then((data) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setResults(data.results || []);
         setTotalPages(Math.min(data.total_pages || 1, 500));
         setStatus("success");
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError(err);
         setStatus("error");
       });
@@ -110,10 +121,23 @@ export default function Discover() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, sortField, sortDirection, advancedKey]);
+  }, [
+    mediaType,
+    genreId,
+    excludedGenreIds,
+    providerId,
+    useMyPlatforms,
+    favoriteProviderIds,
+    region,
+    sortField,
+    sortDirection,
+    advancedKey,
+  ]);
 
   const loadMore = useCallback(() => {
-    if (loadingMore || page >= totalPages) return;
+    if (loadingMore || page >= totalPages) {
+      return;
+    }
     const nextPage = page + 1;
     setLoadingMore(true);
     discover(mediaType, {
@@ -142,18 +166,38 @@ export default function Discover() {
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingMore, page, totalPages, mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, sortField, sortDirection, advancedKey]);
+  }, [
+    loadingMore,
+    page,
+    totalPages,
+    mediaType,
+    genreId,
+    excludedGenreIds,
+    providerId,
+    useMyPlatforms,
+    favoriteProviderIds,
+    region,
+    sortField,
+    sortDirection,
+    advancedKey,
+  ]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
   const sentinelRef = useRef(null);
   useEffect(() => {
-    if (status !== "success") return;
+    if (status !== "success") {
+      return;
+    }
     const el = sentinelRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) loadMore();
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
       },
       { rootMargin: "600px" }
     );

@@ -8,7 +8,8 @@ import { useLibrary } from "../context/LibraryContext";
 // pas leur liste : celle-ci n'est chargée qu'à l'ouverture d'une saison
 // (voir getSeasonDetails, un appel TMDB dédié par saison).
 export default function EpisodeTracker({ item, seasons }) {
-  const { getWatchedEpisodes, isEpisodeWatched, toggleEpisodeWatched, setSeasonEpisodesWatched } = useLibrary();
+  const { getWatchedEpisodes, isEpisodeWatched, toggleEpisodeWatched, setSeasonEpisodesWatched } =
+    useLibrary();
   const [openSeason, setOpenSeason] = useState(null);
   const [episodesBySeason, setEpisodesBySeason] = useState({});
   const [loadingSeason, setLoadingSeason] = useState(null);
@@ -20,7 +21,9 @@ export default function EpisodeTracker({ item, seasons }) {
   function countWatchedInSeason(seasonNumber) {
     let count = 0;
     for (const key of watchedEpisodes) {
-      if (key.startsWith(`${seasonNumber}-`)) count += 1;
+      if (key.startsWith(`${seasonNumber}-`)) {
+        count += 1;
+      }
     }
     return count;
   }
@@ -31,7 +34,9 @@ export default function EpisodeTracker({ item, seasons }) {
       return;
     }
     setOpenSeason(seasonNumber);
-    if (episodesBySeason[seasonNumber]) return;
+    if (episodesBySeason[seasonNumber]) {
+      return;
+    }
     setLoadingSeason(seasonNumber);
     try {
       const data = await getSeasonDetails(item.id, seasonNumber);
@@ -43,12 +48,17 @@ export default function EpisodeTracker({ item, seasons }) {
     }
   }
 
-  if (totalEpisodes === 0) return null;
+  if (totalEpisodes === 0) {
+    return null;
+  }
 
   return (
     <section className="episode-tracker">
       <h3>
-        Épisodes <span className="episode-tracker__total">({watchedEpisodes.size}/{totalEpisodes} vus)</span>
+        Épisodes{" "}
+        <span className="episode-tracker__total">
+          ({watchedEpisodes.size}/{totalEpisodes} vus)
+        </span>
       </h3>
       <div className="season-list">
         {realSeasons.map((season) => {
@@ -65,8 +75,12 @@ export default function EpisodeTracker({ item, seasons }) {
                 onClick={() => toggleSeason(season.season_number)}
                 aria-expanded={isOpen}
               >
-                <span className="season-group__name">{season.name || `Saison ${season.season_number}`}</span>
-                <span className={`season-group__count${allWatched ? " season-group__count--done" : ""}`}>
+                <span className="season-group__name">
+                  {season.name || `Saison ${season.season_number}`}
+                </span>
+                <span
+                  className={`season-group__count${allWatched ? " season-group__count--done" : ""}`}
+                >
                   {seasonWatchedCount}/{season.episode_count}
                 </span>
                 <span className="season-group__chevron">{isOpen ? "▲" : "▼"}</span>
@@ -74,7 +88,9 @@ export default function EpisodeTracker({ item, seasons }) {
 
               {isOpen && (
                 <div className="season-group__body">
-                  {loadingSeason === season.season_number && <p className="page-subtitle">Chargement…</p>}
+                  {loadingSeason === season.season_number && (
+                    <p className="page-subtitle">Chargement…</p>
+                  )}
 
                   {episodes?.length > 0 && (
                     <>
@@ -98,8 +114,19 @@ export default function EpisodeTracker({ item, seasons }) {
                             <label>
                               <input
                                 type="checkbox"
-                                checked={isEpisodeWatched(item.mediaType, item.id, season.season_number, ep.episode_number)}
-                                onChange={() => toggleEpisodeWatched(item, season.season_number, ep.episode_number)}
+                                checked={isEpisodeWatched(
+                                  item.mediaType,
+                                  item.id,
+                                  season.season_number,
+                                  ep.episode_number
+                                )}
+                                onChange={() =>
+                                  toggleEpisodeWatched(
+                                    item,
+                                    season.season_number,
+                                    ep.episode_number
+                                  )
+                                }
                               />
                               <span className="episode-row__number">E{ep.episode_number}</span>
                               <span className="episode-row__title">{ep.name || "Sans titre"}</span>

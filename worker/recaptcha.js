@@ -13,20 +13,32 @@
 const MIN_SCORE = 0.5;
 
 export async function verifyRecaptcha(env, token, expectedAction) {
-  if (!env.RECAPTCHA_SECRET_KEY) return { ok: true, skipped: true };
-  if (!token) return { ok: false, reason: "missing_token" };
+  if (!env.RECAPTCHA_SECRET_KEY) {
+    return { ok: true, skipped: true };
+  }
+  if (!token) {
+    return { ok: false, reason: "missing_token" };
+  }
 
   const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ secret: env.RECAPTCHA_SECRET_KEY, response: token }),
   });
-  if (!res.ok) return { ok: false, reason: "verify_request_failed" };
+  if (!res.ok) {
+    return { ok: false, reason: "verify_request_failed" };
+  }
 
   const data = await res.json();
-  if (!data.success) return { ok: false, reason: "rejected", errors: data["error-codes"] };
-  if (expectedAction && data.action !== expectedAction) return { ok: false, reason: "action_mismatch" };
-  if (typeof data.score === "number" && data.score < MIN_SCORE) return { ok: false, reason: "low_score", score: data.score };
+  if (!data.success) {
+    return { ok: false, reason: "rejected", errors: data["error-codes"] };
+  }
+  if (expectedAction && data.action !== expectedAction) {
+    return { ok: false, reason: "action_mismatch" };
+  }
+  if (typeof data.score === "number" && data.score < MIN_SCORE) {
+    return { ok: false, reason: "low_score", score: data.score };
+  }
 
   return { ok: true, skipped: false, score: data.score };
 }

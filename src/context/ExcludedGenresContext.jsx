@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 // Genres que la personne ne veut jamais voir suggérés (Horreur,
 // Documentaire...), cochés une fois pour filtrer Découvrir/Nouveautés/
@@ -13,7 +21,9 @@ const ExcludedGenresContext = createContext(null);
 function loadInitialIds() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((id) => Number.isFinite(id)) : [];
   } catch {
@@ -38,7 +48,9 @@ export function ExcludedGenresProvider({ children }) {
   }, [excludedGenreIds]);
 
   const toggleExcludedGenre = useCallback((id) => {
-    setExcludedGenreIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setExcludedGenreIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   }, []);
 
   const isExcludedGenre = useCallback((id) => excludedGenreIds.includes(id), [excludedGenreIds]);
@@ -53,6 +65,8 @@ export function ExcludedGenresProvider({ children }) {
 
 export function useExcludedGenres() {
   const ctx = useContext(ExcludedGenresContext);
-  if (!ctx) throw new Error("useExcludedGenres doit être utilisé dans un ExcludedGenresProvider");
+  if (!ctx) {
+    throw new Error("useExcludedGenres doit être utilisé dans un ExcludedGenresProvider");
+  }
   return ctx;
 }

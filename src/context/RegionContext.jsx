@@ -6,12 +6,15 @@ const RegionContext = createContext(null);
 // Nom du pays en français à partir de son code ISO 3166-1 (ex. "FR" ->
 // "France"), via l'API native du navigateur — pas d'appel réseau
 // supplémentaire, pas de liste à maintenir.
-const regionDisplayNames = typeof Intl.DisplayNames === "function"
-  ? new Intl.DisplayNames(["fr"], { type: "region" })
-  : null;
+const regionDisplayNames =
+  typeof Intl.DisplayNames === "function"
+    ? new Intl.DisplayNames(["fr"], { type: "region" })
+    : null;
 
 export function regionName(code) {
-  if (!code) return null;
+  if (!code) {
+    return null;
+  }
   try {
     return regionDisplayNames?.of(code) || code;
   } catch {
@@ -36,7 +39,9 @@ export function RegionProvider({ children }) {
     fetch("/api/region")
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
-        if (!cancelled && data.country) setRegion(data.country);
+        if (!cancelled && data.country) {
+          setRegion(data.country);
+        }
       })
       .catch(() => {
         // Repli silencieux sur DEFAULT_REGION (déjà l'état initial) — ex.
@@ -51,7 +56,9 @@ export function RegionProvider({ children }) {
     let cancelled = false;
     getTheatricalStatusIndex(region)
       .then((index) => {
-        if (!cancelled) setTheatricalIndex(index);
+        if (!cancelled) {
+          setTheatricalIndex(index);
+        }
       })
       .catch(() => {
         // Repli silencieux : les cartes affichent alors simplement l'absence
@@ -62,7 +69,10 @@ export function RegionProvider({ children }) {
     };
   }, [region]);
 
-  const getTheatricalStatus = useCallback((movieId) => theatricalIndex.get(movieId) || null, [theatricalIndex]);
+  const getTheatricalStatus = useCallback(
+    (movieId) => theatricalIndex.get(movieId) || null,
+    [theatricalIndex]
+  );
 
   const value = useMemo(
     () => ({ region, regionName: regionName(region), getTheatricalStatus }),
@@ -74,6 +84,8 @@ export function RegionProvider({ children }) {
 
 export function useRegion() {
   const ctx = useContext(RegionContext);
-  if (!ctx) throw new Error("useRegion doit être utilisé dans un RegionProvider");
+  if (!ctx) {
+    throw new Error("useRegion doit être utilisé dans un RegionProvider");
+  }
   return ctx;
 }

@@ -19,7 +19,9 @@ export default function VerifyAuth() {
     }
     // StrictMode monte/démonte les effets deux fois en dev : le jeton étant
     // à usage unique, un second appel échouerait à tort.
-    if (attempted.current) return;
+    if (attempted.current) {
+      return;
+    }
     attempted.current = true;
 
     verify(token)
@@ -37,13 +39,17 @@ export default function VerifyAuth() {
       {status === "success" && (
         <div className="auth-card">
           <p>✅ Tu es connecté·e !</p>
-          <Link className="btn btn--primary" to="/ma-liste">Aller à Ma liste</Link>
+          <Link className="btn btn--primary" to="/ma-liste">
+            Aller à Ma liste
+          </Link>
         </div>
       )}
       {status === "error" && (
         <div className="auth-card">
           <p className="auth-card__error">{error}</p>
-          <Link className="btn" to="/connexion">Redemander un lien</Link>
+          <Link className="btn" to="/connexion">
+            Redemander un lien
+          </Link>
         </div>
       )}
     </div>

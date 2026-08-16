@@ -23,19 +23,30 @@ function AddToListMenu({ item }) {
   const wrapperRef = useRef(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     function onClickOutside(e) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
-  if (customLists.length === 0) return null;
+  if (customLists.length === 0) {
+    return null;
+  }
 
   return (
     <div className="add-to-list" ref={wrapperRef}>
-      <button type="button" className="icon-btn" onClick={() => setOpen((v) => !v)} title="Ajouter à une liste">
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={() => setOpen((v) => !v)}
+        title="Ajouter à une liste"
+      >
         +
       </button>
       {open && (
@@ -47,7 +58,9 @@ function AddToListMenu({ item }) {
                 <input
                   type="checkbox"
                   checked={checked}
-                  onChange={() => (checked ? removeFromList : addToList)(list.id, item.mediaType, item.id)}
+                  onChange={() =>
+                    (checked ? removeFromList : addToList)(list.id, item.mediaType, item.id)
+                  }
                 />
                 {list.name}
               </label>
@@ -112,13 +125,18 @@ function Row({ item }) {
 }
 
 function emptyMessageFor(tab, activeList) {
-  if (tab === "watchlist") return "Ta liste d'envies est vide. Ajoute des titres depuis les fiches ou le tirage aléatoire.";
-  if (tab === "watched") return "Tu n'as encore rien marqué comme vu.";
+  if (tab === "watchlist") {
+    return "Ta liste d'envies est vide. Ajoute des titres depuis les fiches ou le tirage aléatoire.";
+  }
+  if (tab === "watched") {
+    return "Tu n'as encore rien marqué comme vu.";
+  }
   return `La liste « ${activeList?.name} » est vide pour l'instant. Ajoute des titres depuis le bouton "+" sur chaque ligne.`;
 }
 
 export default function MyList() {
-  const { watched, watchlist, customLists, createList, renameList, deleteList, getListItems } = useLibrary();
+  const { watched, watchlist, customLists, createList, renameList, deleteList, getListItems } =
+    useLibrary();
   const [tab, setTab] = useState("watchlist");
   const [genreMap, setGenreMap] = useState({});
 
@@ -141,9 +159,13 @@ export default function MyList() {
     let cancelled = false;
     Promise.all([getGenres("movie"), getGenres("tv")])
       .then(([m, t]) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         const map = {};
-        for (const g of [...(m.genres || []), ...(t.genres || [])]) map[g.id] = g.name;
+        for (const g of [...(m.genres || []), ...(t.genres || [])]) {
+          map[g.id] = g.name;
+        }
         setGenreMap(map);
       })
       .catch(() => {});
@@ -166,7 +188,9 @@ export default function MyList() {
   const availableGenres = useMemo(() => {
     const ids = new Set();
     for (const item of items) {
-      for (const gid of item.genreIds || []) ids.add(gid);
+      for (const gid of item.genreIds || []) {
+        ids.add(gid);
+      }
     }
     return [...ids]
       .map((id) => ({ id, name: genreMap[id] || "…" }))
@@ -175,18 +199,36 @@ export default function MyList() {
 
   const visibleItems = useMemo(() => {
     let result = items;
-    if (filterType) result = result.filter((item) => item.mediaType === filterType);
-    if (filterGenre) result = result.filter((item) => item.genreIds?.includes(Number(filterGenre)));
-    if (filterYearMin) result = result.filter((item) => item.date && Number(item.date.slice(0, 4)) >= Number(filterYearMin));
-    if (filterYearMax) result = result.filter((item) => item.date && Number(item.date.slice(0, 4)) <= Number(filterYearMax));
+    if (filterType) {
+      result = result.filter((item) => item.mediaType === filterType);
+    }
+    if (filterGenre) {
+      result = result.filter((item) => item.genreIds?.includes(Number(filterGenre)));
+    }
+    if (filterYearMin) {
+      result = result.filter(
+        (item) => item.date && Number(item.date.slice(0, 4)) >= Number(filterYearMin)
+      );
+    }
+    if (filterYearMax) {
+      result = result.filter(
+        (item) => item.date && Number(item.date.slice(0, 4)) <= Number(filterYearMax)
+      );
+    }
 
     const sorted = [...result].sort((a, b) => {
       let diff;
-      if (sortBy === "title") diff = a.title.localeCompare(b.title);
-      else if (sortBy === "year") diff = (a.date || "").localeCompare(b.date || "");
+      if (sortBy === "title") {
+        diff = a.title.localeCompare(b.title);
+      } else if (sortBy === "year") {
+        diff = (a.date || "").localeCompare(b.date || "");
+      }
       // Pas de note = classé en dernier, quel que soit le sens du tri.
-      else if (sortBy === "rating") diff = (a.rating ?? -1) - (b.rating ?? -1);
-      else diff = (a.addedAt || 0) - (b.addedAt || 0);
+      else if (sortBy === "rating") {
+        diff = (a.rating ?? -1) - (b.rating ?? -1);
+      } else {
+        diff = (a.addedAt || 0) - (b.addedAt || 0);
+      }
       return sortDirection === "asc" ? diff : -diff;
     });
     return sorted;
@@ -214,7 +256,11 @@ export default function MyList() {
   }
 
   function handleDeleteList() {
-    if (window.confirm(`Supprimer la liste « ${activeList.name} » ? Les titres eux-mêmes resteront dans « Envie de voir »/« Déjà vu ».`)) {
+    if (
+      window.confirm(
+        `Supprimer la liste « ${activeList.name} » ? Les titres eux-mêmes resteront dans « Envie de voir »/« Déjà vu ».`
+      )
+    ) {
       deleteList(tab);
       setTab("watchlist");
     }
@@ -229,14 +275,24 @@ export default function MyList() {
       <ExcludedGenresSettings />
 
       <div className="filter-bar__group my-list__tabs">
-        <button className={tab === "watchlist" ? "chip chip--active" : "chip"} onClick={() => setTab("watchlist")}>
+        <button
+          className={tab === "watchlist" ? "chip chip--active" : "chip"}
+          onClick={() => setTab("watchlist")}
+        >
           Envie de voir ({watchlist.length})
         </button>
-        <button className={tab === "watched" ? "chip chip--active" : "chip"} onClick={() => setTab("watched")}>
+        <button
+          className={tab === "watched" ? "chip chip--active" : "chip"}
+          onClick={() => setTab("watched")}
+        >
           Déjà vu ({watched.length})
         </button>
         {customLists.map((list) => (
-          <button key={list.id} className={tab === list.id ? "chip chip--active" : "chip"} onClick={() => setTab(list.id)}>
+          <button
+            key={list.id}
+            className={tab === list.id ? "chip chip--active" : "chip"}
+            onClick={() => setTab(list.id)}
+          >
             {list.name} ({list.itemKeys.length})
           </button>
         ))}
@@ -255,7 +311,9 @@ export default function MyList() {
             autoFocus
             maxLength={60}
           />
-          <button type="submit" className="btn">Créer</button>
+          <button type="submit" className="btn">
+            Créer
+          </button>
           <button
             type="button"
             className="btn"
@@ -281,8 +339,16 @@ export default function MyList() {
       )}
       {activeList && renamingList && (
         <form className="my-list__inline-form" onSubmit={submitRename}>
-          <input type="text" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} autoFocus maxLength={60} />
-          <button type="submit" className="btn">Renommer</button>
+          <input
+            type="text"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            autoFocus
+            maxLength={60}
+          />
+          <button type="submit" className="btn">
+            Renommer
+          </button>
           <button type="button" className="btn" onClick={() => setRenamingList(false)}>
             Annuler
           </button>
@@ -294,22 +360,37 @@ export default function MyList() {
       {items.length > 0 && (
         <div className="filter-bar">
           <div className="filter-bar__group">
-            <button className={filterType === "" ? "chip chip--active" : "chip"} onClick={() => setFilterType("")}>
+            <button
+              className={filterType === "" ? "chip chip--active" : "chip"}
+              onClick={() => setFilterType("")}
+            >
               Tous
             </button>
-            <button className={filterType === "movie" ? "chip chip--active" : "chip"} onClick={() => setFilterType("movie")}>
+            <button
+              className={filterType === "movie" ? "chip chip--active" : "chip"}
+              onClick={() => setFilterType("movie")}
+            >
               Films
             </button>
-            <button className={filterType === "tv" ? "chip chip--active" : "chip"} onClick={() => setFilterType("tv")}>
+            <button
+              className={filterType === "tv" ? "chip chip--active" : "chip"}
+              onClick={() => setFilterType("tv")}
+            >
               Séries
             </button>
           </div>
 
           {availableGenres.length > 0 && (
-            <select className="filter-bar__select" value={filterGenre} onChange={(e) => setFilterGenre(e.target.value)}>
+            <select
+              className="filter-bar__select"
+              value={filterGenre}
+              onChange={(e) => setFilterGenre(e.target.value)}
+            >
               <option value="">Tous les genres</option>
               {availableGenres.map((g) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
               ))}
             </select>
           )}
@@ -331,16 +412,26 @@ export default function MyList() {
           </div>
 
           <div className="sort-control">
-            <select className="filter-bar__select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <select
+              className="filter-bar__select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
               {MYLIST_SORT_FIELDS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
             <button
               type="button"
               className="sort-direction-btn"
               onClick={() => setSortDirection((d) => (d === "desc" ? "asc" : "desc"))}
-              title={sortDirection === "desc" ? "Décroissant (cliquer pour croissant)" : "Croissant (cliquer pour décroissant)"}
+              title={
+                sortDirection === "desc"
+                  ? "Décroissant (cliquer pour croissant)"
+                  : "Croissant (cliquer pour décroissant)"
+              }
             >
               {sortDirection === "desc" ? "↓" : "↑"}
             </button>

@@ -23,17 +23,29 @@ export default function CountryLanguageFilter({ country, setCountry, language, s
 
   return (
     <div className="filter-bar__group" style={{ marginBottom: 18 }}>
-      <select value={country} onChange={(e) => setCountry(e.target.value)} className="filter-bar__select">
+      <select
+        value={country}
+        onChange={(e) => setCountry(e.target.value)}
+        className="filter-bar__select"
+      >
         <option value="">Tous les pays</option>
         {countries.map((c) => (
-          <option key={c.iso_3166_1} value={c.iso_3166_1}>{c.english_name}</option>
+          <option key={c.iso_3166_1} value={c.iso_3166_1}>
+            {c.english_name}
+          </option>
         ))}
       </select>
 
-      <select value={language} onChange={(e) => setLanguage(e.target.value)} className="filter-bar__select">
+      <select
+        value={language}
+        onChange={(e) => setLanguage(e.target.value)}
+        className="filter-bar__select"
+      >
         <option value="">Toutes les langues</option>
         {languages.map((l) => (
-          <option key={l.iso_639_1} value={l.iso_639_1}>{l.name || l.english_name}</option>
+          <option key={l.iso_639_1} value={l.iso_639_1}>
+            {l.name || l.english_name}
+          </option>
         ))}
       </select>
     </div>

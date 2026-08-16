@@ -19,24 +19,32 @@ export default function FavoriteProvidersSettings() {
   // Chargé seulement à l'ouverture du panneau : pas besoin d'un appel TMDB
   // supplémentaire si personne ne touche jamais à ce réglage.
   useEffect(() => {
-    if (!open || status !== "idle") return;
+    if (!open || status !== "idle") {
+      return;
+    }
     let cancelled = false;
     setStatus("loading");
     Promise.all([getWatchProvidersList("movie", region), getWatchProvidersList("tv", region)])
       .then(([movieList, tvList]) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         // Un même service (ex. Netflix) a le même provider_id côté TMDB pour
         // films et séries — on fusionne pour proposer une seule liste, pas
         // une par type.
         const merged = new Map();
         for (const p of [...movieList, ...tvList]) {
-          if (!merged.has(p.id)) merged.set(p.id, p);
+          if (!merged.has(p.id)) {
+            merged.set(p.id, p);
+          }
         }
         setProviders([...merged.values()].sort((a, b) => a.name.localeCompare(b.name)));
         setStatus("success");
       })
       .catch(() => {
-        if (!cancelled) setStatus("error");
+        if (!cancelled) {
+          setStatus("error");
+        }
       });
     return () => {
       cancelled = true;
@@ -58,18 +66,21 @@ export default function FavoriteProvidersSettings() {
   return (
     <div className="favorite-providers">
       <button type="button" className="chip" onClick={() => setOpen((o) => !o)}>
-        {open ? "▲" : "▼"} Mes plateformes{favoriteProviderIds.length > 0 ? ` (${favoriteProviderIds.length})` : ""}
+        {open ? "▲" : "▼"} Mes plateformes
+        {favoriteProviderIds.length > 0 ? ` (${favoriteProviderIds.length})` : ""}
       </button>
       <p className="page-subtitle favorite-providers__hint">
-        Coche les services que tu as vraiment pour filtrer Découvrir, Nouveautés et Aléatoire sur « disponible chez
-        moi » en un clic.
+        Coche les services que tu as vraiment pour filtrer Découvrir, Nouveautés et Aléatoire sur «
+        disponible chez moi » en un clic.
       </p>
 
       {open && (
         <div className="favorite-providers__panel">
           {status === "loading" && <p className="page-subtitle">Chargement des plateformes…</p>}
           {status === "error" && (
-            <p className="page-subtitle">Impossible de charger la liste des plateformes pour le moment.</p>
+            <p className="page-subtitle">
+              Impossible de charger la liste des plateformes pour le moment.
+            </p>
           )}
           {status === "success" && (
             <>
@@ -92,7 +103,9 @@ export default function FavoriteProvidersSettings() {
                   </label>
                 ))}
                 {visibleProviders.length === 0 && (
-                  <p className="page-subtitle">Aucune plateforme ne correspond à « {query.trim()} ».</p>
+                  <p className="page-subtitle">
+                    Aucune plateforme ne correspond à « {query.trim()} ».
+                  </p>
                 )}
               </div>
             </>

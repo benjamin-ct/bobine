@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 // Plateformes de streaming que la personne a réellement (Netflix, Disney+...),
 // cochées une fois pour filtrer Découvrir/Nouveautés/Aléatoire en un clic
@@ -14,7 +22,9 @@ const FavoriteProvidersContext = createContext(null);
 function loadInitialIds() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((id) => Number.isFinite(id)) : [];
   } catch {
@@ -39,21 +49,30 @@ export function FavoriteProvidersProvider({ children }) {
   }, [favoriteProviderIds]);
 
   const toggleFavoriteProvider = useCallback((id) => {
-    setFavoriteProviderIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setFavoriteProviderIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   }, []);
 
-  const isFavoriteProvider = useCallback((id) => favoriteProviderIds.includes(id), [favoriteProviderIds]);
+  const isFavoriteProvider = useCallback(
+    (id) => favoriteProviderIds.includes(id),
+    [favoriteProviderIds]
+  );
 
   const value = useMemo(
     () => ({ favoriteProviderIds, toggleFavoriteProvider, isFavoriteProvider }),
     [favoriteProviderIds, toggleFavoriteProvider, isFavoriteProvider]
   );
 
-  return <FavoriteProvidersContext.Provider value={value}>{children}</FavoriteProvidersContext.Provider>;
+  return (
+    <FavoriteProvidersContext.Provider value={value}>{children}</FavoriteProvidersContext.Provider>
+  );
 }
 
 export function useFavoriteProviders() {
   const ctx = useContext(FavoriteProvidersContext);
-  if (!ctx) throw new Error("useFavoriteProviders doit être utilisé dans un FavoriteProvidersProvider");
+  if (!ctx) {
+    throw new Error("useFavoriteProviders doit être utilisé dans un FavoriteProvidersProvider");
+  }
   return ctx;
 }
