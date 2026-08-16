@@ -5,6 +5,7 @@ import { useLibrary } from "../context/LibraryContext";
 import Stats from "../components/Stats";
 import NotificationSettings from "../components/NotificationSettings";
 import FavoriteProvidersSettings from "../components/FavoriteProvidersSettings";
+import ExcludedGenresSettings from "../components/ExcludedGenresSettings";
 
 const MYLIST_SORT_FIELDS = [
   { value: "addedAt", label: "Date d'ajout" },
@@ -225,6 +226,7 @@ export default function MyList() {
 
       <NotificationSettings />
       <FavoriteProvidersSettings />
+      <ExcludedGenresSettings />
 
       <div className="filter-bar__group my-list__tabs">
         <button className={tab === "watchlist" ? "chip chip--active" : "chip"} onClick={() => setTab("watchlist")}>

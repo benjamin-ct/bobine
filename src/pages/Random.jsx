@@ -8,6 +8,7 @@ import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
 import { useRegion } from "../context/RegionContext";
 import { useFavoriteProviders } from "../context/FavoriteProvidersContext";
+import { useExcludedGenres } from "../context/ExcludedGenresContext";
 
 const MAX_ATTEMPTS = 6;
 
@@ -31,6 +32,7 @@ export default function Random() {
   const { watchedIds, isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
   const { region, regionName } = useRegion();
   const { favoriteProviderIds } = useFavoriteProviders();
+  const { excludedGenreIds } = useExcludedGenres();
 
   useEffect(() => {
     setGenreId("");
@@ -59,6 +61,7 @@ export default function Random() {
       // trier n'a pas de sens ici (voir discover() pour le tri par défaut).
       const discoverParams = {
         genreId,
+        excludeGenreIds: excludedGenreIds,
         providerIds: useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined,
         region,
         yearMin: yearMin ? Number(yearMin) : undefined,

@@ -6,6 +6,7 @@ import CountryLanguageFilter from "../components/CountryLanguageFilter";
 import { Loading, ErrorMessage, EmptyState } from "../components/StateMessage";
 import { useRegion } from "../context/RegionContext";
 import { useFavoriteProviders } from "../context/FavoriteProvidersContext";
+import { useExcludedGenres } from "../context/ExcludedGenresContext";
 
 const WINDOWS = [
   { value: 7, label: "7 prochains jours" },
@@ -47,6 +48,7 @@ export default function ComingSoon() {
   const [error, setError] = useState(null);
   const { region } = useRegion();
   const { favoriteProviderIds } = useFavoriteProviders();
+  const { excludedGenreIds } = useExcludedGenres();
   const activeProviderIds = useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined;
 
   // Réinitialise les filtres dépendants et la liste au changement de type.
@@ -79,6 +81,7 @@ export default function ComingSoon() {
     discover(mediaType, {
       page: 1,
       genreId,
+      excludeGenreIds: excludedGenreIds,
       providerIds: activeProviderIds,
       region,
       originCountry: country || undefined,
@@ -101,7 +104,7 @@ export default function ComingSoon() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, genreId, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
+  }, [mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || page >= totalPages) return;
@@ -110,6 +113,7 @@ export default function ComingSoon() {
     discover(mediaType, {
       page: nextPage,
       genreId,
+      excludeGenreIds: excludedGenreIds,
       providerIds: activeProviderIds,
       region,
       originCountry: country || undefined,
@@ -132,7 +136,7 @@ export default function ComingSoon() {
       })
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
-  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
+  }, [loadingMore, page, totalPages, mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
