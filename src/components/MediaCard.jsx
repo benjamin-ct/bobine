@@ -137,7 +137,7 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
     setUpcomingStatus("loading");
     const fetchUpcoming =
       mediaType === "movie"
-        ? getMovieReleaseDates(item.id).then((data) => getUpcomingMovieRelease(data, region))
+        ? getMovieReleaseDates(item.id).then((data) => getUpcomingMovieRelease(data, region, date))
         : getDetails("tv", item.id).then((data) => getUpcomingSeriesRelease(data));
     fetchUpcoming
       .then((result) => {
@@ -151,7 +151,7 @@ export default function MediaCard({ item, showProviderBadge = false, showFutureR
     return () => {
       cancelled = true;
     };
-  }, [showFutureReleaseBadge, isNearViewport, mediaType, item.id, region]);
+  }, [showFutureReleaseBadge, isNearViewport, mediaType, item.id, region, date]);
 
   // Film sans note/type exploitable dans release_dates (rare, mais arrive
   // si aucune date française n'est encore annoncée précisément) : on
