@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { discover, getGenres, getWatchProvidersList } from "../api/tmdb";
 import MediaCard from "../components/MediaCard";
 import FilterBar from "../components/FilterBar";
@@ -13,6 +13,12 @@ const WINDOWS = [
   { value: 30, label: "30 prochains jours" },
   { value: 90, label: "3 prochains mois" },
 ];
+
+// Nombre de cartes révélées par "page" de scroll infini, et nombre de pages
+// TMDB regroupées par lot de fetch (voir plus bas pourquoi un lot plutôt
+// qu'une page à la fois).
+const REVEAL_SIZE = 20;
+const TMDB_PAGES_PER_BATCH = 5;
 
 function toIsoDate(date) {
   return date.toISOString().slice(0, 10);
@@ -30,6 +36,32 @@ function dateRangeFor(windowDays) {
   return { dateFrom: toIsoDate(from), dateTo: toIsoDate(to) };
 }
 
+function releaseDateOf(item) {
+  return item.release_date || item.first_air_date || "";
+}
+
+function sortByDate(items) {
+  return [...items].sort((a, b) => releaseDateOf(a).localeCompare(releaseDateOf(b)));
+}
+
+function dedupe(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+// Récupère plusieurs pages TMDB (triées par popularité, voir plus bas) en
+// parallèle et les fusionne.
+async function fetchPages(mediaType, params, fromPage, count) {
+  const pages = await Promise.all(
+    Array.from({ length: count }, (_, i) => discover(mediaType, { ...params, page: fromPage + i }))
+  );
+  return pages.flatMap((p) => p.results || []);
+}
+
 export default function ComingSoon() {
   const [mediaType, setMediaType] = useState("movie");
   const [genreId, setGenreId] = useState("");
@@ -40,9 +72,6 @@ export default function ComingSoon() {
   const [windowDays, setWindowDays] = useState(30);
   const [genres, setGenres] = useState([]);
   const [providers, setProviders] = useState([]);
-  const [page, setPage] = useState(1);
-  const [results, setResults] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState("idle");
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
@@ -51,15 +80,20 @@ export default function ComingSoon() {
   const { excludedGenreIds } = useExcludedGenres();
   const activeProviderIds = useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined;
 
-  // Réinitialise les filtres dépendants et la liste au changement de type.
+  // `allResults` : lot déjà récupéré et trié par date une bonne fois pour
+  // toutes (voir fetchBatch). `revealCount` : combien de ce lot est
+  // actuellement affiché — le scroll infini avance d'abord dans ce lot
+  // déjà trié (aucun réseau, aucun réordonnancement) avant d'aller
+  // chercher un nouveau lot TMDB une fois le lot courant épuisé.
+  const [allResults, setAllResults] = useState([]);
+  const [revealCount, setRevealCount] = useState(REVEAL_SIZE);
+  const [fetchedPages, setFetchedPages] = useState(0);
+  const [tmdbTotalPages, setTmdbTotalPages] = useState(0);
+
+  // Réinitialise les filtres dépendants au changement de type.
   useEffect(() => {
     setGenreId("");
-    setPage(1);
   }, [mediaType]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [genreId, providerId, useMyPlatforms, country, language, windowDays]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,35 +108,74 @@ export default function ComingSoon() {
     };
   }, [mediaType, region]);
 
-  // Recharge depuis le début quand les filtres changent (page revient à 1).
+  const discoverParams = {
+    genreId,
+    excludeGenreIds: excludedGenreIds,
+    providerIds: activeProviderIds,
+    region,
+    originCountry: country || undefined,
+    originalLanguage: language || undefined,
+    // On continue de FAIRE VENIR les résultats par popularité TMDB
+    // (nécessaire : sans ce tri, la fenêtre de dates renvoie une bonne
+    // part de fiches quasi vides — popularité ~0, souvent sans affiche —
+    // avant les vraies sorties attendues ; testé en direct contre l'API,
+    // TMDB n'expose pas de plancher de popularité côté discover pour
+    // filtrer ce bruit nous-mêmes).
+    sortField: "popularity",
+    sortDirection: "desc",
+    ...dateRangeFor(windowDays),
+  };
+  // Sérialisé pour servir de dépendance d'effet stable (l'objet littéral
+  // ci-dessus est recréé à chaque rendu).
+  const discoverParamsKey = JSON.stringify(discoverParams);
+
+  // Récupère un lot de TMDB_PAGES_PER_BATCH pages TMDB (triées par
+  // popularité), les fusionne avec ce qu'on a déjà, trie l'ensemble par
+  // date UNE SEULE FOIS, puis les stocke. C'est le point clé : on ne
+  // trie jamais un lot partiel affiché à l'écran — tant qu'un lot n'est
+  // pas entièrement récupéré, rien n'est affiché ni réordonné, donc les
+  // cartes déjà visibles ne sautent jamais pendant le scroll (contraire
+  // au tri incrémental par page, qui réinsère les nouveaux titres
+  // n'importe où dans la liste déjà affichée et fait "sauter" l'écran).
+  // `frozenHead` : la portion déjà révélée à l'écran, dans l'ordre déjà
+  // affiché — jamais retriée, jamais déplacée, quel que soit ce qu'on
+  // charge ensuite. `tailToMerge` : ce qui a déjà été récupéré mais pas
+  // encore montré (peut arriver si TMDB renvoie moins d'un lot complet).
+  // Seuls `tailToMerge` + les nouveaux résultats sont fusionnés et triés
+  // par date, puis recollés après `frozenHead` — ça garantit qu'une carte
+  // une fois affichée ne saute plus jamais de position pendant le scroll.
+  const fetchBatch = useCallback(
+    async (fromPage, frozenHead, tailToMerge) => {
+      const first = await discover(mediaType, { ...discoverParams, page: fromPage });
+      const totalPages = Math.min(first.total_pages || 1, 500);
+      const pagesToFetch = Math.min(TMDB_PAGES_PER_BATCH, totalPages - fromPage + 1);
+      const rest =
+        pagesToFetch > 1 ? await fetchPages(mediaType, discoverParams, fromPage + 1, pagesToFetch - 1) : [];
+      const newTail = dedupe([...tailToMerge, ...(first.results || []), ...rest]);
+      return {
+        merged: [...frozenHead, ...sortByDate(newTail)],
+        totalPages,
+        newFetchedPages: fromPage - 1 + pagesToFetch,
+      };
+    },
+    // discoverParamsKey capture toutes les valeurs utilisées par
+    // discoverParams ; mediaType y est déjà inclus mais reste explicite
+    // pour la lisibilité.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mediaType, discoverParamsKey]
+  );
+
+  // (Re)chargement complet quand les filtres changent.
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
-    discover(mediaType, {
-      page: 1,
-      genreId,
-      excludeGenreIds: excludedGenreIds,
-      providerIds: activeProviderIds,
-      region,
-      originCountry: country || undefined,
-      originalLanguage: language || undefined,
-      // On continue de FAIRE VENIR les résultats par popularité TMDB
-      // (nécessaire : sans ce tri, la fenêtre de dates renvoie une bonne
-      // part de fiches quasi vides — popularité ~0, souvent sans affiche —
-      // avant les vraies sorties attendues ; testé en direct contre l'API,
-      // TMDB n'expose pas de plancher de popularité côté discover pour
-      // filtrer ce bruit nous-mêmes). L'AFFICHAGE, lui, est retrié par date
-      // croissante côté client juste avant le rendu (voir sortedResults) :
-      // ça donne un ordre chronologique logique sans laisser passer le
-      // bruit.
-      sortField: "popularity",
-      sortDirection: "desc",
-      ...dateRangeFor(windowDays),
-    })
-      .then((data) => {
+    setRevealCount(REVEAL_SIZE);
+    fetchBatch(1, [], [])
+      .then(({ merged, totalPages, newFetchedPages }) => {
         if (cancelled) return;
-        setResults(data.results || []);
-        setTotalPages(Math.min(data.total_pages || 1, 500));
+        setAllResults(merged);
+        setTmdbTotalPages(totalPages);
+        setFetchedPages(newFetchedPages);
         setStatus("success");
       })
       .catch((err) => {
@@ -113,64 +186,40 @@ export default function ComingSoon() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchBatch]);
 
   const loadMore = useCallback(() => {
-    if (loadingMore || page >= totalPages) return;
-    const nextPage = page + 1;
+    if (loadingMore) return;
+    // D'abord épuiser ce qui est déjà en mémoire, trié, sans requête :
+    // c'est le cas courant du scroll infini, instantané et sans jank.
+    if (revealCount < allResults.length) {
+      setRevealCount((c) => Math.min(c + REVEAL_SIZE, allResults.length));
+      return;
+    }
+    // Plus rien à révéler localement : aller chercher un nouveau lot TMDB
+    // si TMDB en a encore, fusionner et retrier — uniquement la portion
+    // pas encore affichée (voir fetchBatch) — puis révéler la suite.
+    if (fetchedPages >= tmdbTotalPages) return;
     setLoadingMore(true);
-    discover(mediaType, {
-      page: nextPage,
-      genreId,
-      excludeGenreIds: excludedGenreIds,
-      providerIds: activeProviderIds,
-      region,
-      originCountry: country || undefined,
-      originalLanguage: language || undefined,
-      // On continue de FAIRE VENIR les résultats par popularité TMDB
-      // (nécessaire : sans ce tri, la fenêtre de dates renvoie une bonne
-      // part de fiches quasi vides — popularité ~0, souvent sans affiche —
-      // avant les vraies sorties attendues ; testé en direct contre l'API,
-      // TMDB n'expose pas de plancher de popularité côté discover pour
-      // filtrer ce bruit nous-mêmes). L'AFFICHAGE, lui, est retrié par date
-      // croissante côté client juste avant le rendu (voir sortedResults) :
-      // ça donne un ordre chronologique logique sans laisser passer le
-      // bruit.
-      sortField: "popularity",
-      sortDirection: "desc",
-      ...dateRangeFor(windowDays),
-    })
-      .then((data) => {
-        // TMDB peut renvoyer un même titre sur deux pages consécutives
-        // (le classement bouge légèrement pendant qu'on enchaîne les
-        // requêtes) : on déduplique pour éviter les doublons à l'écran
-        // et les clés React en double.
-        setResults((prev) => {
-          const seenIds = new Set(prev.map((item) => item.id));
-          const fresh = (data.results || []).filter((item) => !seenIds.has(item.id));
-          return [...prev, ...fresh];
-        });
-        setPage(nextPage);
+    const frozenHead = allResults.slice(0, revealCount);
+    const tailToMerge = allResults.slice(revealCount);
+    fetchBatch(fetchedPages + 1, frozenHead, tailToMerge)
+      .then(({ merged, totalPages, newFetchedPages }) => {
+        setAllResults(merged);
+        setTmdbTotalPages(totalPages);
+        setFetchedPages(newFetchedPages);
+        setRevealCount((c) => Math.min(c + REVEAL_SIZE, merged.length));
       })
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
-  }, [loadingMore, page, totalPages, mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
+  }, [loadingMore, revealCount, allResults, fetchedPages, tmdbTotalPages, fetchBatch]);
 
-  // Affichage trié par date de sortie croissante (le plus proche en
-  // premier) alors que le fetch lui-même reste trié par popularité côté
-  // TMDB (voir le commentaire sur discover() ci-dessus) — un simple tri
-  // client, aucun appel réseau supplémentaire, recalculé à chaque page
-  // chargée par le scroll infini.
-  const sortedResults = useMemo(() => {
-    return [...results].sort((a, b) => {
-      const dateA = a.release_date || a.first_air_date || "";
-      const dateB = b.release_date || b.first_air_date || "";
-      return dateA.localeCompare(dateB);
-    });
-  }, [results]);
+  const hasMore = revealCount < allResults.length || fetchedPages < tmdbTotalPages;
+  const visibleResults = allResults.slice(0, revealCount);
 
-  // Sentinelle observée pour déclencher le chargement de la page suivante
-  // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
+  // Sentinelle observée pour déclencher le chargement de la suite dès
+  // qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
   const sentinelRef = useRef(null);
   useEffect(() => {
     if (status !== "success") return;
@@ -226,18 +275,18 @@ export default function ComingSoon() {
 
       {status === "loading" && <Loading />}
       {status === "error" && <ErrorMessage error={error} />}
-      {status === "success" && results.length === 0 && (
+      {status === "success" && visibleResults.length === 0 && (
         <EmptyState label="Aucune sortie prévue sur cette période pour ces filtres." />
       )}
 
-      {status === "success" && results.length > 0 && (
+      {status === "success" && visibleResults.length > 0 && (
         <>
           <div className="media-grid">
-            {sortedResults.map((item) => (
+            {visibleResults.map((item) => (
               <MediaCard key={item.id} item={{ ...item, mediaType }} showProviderBadge />
             ))}
           </div>
-          {page < totalPages && (
+          {hasMore && (
             <div ref={sentinelRef} className="load-more">
               {loadingMore && <span className="page-subtitle">Chargement…</span>}
             </div>
