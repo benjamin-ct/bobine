@@ -315,15 +315,45 @@ export async function getWatchProviders(mediaType, id, region = DEFAULT_REGION) 
   return data.results?.[region] || null;
 }
 
-// Fournisseurs de streaming disponibles dans la région donnée -------------
-// Renvoie TOUTES les plateformes connues de TMDB pour cette région
-// (abonnement, location, achat confondus), triées par pertinence locale.
+// Fournisseurs de streaming "principaux" ----------------------------------
+// Le catalogue TMDB complet (~90-100 entrées pour la France) mélange les
+// vraies plateformes avec des chaînes additionnelles greffées sur un compte
+// existant ("X Amazon Channel"), des paliers avec pub ("Netflix Standard
+// with Ads", "Amazon Prime Video with Ads") et des doublons de palier
+// ("Paramount Plus" / "Paramount Plus Premium") — inutilisable comme filtre
+// pratique. TMDB n'expose aucun signal fiable "principal vs additionnel"
+// (pas de champ dédié dans /watch/providers/<type>), d'où une liste choisie
+// à la main plutôt qu'une règle heuristique sur le nom. Revue le 16/08/2026
+// contre les vraies données TMDB (France) — à ajuster si un service majeur
+// manque ou change d'id.
+const MAIN_PROVIDER_IDS = new Set([
+  8, // Netflix
+  119, // Amazon Prime Video
+  337, // Disney Plus
+  350, // Apple TV (Apple TV+)
+  381, // Canal+
+  1899, // HBO Max
+  531, // Paramount Plus
+  283, // Crunchyroll
+  11, // MUBI
+  234, // Arte
+  147, // M6+
+  2, // Apple TV Store (achat/location)
+  3, // Google Play Movies (achat/location)
+  35, // Rakuten TV (achat/location)
+  192, // YouTube (achat/location)
+  10, // Amazon Video (achat/location)
+]);
 
+// Renvoie les plateformes de streaming "principales" disponibles dans la
+// région donnée (abonnement, location, achat confondus), triées par
+// pertinence locale — filtré à MAIN_PROVIDER_IDS ci-dessus plutôt que le
+// catalogue TMDB complet.
 export async function getWatchProvidersList(mediaType, region = DEFAULT_REGION) {
   const data = await tmdbFetch(`/watch/providers/${mediaType}`, { watch_region: region });
   const results = data.results || [];
   return results
-    .slice()
+    .filter((p) => MAIN_PROVIDER_IDS.has(p.provider_id))
     .sort((a, b) => (a.display_priorities?.[region] ?? 999) - (b.display_priorities?.[region] ?? 999))
     .map((p) => ({ id: p.provider_id, name: p.provider_name }));
 }
