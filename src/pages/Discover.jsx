@@ -6,6 +6,7 @@ import AdvancedFilters from "../components/AdvancedFilters";
 import { Loading, ErrorMessage, EmptyState } from "../components/StateMessage";
 import { useRegion } from "../context/RegionContext";
 import { useFavoriteProviders } from "../context/FavoriteProvidersContext";
+import { useExcludedGenres } from "../context/ExcludedGenresContext";
 
 const EMPTY_ADVANCED_FILTERS = {
   yearMin: "", yearMax: "",
@@ -49,6 +50,7 @@ export default function Discover() {
   const [error, setError] = useState(null);
   const { region } = useRegion();
   const { favoriteProviderIds } = useFavoriteProviders();
+  const { excludedGenreIds } = useExcludedGenres();
 
   const advancedKey = JSON.stringify(advanced);
   // Actif ("Mes plateformes") : plusieurs ids OR-joints ; sinon le <select>
@@ -85,6 +87,7 @@ export default function Discover() {
     discover(mediaType, {
       page: 1,
       genreId,
+      excludeGenreIds: excludedGenreIds,
       providerIds: activeProviderIds,
       region,
       sortField,
@@ -107,7 +110,7 @@ export default function Discover() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaType, genreId, providerId, useMyPlatforms, favoriteProviderIds, region, sortField, sortDirection, advancedKey]);
+  }, [mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, sortField, sortDirection, advancedKey]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || page >= totalPages) return;
@@ -116,6 +119,7 @@ export default function Discover() {
     discover(mediaType, {
       page: nextPage,
       genreId,
+      excludeGenreIds: excludedGenreIds,
       providerIds: activeProviderIds,
       region,
       sortField,
@@ -138,7 +142,7 @@ export default function Discover() {
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingMore, page, totalPages, mediaType, genreId, providerId, useMyPlatforms, favoriteProviderIds, region, sortField, sortDirection, advancedKey]);
+  }, [loadingMore, page, totalPages, mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, sortField, sortDirection, advancedKey]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).

@@ -7,17 +7,20 @@ import { AuthProvider } from './context/AuthContext.jsx'
 import { LibraryProvider } from './context/LibraryContext.jsx'
 import { RegionProvider } from './context/RegionContext.jsx'
 import { FavoriteProvidersProvider } from './context/FavoriteProvidersContext.jsx'
+import { ExcludedGenresProvider } from './context/ExcludedGenresContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <RegionProvider>
         <FavoriteProvidersProvider>
-          <AuthProvider>
-            <LibraryProvider>
-              <App />
-            </LibraryProvider>
-          </AuthProvider>
+          <ExcludedGenresProvider>
+            <AuthProvider>
+              <LibraryProvider>
+                <App />
+              </LibraryProvider>
+            </AuthProvider>
+          </ExcludedGenresProvider>
         </FavoriteProvidersProvider>
       </RegionProvider>
     </BrowserRouter>

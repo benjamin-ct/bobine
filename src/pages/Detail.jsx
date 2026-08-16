@@ -18,6 +18,7 @@ import EpisodeTracker from "../components/EpisodeTracker";
 import { Loading, ErrorMessage } from "../components/StateMessage";
 import { useLibrary } from "../context/LibraryContext";
 import { useRegion } from "../context/RegionContext";
+import { useExcludedGenres } from "../context/ExcludedGenresContext";
 
 const MAIN_CAST_COUNT = 12;
 
@@ -30,6 +31,7 @@ export default function Detail() {
   const [showFullCast, setShowFullCast] = useState(false);
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist, getRating, rateWatched } = useLibrary();
   const { region, regionName } = useRegion();
+  const { excludedGenreIds } = useExcludedGenres();
   const recommendationsRef = useRef(null);
 
   useEffect(() => {
@@ -105,6 +107,14 @@ export default function Detail() {
     runtimeMinutes: estimateRuntimeMinutes(details, mediaType),
   };
 
+  // TMDB n'a pas de paramètre d'exclusion par genre sur l'endpoint
+  // recommandations (pas un endpoint de type discover) : on filtre côté
+  // client sur les genres exclus (réglage ExcludedGenresContext) avant de
+  // limiter à 12 titres affichés.
+  const recommendations = (details.recommendations?.results || []).filter(
+    (item) => !item.genre_ids?.some((gId) => excludedGenreIds.includes(gId))
+  );
+
   function scrollToRecommendations() {
     recommendationsRef.current?.scrollIntoView({ behavior: "smooth" });
   }
@@ -145,7 +155,7 @@ export default function Detail() {
                 {watched ? "✔ Déjà vu" : "○ Marquer comme vu"}
               </button>
               <TrailerButton videos={details.videos?.results} />
-              {details.recommendations?.results?.length > 0 && (
+              {recommendations.length > 0 && (
                 <button className="btn" onClick={scrollToRecommendations}>🔁 Similaire</button>
               )}
             </div>
@@ -200,11 +210,11 @@ export default function Detail() {
           </section>
         )}
 
-        {details.recommendations?.results?.length > 0 && (
+        {recommendations.length > 0 && (
           <section className="detail-recommendations" id="recommendations" ref={recommendationsRef}>
             <h3>Si tu as aimé « {title} »</h3>
             <div className="media-grid">
-              {details.recommendations.results.slice(0, 12).map((item) => (
+              {recommendations.slice(0, 12).map((item) => (
                 <MediaCard key={item.id} item={{ ...item, mediaType: item.media_type || mediaType }} />
               ))}
             </div>

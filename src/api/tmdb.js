@@ -65,6 +65,10 @@ const MIN_VOTES_FOR_RATING_SORT = 100;
 export function discover(mediaType, {
   page = 1,
   genreId,
+  // Genres à ne jamais suggérer (réglage "Genres à exclure", ExcludedGenresContext).
+  // Paramètre TMDB natif without_genres, virgule = exclusion si le titre a
+  // l'un de ces genres.
+  excludeGenreIds,
   providerIds,
   // Région utilisée pour filtrer par plateforme (watch_region — n'a de
   // sens que combinée à providerIds, TMDB l'ignore sinon). Voir
@@ -100,6 +104,7 @@ export function discover(mediaType, {
   return tmdbFetch(`/discover/${mediaType}`, {
     page,
     with_genres: genreId || undefined,
+    without_genres: excludeGenreIds?.length ? excludeGenreIds.join(",") : undefined,
     with_watch_providers: providerIds?.length ? providerIds.join("|") : undefined,
     watch_region: providerIds?.length ? region : undefined,
     sort_by: `${resolvedField}.${sortDirection}`,
