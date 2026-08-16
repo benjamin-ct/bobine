@@ -569,6 +569,12 @@ button, select, input {
   margin: 2px 0 0;
   color: var(--text-dim);
   font-size: 0.8rem;
+  /* Peut contenir une date complète ("12 septembre 2026"), plus longue que
+     l'année seule d'avant — tronquée plutôt que de casser la hauteur
+     uniforme des cartes d'une grille. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .media-card__actions {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { posterUrl, logoUrl, getWatchProviders } from "../api/tmdb";
+import { posterUrl, logoUrl, getWatchProviders, formatFullDate } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
 import { useRegion } from "../context/RegionContext";
 
@@ -22,15 +22,23 @@ export default function MediaCard({ item, showProviderBadge = false }) {
   const mediaType = item.mediaType || item.media_type;
   const title = item.title || item.name;
   const date = item.release_date || item.first_air_date;
-  const year = date ? date.slice(0, 4) : "—";
+  const displayDate = formatFullDate(date) || (date ? date.slice(0, 4) : "—");
   const watched = isWatched(mediaType, item.id);
   const inWatchlist = isInWatchlist(mediaType, item.id);
 
   // Statut "au cinéma" (France) : uniquement pour les films (les séries
-  // n'ont pas de notion de sortie en salle). Lookup synchrone dans l'index
-  // chargé une fois par RegionContext (voir getTheatricalStatusIndex,
-  // src/api/tmdb.js) — aucun appel réseau par carte.
-  const theatricalStatus = mediaType === "movie" ? getTheatricalStatus(item.id) : null;
+  // n'ont pas de notion de sortie en salle). L'appartenance à l'index
+  // (now_playing/upcoming, voir getTheatricalStatusIndex dans tmdb.js) dit
+  // seulement "ce film a une distribution en salle" — TMDB inclut dans
+  // now_playing une fenêtre qui peut déborder sur des sorties très proches
+  // mais pas encore effectives (avant-premières...), donc le libellé final
+  // ("En salles" vs "Bientôt") est tranché par la vraie date de sortie,
+  // pas par la seule présence dans l'une ou l'autre liste — sinon un film
+  // pas encore sorti peut afficher "En salles" à tort.
+  const inTheatricalIndex = mediaType === "movie" ? getTheatricalStatus(item.id) : null;
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const theatricalStatus =
+    inTheatricalIndex && date ? (date <= todayIso ? "in_theaters" : "upcoming") : inTheatricalIndex;
 
   const [provider, setProvider] = useState(null);
   useEffect(() => {
@@ -81,7 +89,7 @@ export default function MediaCard({ item, showProviderBadge = false }) {
         </div>
         <div className="media-card__info">
           <p className="media-card__title" title={title}>{title}</p>
-          <p className="media-card__year">{year}</p>
+          <p className="media-card__year">{displayDate}</p>
         </div>
       </Link>
       <div className="media-card__actions">
