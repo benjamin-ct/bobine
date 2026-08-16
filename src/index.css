@@ -527,6 +527,15 @@ button, select, input {
   text-overflow: ellipsis;
 }
 
+/* Statut inconnu (ni cinéma, ni plateforme confirmée) : même position que
+   .media-card__theatrical, mais grisé pour ne pas se faire lire comme une
+   info fiable ("bientôt au cinéma") — c'est justement l'absence d'info. */
+.media-card__theatrical--unknown {
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--text-dim);
+  font-style: italic;
+}
+
 /* Logo de la plateforme de diffusion (Nouveautés/Prochainement, voir
    MediaCard.jsx showProviderBadge) — petit rond en bas à droite, au-dessus
    du bandeau théâtral s'il est aussi présent (les deux ne se gênent pas :
