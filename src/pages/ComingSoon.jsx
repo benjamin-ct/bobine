@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { discover, getGenres, getWatchProvidersList } from "../api/tmdb";
 import MediaCard from "../components/MediaCard";
 import FilterBar from "../components/FilterBar";
@@ -86,6 +86,15 @@ export default function ComingSoon() {
       region,
       originCountry: country || undefined,
       originalLanguage: language || undefined,
+      // On continue de FAIRE VENIR les résultats par popularité TMDB
+      // (nécessaire : sans ce tri, la fenêtre de dates renvoie une bonne
+      // part de fiches quasi vides — popularité ~0, souvent sans affiche —
+      // avant les vraies sorties attendues ; testé en direct contre l'API,
+      // TMDB n'expose pas de plancher de popularité côté discover pour
+      // filtrer ce bruit nous-mêmes). L'AFFICHAGE, lui, est retrié par date
+      // croissante côté client juste avant le rendu (voir sortedResults) :
+      // ça donne un ordre chronologique logique sans laisser passer le
+      // bruit.
       sortField: "popularity",
       sortDirection: "desc",
       ...dateRangeFor(windowDays),
@@ -118,6 +127,15 @@ export default function ComingSoon() {
       region,
       originCountry: country || undefined,
       originalLanguage: language || undefined,
+      // On continue de FAIRE VENIR les résultats par popularité TMDB
+      // (nécessaire : sans ce tri, la fenêtre de dates renvoie une bonne
+      // part de fiches quasi vides — popularité ~0, souvent sans affiche —
+      // avant les vraies sorties attendues ; testé en direct contre l'API,
+      // TMDB n'expose pas de plancher de popularité côté discover pour
+      // filtrer ce bruit nous-mêmes). L'AFFICHAGE, lui, est retrié par date
+      // croissante côté client juste avant le rendu (voir sortedResults) :
+      // ça donne un ordre chronologique logique sans laisser passer le
+      // bruit.
       sortField: "popularity",
       sortDirection: "desc",
       ...dateRangeFor(windowDays),
@@ -137,6 +155,19 @@ export default function ComingSoon() {
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
   }, [loadingMore, page, totalPages, mediaType, genreId, excludedGenreIds, providerId, useMyPlatforms, favoriteProviderIds, region, country, language, windowDays]);
+
+  // Affichage trié par date de sortie croissante (le plus proche en
+  // premier) alors que le fetch lui-même reste trié par popularité côté
+  // TMDB (voir le commentaire sur discover() ci-dessus) — un simple tri
+  // client, aucun appel réseau supplémentaire, recalculé à chaque page
+  // chargée par le scroll infini.
+  const sortedResults = useMemo(() => {
+    return [...results].sort((a, b) => {
+      const dateA = a.release_date || a.first_air_date || "";
+      const dateB = b.release_date || b.first_air_date || "";
+      return dateA.localeCompare(dateB);
+    });
+  }, [results]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
@@ -158,7 +189,7 @@ export default function ComingSoon() {
   return (
     <div className="page">
       <h1>Prochainement</h1>
-      <p className="page-subtitle">Les films et séries pas encore sortis, les plus attendus d'abord.</p>
+      <p className="page-subtitle">Les films et séries pas encore sortis, du plus proche au plus lointain.</p>
 
       <FilterBar
         mediaType={mediaType}
@@ -202,7 +233,7 @@ export default function ComingSoon() {
       {status === "success" && results.length > 0 && (
         <>
           <div className="media-grid">
-            {results.map((item) => (
+            {sortedResults.map((item) => (
               <MediaCard key={item.id} item={{ ...item, mediaType }} showProviderBadge />
             ))}
           </div>
