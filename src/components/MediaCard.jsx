@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { posterUrl, logoUrl, getWatchProviders, formatFullDate } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
@@ -40,13 +40,42 @@ export default function MediaCard({ item, showProviderBadge = false }) {
   const theatricalStatus =
     inTheatricalIndex && date ? (date <= todayIso ? "in_theaters" : "upcoming") : inTheatricalIndex;
 
+  // Charger le badge plateforme seulement quand la carte approche du
+  // viewport (comme le poster, déjà en loading="lazy") : une grille de
+  // Nouveautés/Prochainement affiche ~20 cartes d'un coup, et sans ça les
+  // ~20 appels /watch/providers (un par titre, IDs tous différents — pas
+  // d'endpoint en masse côté TMDB, voir plus haut) partent tous en
+  // parallèle dès le montage, y compris pour les cartes hors écran. Ce
+  // pic simultané, multiplié par plusieurs visiteurs en même temps,
+  // épuise le quota de la clé TMDB partagée (429 observés en prod).
+  // Observer seulement le poster limite le nombre de requêtes lancées à
+  // ce qui est réellement visible (ou sur le point de l'être).
+  const posterRef = useRef(null);
+  const [isNearViewport, setIsNearViewport] = useState(false);
+  useEffect(() => {
+    if (!showProviderBadge) return;
+    const el = posterRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [showProviderBadge]);
+
   const [provider, setProvider] = useState(null);
   // Distingue "pas encore vérifié" de "vérifié, rien trouvé" : sans ça,
   // impossible de savoir si l'absence de badge plateforme est un vrai
   // "on ne sait pas encore où" ou juste le fetch pas encore résolu.
   const [providerStatus, setProviderStatus] = useState("idle");
   useEffect(() => {
-    if (!showProviderBadge) return;
+    if (!showProviderBadge || !isNearViewport) return;
     let cancelled = false;
     setProviderStatus("loading");
     getWatchProviders(mediaType, item.id, region)
@@ -64,7 +93,7 @@ export default function MediaCard({ item, showProviderBadge = false }) {
     return () => {
       cancelled = true;
     };
-  }, [showProviderBadge, mediaType, item.id, region]);
+  }, [showProviderBadge, isNearViewport, mediaType, item.id, region]);
 
   // Sur Prochainement/Nouveautés, un titre sans badge cinéma ET sans
   // plateforme connue est ambigu pour qui regarde la carte : impossible de
@@ -88,7 +117,7 @@ export default function MediaCard({ item, showProviderBadge = false }) {
   return (
     <div className="media-card">
       <Link to={`/media/${mediaType}/${item.id}`} className="media-card__link">
-        <div className="media-card__poster">
+        <div className="media-card__poster" ref={posterRef}>
           {item.poster_path ? (
             <img src={posterUrl(item.poster_path)} alt={title} loading="lazy" />
           ) : (

@@ -434,6 +434,18 @@ async function handleTmdbProxy(request, env, ctx) {
   }
   tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY);
 
+  // /watch/providers est appelé une fois par carte (badge plateforme sur
+  // Nouveautés/Prochainement) : contrairement au reste du catalogue,
+  // chaque titre a un ID distinct, donc la plupart des requêtes ratent le
+  // cache d'edge au premier visiteur qui les déclenche (20 films = 20 URLs
+  // différentes, même avec le cache en place). Les plateformes de diffusion
+  // d'un titre changent rarement d'une heure à l'autre : un TTL nettement
+  // plus long ici absorbe beaucoup plus de trafic sur le même cache, sans
+  // risquer de servir une donnée vraiment périmée (catalogue TMDB en
+  // général : 5 min, cf. commentaire sur handleTmdbProxy).
+  const isWatchProviders = /\/(movie|tv)\/\d+\/watch\/providers$/.test(tmdbPath);
+  const maxAge = isWatchProviders ? 3600 : 300;
+
   const res = await fetch(tmdbUrl.toString());
   const body = await res.text();
   const response = new Response(body, {
@@ -442,7 +454,7 @@ async function handleTmdbProxy(request, env, ctx) {
       "content-type": "application/json; charset=utf-8",
       // Catalogue TMDB peu volatil minute par minute : un court cache
       // navigateur/edge limite la charge sur le quota de la clé serveur.
-      "cache-control": "public, max-age=300",
+      "cache-control": `public, max-age=${maxAge}`,
     },
   });
   // Ne met en cache que les réponses réussies : une erreur (429 y compris)
