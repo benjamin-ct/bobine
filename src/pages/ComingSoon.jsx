@@ -283,7 +283,7 @@ export default function ComingSoon() {
         <>
           <div className="media-grid">
             {visibleResults.map((item) => (
-              <MediaCard key={item.id} item={{ ...item, mediaType }} showProviderBadge />
+              <MediaCard key={item.id} item={{ ...item, mediaType }} showFutureReleaseBadge />
             ))}
           </div>
           {hasMore && (
