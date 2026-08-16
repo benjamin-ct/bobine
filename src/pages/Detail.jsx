@@ -8,6 +8,7 @@ import {
   estimateRuntimeMinutes,
   getFrenchTheatricalDateFromDetails,
   theatricalStatusFromDate,
+  formatFullDate,
 } from "../api/tmdb";
 import ProviderBadges from "../components/ProviderBadges";
 import TrailerButton from "../components/TrailerButton";
@@ -124,7 +125,7 @@ export default function Detail() {
             <img className="detail-poster" src={posterUrl(details.poster_path, "w342")} alt={title} />
           )}
           <div className="detail-info">
-            <h1>{title} {date && <span className="detail-year">({date.slice(0, 4)})</span>}</h1>
+            <h1>{title} {date && <span className="detail-year">({formatFullDate(date) || date.slice(0, 4)})</span>}</h1>
             <p className="detail-meta">
               {details.genres?.map((g) => g.name).join(" · ")}
               {mediaType === "tv" && details.number_of_seasons

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { posterUrl, getGenres } from "../api/tmdb";
+import { posterUrl, getGenres, formatFullDate } from "../api/tmdb";
 import { useLibrary } from "../context/LibraryContext";
 import Stats from "../components/Stats";
 import NotificationSettings from "../components/NotificationSettings";
@@ -62,7 +62,7 @@ function Row({ item }) {
   const { toggleWatched, toggleWatchlist, isWatched, isInWatchlist } = useLibrary();
   const watched = isWatched(item.mediaType, item.id);
   const inWatchlist = isInWatchlist(item.mediaType, item.id);
-  const year = item.date ? item.date.slice(0, 4) : "—";
+  const displayDate = formatFullDate(item.date) || (item.date ? item.date.slice(0, 4) : "—");
 
   return (
     <div className="list-row">
@@ -75,7 +75,7 @@ function Row({ item }) {
         <div className="list-row__info">
           <p className="list-row__title">{item.title}</p>
           <p className="list-row__meta">
-            {item.mediaType === "movie" ? "Film" : "Série"} · {year}
+            {item.mediaType === "movie" ? "Film" : "Série"} · {displayDate}
             {item.rating && <span className="rating-badge"> · ★ {item.rating}/10</span>}
           </p>
         </div>

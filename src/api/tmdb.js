@@ -244,6 +244,17 @@ export function getFrenchTheatricalDateFromDetails(details) {
   return extractFrenchTheatricalDate(details?.release_dates);
 }
 
+// Date complète lisible (ex. "12 septembre 2026"), films et séries — plus
+// précis que l'année seule affichée jusqu'ici sur les cartes/lignes de
+// liste. `null` si la date est absente ou invalide (repli sur l'année seule
+// côté appelant).
+export function formatFullDate(dateString) {
+  if (!dateString) return null;
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
 // "upcoming" (pas encore sorti), "in_theaters" (sorti il y a moins de
 // THEATRICAL_WINDOW_DAYS), "past" (sorti plus tôt), ou null si aucune date
 // de sortie cinéma FR n'est connue pour ce titre (VOD/streaming direct,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { discover, getGenres, getWatchProvidersList, getDetails, getWatchProviders, posterUrl, estimateRuntimeMinutes } from "../api/tmdb";
+import { discover, getGenres, getWatchProvidersList, getDetails, getWatchProviders, posterUrl, estimateRuntimeMinutes, formatFullDate } from "../api/tmdb";
 import FilterBar from "../components/FilterBar";
 import ProviderBadges from "../components/ProviderBadges";
 import TrailerButton from "../components/TrailerButton";
@@ -185,7 +185,7 @@ export default function Random() {
         <div className="random-result">
           <img className="detail-poster" src={posterUrl(pick.poster_path, "w342")} alt={title} />
           <div className="detail-info">
-            <h2>{title} {date && <span className="detail-year">({date.slice(0, 4)})</span>}</h2>
+            <h2>{title} {date && <span className="detail-year">({formatFullDate(date) || date.slice(0, 4)})</span>}</h2>
             <p className="detail-meta">
               {pickDetails?.genres?.map((g) => g.name).join(" · ")}
               {runtime ? ` · ${runtime} min` : ""}
