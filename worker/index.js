@@ -434,17 +434,19 @@ async function handleTmdbProxy(request, env, ctx) {
   }
   tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY);
 
-  // /watch/providers est appelé une fois par carte (badge plateforme sur
-  // Nouveautés/Prochainement) : contrairement au reste du catalogue,
-  // chaque titre a un ID distinct, donc la plupart des requêtes ratent le
-  // cache d'edge au premier visiteur qui les déclenche (20 films = 20 URLs
-  // différentes, même avec le cache en place). Les plateformes de diffusion
-  // d'un titre changent rarement d'une heure à l'autre : un TTL nettement
-  // plus long ici absorbe beaucoup plus de trafic sur le même cache, sans
-  // risquer de servir une donnée vraiment périmée (catalogue TMDB en
-  // général : 5 min, cf. commentaire sur handleTmdbProxy).
-  const isWatchProviders = /\/(movie|tv)\/\d+\/watch\/providers$/.test(tmdbPath);
-  const maxAge = isWatchProviders ? 3600 : 300;
+  // Ces routes sont appelées une fois PAR CARTE (badge plateforme sur
+  // Nouveautés, badge prochaine sortie/diffusion sur Prochainement) :
+  // contrairement au reste du catalogue, chaque titre a un ID distinct,
+  // donc la plupart des requêtes ratent le cache d'edge au premier
+  // visiteur qui les déclenche (20 films = 20 URLs différentes, même avec
+  // le cache en place). Le contenu de ces routes change rarement d'une
+  // heure à l'autre (plateformes de diffusion, dates de sortie, fiche
+  // détail) : un TTL nettement plus long ici absorbe beaucoup plus de
+  // trafic sur le même cache, sans risquer de servir une donnée vraiment
+  // périmée (catalogue TMDB en général : 5 min, cf. commentaire sur
+  // handleTmdbProxy).
+  const isPerTitleRoute = /\/(movie|tv)\/\d+(\/watch\/providers|\/release_dates)?$/.test(tmdbPath);
+  const maxAge = isPerTitleRoute ? 3600 : 300;
 
   const res = await fetch(tmdbUrl.toString());
   const body = await res.text();

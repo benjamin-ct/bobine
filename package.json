@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "verify:upcoming-badge": "node scripts/verify-upcoming-badge.mjs",
     "postinstall": "node scripts/generate-icons.cjs"
   },
   "dependencies": {

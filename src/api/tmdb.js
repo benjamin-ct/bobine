@@ -345,6 +345,87 @@ export function getWatchProviders(mediaType, id, region = DEFAULT_REGION) {
   return promise;
 }
 
+// Badge dynamique "Prochainement" (prochaine sortie/diffusion) -----------
+//
+// Sur Prochainement, tout est par définition pas encore sorti : le badge
+// doit dire OÙ/COMMENT une sortie à venir est prévue (Cinéma, Netflix,
+// Prime Video, ABC, "Série à venir"...), pas réutiliser /watch/providers
+// qui ne reflète que ce qui est DÉJÀ disponible (souvent vide pour un
+// titre pas encore sorti — normal, pas une anomalie). Volontairement
+// distinct de getWatchProviders ci-dessus, qui reste inchangé pour
+// Nouveautés (contenus déjà sortis).
+
+// Cache mémoire par film (même pattern que watchProvidersCache) : la
+// réponse /release_dates change rarement, jamais mise à jour à la
+// milliseconde près, donc pas grave si un exemplaire un peu daté traîne
+// en mémoire pour la session.
+const movieReleaseDatesCache = new Map();
+export function getMovieReleaseDates(movieId) {
+  if (movieReleaseDatesCache.has(movieId)) return movieReleaseDatesCache.get(movieId);
+  const promise = tmdbFetch(`/movie/${movieId}/release_dates`).catch((err) => {
+    movieReleaseDatesCache.delete(movieId);
+    throw err;
+  });
+  movieReleaseDatesCache.set(movieId, promise);
+  return promise;
+}
+
+// Type de sortie TMDB → libellé de repli quand `note` est vide. 2 et 3
+// sont respectivement une sortie limitée et une sortie nationale en
+// salles — les deux valent "Cinéma" pour l'utilisateur, la distinction
+// n'a pas de sens côté badge.
+const RELEASE_TYPE_LABELS = {
+  2: "Cinéma",
+  3: "Cinéma",
+  4: "VOD numérique",
+  5: "DVD / Blu-ray",
+  6: "Télévision",
+};
+
+// Comparaison de dates calendaires en chaîne (YYYY-MM-DD), pas d'objet
+// Date : évite tout décalage de fuseau horaire au moment de la
+// comparaison (un `new Date("2026-08-17")` UTC minuit comparé à un `Date`
+// local peut basculer d'un jour selon l'heure et le fuseau du visiteur).
+function isStrictlyFutureDate(dateString, todayIso) {
+  if (!dateString) return false;
+  return dateString.slice(0, 10) > todayIso;
+}
+
+// Film : prochaine sortie strictement future dans la région donnée, avec
+// son libellé. `note` TMDB (ex. "Prime Video") est prioritaire sur le
+// type de sortie, même si le type est renseigné par ailleurs — un service
+// explicitement nommé est toujours plus fiable qu'une catégorie générique.
+// `releaseDatesResponse` : résultat brut de getMovieReleaseDates() ci-dessus.
+// Renvoie `null` si aucune sortie future exploitable n'est trouvée pour
+// cette région (à charge de l'appelant de retomber sur un repli, voir
+// MediaCard.jsx).
+export function getUpcomingMovieRelease(releaseDatesResponse, region = DEFAULT_REGION) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const entry = releaseDatesResponse?.results?.find((r) => r.iso_3166_1 === region);
+  const future = (entry?.release_dates || [])
+    .filter((rd) => isStrictlyFutureDate(rd.release_date, todayIso))
+    .sort((a, b) => a.release_date.localeCompare(b.release_date));
+  const next = future[0];
+  if (!next) return null;
+  const label = next.note?.trim() || RELEASE_TYPE_LABELS[next.type] || null;
+  if (!label) return null;
+  return { label, date: next.release_date.slice(0, 10) };
+}
+
+// Série : le diffuseur de première diffusion (networks[].name — peut être
+// une plateforme de streaming comme Netflix/Disney+ ou une chaîne
+// classique comme ABC/BBC, TMDB ne distingue pas les deux dans ce champ,
+// et il n'y a pas lieu de le faire ici non plus : le badge représente le
+// canal de diffusion connu, quelle que soit sa nature). Jamais déduit de
+// /watch/providers, qui reflète la disponibilité actuelle, pas la
+// diffusion à venir. "Série à venir" si aucun network connu — jamais
+// d'invention de plateforme. `details` : résultat de getDetails("tv", id).
+export function getUpcomingSeriesRelease(details) {
+  const label = details?.networks?.find((n) => n?.name)?.name || "Série à venir";
+  const date = details?.first_air_date || null;
+  return { label, date };
+}
+
 // Fournisseurs de streaming "principaux" ----------------------------------
 // Le catalogue TMDB complet (~90-100 entrées pour la France) mélange les
 // vraies plateformes avec des chaînes additionnelles greffées sur un compte
