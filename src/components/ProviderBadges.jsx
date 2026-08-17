@@ -1,7 +1,9 @@
 import { logoUrl } from "../api/tmdb";
 
 function Row({ label, items }) {
-  if (!items?.length) return null;
+  if (!items?.length) {
+    return null;
+  }
   return (
     <div className="provider-row">
       <span className="provider-row__label">{label}</span>

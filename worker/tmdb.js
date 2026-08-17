@@ -20,7 +20,9 @@ async function tmdbFetch(env, path, params = {}) {
     }
   }
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`Erreur TMDB (${res.status}) sur ${path}`);
+  if (!res.ok) {
+    throw new Error(`Erreur TMDB (${res.status}) sur ${path}`);
+  }
   return res.json();
 }
 
@@ -52,5 +54,7 @@ export async function discoverRecentByGenre(env, mediaType, genreId, windowDays)
 // sert de filet pour les nouveautés qu'on n'aurait pas via les genres favoris.
 export async function trendingToday(env) {
   const data = await tmdbFetch(env, "/trending/all/day");
-  return (data.results || []).filter((item) => item.media_type === "movie" || item.media_type === "tv");
+  return (data.results || []).filter(
+    (item) => item.media_type === "movie" || item.media_type === "tv"
+  );
 }

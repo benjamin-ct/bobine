@@ -1,0 +1,10 @@
+# Artefacts de build et dépendances : jamais formatés.
+dist
+dev-dist
+node_modules
+
+# Lockfile : géré par npm, pas par Prettier.
+package-lock.json
+
+# Icônes/manifest générés (voir scripts/generate-icons.cjs).
+public

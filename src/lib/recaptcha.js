@@ -42,7 +42,9 @@ function loadScript(siteKey) {
 // même repli symétrique (voir worker/recaptcha.js).
 export async function getRecaptchaToken(action) {
   const siteKey = await fetchSiteKey();
-  if (!siteKey) return null;
+  if (!siteKey) {
+    return null;
+  }
   try {
     await loadScript(siteKey);
     await new Promise((resolve) => window.grecaptcha.ready(resolve));

@@ -30,7 +30,9 @@ export function AuthProvider({ children }) {
   const refresh = useCallback(() => {
     return fetch("/api/auth/me")
       .then((res) => {
-        if (!res.ok) throw new Error("not authenticated");
+        if (!res.ok) {
+          throw new Error("not authenticated");
+        }
         return res.json();
       })
       .then((data) => {
@@ -39,7 +41,9 @@ export function AuthProvider({ children }) {
         pinnedRef.current = true;
       })
       .catch(() => {
-        if (pinnedRef.current) return;
+        if (pinnedRef.current) {
+          return;
+        }
         setEmail(null);
         setStatus("anonymous");
       });
@@ -59,7 +63,9 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ email: emailToSend, recaptchaToken }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "Impossible d'envoyer le lien de connexion.");
+    if (!res.ok) {
+      throw new Error(data.error || "Impossible d'envoyer le lien de connexion.");
+    }
     return data;
   }, []);
 
@@ -75,7 +81,9 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ ...body, recaptchaToken }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || fallbackError);
+    if (!res.ok) {
+      throw new Error(data.error || fallbackError);
+    }
     pinnedRef.current = true;
     setEmail(data.email);
     setStatus("authenticated");
@@ -108,6 +116,8 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth doit être utilisé dans un AuthProvider");
+  if (!ctx) {
+    throw new Error("useAuth doit être utilisé dans un AuthProvider");
+  }
   return ctx;
 }

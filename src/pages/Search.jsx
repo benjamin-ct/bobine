@@ -24,14 +24,20 @@ export default function Search() {
     setStatus("loading");
     searchMulti(query)
       .then((data) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         const results = data.results || [];
-        setTitles(results.filter((item) => item.media_type === "movie" || item.media_type === "tv"));
+        setTitles(
+          results.filter((item) => item.media_type === "movie" || item.media_type === "tv")
+        );
         setPeople(results.filter((item) => item.media_type === "person"));
         setStatus("success");
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError(err);
         setStatus("error");
       });
@@ -65,7 +71,10 @@ export default function Search() {
           {people.length > 0 && <h3>Films & séries</h3>}
           <div className="media-grid">
             {titles.map((item) => (
-              <MediaCard key={`${item.media_type}:${item.id}`} item={{ ...item, mediaType: item.media_type }} />
+              <MediaCard
+                key={`${item.media_type}:${item.id}`}
+                item={{ ...item, mediaType: item.media_type }}
+              />
             ))}
           </div>
         </section>

@@ -45,7 +45,9 @@ async function createMagicLink(db, email) {
   const token = randomToken();
   const code = randomCode();
   await db
-    .prepare("INSERT INTO magic_links (token, code, email, expires_at, used_at) VALUES (?, ?, ?, ?, NULL)")
+    .prepare(
+      "INSERT INTO magic_links (token, code, email, expires_at, used_at) VALUES (?, ?, ?, ?, NULL)"
+    )
     .bind(token, code, email, Date.now() + MAGIC_LINK_TTL_MS)
     .run();
   return { token, code };
@@ -58,8 +60,13 @@ async function consumeMagicLink(db, token) {
     .prepare("SELECT email, expires_at, used_at FROM magic_links WHERE token = ?")
     .bind(token)
     .first();
-  if (!row || row.used_at || row.expires_at < Date.now()) return null;
-  await db.prepare("UPDATE magic_links SET used_at = ? WHERE token = ?").bind(Date.now(), token).run();
+  if (!row || row.used_at || row.expires_at < Date.now()) {
+    return null;
+  }
+  await db
+    .prepare("UPDATE magic_links SET used_at = ? WHERE token = ?")
+    .bind(Date.now(), token)
+    .run();
   return row.email;
 }
 
@@ -67,19 +74,31 @@ async function consumeMagicLink(db, token) {
 // jeton — consomme la même ligne (donc invalide aussi le lien).
 async function consumeMagicLinkByCode(db, code) {
   const normalized = (code || "").trim().toUpperCase();
-  if (!normalized) return null;
+  if (!normalized) {
+    return null;
+  }
   const row = await db
     .prepare("SELECT email, expires_at, used_at FROM magic_links WHERE code = ?")
     .bind(normalized)
     .first();
-  if (!row || row.used_at || row.expires_at < Date.now()) return null;
-  await db.prepare("UPDATE magic_links SET used_at = ? WHERE code = ?").bind(Date.now(), normalized).run();
+  if (!row || row.used_at || row.expires_at < Date.now()) {
+    return null;
+  }
+  await db
+    .prepare("UPDATE magic_links SET used_at = ? WHERE code = ?")
+    .bind(Date.now(), normalized)
+    .run();
   return row.email;
 }
 
 async function findOrCreateUser(db, email) {
-  const existing = await db.prepare("SELECT id, email FROM users WHERE email = ?").bind(email).first();
-  if (existing) return existing;
+  const existing = await db
+    .prepare("SELECT id, email FROM users WHERE email = ?")
+    .bind(email)
+    .first();
+  if (existing) {
+    return existing;
+  }
   const result = await db
     .prepare("INSERT INTO users (email, created_at) VALUES (?, ?)")
     .bind(email, Date.now())
@@ -104,14 +123,18 @@ function parseCookie(request, name) {
   const header = request.headers.get("cookie") || "";
   for (const part of header.split(";")) {
     const [key, ...rest] = part.trim().split("=");
-    if (key === name) return rest.join("=");
+    if (key === name) {
+      return rest.join("=");
+    }
   }
   return null;
 }
 
 async function getUserFromRequest(db, request) {
   const token = parseCookie(request, SESSION_COOKIE);
-  if (!token) return null;
+  if (!token) {
+    return null;
+  }
   const row = await db
     .prepare(
       `SELECT users.id, users.email, sessions.expires_at
@@ -120,7 +143,9 @@ async function getUserFromRequest(db, request) {
     )
     .bind(token)
     .first();
-  if (!row || row.expires_at < Date.now()) return null;
+  if (!row || row.expires_at < Date.now()) {
+    return null;
+  }
   return { id: row.id, email: row.email, sessionToken: token };
 }
 
@@ -142,7 +167,9 @@ function sessionCookieHeader(request, token, { clear = false } = {}) {
 // production, RESEND_API_KEY est toujours configurée donc ce cas ne se
 // présente jamais côté déployé.
 async function sendMagicLinkEmail(env, email, link, code) {
-  if (!env.RESEND_API_KEY) return { skipped: true };
+  if (!env.RESEND_API_KEY) {
+    return { skipped: true };
+  }
 
   const from = env.RESEND_FROM_EMAIL || "Bobine <onboarding@resend.dev>";
   const res = await fetch("https://api.resend.com/emails", {
@@ -167,7 +194,9 @@ async function sendMagicLinkEmail(env, email, link, code) {
     }),
   });
   if (!res.ok) {
-    throw new Error(`Échec de l'envoi de l'email (${res.status}) : ${await res.text().catch(() => "")}`);
+    throw new Error(
+      `Échec de l'envoi de l'email (${res.status}) : ${await res.text().catch(() => "")}`
+    );
   }
   return { skipped: false };
 }

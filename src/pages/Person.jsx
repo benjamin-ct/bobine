@@ -11,7 +11,9 @@ function dedupeByMedia(items) {
   const out = [];
   for (const item of items) {
     const key = `${item.media_type}:${item.id}`;
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push(item);
   }
@@ -38,13 +40,17 @@ export default function Person() {
     setStatus("loading");
     Promise.all([getPerson(id), getPersonCredits(id)])
       .then(([p, c]) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setPerson(p);
         setCredits(c);
         setStatus("success");
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError(err);
         setStatus("error");
       });
@@ -53,9 +59,23 @@ export default function Person() {
     };
   }, [id]);
 
-  if (status === "loading") return <div className="page"><Loading /></div>;
-  if (status === "error") return <div className="page"><ErrorMessage error={error} /></div>;
-  if (!person) return null;
+  if (status === "loading") {
+    return (
+      <div className="page">
+        <Loading />
+      </div>
+    );
+  }
+  if (status === "error") {
+    return (
+      <div className="page">
+        <ErrorMessage error={error} />
+      </div>
+    );
+  }
+  if (!person) {
+    return null;
+  }
 
   const asActor = sortByDateDesc(dedupeByMedia(credits?.cast || []));
   const asCrew = sortByDateDesc(
@@ -64,11 +84,17 @@ export default function Person() {
 
   return (
     <div className="page">
-      <Link to="/" className="back-link" style={{ marginTop: 0, marginBottom: 20 }}>← Retour</Link>
+      <Link to="/" className="back-link" style={{ marginTop: 0, marginBottom: 20 }}>
+        ← Retour
+      </Link>
 
       <div className="person-header">
         {person.profile_path && (
-          <img className="person-header__photo" src={posterUrl(person.profile_path, "w342")} alt={person.name} />
+          <img
+            className="person-header__photo"
+            src={posterUrl(person.profile_path, "w342")}
+            alt={person.name}
+          />
         )}
         <div>
           <h1>{person.name}</h1>
@@ -85,7 +111,10 @@ export default function Person() {
         ) : (
           <div className="media-grid">
             {asActor.map((item) => (
-              <MediaCard key={`${item.media_type}:${item.id}`} item={{ ...item, mediaType: item.media_type }} />
+              <MediaCard
+                key={`${item.media_type}:${item.id}`}
+                item={{ ...item, mediaType: item.media_type }}
+              />
             ))}
           </div>
         )}
@@ -98,7 +127,10 @@ export default function Person() {
         ) : (
           <div className="media-grid">
             {asCrew.map((item) => (
-              <MediaCard key={`${item.media_type}:${item.id}`} item={{ ...item, mediaType: item.media_type }} />
+              <MediaCard
+                key={`${item.media_type}:${item.id}`}
+                item={{ ...item, mediaType: item.media_type }}
+              />
             ))}
           </div>
         )}

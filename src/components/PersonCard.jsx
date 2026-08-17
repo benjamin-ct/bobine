@@ -20,7 +20,9 @@ export default function PersonCard({ person }) {
       </div>
       <p className="person-card__name">{person.name}</p>
       <p className="person-card__role">
-        {DEPARTMENT_LABELS[person.known_for_department] || person.known_for_department || "Personnalité"}
+        {DEPARTMENT_LABELS[person.known_for_department] ||
+          person.known_for_department ||
+          "Personnalité"}
       </p>
     </Link>
   );

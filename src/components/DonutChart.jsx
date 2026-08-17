@@ -7,7 +7,9 @@ const GAP = 5; // px, espace entre les deux segments
 
 export default function DonutChart({ segments, centerLabel, centerValue }) {
   const total = segments.reduce((sum, s) => sum + s.value, 0);
-  if (total === 0) return null;
+  if (total === 0) {
+    return null;
+  }
 
   let cumulative = 0;
   const arcs = segments

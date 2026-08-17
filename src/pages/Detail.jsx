@@ -30,7 +30,8 @@ export default function Detail() {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
   const [showFullCast, setShowFullCast] = useState(false);
-  const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist, getRating, rateWatched } = useLibrary();
+  const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist, getRating, rateWatched } =
+    useLibrary();
   const { region, regionName } = useRegion();
   const { excludedGenreIds } = useExcludedGenres();
   const recommendationsRef = useRef(null);
@@ -41,13 +42,17 @@ export default function Detail() {
     setShowFullCast(false);
     Promise.all([getDetails(mediaType, id), getWatchProviders(mediaType, id, region)])
       .then(([d, p]) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setDetails(d);
         setProviders(p);
         setStatus("success");
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError(err);
         setStatus("error");
       });
@@ -63,9 +68,23 @@ export default function Detail() {
     }
   }, [status]);
 
-  if (status === "loading") return <div className="page"><Loading /></div>;
-  if (status === "error") return <div className="page"><ErrorMessage error={error} /></div>;
-  if (!details) return null;
+  if (status === "loading") {
+    return (
+      <div className="page">
+        <Loading />
+      </div>
+    );
+  }
+  if (status === "error") {
+    return (
+      <div className="page">
+        <ErrorMessage error={error} />
+      </div>
+    );
+  }
+  if (!details) {
+    return null;
+  }
 
   const title = details.title || details.name;
   const date = details.release_date || details.first_air_date;
@@ -79,7 +98,11 @@ export default function Detail() {
   const theatricalDate = mediaType === "movie" ? getFrenchTheatricalDateFromDetails(details) : null;
   const theatricalStatus = theatricalStatusFromDate(theatricalDate);
   const theatricalDateFormatted = theatricalDate
-    ? new Date(theatricalDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    ? new Date(theatricalDate).toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
     : null;
   const theatricalMessage = {
     in_theaters: `🎬 Actuellement au cinéma (sorti le ${theatricalDateFormatted})`,
@@ -124,7 +147,11 @@ export default function Detail() {
     <div className="detail-page">
       <div
         className="detail-hero"
-        style={{ backgroundImage: details.backdrop_path ? `url(${backdropUrl(details.backdrop_path)})` : undefined }}
+        style={{
+          backgroundImage: details.backdrop_path
+            ? `url(${backdropUrl(details.backdrop_path)})`
+            : undefined,
+        }}
       >
         <div className="detail-hero__overlay" />
       </div>
@@ -132,16 +159,27 @@ export default function Detail() {
       <div className="detail-content page">
         <div className="detail-main">
           {details.poster_path && (
-            <img className="detail-poster" src={posterUrl(details.poster_path, "w342")} alt={title} />
+            <img
+              className="detail-poster"
+              src={posterUrl(details.poster_path, "w342")}
+              alt={title}
+            />
           )}
           <div className="detail-info">
-            <h1>{title} {date && <span className="detail-year">({formatFullDate(date) || date.slice(0, 4)})</span>}</h1>
+            <h1>
+              {title}{" "}
+              {date && (
+                <span className="detail-year">({formatFullDate(date) || date.slice(0, 4)})</span>
+              )}
+            </h1>
             <p className="detail-meta">
               {details.genres?.map((g) => g.name).join(" · ")}
               {mediaType === "tv" && details.number_of_seasons
                 ? ` · ${details.number_of_seasons} saison${details.number_of_seasons > 1 ? "s" : ""}`
                 : ""}
-              {mediaType === "tv" && details.number_of_episodes ? ` · ${details.number_of_episodes} épisodes` : ""}
+              {mediaType === "tv" && details.number_of_episodes
+                ? ` · ${details.number_of_episodes} épisodes`
+                : ""}
               {runtime ? ` · ${runtime} min${mediaType === "tv" ? "/épisode" : ""}` : ""}
               {details.vote_average ? ` · ⭐ ${details.vote_average.toFixed(1)}` : ""}
             </p>
@@ -149,20 +187,31 @@ export default function Detail() {
             <p className="detail-overview">{details.overview || "Pas de synopsis disponible."}</p>
 
             <div className="detail-actions">
-              <button className={`btn ${inWatchlist ? "btn--gold" : ""}`} onClick={() => toggleWatchlist(libItem)}>
+              <button
+                className={`btn ${inWatchlist ? "btn--gold" : ""}`}
+                onClick={() => toggleWatchlist(libItem)}
+              >
                 {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
               </button>
-              <button className={`btn ${watched ? "btn--green" : ""}`} onClick={() => toggleWatched(libItem)}>
+              <button
+                className={`btn ${watched ? "btn--green" : ""}`}
+                onClick={() => toggleWatched(libItem)}
+              >
                 {watched ? "✔ Déjà vu" : "○ Marquer comme vu"}
               </button>
               <TrailerButton videos={details.videos?.results} />
               {recommendations.length > 0 && (
-                <button className="btn" onClick={scrollToRecommendations}>🔁 Similaire</button>
+                <button className="btn" onClick={scrollToRecommendations}>
+                  🔁 Similaire
+                </button>
               )}
             </div>
 
             {watched && (
-              <RatingInput value={getRating(mediaType, id)} onRate={(rating) => rateWatched(mediaType, id, rating)} />
+              <RatingInput
+                value={getRating(mediaType, id)}
+                onRate={(rating) => rateWatched(mediaType, id, rating)}
+              />
             )}
 
             <h3>Où regarder{regionName ? ` (${regionName})` : ""}</h3>
@@ -184,7 +233,9 @@ export default function Detail() {
                     <CastCard
                       key={person.credit_id || person.id}
                       member={person}
-                      role={mediaType === "movie" ? "Réalisateur/Réalisatrice" : "Créateur/Créatrice"}
+                      role={
+                        mediaType === "movie" ? "Réalisateur/Réalisatrice" : "Créateur/Créatrice"
+                      }
                     />
                   ))}
                 </div>
@@ -196,7 +247,10 @@ export default function Detail() {
                 <h3>Casting principal</h3>
                 <div className="person-grid">
                   {visibleCast.map((member) => (
-                    <CastCard key={member.credit_id || `${member.id}-${member.character}`} member={member} />
+                    <CastCard
+                      key={member.credit_id || `${member.id}-${member.character}`}
+                      member={member}
+                    />
                   ))}
                 </div>
                 {remainingCastCount > 0 && (
@@ -216,13 +270,18 @@ export default function Detail() {
             <h3>Si tu as aimé « {title} »</h3>
             <div className="media-grid">
               {recommendations.slice(0, 12).map((item) => (
-                <MediaCard key={item.id} item={{ ...item, mediaType: item.media_type || mediaType }} />
+                <MediaCard
+                  key={item.id}
+                  item={{ ...item, mediaType: item.media_type || mediaType }}
+                />
               ))}
             </div>
           </section>
         )}
 
-        <Link to="/" className="back-link">← Retour</Link>
+        <Link to="/" className="back-link">
+          ← Retour
+        </Link>
       </div>
     </div>
   );

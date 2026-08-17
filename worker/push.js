@@ -15,7 +15,9 @@ export class ExpiredSubscriptionError extends Error {}
 let vapidConfigured = false;
 
 function ensureVapid(env) {
-  if (vapidConfigured) return;
+  if (vapidConfigured) {
+    return;
+  }
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY || !env.VAPID_SUBJECT) {
     throw new Error(
       "Clés VAPID manquantes (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT) — à configurer dans les secrets du Worker."

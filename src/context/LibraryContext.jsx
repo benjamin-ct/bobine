@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useAuth } from "./AuthContext";
 
 const STORAGE_KEY = "bobine.library.v1";
@@ -18,7 +26,9 @@ const LibraryContext = createContext(null);
 function loadInitialState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { watched: {}, watchlist: {} };
+    if (!raw) {
+      return { watched: {}, watchlist: {} };
+    }
     const parsed = JSON.parse(raw);
     return {
       watched: parsed.watched || {},
@@ -42,7 +52,9 @@ function makeKey(mediaType, id) {
 function loadInitialCustomLists() {
   try {
     const raw = localStorage.getItem(CUSTOM_LISTS_STORAGE_KEY);
-    if (!raw) return {};
+    if (!raw) {
+      return {};
+    }
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch (err) {
@@ -78,8 +90,11 @@ function mergeLists(local, remote) {
   for (const key of new Set([...Object.keys(local), ...Object.keys(remote)])) {
     const a = local[key];
     const b = remote[key];
-    if (a && b) merged[key] = (a.updatedAt || a.addedAt || 0) >= (b.updatedAt || b.addedAt || 0) ? a : b;
-    else merged[key] = a || b;
+    if (a && b) {
+      merged[key] = (a.updatedAt || a.addedAt || 0) >= (b.updatedAt || b.addedAt || 0) ? a : b;
+    } else {
+      merged[key] = a || b;
+    }
   }
   return merged;
 }
@@ -147,14 +162,18 @@ export function LibraryProvider({ children }) {
   //  - Les fois suivantes : le serveur fait autorité (il reflète le dernier
   //    appareil ayant synchronisé), on remplace l'état local.
   useEffect(() => {
-    if (authStatus !== "authenticated" || !email) return;
+    if (authStatus !== "authenticated" || !email) {
+      return;
+    }
     let cancelled = false;
     syncingRef.current = true;
 
     fetch("/api/library")
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("sync failed"))))
       .then((remote) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         const alreadySyncedFor = localStorage.getItem(SYNCED_FOR_KEY);
         if (alreadySyncedFor === email) {
           setState({ watched: remote.watched || {}, watchlist: remote.watchlist || {} });
@@ -182,7 +201,9 @@ export function LibraryProvider({ children }) {
       })
       .catch((err) => console.warn("Bobine : synchronisation de la bibliothèque impossible.", err))
       .finally(() => {
-        if (!cancelled) syncingRef.current = false;
+        if (!cancelled) {
+          syncingRef.current = false;
+        }
       });
 
     return () => {
@@ -198,15 +219,22 @@ export function LibraryProvider({ children }) {
   // actions rapprochées (ex. "tout marquer vu" sur une saison) en un seul
   // appel plutôt qu'un par item.
   useEffect(() => {
-    if (authStatus !== "authenticated" || syncingRef.current) return;
+    if (authStatus !== "authenticated" || syncingRef.current) {
+      return;
+    }
     const timeoutId = setTimeout(() => {
-      if (pendingOpsRef.current.size === 0) return;
+      if (pendingOpsRef.current.size === 0) {
+        return;
+      }
       const opsSnapshot = new Map(pendingOpsRef.current);
       const upserts = [];
       const deletes = [];
       for (const op of opsSnapshot.values()) {
-        if (op.action === "upsert") upserts.push({ mediaType: op.mediaType, id: op.id, status: op.status, item: op.item });
-        else deletes.push({ mediaType: op.mediaType, id: op.id });
+        if (op.action === "upsert") {
+          upserts.push({ mediaType: op.mediaType, id: op.id, status: op.status, item: op.item });
+        } else {
+          deletes.push({ mediaType: op.mediaType, id: op.id });
+        }
       }
       fetch("/api/library/sync", {
         method: "POST",
@@ -214,17 +242,24 @@ export function LibraryProvider({ children }) {
         body: JSON.stringify({ upserts, deletes }),
       })
         .then((res) => {
-          if (!res.ok) throw new Error("sync failed");
+          if (!res.ok) {
+            throw new Error("sync failed");
+          }
           // Ne retire que ce qui vient d'être envoyé ET n'a pas été modifié
           // entre-temps (comparaison par référence) : une nouvelle action
           // survenue pendant que la requête était en vol ne doit pas être
           // perdue, elle reste en file pour le prochain envoi.
           for (const [key, op] of opsSnapshot) {
-            if (pendingOpsRef.current.get(key) === op) pendingOpsRef.current.delete(key);
+            if (pendingOpsRef.current.get(key) === op) {
+              pendingOpsRef.current.delete(key);
+            }
           }
         })
         .catch((err) =>
-          console.warn("Bobine : synchronisation incrémentale impossible, nouvelle tentative au prochain changement.", err)
+          console.warn(
+            "Bobine : synchronisation incrémentale impossible, nouvelle tentative au prochain changement.",
+            err
+          )
         );
     }, SYNC_DEBOUNCE_MS);
     return () => clearTimeout(timeoutId);
@@ -236,7 +271,11 @@ export function LibraryProvider({ children }) {
       const next = { ...prev, watched: { ...prev.watched } };
       if (next.watched[key]) {
         delete next.watched[key];
-        pendingOpsRef.current.set(key, { action: "delete", mediaType: item.mediaType, id: item.id });
+        pendingOpsRef.current.set(key, {
+          action: "delete",
+          mediaType: item.mediaType,
+          id: item.id,
+        });
       } else {
         const newItem = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
         next.watched[key] = newItem;
@@ -263,7 +302,11 @@ export function LibraryProvider({ children }) {
       const next = { ...prev, watchlist: { ...prev.watchlist } };
       if (next.watchlist[key]) {
         delete next.watchlist[key];
-        pendingOpsRef.current.set(key, { action: "delete", mediaType: item.mediaType, id: item.id });
+        pendingOpsRef.current.set(key, {
+          action: "delete",
+          mediaType: item.mediaType,
+          id: item.id,
+        });
       } else {
         const newItem = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
         next.watchlist[key] = newItem;
@@ -279,17 +322,34 @@ export function LibraryProvider({ children }) {
     });
   }, []);
 
-  const isWatched = useCallback((mediaType, id) => Boolean(state.watched[makeKey(mediaType, id)]), [state.watched]);
-  const isInWatchlist = useCallback((mediaType, id) => Boolean(state.watchlist[makeKey(mediaType, id)]), [state.watchlist]);
-  const getRating = useCallback((mediaType, id) => state.watched[makeKey(mediaType, id)]?.rating ?? null, [state.watched]);
+  const isWatched = useCallback(
+    (mediaType, id) => Boolean(state.watched[makeKey(mediaType, id)]),
+    [state.watched]
+  );
+  const isInWatchlist = useCallback(
+    (mediaType, id) => Boolean(state.watchlist[makeKey(mediaType, id)]),
+    [state.watchlist]
+  );
+  const getRating = useCallback(
+    (mediaType, id) => state.watched[makeKey(mediaType, id)]?.rating ?? null,
+    [state.watched]
+  );
 
   // Note sur 10, uniquement pour un titre déjà marqué comme vu.
   const rateWatched = useCallback((mediaType, id, rating) => {
     const key = makeKey(mediaType, id);
     setState((prev) => {
-      if (!prev.watched[key]) return prev;
+      if (!prev.watched[key]) {
+        return prev;
+      }
       const updated = { ...prev.watched[key], rating, updatedAt: Date.now() };
-      pendingOpsRef.current.set(key, { action: "upsert", mediaType, id, status: "watched", item: updated });
+      pendingOpsRef.current.set(key, {
+        action: "upsert",
+        mediaType,
+        id,
+        status: "watched",
+        item: updated,
+      });
       return { ...prev, watched: { ...prev.watched, [key]: updated } };
     });
   }, []);
@@ -299,9 +359,17 @@ export function LibraryProvider({ children }) {
   const setRuntime = useCallback((mediaType, id, runtimeMinutes) => {
     const key = makeKey(mediaType, id);
     setState((prev) => {
-      if (!prev.watched[key] || prev.watched[key].runtimeMinutes != null) return prev;
+      if (!prev.watched[key] || prev.watched[key].runtimeMinutes != null) {
+        return prev;
+      }
       const updated = { ...prev.watched[key], runtimeMinutes, updatedAt: Date.now() };
-      pendingOpsRef.current.set(key, { action: "upsert", mediaType, id, status: "watched", item: updated });
+      pendingOpsRef.current.set(key, {
+        action: "upsert",
+        mediaType,
+        id,
+        status: "watched",
+        item: updated,
+      });
       return { ...prev, watched: { ...prev.watched, [key]: updated } };
     });
   }, []);
@@ -313,9 +381,17 @@ export function LibraryProvider({ children }) {
   const setDirectors = useCallback((mediaType, id, directors) => {
     const key = makeKey(mediaType, id);
     setState((prev) => {
-      if (!prev.watched[key] || prev.watched[key].directors?.length) return prev;
+      if (!prev.watched[key] || prev.watched[key].directors?.length) {
+        return prev;
+      }
       const updated = { ...prev.watched[key], directors, updatedAt: Date.now() };
-      pendingOpsRef.current.set(key, { action: "upsert", mediaType, id, status: "watched", item: updated });
+      pendingOpsRef.current.set(key, {
+        action: "upsert",
+        mediaType,
+        id,
+        status: "watched",
+        item: updated,
+      });
       return { ...prev, watched: { ...prev.watched, [key]: updated } };
     });
   }, []);
@@ -333,7 +409,11 @@ export function LibraryProvider({ children }) {
 
   const isEpisodeWatched = useCallback(
     (mediaType, id, season, episode) =>
-      Boolean(findShowEntry(state, mediaType, id)?.watchedEpisodes?.includes(makeEpisodeKey(season, episode))),
+      Boolean(
+        findShowEntry(state, mediaType, id)?.watchedEpisodes?.includes(
+          makeEpisodeKey(season, episode)
+        )
+      ),
     [state]
   );
 
@@ -347,9 +427,16 @@ export function LibraryProvider({ children }) {
       const listName = prev.watched[key] ? "watched" : "watchlist";
       const existing = prev[listName][key] || { ...item, addedAt: Date.now() };
       const nextEpisodes = new Set(existing.watchedEpisodes || []);
-      if (nextEpisodes.has(epKey)) nextEpisodes.delete(epKey);
-      else nextEpisodes.add(epKey);
-      const updated = { ...existing, watchedEpisodes: Array.from(nextEpisodes), updatedAt: Date.now() };
+      if (nextEpisodes.has(epKey)) {
+        nextEpisodes.delete(epKey);
+      } else {
+        nextEpisodes.add(epKey);
+      }
+      const updated = {
+        ...existing,
+        watchedEpisodes: Array.from(nextEpisodes),
+        updatedAt: Date.now(),
+      };
       pendingOpsRef.current.set(key, {
         action: "upsert",
         mediaType: item.mediaType,
@@ -370,10 +457,17 @@ export function LibraryProvider({ children }) {
       const nextEpisodes = new Set(existing.watchedEpisodes || []);
       for (const episode of episodeNumbers) {
         const epKey = makeEpisodeKey(season, episode);
-        if (watched) nextEpisodes.add(epKey);
-        else nextEpisodes.delete(epKey);
+        if (watched) {
+          nextEpisodes.add(epKey);
+        } else {
+          nextEpisodes.delete(epKey);
+        }
       }
-      const updated = { ...existing, watchedEpisodes: Array.from(nextEpisodes), updatedAt: Date.now() };
+      const updated = {
+        ...existing,
+        watchedEpisodes: Array.from(nextEpisodes),
+        updatedAt: Date.now(),
+      };
       pendingOpsRef.current.set(key, {
         action: "upsert",
         mediaType: item.mediaType,
@@ -389,21 +483,32 @@ export function LibraryProvider({ children }) {
 
   const createList = useCallback((name) => {
     const trimmed = name.trim();
-    if (!trimmed) return null;
+    if (!trimmed) {
+      return null;
+    }
     const id = makeListId();
-    setCustomLists((prev) => ({ ...prev, [id]: { id, name: trimmed, itemKeys: [], createdAt: Date.now() } }));
+    setCustomLists((prev) => ({
+      ...prev,
+      [id]: { id, name: trimmed, itemKeys: [], createdAt: Date.now() },
+    }));
     return id;
   }, []);
 
   const renameList = useCallback((listId, name) => {
     const trimmed = name.trim();
-    if (!trimmed) return;
-    setCustomLists((prev) => (prev[listId] ? { ...prev, [listId]: { ...prev[listId], name: trimmed } } : prev));
+    if (!trimmed) {
+      return;
+    }
+    setCustomLists((prev) =>
+      prev[listId] ? { ...prev, [listId]: { ...prev[listId], name: trimmed } } : prev
+    );
   }, []);
 
   const deleteList = useCallback((listId) => {
     setCustomLists((prev) => {
-      if (!prev[listId]) return prev;
+      if (!prev[listId]) {
+        return prev;
+      }
       const next = { ...prev };
       delete next[listId];
       return next;
@@ -414,7 +519,9 @@ export function LibraryProvider({ children }) {
     const key = makeKey(mediaType, id);
     setCustomLists((prev) => {
       const list = prev[listId];
-      if (!list || list.itemKeys.includes(key)) return prev;
+      if (!list || list.itemKeys.includes(key)) {
+        return prev;
+      }
       return { ...prev, [listId]: { ...list, itemKeys: [...list.itemKeys, key] } };
     });
   }, []);
@@ -423,13 +530,16 @@ export function LibraryProvider({ children }) {
     const key = makeKey(mediaType, id);
     setCustomLists((prev) => {
       const list = prev[listId];
-      if (!list) return prev;
+      if (!list) {
+        return prev;
+      }
       return { ...prev, [listId]: { ...list, itemKeys: list.itemKeys.filter((k) => k !== key) } };
     });
   }, []);
 
   const isInList = useCallback(
-    (listId, mediaType, id) => Boolean(customLists[listId]?.itemKeys.includes(makeKey(mediaType, id))),
+    (listId, mediaType, id) =>
+      Boolean(customLists[listId]?.itemKeys.includes(makeKey(mediaType, id))),
     [customLists]
   );
 
@@ -438,7 +548,10 @@ export function LibraryProvider({ children }) {
   // ET jamais marqué vu) est simplement omise plutôt que de laisser un état
   // incohérent à gérer explicitement ailleurs.
   const getListItems = useCallback(
-    (listId) => (customLists[listId]?.itemKeys || []).map((key) => state.watched[key] || state.watchlist[key]).filter(Boolean),
+    (listId) =>
+      (customLists[listId]?.itemKeys || [])
+        .map((key) => state.watched[key] || state.watchlist[key])
+        .filter(Boolean),
     [customLists, state]
   );
 
@@ -503,7 +616,9 @@ export function LibraryProvider({ children }) {
 
 export function useLibrary() {
   const ctx = useContext(LibraryContext);
-  if (!ctx) throw new Error("useLibrary doit être utilisé dans un LibraryProvider");
+  if (!ctx) {
+    throw new Error("useLibrary doit être utilisé dans un LibraryProvider");
+  }
   return ctx;
 }
 

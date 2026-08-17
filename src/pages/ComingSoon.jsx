@@ -47,7 +47,9 @@ function sortByDate(items) {
 function dedupe(items) {
   const seen = new Set();
   return items.filter((item) => {
-    if (seen.has(item.id)) return false;
+    if (seen.has(item.id)) {
+      return false;
+    }
     seen.add(item.id);
     return true;
   });
@@ -78,7 +80,11 @@ export default function ComingSoon() {
   const { region } = useRegion();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
-  const activeProviderIds = useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined;
+  const activeProviderIds = useMyPlatforms
+    ? favoriteProviderIds
+    : providerId
+      ? [providerId]
+      : undefined;
 
   // `allResults` : lot déjà récupéré et trié par date une bonne fois pour
   // toutes (voir fetchBatch). `revealCount` : combien de ce lot est
@@ -150,7 +156,9 @@ export default function ComingSoon() {
       const totalPages = Math.min(first.total_pages || 1, 500);
       const pagesToFetch = Math.min(TMDB_PAGES_PER_BATCH, totalPages - fromPage + 1);
       const rest =
-        pagesToFetch > 1 ? await fetchPages(mediaType, discoverParams, fromPage + 1, pagesToFetch - 1) : [];
+        pagesToFetch > 1
+          ? await fetchPages(mediaType, discoverParams, fromPage + 1, pagesToFetch - 1)
+          : [];
       const newTail = dedupe([...tailToMerge, ...(first.results || []), ...rest]);
       return {
         merged: [...frozenHead, ...sortByDate(newTail)],
@@ -172,14 +180,18 @@ export default function ComingSoon() {
     setRevealCount(REVEAL_SIZE);
     fetchBatch(1, [], [])
       .then(({ merged, totalPages, newFetchedPages }) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setAllResults(merged);
         setTmdbTotalPages(totalPages);
         setFetchedPages(newFetchedPages);
         setStatus("success");
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError(err);
         setStatus("error");
       });
@@ -190,7 +202,9 @@ export default function ComingSoon() {
   }, [fetchBatch]);
 
   const loadMore = useCallback(() => {
-    if (loadingMore) return;
+    if (loadingMore) {
+      return;
+    }
     // D'abord épuiser ce qui est déjà en mémoire, trié, sans requête :
     // c'est le cas courant du scroll infini, instantané et sans jank.
     if (revealCount < allResults.length) {
@@ -200,7 +214,9 @@ export default function ComingSoon() {
     // Plus rien à révéler localement : aller chercher un nouveau lot TMDB
     // si TMDB en a encore, fusionner et retrier — uniquement la portion
     // pas encore affichée (voir fetchBatch) — puis révéler la suite.
-    if (fetchedPages >= tmdbTotalPages) return;
+    if (fetchedPages >= tmdbTotalPages) {
+      return;
+    }
     setLoadingMore(true);
     const frozenHead = allResults.slice(0, revealCount);
     const tailToMerge = allResults.slice(revealCount);
@@ -222,12 +238,18 @@ export default function ComingSoon() {
   // qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
   const sentinelRef = useRef(null);
   useEffect(() => {
-    if (status !== "success") return;
+    if (status !== "success") {
+      return;
+    }
     const el = sentinelRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) loadMore();
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
       },
       { rootMargin: "600px" }
     );
@@ -238,7 +260,9 @@ export default function ComingSoon() {
   return (
     <div className="page">
       <h1>Prochainement</h1>
-      <p className="page-subtitle">Les films et séries pas encore sortis, du plus proche au plus lointain.</p>
+      <p className="page-subtitle">
+        Les films et séries pas encore sortis, du plus proche au plus lointain.
+      </p>
 
       <FilterBar
         mediaType={mediaType}

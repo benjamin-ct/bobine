@@ -25,11 +25,14 @@ export default function AdvancedFilters({ filters, setFilters }) {
 
   function reset() {
     setFilters({
-      yearMin: "", yearMax: "",
-      voteAverageMin: "", voteAverageMax: "",
+      yearMin: "",
+      yearMax: "",
+      voteAverageMin: "",
+      voteAverageMax: "",
       voteCountMin: "",
       originCountry: "",
-      runtimeMin: "", runtimeMax: "",
+      runtimeMin: "",
+      runtimeMax: "",
     });
   }
 
@@ -123,10 +126,15 @@ export default function AdvancedFilters({ filters, setFilters }) {
 
           <div className="advanced-filters__field">
             <label>Pays de production</label>
-            <select value={filters.originCountry} onChange={(e) => update("originCountry", e.target.value)}>
+            <select
+              value={filters.originCountry}
+              onChange={(e) => update("originCountry", e.target.value)}
+            >
               <option value="">Tous les pays</option>
               {countries.map((c) => (
-                <option key={c.iso_3166_1} value={c.iso_3166_1}>{c.english_name}</option>
+                <option key={c.iso_3166_1} value={c.iso_3166_1}>
+                  {c.english_name}
+                </option>
               ))}
             </select>
           </div>

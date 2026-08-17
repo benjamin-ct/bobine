@@ -1,39 +1,20 @@
-// Vérifie l'algorithme du plafond de concurrence ajouté à tmdbFetch()
-// (src/api/tmdb.js) : jamais plus de MAX_CONCURRENT_REQUESTS requêtes
-// réellement en vol en même temps, aucune requête perdue, aucun blocage
-// permanent même si certaines échouent.
+// Vérifie l'algorithme du plafond de concurrence utilisé par tmdbFetch()
+// (src/api/concurrencyLimiter.js) : jamais plus de `maxConcurrent`
+// requêtes réellement en vol en même temps, aucune requête perdue, aucun
+// blocage permanent même si certaines échouent.
 //
 // Pas de framework de test dans ce repo — script autonome, comme
-// scripts/verify-upcoming-badge.mjs. Algorithme copié verbatim depuis
-// tmdb.js (import direct impossible sous Node nu : tmdb.js lit
-// `import.meta.env.*` au chargement du module, une transformation propre
-// à Vite qui n'existe pas en Node natif).
+// scripts/verify-upcoming-badge.mjs. Le limiteur est IMPORTÉ directement
+// depuis concurrencyLimiter.js (module pur, sans `import.meta.env` ni
+// réseau, chargeable sous Node nu) : plus aucune copie de l'algorithme à
+// garder synchronisée. On instancie ici un limiteur jetable dédié aux
+// tests et on inspecte son `activeCount`.
+
+import { createConcurrencyLimiter } from "../src/api/concurrencyLimiter.js";
 
 const MAX_CONCURRENT_REQUESTS = 6;
-let activeRequests = 0;
-const pendingQueue = [];
-
-function runNextQueued() {
-  if (activeRequests >= MAX_CONCURRENT_REQUESTS || pendingQueue.length === 0) return;
-  const next = pendingQueue.shift();
-  activeRequests++;
-  next();
-}
-
-function withConcurrencyLimit(fn) {
-  return new Promise((resolve, reject) => {
-    const run = () => {
-      fn()
-        .then(resolve, reject)
-        .finally(() => {
-          activeRequests--;
-          runNextQueued();
-        });
-    };
-    pendingQueue.push(run);
-    runNextQueued();
-  });
-}
+const limiter = createConcurrencyLimiter(MAX_CONCURRENT_REQUESTS);
+const withConcurrencyLimit = (fn) => limiter.run(fn);
 
 let passed = 0;
 let failed = 0;
@@ -65,20 +46,23 @@ async function testBurstNeverExceedsCap() {
     maxObserved <= MAX_CONCURRENT_REQUESTS,
     `max observé = ${maxObserved}, plafond = ${MAX_CONCURRENT_REQUESTS}`
   );
-  report("Compteur revenu à 0 après la rafale", activeRequests === 0);
+  report("Compteur revenu à 0 après la rafale", limiter.activeCount === 0);
 }
 
 async function testFailureReleasesSlot() {
-  const before = activeRequests;
+  const before = limiter.activeCount;
   const tasks = [1, 2, 3, 4, 5].map((i) =>
     withConcurrencyLimit(
-      () => new Promise((res, rej) => setTimeout(() => (i === 3 ? rej(new Error(`boom ${i}`)) : res(i)), 10))
+      () =>
+        new Promise((res, rej) =>
+          setTimeout(() => (i === 3 ? rej(new Error(`boom ${i}`)) : res(i)), 10)
+        )
     )
   );
   const outcomes = await Promise.allSettled(tasks);
   const rejectedCount = outcomes.filter((o) => o.status === "rejected").length;
   report("Une requête en échec ne bloque pas les autres", rejectedCount === 1);
-  report("Le compteur revient à son niveau initial après un échec", activeRequests === before);
+  report("Le compteur revient à son niveau initial après un échec", limiter.activeCount === before);
 }
 
 async function main() {
