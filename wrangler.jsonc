@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "bobine",
-  "main": "./worker/index.js",
+  "main": "./worker/index.ts",
   "compatibility_date": "2026-08-09",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
@@ -33,7 +33,7 @@
     }
   ],
   // Une fois par jour à 7h UTC : vérifie les nouveautés et envoie les
-  // notifications push (voir worker/scheduled.js).
+  // notifications push (voir worker/scheduled.ts).
   "triggers": {
     "crons": ["0 7 * * *"]
   }

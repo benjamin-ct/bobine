@@ -1,0 +1,5 @@
+# Le typecheck complet (projet TS "composite", 4 tsconfig) est trop lent
+# pour un hook de pre-commit déclenché à chaque commit — il tourne ici, au
+# moment du push, en complément (pas en remplacement) de la CI GitHub
+# Actions qui revalide tout de toute façon.
+npm run typecheck

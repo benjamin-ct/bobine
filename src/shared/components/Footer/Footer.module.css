@@ -1,0 +1,34 @@
+.footer {
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+  padding-block: 30px;
+}
+
+.row {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--fg);
+}
+
+.reel {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+}

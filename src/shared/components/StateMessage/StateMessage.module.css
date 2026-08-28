@@ -1,0 +1,17 @@
+.message {
+  padding: 56px 20px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--border-2);
+  border-radius: var(--radius-lg);
+}
+
+.loading {
+  border-style: solid;
+  border-color: var(--border);
+}
+
+.error {
+  border-color: color-mix(in oklch, var(--accent) 45%, var(--border));
+  color: var(--accent-ink);
+}

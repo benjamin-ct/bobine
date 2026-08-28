@@ -1,0 +1,33 @@
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.dragHint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.draggable {
+  cursor: grab;
+}
+
+.dragging {
+  opacity: 0.45;
+}
+
+.dropBefore {
+  box-shadow: -3px 0 0 var(--accent);
+}
+
+.dropAfter {
+  box-shadow: 3px 0 0 var(--accent);
+}

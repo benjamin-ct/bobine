@@ -1,0 +1,20 @@
+.page {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: 24px var(--gutter) 64px;
+}
+
+.title {
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  margin-bottom: 20px;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.section h3 {
+  font-size: 18px;
+  margin-bottom: 14px;
+}

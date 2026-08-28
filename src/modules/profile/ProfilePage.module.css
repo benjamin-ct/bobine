@@ -1,0 +1,72 @@
+.page {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: 0 var(--gutter) 64px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+}
+
+.span6 {
+  grid-column: span 6;
+}
+
+@media (max-width: 860px) {
+  .span6 {
+    grid-column: span 12;
+  }
+}
+
+.ticket {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  height: 100%;
+}
+
+.k {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hint {
+  margin: 10px 0 16px;
+  max-width: 46ch;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.section {
+  padding-block: clamp(28px, 4vw, 44px);
+}
+
+.section h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.discGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  max-width: 820px;
+}
+
+@media (max-width: 640px) {
+  .discGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}

@@ -1,0 +1,101 @@
+.rate {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-block: 14px;
+}
+
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.star {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: var(--border-2);
+  transition: color 0.14s ease;
+}
+
+.star svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  transition:
+    transform 0.14s ease,
+    filter 0.14s ease;
+}
+
+.star:hover svg {
+  transform: scale(1.25);
+}
+
+.star.lit {
+  color: var(--accent);
+}
+
+.s-low .star.lit {
+  color: color-mix(in oklch, var(--accent) 55%, var(--muted));
+}
+.s-low .star.lit svg {
+  transform: scale(0.86);
+}
+.s-high .star.lit {
+  color: var(--gold);
+}
+.s-high .star.lit svg {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 5px var(--gold-soft));
+}
+
+.valueLabel {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.valueLabel b {
+  color: var(--accent-ink);
+  font-size: 15px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.badge .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.badge.s-low {
+  color: var(--muted);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.badge.s-mid {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border-color: color-mix(in oklch, var(--accent) 34%, transparent);
+}
+.badge.s-high {
+  color: oklch(0.3 0.055 80);
+  background: var(--gold);
+  border-color: color-mix(in oklch, var(--gold) 65%, oklch(0 0 0));
+}

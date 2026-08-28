@@ -4,23 +4,63 @@ Application pour découvrir des films et séries, savoir où les regarder en str
 
 Les données (catalogue, affiches, plateformes de streaming) viennent de [TMDB](https://www.themoviedb.org/) (The Movie Database), qui agrège aussi les disponibilités JustWatch.
 
-## Configuration
+## Stack technique
+
+- **React 19** + **TypeScript** (`strict: true` partout, quasiment aucun `any` — voir plus bas) + **React Router 7**
+- **Vite 8** (build) + **vite-plugin-pwa** (PWA installable, service worker custom en TypeScript)
+- **CSS Modules** maison, aucune dépendance de style (pas de Tailwind/styled-components) — voir [Style et CSS](#style-et-css)
+- **Cloudflare Workers** (`worker/`, TypeScript) pour l'API, le proxy TMDB, l'authentification et les notifications push, avec **D1** (SQLite à l'edge) pour la persistance
+- **oxlint** (lint, y compris TypeScript) + **Prettier** (format) + **Husky/lint-staged** (hooks Git locaux)
+- Node **24** (LTS), voir `.nvmrc`
+
+## Structure du projet
+
+Un module par domaine métier, un sous-module par page, un module séparé pour les composants transverses. Un module métier n'importe jamais les internals d'un autre module métier — seuls `core/` et `shared/` sont importables par tous.
+
+```
+src/
+  core/                     # fondations, importables par tout le projet
+    api/                    # client TMDB (tmdb.ts, tmdbClient.ts) + logique pure
+    context/                # contexts React (Auth, Library, Region, Theme, ...)
+    lib/                    # utilitaires transverses (reCAPTCHA...)
+    types/                  # types partagés (tmdb.ts, library.ts)
+  shared/
+    components/             # composants réutilisables (MediaCard, NavBar, FilterBar, ...)
+    lib/                    # utilitaires UI (couleurs d'affiche de repli, paliers de note...)
+    styles/                 # CSS Modules partagés (grille média, clés d'affiche duotone...)
+  modules/
+    discover/                     # page "Découvrir"
+    new-releases/                  # page "Nouveautés"
+    coming-soon/                   # page "Prochainement" (calendrier)
+    random/                        # page "Aléatoire"
+    detail/
+      DetailPage.tsx
+      components/                  # EpisodeTracker, CollectionSection (spécifiques à Detail)
+    person/
+    my-list/
+      MyListPage.tsx                # onglets Déjà vu / Envie de voir / En cours / listes perso
+      components/                   # StatsPanel, WatchlistPanel, CustomListPanel
+    profile/                       # compte, notifications, préférences de recommandation
+    search/
+    auth/                          # connexion (lien magique), vérification
+  styles/                  # reset global + tokens de design (variables.css)
+  App.tsx, main.tsx, sw.ts
+worker/                    # Cloudflare Worker (API, auth, notifications, proxy TMDB)
+scripts/                   # génération d'icônes PWA + vérifications de logique pure
+```
+
+Chaque composant vit dans son propre dossier avec son `*.module.css` (ex. `shared/components/MediaCard/{MediaCard.tsx,MediaCard.module.css}`). Les tokens de design (couleurs OKLCH, typographies, rayons, ombres) sont centralisés dans `src/styles/variables.css` ; le reste n'y touche que via `var(--...)`.
+
+## Lancer le projet en local
 
 1. Crée un compte gratuit sur [themoviedb.org](https://www.themoviedb.org/) puis récupère ta clé API (v3) dans **Réglages → API**.
-2. Ouvre `.env.local` à la racine du projet et remplace la valeur :
+2. Ouvre `.env.local` à la racine du projet et renseigne :
 
    ```
    VITE_TMDB_API_KEY=ta_cle_ici
    ```
 
-   Cette variable ne sert qu'en **développement local** (`npm run dev`, Vite
-   seul sans Worker) : elle permet d'appeler TMDB directement depuis le
-   navigateur pour itérer vite, sans dépendre d'un Worker qui tourne. Elle
-   ne quitte jamais ta machine, donc aucun enjeu de sécurité à la garder
-   simple. **En production, c'est `TMDB_API_KEY` (secret du Worker, voir
-   plus bas) qui est utilisée** — le navigateur ne voit jamais la clé
-   (toutes les requêtes TMDB passent par un proxy `/api/tmdb/...` côté
-   Worker).
+   Cette variable ne sert qu'en **développement local** (`npm run dev`, Vite seul sans Worker) : elle permet d'appeler TMDB directement depuis le navigateur pour itérer vite. Elle ne quitte jamais ta machine. **En production, c'est `TMDB_API_KEY`** (secret du Worker, voir plus bas) qui est utilisée — le navigateur ne voit jamais la clé (toutes les requêtes TMDB passent par un proxy `/api/tmdb/...` côté Worker).
 
 3. Installe les dépendances puis lance le serveur de dev :
 
@@ -31,197 +71,85 @@ Les données (catalogue, affiches, plateformes de streaming) viennent de [TMDB](
 
 4. Ouvre l'URL affichée (généralement http://localhost:5173).
 
+### Scripts disponibles
+
+| Commande                          | Rôle                                                                |
+| --------------------------------- | ------------------------------------------------------------------- |
+| `npm run dev`                     | Serveur de dev Vite                                                 |
+| `npm run build`                   | Build de production (`dist/`)                                       |
+| `npm run typecheck`               | `tsc -b --noEmit` sur les 4 tsconfig du projet (app/node/worker/sw) |
+| `npm run lint`                    | oxlint (TypeScript + React)                                         |
+| `npm run format` / `format:check` | Prettier                                                            |
+| `npm run verify:*`                | Vérifications de logique pure (voir `scripts/`)                     |
+
+## Convention de fetch API
+
+Un point d'entrée unique : `src/core/api/tmdb.ts` (réexporte `tmdbClient.ts` pour la config/le fetch central, et les modules de logique pure `movieMeta.ts`/`releaseBadge.ts`/`concurrencyLimiter.ts`, testables sous Node sans dépendance à `import.meta.env`). Tous les modules métier importent depuis ce fichier — jamais de `fetch()` TMDB ailleurs. Les types de réponse partagés vivent dans `src/core/types/tmdb.ts` (et `library.ts` pour la bibliothèque personnelle) plutôt que redéfinis composant par composant.
+
+Gestion des erreurs/chargement uniforme : chaque page suit le même pattern `status: "idle" | "loading" | "success" | "error"` et affiche `<Loading />` / `<ErrorMessage />` / `<EmptyState />` (voir `shared/components/StateMessage`).
+
+## Style et CSS
+
+Système maison en CSS Modules : un `*.module.css` par composant, référencant les tokens définis une seule fois dans `src/styles/variables.css` (palette OKLCH claire/sombre, typographies, rayons, ombres). `src/styles/global.css` ne contient que le reset et une poignée d'utilitaires vraiment transverses (`.container`, `.perfStrip`, `.visuallyHidden`) — c'est la seule feuille de style non modulaire du projet, chargée une fois dans `main.tsx`.
+
+## Comptes et synchronisation (optionnel)
+
+Se connecter (page **Connexion**) permet de retrouver sa liste "envie de voir" / "déjà vu" sur plusieurs navigateurs et appareils. Pas de mot de passe : un lien de connexion à usage unique est envoyé par email (valable 15 minutes), avec aussi un **code court** en alternative (ex. `AB2K9X`) à taper directement dans l'app — pensé pour les apps ajoutées à l'écran d'accueil (iOS surtout), où le lien s'ouvrirait dans le navigateur au lieu de l'app installée.
+
+## Notifications push (optionnel)
+
+Le Worker gère les notifications push (nouveautés en streaming, sorties dans tes genres préférés, grosses tendances) via une tâche planifiée quotidienne et une base D1. Activées depuis **Profil** (bouton "Activer les notifications").
+
 ## Déploiement (Cloudflare Workers)
 
-Le projet est configuré pour être déployé sur Cloudflare via `wrangler.jsonc`
-(assets statiques + routing SPA). En connectant le repo GitHub dans le
-dashboard Cloudflare (**Workers & Pages → Create → Connect to Git**), chaque
-push sur `main` déclenche automatiquement :
+Le projet est configuré pour être déployé sur Cloudflare via `wrangler.jsonc` (assets statiques + Worker `worker/index.ts`, bundlé nativement en TypeScript par Wrangler — aucune étape de build séparée pour le Worker). En connectant le repo GitHub dans le dashboard Cloudflare (**Workers & Pages → Create → Connect to Git**), chaque push sur `main` déclenche automatiquement :
 
 | Étape       | Commande              |
 | ----------- | --------------------- |
 | Build       | `npm run build`       |
 | Déploiement | `npx wrangler deploy` |
 
-**Important** : avant le premier déploiement, configure les secrets du
-Worker (dashboard Cloudflare, Worker `bobine` → **Settings → Variables and
-Secrets**, accessible une fois que le Worker a un script, pas seulement des
-assets statiques) :
+**Avant le premier déploiement**, configure dans le dashboard Cloudflare (Worker `bobine` → **Settings → Variables and Secrets**, type **Secret** obligatoire — voir l'avertissement dans `wrangler.jsonc`) :
 
-| Nom            | Type       | Valeur                                                                                                                                             |
-| -------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TMDB_API_KEY` | **Secret** | ta clé TMDB — **obligatoire**, sert à la fois au proxy `/api/tmdb/...` (tout le catalogue de l'app) et à la tâche planifiée des notifications push |
+| Nom                                    | Obligatoire        | Rôle                                                                                                                      |
+| -------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `TMDB_API_KEY`                         | ✅                 | Proxy TMDB + tâche planifiée                                                                                              |
+| `VAPID_PRIVATE_KEY`                    | Notifications push | `node -e "console.log(require('web-push').generateVAPIDKeys())"`                                                          |
+| `DEBUG_TRIGGER_KEY`                    | optionnel          | Déclenchement manuel `/api/run-check`, `/api/test-notification`                                                           |
+| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Comptes            | Envoi des liens de connexion par email (sans elle : le lien est renvoyé dans la réponse API, pour tester sans boîte mail) |
+| `RECAPTCHA_SECRET_KEY`                 | optionnel          | Anti-bot sur l'authentification                                                                                           |
 
-⚠️ **Type "Secret" obligatoire**, pas "Texte" : Wrangler efface les
-variables de type "Texte" configurées depuis le dashboard à _chaque_
-déploiement si elles ne sont pas déclarées dans `wrangler.jsonc` (c'est le
-comportement documenté de Cloudflare). Les secrets, eux, survivent
-toujours aux déploiements.
+Pour tester la configuration localement sans rien déployer : `npm run build && npx wrangler deploy --dry-run`.
 
-Pour tester la configuration Wrangler localement sans rien déployer :
-
-```bash
-npm run build
-npx wrangler deploy --dry-run
-```
-
-### Notifications push (optionnel)
-
-Le Worker gère aussi les notifications push (nouveautés en streaming, sorties
-dans tes genres préférés, grosses tendances du moment), via une tâche
-planifiée quotidienne et une base D1. Pour les activer, en plus de
-`TMDB_API_KEY` (voir ci-dessus, déjà nécessaire pour le reste de l'app) :
-
-1. **Secrets supplémentaires du Worker** :
-
-   | Nom                 | Type       | Valeur                                                                                                                                                                                              |
-   | ------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `VAPID_PRIVATE_KEY` | **Secret** | générée une fois avec `node -e "console.log(require('web-push').generateVAPIDKeys())"`                                                                                                              |
-   | `DEBUG_TRIGGER_KEY` | **Secret** | optionnel — une chaîne aléatoire, permet de déclencher manuellement la vérification via `POST /api/run-check` (ou une notif de test via `POST /api/test-notification`) avec l'en-tête `X-Debug-Key` |
-
-   (Type "Secret" obligatoire ici aussi, pas "Texte" — voir l'avertissement plus haut.)
-
-   `VAPID_PUBLIC_KEY` et `VAPID_SUBJECT` n'ont plus besoin d'être configurées
-   dans le dashboard : elles sont commitées directement dans `wrangler.jsonc`
-   (`VAPID_PUBLIC_KEY` est faite pour être publique — c'est justement ce
-   qu'on sert via `GET /api/vapid-public-key` — donc aucun risque à la
-   committer ; adapte `VAPID_SUBJECT` à ton email si tu régénères tes
-   propres clés).
-
-2. La base D1 (`bobine-notifications`) et le cron (tous les jours à 7h UTC)
-   sont déclarés dans `wrangler.jsonc` et se provisionnent automatiquement au
-   déploiement — rien à faire côté dashboard pour ça.
-
-3. Côté app, l'utilisateur active les notifications depuis **Ma liste**
-   (bouton "Activer les notifications"). Fonctionne même app fermée, tant que
-   le navigateur autorise les notifications pour le site.
-
-**Pour tester qu'une notification arrive vraiment** (sans attendre le cron
-quotidien ni qu'un vrai événement se produise) : une fois les notifications
-activées dans l'app, avec `DEBUG_TRIGGER_KEY` configurée (voir tableau
-ci-dessus) —
-
-```bash
-curl -X POST https://bobine.creusatbenjamin.workers.dev/api/test-notification \
-  -H "X-Debug-Key: ta_valeur_de_DEBUG_TRIGGER_KEY"
-```
-
-Envoie une notification de test à tous les appareils abonnés, indépendamment
-de toute logique métier (utile car le tout premier passage de la
-vérification quotidienne ne notifie jamais rien : il se contente de prendre
-une référence de ce qui est déjà disponible). `POST /api/run-check` (même
-en-tête) déclenche à la place la vraie vérification quotidienne, si tu veux
-tester la logique métier elle-même plutôt que juste la chaîne d'envoi.
-
-Pour du développement local avec un Worker complet (D1 + secrets), crée un
-`.dev.vars` (jamais commité) avec les mêmes clés que ci-dessus, puis :
-
-```bash
-npx wrangler d1 execute bobine-notifications --local --file=worker/schema.sql
-npx wrangler dev
-```
-
-⚠️ En local, `wrangler dev` ne détecte pas toujours les nouveaux fichiers
-générés par un `npm run build` lancé pendant qu'il tourne (assets mis en
-cache disque dans `.wrangler/state/v3/cache`) : après un rebuild, arrête-le
-(`Ctrl+C`) et relance `npx wrangler dev`, ou supprime ce dossier de cache si
-le problème persiste.
-
-### Comptes et synchronisation (optionnel)
-
-Se connecter (bouton "Connexion" dans la barre de navigation) permet de
-retrouver sa liste "envie de voir" / "déjà vu" sur plusieurs navigateurs et
-appareils. Pas de mot de passe : un lien de connexion à usage unique est
-envoyé par email (valable 15 minutes), avec aussi un **code court** en
-alternative (ex. `AB2K9X`) à taper directement dans l'app.
-
-Le code existe spécifiquement pour les apps ajoutées à l'écran d'accueil
-(iOS surtout) : dans ce mode, l'app tourne dans un stockage isolé de
-Safari, donc cliquer le lien (qui s'ouvre dans le navigateur) ne connecte
-jamais l'app installée. Taper le code dans l'app déjà ouverte contourne le
-problème, sans jamais changer de contexte de stockage.
-
-1. **Service d'envoi d'email** — le Worker utilise [Resend](https://resend.com)
-   (compte gratuit). Dans le dashboard Cloudflare, sur le Worker `bobine` :
-   **Settings → Variables and Secrets**, ajoute :
-
-   | Nom                 | Type              | Valeur                                                                                                                                                                                                                 |
-   | ------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `RESEND_API_KEY`    | **Secret**        | ta clé API Resend                                                                                                                                                                                                      |
-   | `RESEND_FROM_EMAIL` | Texte (optionnel) | adresse d'envoi, ex. `Bobine <connexion@tondomaine.com>` — nécessite un domaine vérifié dans Resend. Sans cette variable, l'app utilise `onboarding@resend.dev` (fonctionne sans domaine vérifié, en test uniquement). |
-
-   Sans `RESEND_API_KEY` configurée (ex. en local sans `.dev.vars`), aucun
-   email n'est envoyé : l'API renvoie directement le lien de connexion dans
-   sa réponse (`devLink`), affiché sur la page de connexion, pour pouvoir
-   tester le flux sans boîte mail. Ce cas ne se présente jamais en
-   production tant que le secret est configuré.
-
-2. La base D1 (même base que les notifications push) stocke les comptes,
-   liens de connexion, sessions, et la bibliothèque synchronisée — déclarée
-   dans `worker/schema.sql`, provisionnée automatiquement au déploiement.
-
-3. À la première connexion sur un appareil, la bibliothèque locale
-   (`localStorage`) et celle du compte sont **fusionnées** (rien n'est
-   perdu) puis renvoyées au serveur. Aux connexions suivantes sur ce même
-   appareil, le serveur fait autorité (il reflète le dernier appareil ayant
-   synchronisé). Se déconnecter ne supprime rien en local : les données
-   restent disponibles hors connexion.
-
-4. **reCAPTCHA v3** (optionnel, mais recommandé) — filtre les bots/scripts
-   qui tapent directement sur `/api/auth/request-link` et `/api/auth/verify`
-   sans jamais passer par un vrai navigateur. Invisible pour l'utilisateur
-   (pas de case à cocher).
-
-   1. Crée un site sur [google.com/recaptcha/admin](https://www.google.com/recaptcha/admin) — type **reCAPTCHA v3**, domaine `bobine.creusatbenjamin.workers.dev` (+ `localhost` si tu veux aussi l'activer en dev).
-   2. Renseigne la **clé de site** (publique) dans `wrangler.jsonc`, champ `vars.RECAPTCHA_SITE_KEY`.
-   3. Ajoute la **clé secrète** dans le dashboard Cloudflare, Worker `bobine` → **Settings → Variables and Secrets** :
-
-      | Nom                    | Type       | Valeur                   |
-      | ---------------------- | ---------- | ------------------------ |
-      | `RECAPTCHA_SECRET_KEY` | **Secret** | ta clé secrète reCAPTCHA |
-
-   Tant que ces deux valeurs ne sont pas configurées, la vérification est
-   entièrement sautée (côté client ET serveur) — l'authentification continue
-   de fonctionner normalement, juste sans cette couche.
+Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.dev.vars` (jamais commité), puis `npx wrangler d1 execute bobine-notifications --local --file=worker/schema.sql && npx wrangler dev`.
 
 ## Sécurité
 
-- **Isolation entre comptes** : `PUT`/`GET /api/library` déterminent
-  toujours le compte à partir du cookie de session (jointure `sessions` ↔
-  `users` en base), jamais d'un identifiant fourni par le client (aucun
-  paramètre de ce type n'est même lu). Un compte A n'a donc aucun moyen de
-  lire ou modifier les données d'un compte B, quoi qu'il envoie dans la
-  requête — vérifié empiriquement (deux comptes réels, tentative d'injection
-  d'un `userId` arbitraire dans le payload : sans effet, la bibliothèque du
-  second compte reste intacte). Voir le commentaire au-dessus de
-  `handleGetLibrary`/`handlePutLibrary` dans `worker/index.js`.
-- **Rate-limiting, validation de schéma, en-têtes HTTP, proxy TMDB** : voir
-  `worker/rate-limit.js`, `worker/validate.js`, `public/_headers` — mis en
-  place suite à un test de sécurité externe (voir historique des PR).
+- **Isolation entre comptes** : `PUT`/`GET /api/library` déterminent toujours le compte à partir du cookie de session (jointure `sessions` ↔ `users` en base), jamais d'un identifiant fourni par le client. Voir le commentaire au-dessus de `handleGetLibrary`/`handlePutLibrary` dans `worker/index.ts`.
+- **Rate-limiting, validation de schéma, en-têtes HTTP, proxy TMDB** : voir `worker/rate-limit.ts`, `worker/validate.ts`, `public/_headers`.
+- Détail complet des mécanismes vérifiés après la migration TypeScript : voir le debrief de migration (fourni séparément, pas commité dans ce README pour rester concis).
+
+## Hooks Git locaux (Husky)
+
+- **pre-commit** : lint + format automatique des fichiers modifiés (`lint-staged`).
+- **pre-push** : `npm run typecheck` complet (trop lent pour tourner à chaque commit).
+
+Ces hooks sont un filet local, en complément de la CI (qui revalide tout de toute façon) — pas un remplacement. Pour bypasser ponctuellement (jamais en usage normal) : `git commit --no-verify` / `git push --no-verify`.
+
+## Fonctionnalités en stub
+
+- **Nom affiché (Profil → Compte)** : préférence purement locale à l'appareil (`localStorage`), pas de colonne dédiée côté D1 — le compte n'a aujourd'hui qu'un email (authentification par lien magique, pas de profil étendu). Voir `modules/profile/components/AccountCard.tsx`.
+
+Tout le reste (saga/collection, statistiques et collaborateur·rices fréquent·es d'une personne, titres exclus, thème clair/sombre, rangée "Reprendre"/"En cours", cloche "Me prévenir" sur Prochainement...) est branché sur de vraies données TMDB ou la bibliothèque locale/synchronisée — aucune fausse donnée simulée.
 
 ## Fonctionnalités
 
-- **Découvrir** : parcourir films/séries, filtrable par genre et par n'importe laquelle des plateformes de streaming disponibles en France (liste complète tirée de TMDB, pas juste les grosses). Tri par popularité, note, ou année (croissant/décroissant). Les résultats s'accumulent en **scroll infini** : la page suivante se charge automatiquement en approchant du bas (pas de bouton, pas de pagination). N'affiche que des titres déjà sortis (les sorties à venir sont dans l'onglet **Prochainement**).
-  - **Filtres avancés** (repliables) : année de sortie (min/max — ex. "tous les films de 2025"), note (min/max), nombre de votes minimum, durée (min/max), pays de production.
-- **Nouveautés** : films/séries sortis récemment (7 jours / 30 jours / 3 derniers mois, au choix), triés par popularité pour remonter les sorties notables plutôt qu'une liste brute de tout ce qui a une date récente. Mêmes filtres genre/plateforme et même scroll infini que Découvrir, plus deux filtres légers **pays de production** et **langue originale** (sans le panneau complet de filtres avancés de Découvrir — année/note/durée n'ont pas vraiment de sens ici).
-- **Prochainement** : films/séries pas encore sortis (7 jours / 30 jours / 3 prochains mois, au choix), même logique de tri par popularité et mêmes filtres pays/langue que Nouveautés.
-- **Recherche** : barre de recherche globale — films, séries, **et personnes** (acteurs, réalisateurs). Les résultats s'affichent **en direct** dans un menu déroulant dès 2 caractères tapés (pas besoin de valider), avec affiche/photo, titre et année ; un lien "Voir tous les résultats" renvoie vers la page de recherche complète. Cliquer sur une personne ouvre sa fiche avec sa filmographie complète (comme acteur/actrice, et comme réalisateur/scénariste).
-- **Fiche détail** : synopsis, note, bande-annonce jouée en modal (sans quitter l'app), plateformes de streaming disponibles **dans ta région** (détectée automatiquement, voir plus bas), bouton "🔁 Similaire" qui saute directement aux recommandations.
-- **Statut cinéma (France)**, pour les films : badge "🎬 En salles" ou "🗓️ Bientôt au cinéma" sur les vignettes (Découvrir/Nouveautés/Prochainement), message détaillé sur la fiche ("Actuellement au cinéma", "Sortie prévue le...", "Sorti le..."). Basé sur la date de sortie nationale en salles en France (TMDB `release_dates`) ; un film est considéré "encore au cinéma" jusqu'à 6 semaines après sa sortie (TMDB ne donne pas de date de fin d'exploitation, c'est une estimation).
-- **Aléatoire** : tire un titre au hasard selon tes filtres (genre, plateforme, année de sortie min/max), en excluant (optionnellement) ce que tu as déjà vu. Affiche aussi la bande-annonce.
-- **Ma liste** : deux listes séparées — "Envie de voir" (pile d'attente, bouton **or** ★) et "Déjà vu" (bouton **vert** ✔) —, stockées localement dans le navigateur (localStorage), aucun compte requis. Se connecter (optionnel, voir [Comptes et synchronisation](#comptes-et-synchronisation-optionnel)) synchronise cette liste entre navigateurs et appareils.
-  - **Stats visuelles** dans l'onglet "Déjà vu" : donut films/séries, temps de visionnage total mis en avant, genres préférés, aperçu "Vus récemment".
-  - **Stats** dans l'onglet "Déjà vu" : nombre de titres vus, répartition films/séries, top 5 des genres préférés, et un aperçu "Vus récemment".
-- **PWA installable** : icône dédiée, s'installe comme une app depuis le navigateur (Chrome/Edge : icône d'installation dans la barre d'adresse ; Android : "Ajouter à l'écran d'accueil" ; iOS Safari : partager → "Sur l'écran d'accueil").
-- **Notifications push** (optionnel, voir [Configuration des notifications push](#notifications-push-optionnel)) : préviens-toi quand un titre de ta liste "Envie de voir" arrive en streaming, pour les nouveautés dans tes genres préférés, et pour les grosses sorties du moment — même app fermée.
-- **Retour en haut de page** : un bouton flottant "↑" apparaît après un peu de scroll sur n'importe quelle page. La page remonte aussi automatiquement en haut en changeant d'onglet, et cliquer sur l'onglet actif (ou le logo "Bobine" depuis l'accueil) remonte en haut même sans changer de page.
-- **Comptes et synchronisation** (optionnel, voir [Comptes et synchronisation](#comptes-et-synchronisation-optionnel)) : connexion par lien magique (pas de mot de passe), pour retrouver sa liste "envie de voir" / "déjà vu" sur plusieurs navigateurs et appareils.
-
-## Notes techniques
-
-- React 19 + Vite + React Router + vite-plugin-pwa + Wrangler (déploiement Cloudflare Workers).
-- Le catalogue est interrogé en direct via l'API TMDB, aucune donnée de catalogue n'est dupliquée côté serveur.
-- Le suivi "vu / envie de voir" est stocké dans le navigateur (`localStorage`) — ça reste la source de vérité hors connexion. Vider les données du site ou changer de navigateur sans être connecté réinitialise la liste — connecte-toi (voir [Comptes et synchronisation](#comptes-et-synchronisation-optionnel)) pour une synchronisation automatique entre appareils.
-- Exceptions au "tout côté client" : les **notifications push** ont besoin d'un minimum d'état côté serveur (base D1 `worker/schema.sql`) — abonnement push, copie de la liste "envie de voir" et des genres favoris, pour que la tâche planifiée quotidienne (`worker/scheduled.js`) puisse vérifier les nouveautés même quand l'app est fermée. Les **comptes** (même base D1) stockent l'email, les liens de connexion à usage unique, les sessions, et — pour les utilisateurs connectés seulement — une copie de la bibliothèque pour la synchronisation.
-- Les icônes PWA (`public/icon-*.png`) sont générées par `scripts/generate-icons.cjs` ; relance-le si tu veux changer le design.
-- **Région dynamique** : "Où regarder" (Fiche détail, Aléatoire) et la liste des plateformes disponibles dans les filtres s'adaptent au pays du visiteur, détecté automatiquement via `request.cf.country` côté Worker (`GET /api/region`) — aucune permission navigateur, aucun service tiers, gratuit. Pas de France supposée par défaut pour tout le monde. En dev local (`npm run dev` sans Worker), repli sur la France (`DEFAULT_REGION` dans `src/api/tmdb.js`).
+- **Découvrir** : suggestions filtrables par genre (sélection multiple) et plateforme, triées par popularité/note/année, scroll infini. Rangée **Reprendre** au-dessus (séries entamées).
+- **Nouveautés** / **Prochainement** : sorties récentes / à venir, filtres pays/langue, fenêtre de dates ajustable. Prochainement affiche un calendrier groupé par mois avec cloche **Me prévenir** par titre.
+- **Recherche** : en direct dans la barre de nav (films, séries, personnes) + page de résultats complète.
+- **Fiche détail** : synopsis, bande-annonce, plateformes de streaming (région détectée automatiquement), statut cinéma (France), notation 0-10 avec paliers, saisons/épisodes, **la saga** (autres films de la franchise), titres similaires, exclusion du titre des suggestions.
+- **Fiche personne** : biographie, statistiques (nombre de titres, note moyenne, genre fétiche), filmographie, **souvent à l'affiche avec** (collaborateur·rices récurrent·es).
+- **Aléatoire** : tirage au sort selon tes filtres, avec alternatives.
+- **Ma liste** : Déjà vu (statistiques visuelles : répartition films/séries, temps de visionnage, genres préférés, vus par année), Envie de voir (tri + réordonnancement manuel par glisser-déposer), En cours (séries entamées), listes personnalisées.
+- **Profil** : compte, notifications push, plateformes favorites, genres exclus, titres exclus.
+- **PWA installable**, thème clair/sombre, comptes optionnels avec synchronisation multi-appareils.

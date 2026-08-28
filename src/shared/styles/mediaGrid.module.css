@@ -1,0 +1,29 @@
+/* Grille de cartes films/séries et sentinelle de scroll infini — partagée
+   par tous les modules qui affichent une grille TMDB (Découvrir, Nouveautés,
+   Prochainement, recherche, filmographie...). */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 22px;
+}
+
+@media (max-width: 1080px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+.loadMore {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: 13px;
+}

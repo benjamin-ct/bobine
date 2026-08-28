@@ -1,0 +1,142 @@
+.dropdown {
+  position: relative;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.trigger:hover {
+  border-color: var(--border-2);
+  background: var(--surface-2);
+}
+
+.active {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.caret {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+.caretOpen {
+  transform: rotate(180deg);
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  min-width: 220px;
+  max-height: 340px;
+  overflow: auto;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  animation: in 0.16s ease;
+}
+
+.panelRight {
+  left: auto;
+  right: 0;
+}
+
+@keyframes in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.head {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 10px 6px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--fg);
+}
+
+.option:hover {
+  background: var(--surface-2);
+}
+
+.check {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  border: 1.5px solid var(--border-2);
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  color: transparent;
+  transition: all 0.14s ease;
+}
+
+.check svg {
+  width: 12px;
+  height: 12px;
+}
+
+.optionOn .check {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.radio {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  border: 1.5px solid var(--border-2);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+.radio::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--accent);
+  transform: scale(0);
+  transition: transform 0.14s ease;
+}
+
+.optionOn .radio::after {
+  transform: scale(1);
+}
