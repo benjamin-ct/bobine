@@ -1,9 +1,21 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "oxc"],
+  "plugins": ["react", "oxc", "typescript"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
-    "curly": ["error", "all"]
-  }
+    "curly": ["error", "all"],
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-unused-vars": "off",
+    // Le pattern useEffect + fetch + setState (chargement de données au
+    // montage/changement de dépendances) est utilisé délibérément dans tout
+    // le projet — aucune librairie de fetching (React Query...) n'est en
+    // place, ce n'est pas l'objet de cette migration (voir README, "pas de
+    // nouvelles dépendances sans justification"). Cette règle considérerait
+    // ce pattern standard comme une erreur sur ~20 composants ; désactivée
+    // pour rester alignée avec l'architecture réelle du projet plutôt que
+    // de forcer une réécriture hors scope.
+    "react/set-state-in-effect": "off"
+  },
+  "ignorePatterns": ["dist", "dev-dist", "node_modules"]
 }

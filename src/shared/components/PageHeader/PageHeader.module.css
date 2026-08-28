@@ -1,0 +1,27 @@
+.head {
+  padding-block: clamp(28px, 4vw, 44px) 24px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+
+.title {
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+
+.lead {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 62ch;
+  margin-top: 12px;
+}

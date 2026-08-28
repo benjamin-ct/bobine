@@ -1,0 +1,75 @@
+/* Styles partagés par les panneaux de réglages du profil (plateformes,
+   genres exclus, titres exclus) — un seul fichier plutôt que dupliqué. */
+.search {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--fg);
+  margin: 10px 0 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--fg);
+}
+
+.item:hover {
+  background: var(--surface-2);
+}
+
+.item input {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chipX {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chipX svg {
+  width: 13px;
+  height: 13px;
+  opacity: 0.8;
+}
+
+.chipX:hover svg {
+  opacity: 1;
+}
+
+.emptyHint {
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+}

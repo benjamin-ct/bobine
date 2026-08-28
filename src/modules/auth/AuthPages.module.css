@@ -1,0 +1,89 @@
+.page {
+  max-width: 440px;
+  margin-inline: auto;
+  padding: clamp(40px, 9vw, 90px) var(--gutter) 80px;
+  text-align: center;
+}
+
+.page h1 {
+  font-size: var(--fs-h2);
+  margin-top: 8px;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+.hintTight {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: -6px;
+  margin-bottom: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: left;
+}
+
+.card label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.card input {
+  padding: 11px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 15px;
+}
+
+.codeInput {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  letter-spacing: 6px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.error {
+  color: var(--accent-ink);
+  font-size: 14px;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.6;
+}
+
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+}

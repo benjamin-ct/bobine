@@ -1,0 +1,132 @@
+.tracker {
+  margin-top: 48px;
+}
+
+.total {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.9em;
+}
+
+.seasonList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.seasonGroup {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.seasonHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.seasonName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seasonCount {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.seasonCountDone {
+  color: var(--ok-ink);
+}
+
+.chevron {
+  color: var(--muted);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.seasonBody {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.loading {
+  color: var(--muted);
+  margin: 12px 0 0;
+}
+
+.markAll {
+  margin: 14px 0 4px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.episodeList {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.episodeRow {
+  border-top: 1px solid var(--border);
+}
+
+.episodeRow:first-child {
+  border-top: none;
+}
+
+.episodeRow label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.episodeRow input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+
+.epNumber {
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.epTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.epDate {
+  color: var(--muted);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}

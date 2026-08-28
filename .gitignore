@@ -18,11 +18,14 @@ dev-dist
 .wrangler
 .dev.vars*
 
-# Icônes PWA générées par scripts/generate-icons.cjs (voir npm postinstall)
+# Icônes PWA générées par scripts/generate-icons.ts (voir npm postinstall)
 /public/icon-192.png
 /public/icon-512.png
 /public/icon-maskable-512.png
 /public/apple-touch-icon.png
+
+# Cache incrémental de `tsc -b` (voir npm run typecheck)
+*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*

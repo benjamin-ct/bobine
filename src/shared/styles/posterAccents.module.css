@@ -1,0 +1,26 @@
+/* Clés d'affiche duotone (repli sans image réelle) — voir posterAccent.ts.
+   Un dégradé par clé, dans le même langage visuel que le reste de l'app. */
+.scifi {
+  background: linear-gradient(158deg, var(--g-scifi-1), var(--g-scifi-2));
+}
+.drama {
+  background: linear-gradient(158deg, var(--g-drama-1), var(--g-drama-2));
+}
+.thriller {
+  background: linear-gradient(158deg, var(--g-thril-1), var(--g-thril-2));
+}
+.horror {
+  background: linear-gradient(158deg, var(--g-horr-1), var(--g-horr-2));
+}
+.animation {
+  background: linear-gradient(158deg, var(--g-anim-1), var(--g-anim-2));
+}
+.romance {
+  background: linear-gradient(158deg, var(--g-roman-1), var(--g-roman-2));
+}
+.comedy {
+  background: linear-gradient(158deg, var(--g-com-1), var(--g-com-2));
+}
+.adventure {
+  background: linear-gradient(158deg, var(--g-adv-1), var(--g-adv-2));
+}

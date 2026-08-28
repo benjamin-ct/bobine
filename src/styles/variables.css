@@ -1,0 +1,109 @@
+/* ─── Design tokens — thème "rouge velours" ──────────────────────────────
+   Repris du design de référence (maquette HTML) : palette OKLCH (perceptuelle,
+   contraste stable entre les deux thèmes), typographie à trois rôles
+   (affiche / titres / corps), et une échelle d'espacement/rayon partagée par
+   tous les modules CSS de l'app. Un seul fichier de vérité pour ces valeurs :
+   les *.module.css de chaque composant ne font que les référencer via var(). */
+
+:root {
+  /* thème sombre (par défaut) */
+  --bg: oklch(0.17 0.012 66);
+  --surface: oklch(0.215 0.014 66);
+  --surface-2: oklch(0.255 0.016 66);
+  --fg: oklch(0.96 0.008 85);
+  --muted: oklch(0.72 0.018 80);
+  --border: oklch(0.31 0.016 66);
+  --border-2: oklch(0.38 0.02 66);
+
+  --accent: oklch(0.505 0.15 25); /* rouge velours chaud */
+  --accent-strong: oklch(0.43 0.15 25);
+  --accent-ink: oklch(0.68 0.125 30); /* rouge lisible en texte sur fond sombre */
+  --accent-soft: color-mix(in oklch, var(--accent) 22%, transparent);
+  --on-accent: oklch(0.98 0.012 70);
+
+  --ok: oklch(0.76 0.15 150); /* "déjà vu" */
+  --ok-ink: oklch(0.8 0.15 152);
+  --ok-soft: color-mix(in oklch, var(--ok) 18%, transparent);
+
+  --gold: oklch(0.84 0.075 85); /* accent secondaire, popcorn */
+  --gold-soft: color-mix(in oklch, var(--gold) 24%, transparent);
+
+  --data-1: oklch(0.54 0.15 26); /* films, dataviz */
+  --data-2: var(--gold); /* séries, dataviz */
+
+  --pf-netflix: oklch(0.55 0.19 22);
+  --pf-prime: oklch(0.62 0.13 232);
+  --pf-disney: oklch(0.5 0.15 265);
+  --pf-max: oklch(0.52 0.16 285);
+  --pf-apple: oklch(0.28 0.004 285);
+  --pf-cine: oklch(0.505 0.15 25);
+
+  /* clés d'affiche — duotones par genre (repli quand aucune affiche TMDB) */
+  --g-scifi-1: oklch(0.55 0.15 265);
+  --g-scifi-2: oklch(0.32 0.11 300);
+  --g-drama-1: oklch(0.52 0.12 30);
+  --g-drama-2: oklch(0.28 0.07 20);
+  --g-thril-1: oklch(0.42 0.1 250);
+  --g-thril-2: oklch(0.24 0.05 260);
+  --g-horr-1: oklch(0.46 0.17 20);
+  --g-horr-2: oklch(0.2 0.08 12);
+  --g-anim-1: oklch(0.78 0.15 200);
+  --g-anim-2: oklch(0.62 0.17 330);
+  --g-roman-1: oklch(0.68 0.13 15);
+  --g-roman-2: oklch(0.48 0.12 350);
+  --g-com-1: oklch(0.8 0.15 90);
+  --g-com-2: oklch(0.62 0.16 50);
+  --g-adv-1: oklch(0.6 0.13 155);
+  --g-adv-2: oklch(0.38 0.09 190);
+
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --font-poster: "Bebas Neue", "Oswald", "Anton", "Arial Narrow", var(--font-display);
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  --fs-h1: clamp(32px, 4.4vw, 48px);
+  --fs-h2: clamp(22px, 2.8vw, 30px);
+
+  --container: 1200px;
+  --gutter: clamp(20px, 4vw, 40px);
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+
+  --shadow: 0 1px 2px oklch(0 0 0 / 0.25), 0 12px 34px -14px oklch(0 0 0 / 0.55);
+  --shadow-lift: 0 2px 6px oklch(0 0 0 / 0.3), 0 22px 48px -18px oklch(0 0 0 / 0.7);
+
+  color-scheme: dark;
+}
+
+/* Thème clair : opt-in explicite (data-theme="light") ou repli système si
+   aucun choix n'a jamais été fait — voir ThemeContext. */
+[data-theme="light"] {
+  --bg: oklch(0.975 0.012 82);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.955 0.012 82);
+  --fg: oklch(0.24 0.02 55);
+  --muted: oklch(0.49 0.02 60);
+  --border: oklch(0.9 0.014 80);
+  --border-2: oklch(0.84 0.02 78);
+
+  --accent: oklch(0.485 0.155 25);
+  --accent-strong: oklch(0.41 0.155 25);
+  --accent-ink: oklch(0.45 0.16 26);
+  --accent-soft: color-mix(in oklch, var(--accent) 15%, transparent);
+  --on-accent: oklch(0.98 0.012 70);
+
+  --ok: oklch(0.62 0.14 152);
+  --ok-ink: oklch(0.48 0.13 152);
+  --ok-soft: color-mix(in oklch, var(--ok) 16%, transparent);
+
+  --gold: oklch(0.74 0.085 82);
+  --gold-soft: color-mix(in oklch, var(--gold) 22%, transparent);
+  --data-1: oklch(0.5 0.16 26);
+  --data-2: var(--gold);
+
+  --shadow: 0 1px 2px oklch(0.3 0.02 60 / 0.1), 0 14px 32px -16px oklch(0.3 0.05 50 / 0.28);
+  --shadow-lift: 0 2px 6px oklch(0.3 0.02 60 / 0.12), 0 24px 46px -18px oklch(0.3 0.05 50 / 0.34);
+
+  color-scheme: light;
+}

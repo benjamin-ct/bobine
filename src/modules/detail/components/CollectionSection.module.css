@@ -1,0 +1,13 @@
+.section {
+  margin-top: 48px;
+}
+
+.name {
+  color: var(--accent-ink);
+}
+
+.count {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.85em;
+}

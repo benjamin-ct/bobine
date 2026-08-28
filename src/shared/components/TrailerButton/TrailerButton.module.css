@@ -1,0 +1,57 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.trigger svg {
+  width: 16px;
+  height: 16px;
+}
+
+.trigger:hover {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: oklch(0 0 0 / 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  aspect-ratio: 16 / 9;
+  background: black;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.modal iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  color: white;
+  font-size: 1.3rem;
+}

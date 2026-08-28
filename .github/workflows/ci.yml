@@ -1,10 +1,12 @@
 # Intégration continue : bloque toute PR (et tout push sur main) dont le
-# lint, les vérifications de logique pure ou le build échouent.
+# format, le lint, le typecheck, les vérifications de logique pure ou le
+# build échouent.
 #
 # Le lint (oxlint) est l'étape "linter bloquant" : il sort en code non nul
 # dès qu'une règle de sévérité `error` est violée (voir .oxlintrc.json,
-# ex. react/rules-of-hooks). Les warnings n'échouent PAS volontairement —
-# choix assumé pour ne pas bloquer sur les ~15 warnings pré-existants.
+# ex. react/rules-of-hooks). Le typecheck (tsc, projet composite à 4
+# tsconfig — app/node/worker/sw) échoue sur la moindre erreur de type, y
+# compris un `any` implicite (strict: true partout, voir tsconfig.*.json).
 name: CI
 
 on:
@@ -20,14 +22,14 @@ concurrency:
 
 jobs:
   verify:
-    name: Lint, tests & build
+    name: Format, lint, typecheck, tests & build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -38,6 +40,9 @@ jobs:
 
       - name: Lint (bloquant sur les erreurs)
         run: npm run lint
+
+      - name: Typecheck (TypeScript strict, bloquant)
+        run: npm run typecheck
 
       - name: Vérifications de logique pure
         run: |

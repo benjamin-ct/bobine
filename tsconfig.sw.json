@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2023",
+    /* Lib "WebWorker" plutôt que "DOM" : le service worker tourne dans un
+       contexte global distinct (self: ServiceWorkerGlobalScope, pas
+       Window) — incompatible avec tsconfig.app.json, d'où ce tsconfig
+       séparé rien que pour ce fichier. */
+    "lib": ["ES2023", "WebWorker"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "types": [],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/sw.ts"]
+}
