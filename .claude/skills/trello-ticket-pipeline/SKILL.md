@@ -24,9 +24,20 @@ Ce skill fait tourner un pipeline de développement autonome basé sur les liste
 
 Ne jamais avoir plus d'une carte dans `En cours` en même temps. Avant de prendre un nouveau ticket dans `A faire`, toujours vérifier que `En cours` est vide.
 
+## Règle d'or : toujours supprimer une branche mergée
+
+Dès qu'une branche est mergée (n'importe où dans ce workflow), la supprimer immédiatement, sans exception et sans attendre qu'on le demande. Ne jamais laisser une branche déjà mergée traîner sur le dépôt.
+
 ## Boucle principale
 
 À chaque exécution, dérouler dans cet ordre :
+
+### 0. Faire avancer les cartes cochées comme "terminée"
+
+Avant toute autre chose, regarder les cartes de `A valider` et de `To merge` : si une carte est cochée comme **terminée/achevée** (le check ✅ sur la carte elle-même, pas une checklist interne), c'est le signal qu'un humain valide cette étape et que la carte doit avancer.
+
+- Carte cochée dans `A valider` → la déplacer vers `To merge` (elle sera alors mergée à l'étape 1, dans la foulée).
+- Carte cochée dans `To merge` → rien à déplacer, elle y est déjà traitée à l'étape 1 ; ça confirme juste le go pour merger.
 
 ### 1. Merger ce qui est prêt (liste `To merge`)
 
@@ -61,6 +72,6 @@ Si `To merge` et `A faire` sont vides et qu'aucune carte n'est dans `En cours`, 
 
 ## Notes
 
-- `A valider` est un état géré par les humains : Claude n'y touche jamais à part y déposer un ticket terminé. Le passage de `A valider` vers `To merge` est fait manuellement par l'équipe après review.
+- `A valider` est un état géré par les humains : Claude n'y touche jamais à part y déposer un ticket terminé ou faire avancer une carte cochée "terminée" (voir étape 0). Le passage de `A valider` vers `To merge` se fait soit manuellement (déplacement de la carte par l'équipe après review), soit en cochant la carte comme terminée.
 - Ce skill ne tourne pas tout seul en tâche de fond : il se déclenche à chaque fois que Claude Code est lancé/relancé sur ce projet (manuellement, ou via une tâche planifiée / un hook si vous en configurez un).
 - Si les noms de listes réels diffèrent (accents, majuscules, "A merger" vs "To merge"...), les faire correspondre par similarité plutôt que par égalité stricte.
