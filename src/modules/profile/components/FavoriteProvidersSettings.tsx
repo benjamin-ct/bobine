@@ -18,8 +18,14 @@ export default function FavoriteProvidersSettings() {
   const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(false);
 
+  // `status` n'est délibérément PAS une dépendance : ce `setStatus("loading")`
+  // synchrone changerait `status` et redéclencherait l'effet immédiatement
+  // (avant même que la requête réseau n'aboutisse), ce qui exécute le
+  // cleanup ci-dessous et met `cancelled = true` sur la promesse en cours —
+  // le composant reste alors bloqué sur "Chargement…" pour toujours, la
+  // requête d'origine se terminant plus tard sur un `cancelled` déjà vrai.
   useEffect(() => {
-    if (!loaded || status !== "idle") {
+    if (!loaded) {
       return;
     }
     let cancelled = false;
@@ -42,7 +48,7 @@ export default function FavoriteProvidersSettings() {
     return () => {
       cancelled = true;
     };
-  }, [loaded, status, region]);
+  }, [loaded, region]);
 
   const trimmedQuery = query.trim().toLowerCase();
   const visibleProviders = trimmedQuery
