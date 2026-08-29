@@ -11,7 +11,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
 # Annule une exécution précédente encore en cours sur la même réf (ex.
@@ -69,7 +69,7 @@ jobs:
 
   deploy-preview:
     name: Deploy preview & comment
-    needs: [ verify, secrets-scan ]
+    needs: [verify, secrets-scan]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
