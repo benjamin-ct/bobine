@@ -2,6 +2,7 @@ import { useState, type DragEvent } from "react";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { MediaCard, Dropdown, EmptyState } from "../../../shared/components/index.ts";
 import dropdownStyles from "../../../shared/components/Dropdown/Dropdown.module.css";
+import { libraryItemToMediaItem } from "../../../shared/lib/libraryItem.ts";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import styles from "./WatchlistPanel.module.css";
@@ -109,7 +110,7 @@ export default function WatchlistPanel({ items }: { items: LibraryItem[] }) {
                   : ""
               }`}
             >
-              <MediaCard item={{ ...item, mediaType: item.mediaType }} />
+              <MediaCard item={libraryItemToMediaItem(item)} />
             </div>
           );
         })}
