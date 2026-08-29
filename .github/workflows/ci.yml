@@ -91,7 +91,13 @@ jobs:
       - name: Generate branch slug for preview URL
         id: branch-slug
         run: |
-          SLUG=$(echo "${{ github.head_ref }}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/^-*//;s/-*$//' | cut -c1-30)
+          # Le tronquage à 30 caractères doit passer APRÈS le nettoyage des
+          # tirets de bord : sinon, quand la coupe tombe pile sur un tiret
+          # (ex. branche "fix/affiches-manquantes-envie-de-voir" -> slug
+          # "fix-affiches-manquantes-envie-"), le tiret final réapparaît
+          # après troncature et Cloudflare rejette l'alias (code 10021,
+          # "invalid alias"). D'où le second nettoyage, après la coupe.
+          SLUG=$(echo "${{ github.head_ref }}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/^-*//;s/-*$//' | cut -c1-30 | sed 's/^-*//;s/-*$//')
           echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
 
       - name: Deploy Worker version (preview)
