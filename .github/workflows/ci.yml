@@ -11,7 +11,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 # Annule une exécution précédente encore en cours sur la même réf (ex.
@@ -69,7 +69,9 @@ jobs:
 
   deploy-preview:
     name: Deploy preview & comment
-    needs: [verify, secrets-scan]
+    needs:
+      - verify
+      - secrets-scan
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -86,21 +88,24 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Generate branch slug for preview URL
+        id: branch-slug
+        run: |
+          SLUG=$(echo "${{ github.head_ref }}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/^-*//;s/-*$//' | cut -c1-30)
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+
       - name: Deploy Worker version (preview)
         id: deploy
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: versions upload
+          command: versions upload --preview-alias ${{ steps.branch-slug.outputs.slug }}
 
-      - name: Extract preview URL from wrangler output
+      - name: Build preview URL
         id: preview-url
-        env:
-          CMD_OUTPUT: ${{ steps.deploy.outputs.command-output }}
         run: |
-          URL=$(echo "$CMD_OUTPUT" | grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' | head -1)
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "url=https://${{ steps.branch-slug.outputs.slug }}-bobine.creusatbenjamin.workers.dev" >> "$GITHUB_OUTPUT"
 
       - name: Post preview URL as comment on PR
         uses: marocchino/sticky-pull-request-comment@v3
@@ -108,7 +113,7 @@ jobs:
           header: preview-url
           message: |
             🚀 **Preview deployed** for this commit (`${{ github.sha }}`)
-
+            
             👉 ${{ steps.preview-url.outputs.url }}
-
-            <sub>Wrangler output: see logs of the `deploy-preview` job</sub>
+            
+            <sub>This url stays stable for the duration of the PR (alias : `${{ steps.branch-slug.outputs.slug }}`)</sub>
