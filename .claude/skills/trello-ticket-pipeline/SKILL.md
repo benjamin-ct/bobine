@@ -37,7 +37,7 @@ Pour chaque carte de `To merge`, une par une, dans l'ordre :
    - Si un check est rouge : laisser la carte dans `To merge`, ajouter un commentaire décrivant le problème, et passer à la carte suivante.
 3. Merger la PR (squash merge par défaut, sauf convention contraire du dépôt).
 4. Déplacer la carte vers `Done`.
-5. Supprimer la branche mergée si c'est la convention du dépôt.
+5. Supprimer la branche mergée (systématiquement, dès le merge fait — ne pas laisser traîner de branches mortes).
 
 ### 2. Reprendre ou démarrer un ticket (listes `En cours` / `A faire`)
 
@@ -45,7 +45,7 @@ Pour chaque carte de `To merge`, une par une, dans l'ordre :
 - **Sinon, si `A faire` contient des cartes** : prendre la première carte de la liste (l'ordre = la position des cartes dans la liste Trello), puis :
   1. Déplacer la carte vers `En cours`.
   2. Lire la description, les checklists et les commentaires de la carte pour comprendre la tâche.
-  3. Créer une branche dédiée, ex. `ticket-<id-court>-<slug-du-titre>`.
+  3. Créer une branche dédiée avec un nom **lisible et parlant sur ce qui est fait** (et pas juste l'ID du ticket) : c'est ce nom qui se retrouve dans l'URL de preview, donc il doit rester compréhensible une fois là-dedans. Format : `<type>/<description-courte-en-mots-clés>`, ex. `feature/watchlist-films`, `fix/filtre-plateformes-streaming`. Éviter les IDs/hash illisibles ; le numéro de ticket peut être ajouté en suffixe si utile (`feature/watchlist-films-42`), mais jamais en tête ou seul.
   4. Développer ce qui est demandé, commiter au fur et à mesure.
   5. Ouvrir une Pull Request sur GitHub avec, dans la description, un lien vers la carte Trello.
   6. Récupérer l'URL de preview :
