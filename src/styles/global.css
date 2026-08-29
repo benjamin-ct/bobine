@@ -70,6 +70,23 @@ input {
   font-family: inherit;
 }
 
+/* Évite le zoom automatique de Safari iOS à la mise au point d'un champ :
+   Safari zoome toute la page dès qu'un champ focalisé a un font-size
+   calculé < 16px. Beaucoup de champs de l'app n'ont pas de taille de police
+   explicite (repli sur le style de contrôle par défaut du navigateur,
+   généralement < 16px) ou en définissent une plus petite par choix
+   esthétique desktop — le !important est le seul moyen fiable de garantir
+   16px sur mobile sans devoir traquer/maintenir chaque composant à la main.
+   Sans effet sur desktop (aucun navigateur de bureau ne zoome au focus).
+   Voir le ticket Trello "Zoom champ texte". */
+@media (max-width: 720px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 p {
   margin: 0;
 }
