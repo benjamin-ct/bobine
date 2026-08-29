@@ -36,6 +36,11 @@ function extractDirectors(details: Awaited<ReturnType<typeof getDetails>>, media
 
 export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
+  // Distingue "pas encore chargé" de "chargé, ce genre est introuvable" : sans
+  // ça, `topGenres` retombe sur "…" le temps du premier fetch — un nom de
+  // genre littéralement "…" se lit comme un bug plutôt que comme du
+  // chargement (voir le ticket Trello "Genres préférés '...'").
+  const [genresLoaded, setGenresLoaded] = useState(false);
   const { setRuntime, setDirectors } = useLibrary();
   const attemptedRef = useRef(new Set<string>());
 
@@ -51,8 +56,13 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
           map[g.id] = g.name;
         }
         setGenreMap(map);
+        setGenresLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) {
+          setGenresLoaded(true);
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -127,10 +137,14 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
       genreCounts.set(gId, (genreCounts.get(gId) || 0) + 1);
     }
   }
+  // Filtre plutôt que de retomber sur un texte de repli : un id absent de
+  // `genreMap` (chargement pas encore terminé, ou id TMDB inconnu) ne doit
+  // jamais s'afficher comme un genre à part entière.
   const topGenres = [...genreCounts.entries()]
+    .filter(([id]) => genreMap[id])
     .sort((a, b) => b[1] - a[1])
     .slice(0, TOP_GENRES_COUNT)
-    .map(([id, n]) => ({ name: genreMap[id] || "…", n }));
+    .map(([id, n]) => ({ id, name: genreMap[id], n }));
 
   const recent = watched.slice(0, RECENT_COUNT);
 
@@ -202,9 +216,11 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
       <div className={`${styles.ticket} ${styles.span5}`}>
         <span className={styles.k}>Genres préférés</span>
         <div className={styles.genreTags}>
-          {topGenres.length ? (
+          {!genresLoaded ? (
+            <p className={styles.hint}>Chargement…</p>
+          ) : topGenres.length ? (
             topGenres.map((g) => (
-              <span key={g.name} className={styles.gtag}>
+              <span key={g.id} className={styles.gtag}>
                 {g.name} <span className={styles.gtagN}>{g.n}</span>
               </span>
             ))
