@@ -52,3 +52,48 @@ jobs:
 
       - name: Build
         run: npm run build
+  deploy-preview:
+    name: Deploy preview & comment
+    needs: verify
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+
+      - name: Deploy Worker version (preview)
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload
+
+      - name: Extract preview URL from wrangler output
+        id: preview-url
+        env:
+          CMD_OUTPUT: ${{ steps.deploy.outputs.command-output }}
+        run: |
+          URL=$(echo "$CMD_OUTPUT" | grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' | head -1)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Post preview URL as comment on PR
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: preview-url
+          message: |
+            🚀 **Preview deployed** for this commit (`${{ github.sha }}`)
+
+            👉 ${{ steps.preview-url.outputs.url }}
+
+            <sub>Wrangler output: see logs of the `deploy-preview` job</sub>
