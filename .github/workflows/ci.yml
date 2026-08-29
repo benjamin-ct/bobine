@@ -11,7 +11,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 # Annule une exécution précédente encore en cours sur la même réf (ex.
@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit dépendances (vulnérabilités connues)
+        run: npm audit --audit-level=high
+
       - name: Formatage (Prettier, bloquant)
         run: npm run format:check
 
@@ -52,9 +55,21 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  secrets-scan:
+    name: Scan secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   deploy-preview:
     name: Deploy preview & comment
-    needs: verify
+    needs: [ verify, secrets-scan ]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
