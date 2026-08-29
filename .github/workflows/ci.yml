@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit dépendances (vulnérabilités connues)
+        run: npm audit --audit-level=high
+
       - name: Formatage (Prettier, bloquant)
         run: npm run format:check
 
@@ -52,3 +55,65 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  secrets-scan:
+    name: Scan secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-preview:
+    name: Deploy preview & comment
+    needs:
+      - verify
+      - secrets-scan
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+
+      - name: Generate branch slug for preview URL
+        id: branch-slug
+        run: |
+          SLUG=$(echo "${{ github.head_ref }}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/^-*//;s/-*$//' | cut -c1-30)
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Worker version (preview)
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload --preview-alias ${{ steps.branch-slug.outputs.slug }}
+
+      - name: Build preview URL
+        id: preview-url
+        run: |
+          echo "url=https://${{ steps.branch-slug.outputs.slug }}-bobine.creusatbenjamin.workers.dev" >> "$GITHUB_OUTPUT"
+
+      - name: Post preview URL as comment on PR
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: preview-url
+          message: |
+            🚀 **Preview deployed** for this commit (`${{ github.sha }}`)
+
+            👉 ${{ steps.preview-url.outputs.url }}
+
+            <sub>This url stays stable for the duration of the PR (alias : `${{ steps.branch-slug.outputs.slug }}`)</sub>
