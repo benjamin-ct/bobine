@@ -350,7 +350,7 @@ export default function DetailPage() {
           {directors.length > 0 && (
             <>
               <h3>{mediaType === "movie" ? "Réalisation" : "Créé par"}</h3>
-              <div className={gridStyles.grid} style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
+              <div className={gridStyles.personGrid}>
                 {directors.map((person) => (
                   <PersonCard
                     key={person.id}
@@ -367,7 +367,7 @@ export default function DetailPage() {
           {cast.length > 0 && (
             <>
               <h3 style={{ marginTop: 32 }}>Casting principal</h3>
-              <div className={gridStyles.grid} style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
+              <div className={gridStyles.personGrid}>
                 {visibleCast.map((member) => (
                   <PersonCard
                     key={member.credit_id || `${member.id}-${member.character}`}

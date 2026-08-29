@@ -79,7 +79,7 @@ export default function SearchPage() {
       {status === "success" && people.length > 0 && (
         <section className={styles.section}>
           <h3>Acteurs &amp; réalisateurs</h3>
-          <div className={gridStyles.grid} style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
+          <div className={gridStyles.personGrid}>
             {people.map((person) => (
               <PersonCard
                 key={person.id}
