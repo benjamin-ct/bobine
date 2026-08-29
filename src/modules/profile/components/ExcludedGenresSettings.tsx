@@ -14,8 +14,14 @@ export default function ExcludedGenresSettings() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [loaded, setLoaded] = useState(false);
 
+  // `status` n'est délibérément PAS une dépendance : ce `setStatus("loading")`
+  // synchrone changerait `status` et redéclencherait l'effet immédiatement
+  // (avant même que la requête réseau n'aboutisse), ce qui exécute le
+  // cleanup ci-dessous et met `cancelled = true` sur la promesse en cours —
+  // le composant reste alors bloqué sur "Chargement…" pour toujours, la
+  // requête d'origine se terminant plus tard sur un `cancelled` déjà vrai.
   useEffect(() => {
-    if (!loaded || status !== "idle") {
+    if (!loaded) {
       return;
     }
     let cancelled = false;
@@ -38,7 +44,7 @@ export default function ExcludedGenresSettings() {
     return () => {
       cancelled = true;
     };
-  }, [loaded, status]);
+  }, [loaded]);
 
   return (
     <Disclosure
