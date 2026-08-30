@@ -19,7 +19,7 @@ export {
   theatricalStatusFromDate,
 } from "./movieMeta.ts";
 export { posterUrl, backdropUrl, logoUrl, IMG_BASE, TmdbConfigError } from "./tmdbClient.ts";
-import { tmdbFetch } from "./tmdbClient.ts";
+import { tmdbFetch, IS_DEV } from "./tmdbClient.ts";
 
 import type {
   Country,
@@ -293,9 +293,16 @@ export function getCollection(collectionId: number): Promise<CollectionDetails> 
 // titres à la fois : faire un appel /release_dates par vignette enverrait
 // autant de requêtes que de cartes affichées. TMDB expose deux listes
 // dédiées, région-conscientes et déjà filtrées aux sorties en salle —
-// /movie/now_playing et /movie/upcoming — récupérées entièrement une fois
-// par région (cache mémoire) pour en faire un index consultable en O(1),
-// sans aucun appel réseau par carte.
+// /movie/now_playing et /movie/upcoming — parcourues entièrement pour en
+// faire un index consultable en O(1), sans aucun appel réseau par carte.
+//
+// En production, ce parcours (une dizaine de pages) est fait UNE FOIS côté
+// Worker et partagé par tous les visiteurs d'une région via le cache d'edge
+// (voir worker/tmdb.ts getTheatricalIndex et /api/theatrical-index) : sans
+// ça, chaque session navigateur repayait ce coût dès l'ouverture de l'app
+// (le cache mémoire ci-dessous ne survit pas à un rechargement). En dev
+// (Worker pas dans la boucle, voir tmdbClient.ts), on continue de parcourir
+// les pages directement depuis le navigateur.
 const MAX_THEATRICAL_PAGES = 10; // now_playing + upcoming restent largement sous ce plafond en pratique
 
 async function fetchAllPages(
@@ -315,6 +322,39 @@ async function fetchAllPages(
 
 export type TheatricalIndex = Map<number, "upcoming" | "in_theaters">;
 
+function buildTheatricalIndex(inTheaters: number[], upcoming: number[]): TheatricalIndex {
+  const index: TheatricalIndex = new Map();
+  for (const id of upcoming) {
+    index.set(id, "upcoming");
+  }
+  // now_playing en dernier : si un titre apparaît dans les deux listes
+  // (bascule en cours), "en salles" prime sur "bientôt".
+  for (const id of inTheaters) {
+    index.set(id, "in_theaters");
+  }
+  return index;
+}
+
+async function fetchTheatricalIndexDirect(region: string): Promise<TheatricalIndex> {
+  const [nowPlaying, upcoming] = await Promise.all([
+    fetchAllPages("/movie/now_playing", region, MAX_THEATRICAL_PAGES),
+    fetchAllPages("/movie/upcoming", region, MAX_THEATRICAL_PAGES),
+  ]);
+  return buildTheatricalIndex(
+    nowPlaying.map((movie) => movie.id),
+    upcoming.map((movie) => movie.id)
+  );
+}
+
+async function fetchTheatricalIndexFromWorker(region: string): Promise<TheatricalIndex> {
+  const res = await fetch(`/api/theatrical-index?region=${encodeURIComponent(region)}`);
+  if (!res.ok) {
+    throw new Error(`Erreur index théâtral (${res.status})`);
+  }
+  const data: { inTheaters: number[]; upcoming: number[] } = await res.json();
+  return buildTheatricalIndex(data.inTheaters, data.upcoming);
+}
+
 let theatricalIndexCache: { region: string; promise: Promise<TheatricalIndex> } | null = null;
 export function getTheatricalStatusIndex(
   region: string = DEFAULT_REGION
@@ -322,22 +362,9 @@ export function getTheatricalStatusIndex(
   if (theatricalIndexCache?.region === region) {
     return theatricalIndexCache.promise;
   }
-  const promise = (async () => {
-    const [nowPlaying, upcoming] = await Promise.all([
-      fetchAllPages("/movie/now_playing", region, MAX_THEATRICAL_PAGES),
-      fetchAllPages("/movie/upcoming", region, MAX_THEATRICAL_PAGES),
-    ]);
-    const index: TheatricalIndex = new Map();
-    for (const movie of upcoming) {
-      index.set(movie.id, "upcoming");
-    }
-    // now_playing en dernier : si un titre apparaît dans les deux listes
-    // (bascule en cours), "en salles" prime sur "bientôt".
-    for (const movie of nowPlaying) {
-      index.set(movie.id, "in_theaters");
-    }
-    return index;
-  })().catch((err: unknown) => {
+  const promise = (
+    IS_DEV ? fetchTheatricalIndexDirect(region) : fetchTheatricalIndexFromWorker(region)
+  ).catch((err: unknown) => {
     theatricalIndexCache = null;
     throw err;
   });

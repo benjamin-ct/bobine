@@ -12,7 +12,7 @@ import { createConcurrencyLimiter } from "./concurrencyLimiter.ts";
 // continue d'appeler TMDB directement avec la clé locale — elle ne
 // quitte jamais la machine du développeur, donc pas d'enjeu de sécurité
 // à la garder simple pour l'itération rapide.
-const IS_DEV = import.meta.env.DEV;
+export const IS_DEV = import.meta.env.DEV;
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const BASE_URL = IS_DEV ? "https://api.themoviedb.org/3" : "/api/tmdb";
 const LANGUAGE = "fr-FR";

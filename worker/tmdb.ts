@@ -1,7 +1,9 @@
-// Client TMDB minimal côté Worker, pour la tâche planifiée uniquement.
-// Distinct de src/core/api/tmdb.ts (qui tourne dans le navigateur et lit
-// import.meta.env.VITE_TMDB_API_KEY) : ici on lit env.TMDB_API_KEY, un
-// secret Worker configuré séparément dans le dashboard Cloudflare.
+// Client TMDB minimal côté Worker, pour la tâche planifiée et les endpoints
+// qui mutualisent un appel TMDB coûteux entre visiteurs (voir
+// getTheatricalIndex). Distinct de src/core/api/tmdb.ts (qui tourne dans le
+// navigateur et lit import.meta.env.VITE_TMDB_API_KEY) : ici on lit
+// env.TMDB_API_KEY, un secret Worker configuré séparément dans le dashboard
+// Cloudflare.
 import type { Env } from "./types.ts";
 
 const BASE_URL = "https://api.themoviedb.org/3";
@@ -88,4 +90,44 @@ export async function trendingToday(env: Env): Promise<TmdbListItem[]> {
   return (data.results || []).filter(
     (item) => item.media_type === "movie" || item.media_type === "tv"
   );
+}
+
+const MAX_THEATRICAL_PAGES = 10; // now_playing + upcoming restent largement sous ce plafond en pratique
+
+async function fetchAllPageIds(
+  env: Env,
+  path: string,
+  region: string,
+  maxPages: number
+): Promise<number[]> {
+  const first = await tmdbFetch<{ results?: TmdbListItem[]; total_pages?: number }>(env, path, {
+    region,
+    page: 1,
+  });
+  const totalPages = Math.min(first.total_pages || 1, maxPages);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) =>
+      tmdbFetch<{ results?: TmdbListItem[] }>(env, path, { region, page: i + 2 })
+    )
+  );
+  return [first, ...rest].flatMap((page) => (page.results || []).map((item) => item.id));
+}
+
+export interface TheatricalIndexResult {
+  inTheaters: number[];
+  upcoming: number[];
+}
+
+// Parcourt /movie/now_playing et /movie/upcoming en entier pour une région
+// (voir /api/theatrical-index dans index.ts, qui met le résultat en cache
+// d'edge) : appelé au plus une fois par région et par heure, peu importe le
+// nombre de visiteurs — remplace en production le parcours équivalent que
+// src/core/api/tmdb.ts ferait sinon depuis CHAQUE navigateur à CHAQUE
+// session (son propre cache mémoire ne survit pas à un rechargement).
+export async function getTheatricalIndex(env: Env, region: string): Promise<TheatricalIndexResult> {
+  const [inTheaters, upcoming] = await Promise.all([
+    fetchAllPageIds(env, "/movie/now_playing", region, MAX_THEATRICAL_PAGES),
+    fetchAllPageIds(env, "/movie/upcoming", region, MAX_THEATRICAL_PAGES),
+  ]);
+  return { inTheaters, upcoming };
 }

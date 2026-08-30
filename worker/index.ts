@@ -35,6 +35,7 @@ import {
   sanitizeKeyList,
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
+import { getTheatricalIndex } from "./tmdb.ts";
 import type { Env } from "./types.ts";
 
 function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
@@ -495,6 +496,28 @@ async function handleLibrarySync(request: Request, env: Env): Promise<Response> 
   return json({ ok: true });
 }
 
+// Index "au cinéma"/"bientôt" (voir getTheatricalIndex, worker/tmdb.ts) pour
+// une région : mis en cache à l'edge, si bien qu'un seul visiteur par région
+// et par heure paie le parcours complet de now_playing/upcoming — les
+// suivants reçoivent la réponse déjà calculée. Remplace en production le
+// parcours équivalent que src/core/api/tmdb.ts ferait sinon depuis CHAQUE
+// navigateur à CHAQUE session (voir getTheatricalStatusIndex, dont le cache
+// mémoire ne survit pas à un rechargement).
+async function handleTheatricalIndex(request: Request, env: Env, ctx: ExecutionContext) {
+  const url = new URL(request.url);
+  const region = url.searchParams.get("region") || "FR";
+  const cache = caches.default;
+  const cacheKey = new Request(`${url.origin}/api/theatrical-index?region=${region}`);
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  const index = await getTheatricalIndex(env, region);
+  const response = json(index, 200, { "cache-control": "public, max-age=3600" });
+  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
+}
+
 // Paramètres reconnus par ce Worker mais absents de l'API TMDB : jamais
 // transmis à TMDB (voir handleTmdbProxy), seulement lus pour piloter
 // l'enrichissement des grilles ci-dessous.
@@ -759,6 +782,10 @@ async function routeRequest(
 
   if (url.pathname.startsWith("/api/tmdb/") && request.method === "GET") {
     return handleTmdbProxy(request, env, ctx);
+  }
+
+  if (url.pathname === "/api/theatrical-index" && request.method === "GET") {
+    return handleTheatricalIndex(request, env, ctx);
   }
 
   // Pays du visiteur, déduit par Cloudflare au niveau du edge (aucun appel
