@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { MediaCard, EmptyState } from "../../../shared/components/index.ts";
+import { libraryItemToMediaItem } from "../../../shared/lib/libraryItem.ts";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
 import type { CustomList } from "../../../core/types/library.ts";
 import styles from "./CustomListPanel.module.css";
@@ -79,10 +80,7 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
       ) : (
         <div className={gridStyles.grid}>
           {items.map((item) => (
-            <MediaCard
-              key={`${item.mediaType}:${item.id}`}
-              item={{ ...item, mediaType: item.mediaType }}
-            />
+            <MediaCard key={`${item.mediaType}:${item.id}`} item={libraryItemToMediaItem(item)} />
           ))}
         </div>
       )}
