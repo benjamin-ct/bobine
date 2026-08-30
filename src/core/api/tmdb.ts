@@ -86,6 +86,14 @@ export interface DiscoverParams {
   originalLanguage?: string;
   runtimeMin?: number;
   runtimeMax?: number;
+  /** Demande au Worker (voir worker/index.ts) de résoudre le badge plateforme
+   * de chaque résultat côté serveur (un seul aller-retour pour toute la
+   * grille, avec réutilisation du cache d'edge par titre) plutôt que de
+   * laisser chaque MediaCard faire son propre appel /watch/providers une fois
+   * visible. Réservé aux pages qui affichent ce badge (voir
+   * showProviderBadge sur MediaCard) : sans intérêt ailleurs. Sans effet en
+   * dev (le Worker n'est pas dans la boucle, voir tmdbClient.ts). */
+  includeProviderBadge?: boolean;
 }
 
 export function discover(
@@ -111,6 +119,7 @@ export function discover(
     originalLanguage,
     runtimeMin,
     runtimeMax,
+    includeProviderBadge,
   }: DiscoverParams = {}
 ): Promise<PagedResponse<MediaSummary>> {
   const resolvedField: string =
@@ -151,6 +160,12 @@ export function discover(
     [`${dateField}.lte`]: dateLte,
     [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
     include_adult: false,
+    // Paramètres propres au Worker (retirés avant l'appel TMDB réel côté
+    // serveur, voir handleTmdbProxy) : region est renvoyée séparément de
+    // watch_region ci-dessus, qui ne part que combinée à un filtre
+    // providerIds et n'a donc pas toujours la bonne valeur pour ce besoin.
+    include_watch_providers_badge: includeProviderBadge ? 1 : undefined,
+    watch_providers_badge_region: includeProviderBadge ? region : undefined,
   });
 }
 

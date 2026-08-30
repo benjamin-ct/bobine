@@ -39,6 +39,13 @@ export interface MediaSummary {
   genre_ids?: number[];
   origin_country?: string[];
   original_language?: string;
+  /** Présent uniquement quand discover() est appelé avec includeProviderBadge :
+   * plateformes déjà résolues côté Worker (voir worker/index.ts), pour éviter
+   * un appel /watch/providers par carte depuis le navigateur. `undefined` (pas
+   * `null`) tant que le badge n'a pas été demandé — MediaCard s'en sert pour
+   * distinguer "pas encore enrichi" (fallback sur l'appel par carte) de
+   * "enrichi, aucune plateforme trouvée". */
+  watch_providers?: RegionWatchProviders | null;
 }
 
 /** MediaSummary enrichi côté client d'un `mediaType` non ambigu (voir

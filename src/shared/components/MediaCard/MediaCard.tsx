@@ -15,6 +15,7 @@ import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
 import type {
   MediaItem,
+  RegionWatchProviders,
   ReleaseDatesResponse,
   WatchProviderEntry,
 } from "../../../core/types/tmdb.ts";
@@ -105,6 +106,20 @@ function MediaCard({
     if (!showProviderBadge || !isNearViewport) {
       return;
     }
+    // Abonnement en priorité (le plus pertinent pour "où le regarder"),
+    // sinon location/achat ; rien si le titre n'est encore distribué nulle
+    // part (fréquent sur Prochainement) — pas de badge affiché.
+    const pickBadge = (data: RegionWatchProviders | null | undefined) =>
+      data?.flatrate?.[0] || data?.rent?.[0] || data?.buy?.[0] || null;
+    // Déjà résolu côté Worker (discover() appelé avec includeProviderBadge,
+    // voir NewReleasesPage) : `undefined` distingue "pas demandé" (fallback
+    // ci-dessous) de "demandé, rien trouvé" (`null`), qui doit rester sans
+    // appel réseau.
+    if (item.watch_providers !== undefined) {
+      setProvider(pickBadge(item.watch_providers));
+      setProviderStatus("done");
+      return;
+    }
     let cancelled = false;
     setProviderStatus("loading");
     getWatchProviders(mediaType, item.id, region)
@@ -112,10 +127,7 @@ function MediaCard({
         if (cancelled) {
           return;
         }
-        // Abonnement en priorité (le plus pertinent pour "où le regarder"),
-        // sinon location/achat ; rien si le titre n'est encore distribué
-        // nulle part (fréquent sur Prochainement) — pas de badge affiché.
-        setProvider(data?.flatrate?.[0] || data?.rent?.[0] || data?.buy?.[0] || null);
+        setProvider(pickBadge(data));
         setProviderStatus("done");
       })
       .catch(() => {
@@ -126,7 +138,7 @@ function MediaCard({
     return () => {
       cancelled = true;
     };
-  }, [showProviderBadge, isNearViewport, mediaType, item.id, region]);
+  }, [showProviderBadge, isNearViewport, mediaType, item.id, item.watch_providers, region]);
 
   // Sur Nouveautés, un titre sans badge cinéma ET sans plateforme connue
   // est ambigu : on le dit explicitement plutôt que de laisser un badge

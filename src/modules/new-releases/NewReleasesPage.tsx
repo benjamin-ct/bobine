@@ -100,6 +100,7 @@ export default function NewReleasesPage() {
       originalLanguage: language || undefined,
       sortField: "popularity",
       sortDirection: "desc",
+      includeProviderBadge: true,
       ...dateRangeFor(windowDays),
     })
       .then((data) => {
@@ -150,6 +151,7 @@ export default function NewReleasesPage() {
       originalLanguage: language || undefined,
       sortField: "popularity",
       sortDirection: "desc",
+      includeProviderBadge: true,
       ...dateRangeFor(windowDays),
     })
       .then((data) => {

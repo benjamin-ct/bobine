@@ -495,6 +495,76 @@ async function handleLibrarySync(request: Request, env: Env): Promise<Response> 
   return json({ ok: true });
 }
 
+// Paramètres reconnus par ce Worker mais absents de l'API TMDB : jamais
+// transmis à TMDB (voir handleTmdbProxy), seulement lus pour piloter
+// l'enrichissement des grilles ci-dessous.
+const WORKER_ONLY_PARAMS = ["include_watch_providers_badge", "watch_providers_badge_region"];
+
+// Résout les plateformes de streaming d'un titre en réutilisant EXACTEMENT
+// la même entrée de cache d'edge que l'appel direct /api/tmdb/<type>/<id>/
+// watch/providers (même URL, même TTL 1h) : un titre déjà consulté (fiche
+// détail, ou déjà croisé dans une autre grille) répond sans retaper TMDB.
+async function fetchWatchProvidersCached(
+  origin: string,
+  mediaType: "movie" | "tv",
+  id: number,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<Record<string, { flatrate?: unknown; rent?: unknown; buy?: unknown }> | null> {
+  const cache = caches.default;
+  const cacheKey = new Request(
+    `${origin}/api/tmdb/${mediaType}/${id}/watch/providers?language=fr-FR`
+  );
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    return cached.ok ? cached.json() : null;
+  }
+  const tmdbUrl = new URL(`https://api.themoviedb.org/3/${mediaType}/${id}/watch/providers`);
+  tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY!);
+  const res = await fetch(tmdbUrl.toString());
+  const body = await res.text();
+  if (!res.ok) {
+    return null;
+  }
+  ctx.waitUntil(
+    cache.put(
+      cacheKey,
+      new Response(body, {
+        status: res.status,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=3600",
+        },
+      })
+    )
+  );
+  return JSON.parse(body).results || {};
+}
+
+// Grilles (Nouveautés...) : plutôt que de laisser chaque carte affichée
+// déclencher son propre appel /watch/providers depuis le navigateur une
+// fois visible (voir MediaCard.tsx), le badge plateforme est résolu ici en
+// un aller-retour serveur→TMDB par titre, en parallèle, fusionné dans la
+// réponse /discover renvoyée au client. Sans ça, une grille de ~20 cartes
+// gonfle son propre chargement de ~20 requêtes réseau côté client — un coût
+// payé pour rien puisque TMDB est de toute façon interrogé une fois par
+// titre, avec ou sans ce détour.
+async function enrichDiscoverResultsWithProviders(
+  data: { results?: Array<{ id: number }> },
+  mediaType: "movie" | "tv",
+  region: string,
+  origin: string,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<void> {
+  await Promise.all(
+    (data.results || []).map(async (item) => {
+      const results = await fetchWatchProvidersCached(origin, mediaType, item.id, env, ctx);
+      (item as { watch_providers?: unknown }).watch_providers = results?.[region] ?? null;
+    })
+  );
+}
+
 // Proxy TMDB : la clé API TMDB n'est plus exposée côté client (elle
 // n'apparaît dans aucune requête réseau visible depuis le navigateur). Le
 // front (src/core/api/tmdbClient.ts) appelle /api/tmdb/<chemin TMDB> ; ce
@@ -533,12 +603,17 @@ async function handleTmdbProxy(
   const tmdbPath = url.pathname.replace(/^\/api\/tmdb/, "");
   const tmdbUrl = new URL(`https://api.themoviedb.org/3${tmdbPath}`);
   for (const [key, value] of url.searchParams) {
-    if (key === "api_key") {
+    if (key === "api_key" || WORKER_ONLY_PARAMS.includes(key)) {
       continue;
-    } // ignoré : seule la clé serveur est utilisée
+    } // ignorés : jamais transmis à TMDB (clé serveur / paramètres internes)
     tmdbUrl.searchParams.set(key, value);
   }
   tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY);
+
+  const discoverMediaType = tmdbPath.match(/^\/discover\/(movie|tv)$/)?.[1] as
+    "movie" | "tv" | undefined;
+  const shouldEnrichProviders =
+    discoverMediaType && url.searchParams.get("include_watch_providers_badge") === "1";
 
   // Ces routes sont appelées une fois PAR CARTE (badge plateforme sur
   // Nouveautés, badge prochaine sortie/diffusion sur Prochainement) :
@@ -551,7 +626,13 @@ async function handleTmdbProxy(
   const maxAge = isPerTitleRoute ? 3600 : 300;
 
   const res = await fetch(tmdbUrl.toString());
-  const body = await res.text();
+  let body = await res.text();
+  if (res.ok && shouldEnrichProviders) {
+    const region = url.searchParams.get("watch_providers_badge_region") || "FR";
+    const data = JSON.parse(body);
+    await enrichDiscoverResultsWithProviders(data, discoverMediaType, region, url.origin, env, ctx);
+    body = JSON.stringify(data);
+  }
   const response = new Response(body, {
     status: res.status,
     headers: {
