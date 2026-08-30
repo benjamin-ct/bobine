@@ -20,6 +20,32 @@
   }
 }
 
+/* Grille de fiches personnes (casting, réalisation, collaborateur·rices
+   fréquent·es...) — mêmes paliers que .grid, mais 7 colonnes par défaut
+   (avatars ronds, plus compacts qu'une affiche). Une classe dédiée plutôt
+   qu'un style inline `gridTemplateColumns` sur .grid : un style inline a une
+   spécificité plus forte que les @media ci-dessus et les rendait inopérants
+   — les grilles de personnes restaient bloquées à 7 colonnes sur mobile,
+   avec des avatars minuscules. */
+.personGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 22px;
+}
+
+@media (max-width: 1080px) {
+  .personGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .personGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
 .loadMore {
   display: flex;
   justify-content: center;

@@ -92,7 +92,7 @@ export default function FrequentCollaborators({
       {status === "loading" ? (
         <p style={{ color: "var(--muted)" }}>Recherche des collaborateur·rices…</p>
       ) : (
-        <div className={gridStyles.grid} style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
+        <div className={gridStyles.personGrid}>
           {collaborators.map((c) => (
             <PersonCard
               key={c.id}
