@@ -141,7 +141,7 @@ export interface CreatedBy {
   name: string;
 }
 
-/** Détails complets (append_to_response: credits,videos,recommendations,release_dates). */
+/** Détails complets (append_to_response: credits,videos,recommendations,release_dates,watch/providers). */
 export interface MediaDetails extends MediaSummary {
   runtime?: number; // films
   episode_run_time?: number[]; // séries
@@ -153,6 +153,9 @@ export interface MediaDetails extends MediaSummary {
   videos?: Videos;
   recommendations?: { results: MediaSummary[] };
   release_dates?: ReleaseDatesResponse;
+  // Clé littérale avec un slash : c'est ce que TMDB renvoie pour cette
+  // ressource quand elle est incluse via append_to_response.
+  "watch/providers"?: WatchProvidersResponse;
   networks?: Network[];
   created_by?: CreatedBy[];
   belongs_to_collection?: CollectionSummary | null;

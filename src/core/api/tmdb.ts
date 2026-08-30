@@ -233,9 +233,10 @@ export function getDetails(mediaType: MediaType, id: string | number): Promise<M
   }
   const promise = tmdbFetch<MediaDetails>(`/${mediaType}/${id}`, {
     // release_dates : sorties par pays (dont FR), pour le statut "au
-    // cinéma" — inclus ici pour ne pas faire un second appel sur la fiche
-    // détail.
-    append_to_response: "credits,videos,recommendations,release_dates",
+    // cinéma". watch/providers : plateformes de streaming/achat/location —
+    // inclus ici pour ne pas faire un second appel séparé (voir
+    // watchProvidersFromDetails) sur la fiche détail / la roue aléatoire.
+    append_to_response: "credits,videos,recommendations,release_dates,watch/providers",
   }).catch((err: unknown) => {
     detailsCache.delete(key);
     throw err;
@@ -361,6 +362,20 @@ export function getWatchProviders(
     });
   watchProvidersCache.set(key, promise);
   return promise;
+}
+
+// Extrait les plateformes déjà incluses dans une fiche détail chargée via
+// getDetails() (append_to_response=watch/providers) — évite un second appel
+// getWatchProviders() en plus de getDetails() sur les écrans qui chargent
+// déjà la fiche complète (fiche détail, roue aléatoire). Réservé aux appels
+// "un titre à la fois" : les grilles (badge plateforme sur les cartes)
+// continuent d'utiliser getWatchProviders() seul, une fiche complète par
+// carte serait bien plus lourde que le nécessaire.
+export function watchProvidersFromDetails(
+  details: MediaDetails,
+  region: string = DEFAULT_REGION
+): RegionWatchProviders | null {
+  return details["watch/providers"]?.results?.[region] || null;
 }
 
 // Badge dynamique "Prochainement" (prochaine sortie/diffusion) -----------

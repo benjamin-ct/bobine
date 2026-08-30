@@ -4,7 +4,7 @@ import {
   backdropUrl,
   posterUrl,
   getDetails,
-  getWatchProviders,
+  watchProvidersFromDetails,
   estimateRuntimeMinutes,
   getFrenchTheatricalDateFromDetails,
   theatricalStatusFromDate,
@@ -69,13 +69,13 @@ export default function DetailPage() {
     let cancelled = false;
     setStatus("loading");
     setShowFullCast(false);
-    Promise.all([getDetails(mediaType, id), getWatchProviders(mediaType, id, region)])
-      .then(([d, p]) => {
+    getDetails(mediaType, id)
+      .then((d) => {
         if (cancelled) {
           return;
         }
         setDetails(d);
-        setProviders(p);
+        setProviders(watchProvidersFromDetails(d, region));
         setStatus("success");
       })
       .catch((err) => {

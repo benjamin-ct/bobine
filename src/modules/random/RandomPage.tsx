@@ -6,7 +6,7 @@ import {
   getGenres,
   getWatchProvidersList,
   getDetails,
-  getWatchProviders,
+  watchProvidersFromDetails,
   posterUrl,
   formatFullDate,
 } from "../../core/api/tmdb.ts";
@@ -146,13 +146,10 @@ export default function RandomPage() {
         };
       }
 
-      const [fullDetails, providersData] = await Promise.all([
-        getDetails(mediaType, candidate.id),
-        getWatchProviders(mediaType, candidate.id, region),
-      ]);
+      const fullDetails = await getDetails(mediaType, candidate.id);
       setPick(candidate);
       setPickDetails(fullDetails);
-      setProvidersResult(providersData);
+      setProvidersResult(watchProvidersFromDetails(fullDetails, region));
       setStatus("success");
     } catch (err) {
       setError(err as Error);
