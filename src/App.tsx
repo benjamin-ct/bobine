@@ -1,5 +1,11 @@
 import { Routes, Route } from "react-router-dom";
-import { NavBar, ScrollToTop, ScrollToTopButton, Footer } from "./shared/components/index.ts";
+import {
+  NavBar,
+  ScrollToTop,
+  ScrollToTopButton,
+  RecaptchaBadge,
+  Footer,
+} from "./shared/components/index.ts";
 import Discover from "./modules/discover/index.ts";
 import NewReleases from "./modules/new-releases/index.ts";
 import ComingSoon from "./modules/coming-soon/index.ts";
@@ -16,6 +22,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <RecaptchaBadge />
       <NavBar />
       <main>
         <Routes>

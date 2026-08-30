@@ -10,6 +10,7 @@ export { default as RatingStars } from "./RatingStars/RatingStars.tsx";
 export { default as ProviderBadges } from "./ProviderBadges/ProviderBadges.tsx";
 export { default as TrailerButton } from "./TrailerButton/TrailerButton.tsx";
 export { default as ScrollToTop } from "./ScrollToTop/ScrollToTop.tsx";
+export { default as RecaptchaBadge } from "./RecaptchaBadge/RecaptchaBadge.tsx";
 export { default as ScrollToTopButton } from "./ScrollToTopButton/ScrollToTopButton.tsx";
 export { default as Chip } from "./Chip/Chip.tsx";
 export { default as Dropdown } from "./Dropdown/Dropdown.tsx";
