@@ -9,6 +9,35 @@
   font-weight: 600;
 }
 
+.authBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 20px;
+  margin-top: 24px;
+}
+
+.authBannerText {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.loginBtn {
+  display: inline-flex;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  font-size: 14px;
+}
+
 .tabs {
   display: flex;
   flex-wrap: wrap;

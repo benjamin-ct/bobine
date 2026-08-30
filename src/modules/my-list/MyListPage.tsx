@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
+import { useAuth } from "../../core/context/AuthContext.tsx";
 import { PageHeader, ContinueWatchingRow, EmptyState } from "../../shared/components/index.ts";
 import StatsPanel from "./components/StatsPanel.tsx";
 import WatchlistPanel from "./components/WatchlistPanel.tsx";
@@ -11,6 +12,7 @@ type Tab = "seen" | "want" | "progress" | string; // string = id de liste person
 
 export default function MyListPage() {
   const { watched, watchlist, customLists, createList } = useLibrary();
+  const { status: authStatus } = useAuth();
   const [tab, setTab] = useState<Tab>("seen");
   const [creating, setCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
@@ -45,6 +47,18 @@ export default function MyListPage() {
           </>
         }
       />
+
+      {authStatus !== "authenticated" && (
+        <div className={styles.authBanner}>
+          <p className={styles.authBannerText}>
+            Connecte-toi pour synchroniser cette liste entre tes appareils : elle n'a pas disparu,
+            elle reste enregistrée sur cet appareil.
+          </p>
+          <Link to="/connexion" className={styles.loginBtn}>
+            Connexion
+          </Link>
+        </div>
+      )}
 
       <div className={styles.tabs} role="tablist">
         <button
