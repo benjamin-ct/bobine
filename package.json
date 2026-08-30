@@ -17,6 +17,7 @@
     "verify:upcoming-badge": "node scripts/verify-upcoming-badge.ts",
     "verify:movie-meta": "node scripts/verify-movie-meta.ts",
     "verify:tmdb-concurrency-cap": "node scripts/verify-tmdb-concurrency-cap.ts",
+    "verify:numeric-range-filter": "node scripts/verify-numeric-range-filter.ts",
     "postinstall": "node scripts/generate-icons.ts",
     "prepare": "husky"
   },

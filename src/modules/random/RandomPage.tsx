@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { FocusEvent } from "react";
 import { Link } from "react-router-dom";
 import {
   discover,
@@ -24,6 +25,7 @@ import {
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import { ratingTier } from "../../shared/lib/ratingTier.ts";
+import { clampNumericValue, isRangeInverted } from "../../shared/lib/numericRangeFilter.ts";
 import type {
   Genre,
   MediaDetails,
@@ -35,6 +37,9 @@ import type { WatchProviderOption } from "../../core/api/tmdb.ts";
 import styles from "./RandomPage.module.css";
 
 const MAX_ATTEMPTS = 6;
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_MIN = 1900;
+const YEAR_MAX = CURRENT_YEAR + 5;
 
 export default function RandomPage() {
   const [mediaType, setMediaType] = useState<MediaType>("movie");
@@ -50,7 +55,9 @@ export default function RandomPage() {
   const [pick, setPick] = useState<MediaItem | null>(null);
   const [pickDetails, setPickDetails] = useState<MediaDetails | null>(null);
   const [providersResult, setProvidersResult] = useState<RegionWatchProviders | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "empty" | "success" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "empty" | "success" | "error" | "invalid"
+  >("idle");
   const [error, setError] = useState<Error | null>(null);
 
   const { watchedIds, isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
@@ -58,6 +65,22 @@ export default function RandomPage() {
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
   const { filterExcluded } = useExcludedTitles();
+
+  const yearRangeError = isRangeInverted(yearMin, yearMax)
+    ? "L'année minimum est supérieure à l'année maximum."
+    : null;
+
+  // Plafonne la valeur saisie une fois le champ quitté (pas à chaque frappe,
+  // ce qui empêcherait de taper un nombre à plusieurs chiffres dès que sa
+  // valeur intermédiaire sort des bornes, ex. "2" < 1900).
+  function clampYearOnBlur(setter: (value: string) => void) {
+    return (e: FocusEvent<HTMLInputElement>) => {
+      const clamped = clampNumericValue(e.target.value, YEAR_MIN, YEAR_MAX);
+      if (clamped !== e.target.value) {
+        setter(clamped);
+      }
+    };
+  }
 
   useEffect(() => {
     setGenreIds([]);
@@ -77,6 +100,12 @@ export default function RandomPage() {
   }, [mediaType, region]);
 
   async function drawRandom() {
+    if (yearRangeError) {
+      // Plage min/max incohérente : on n'appelle pas l'API, qui retomberait
+      // silencieusement sur 0 résultat.
+      setStatus("invalid");
+      return;
+    }
     setStatus("loading");
     setError(null);
     setPick(null);
@@ -182,19 +211,28 @@ export default function RandomPage() {
           <input
             type="number"
             placeholder="Min"
-            min={1900}
+            min={YEAR_MIN}
+            max={YEAR_MAX}
             value={yearMin}
             onChange={(e) => setYearMin(e.target.value)}
+            onBlur={clampYearOnBlur(setYearMin)}
           />
           <span>–</span>
           <input
             type="number"
             placeholder="Max"
-            min={1900}
+            min={YEAR_MIN}
+            max={YEAR_MAX}
             value={yearMax}
             onChange={(e) => setYearMax(e.target.value)}
+            onBlur={clampYearOnBlur(setYearMax)}
           />
         </div>
+        {yearRangeError && (
+          <p className={styles.rangeError} role="alert">
+            ⚠️ {yearRangeError}
+          </p>
+        )}
       </div>
 
       <label className={styles.checkboxLine}>
@@ -210,7 +248,7 @@ export default function RandomPage() {
         type="button"
         className={styles.rollBtn}
         onClick={drawRandom}
-        disabled={status === "loading"}
+        disabled={status === "loading" || !!yearRangeError}
       >
         <svg
           viewBox="0 0 24 24"

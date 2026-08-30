@@ -19,6 +19,7 @@ export { default as FilterBar } from "./FilterBar/FilterBar.tsx";
 export {
   default as AdvancedFilters,
   EMPTY_ADVANCED_FILTERS,
+  getAdvancedFiltersRangeError,
 } from "./AdvancedFilters/AdvancedFilters.tsx";
 export type { AdvancedFiltersState } from "./AdvancedFilters/AdvancedFilters.tsx";
 export { default as CountryLanguageFilter } from "./CountryLanguageFilter/CountryLanguageFilter.tsx";
