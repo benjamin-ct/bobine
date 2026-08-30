@@ -355,7 +355,17 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           id: item.id,
         });
       } else {
-        const newItem: LibraryItem = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
+        // On repasse "vu" un titre déjà présent dans la liste à voir : on
+        // conserve la note/réalisateurs/épisodes déjà connus plutôt que de
+        // repartir d'un item vierge (cf. bug #14 : la note disparaissait
+        // silencieusement lors d'un aller-retour Vu ↔ Envie de voir).
+        const existing = next.watchlist[key];
+        const newItem: LibraryItem = {
+          ...existing,
+          ...item,
+          addedAt: existing?.addedAt ?? Date.now(),
+          updatedAt: Date.now(),
+        };
         next.watched[key] = newItem;
         // Un film vu n'a plus besoin d'être dans la liste à voir.
         if (next.watchlist[key]) {
@@ -389,8 +399,23 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         });
       } else {
         added = true;
-        const newItem: LibraryItem = { ...item, addedAt: Date.now(), updatedAt: Date.now() };
+        // Symétrique à toggleWatched : on conserve la note/réalisateurs déjà
+        // connus si le titre était marqué "vu", et on le retire de "vu"
+        // puisqu'un titre ne doit être que dans une seule des deux listes.
+        const existing = next.watched[key];
+        const newItem: LibraryItem = {
+          ...existing,
+          ...item,
+          addedAt: existing?.addedAt ?? Date.now(),
+          updatedAt: Date.now(),
+        };
         next.watchlist[key] = newItem;
+        // Un titre "envie de voir" ne doit pas rester marqué "vu" en
+        // parallèle (les deux listes doivent rester mutuellement exclusives).
+        if (next.watched[key]) {
+          next.watched = { ...next.watched };
+          delete next.watched[key];
+        }
         pendingOpsRef.current.set(key, {
           action: "upsert",
           mediaType: item.mediaType,
