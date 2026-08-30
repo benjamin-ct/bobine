@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   backdropUrl,
   posterUrl,
@@ -37,6 +37,7 @@ import styles from "./DetailPage.module.css";
 const MAIN_CAST_COUNT = 12;
 
 export default function DetailPage() {
+  const navigate = useNavigate();
   const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
   const [details, setDetails] = useState<MediaDetails | null>(null);
   const [providers, setProviders] = useState<RegionWatchProviders | null>(null);
@@ -191,7 +192,18 @@ export default function DetailPage() {
 
   return (
     <div className={styles.page}>
-      <Link to="/" className={styles.back}>
+      <Link
+        to="/"
+        className={styles.back}
+        onClick={(e) => {
+          // navigate(-1) déclenche un vrai retour arrière (POP), nécessaire
+          // pour que useScrollRestoration restaure la position de la liste
+          // d'origine — un <Link> classique crée une nouvelle entrée
+          // d'historique (PUSH) et ne restaure jamais rien.
+          e.preventDefault();
+          navigate(-1);
+        }}
+      >
         ← Retour
       </Link>
 

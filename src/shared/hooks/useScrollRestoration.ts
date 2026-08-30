@@ -21,33 +21,42 @@ const scrollPositions = new Map<string, number>();
 export function useScrollRestoration(ready: boolean, versionKey: number | string) {
   const location = useLocation();
   const navigationType = useNavigationType();
-  const restoredRef = useRef(false);
+  // Cible figée pour la restauration en cours (distincte de scrollPositions,
+  // pour ne pas être écrasée par les scrolls programmatiques ci-dessous).
+  const targetRef = useRef<number | null>(null);
+  const restoringRef = useRef(false);
 
-  useEffect(() => {
-    restoredRef.current = false;
-  }, [location.key]);
+  useLayoutEffect(() => {
+    targetRef.current =
+      navigationType === "POP" ? (scrollPositions.get(location.key) ?? null) : null;
+    restoringRef.current = targetRef.current != null;
+  }, [location.key, navigationType]);
 
   useEffect(() => {
     const handleScroll = () => {
-      scrollPositions.set(location.key, window.scrollY);
+      // Pendant la restauration, window.scrollTo() ci-dessous déclenche
+      // aussi cet écouteur : ignorer ces scrolls-là pour ne pas écraser la
+      // cible avant qu'elle soit atteinte.
+      if (!restoringRef.current) {
+        scrollPositions.set(location.key, window.scrollY);
+      }
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [location.key]);
 
   useLayoutEffect(() => {
-    if (!ready || restoredRef.current || navigationType !== "POP") {
+    if (!restoringRef.current || !ready || navigationType !== "POP") {
       return;
     }
-    const saved = scrollPositions.get(location.key);
-    if (saved == null) {
-      restoredRef.current = true;
+    const target = targetRef.current;
+    if (target == null) {
       return;
     }
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    window.scrollTo(0, Math.min(saved, Math.max(maxScroll, 0)));
-    if (maxScroll >= saved) {
-      restoredRef.current = true;
+    window.scrollTo(0, Math.min(target, Math.max(maxScroll, 0)));
+    if (maxScroll >= target) {
+      restoringRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, navigationType, location.key, versionKey]);
