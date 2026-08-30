@@ -149,6 +149,7 @@ précédente s'est arrêtée en cours de route) et continuer le développement (
       - sinon, la chercher dans les checks/deployments de la PR sur GitHub.
    3. Déplacer la carte vers `A valider`.
    4. Ajouter un commentaire sur la carte avec le lien de la preview (et le lien de la PR).
+      **Toujours préfixer le commentaire par `🤖 [Claude]`** pour indiquer clairement qu'il s'agit d'un message automatisé.
 
 ### 3. Démarrer un nouveau ticket (liste `A faire`)
 
@@ -183,3 +184,4 @@ carte de `En cours` sans label en traitement actif : l'exécution est terminée.
 - Si un appel à l'API Trello ou GitHub échoue (rate limit, erreur réseau, permission), ne pas modifier partiellement un
   état (ex. ne pas déplacer une carte si l'action associée a échoué). Réessayer une fois ; si l'échec persiste,
   s'arrêter et signaler l'erreur plutôt que de continuer sur un état incohérent.
+- Tous les commentaires postés sur Trello par ce skill sont préfixés par `🤖 [Claude]` pour les distinguer des messages humains.
