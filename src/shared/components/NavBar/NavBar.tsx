@@ -322,6 +322,16 @@ export default function NavBar() {
 
         <button
           type="button"
+          className={`${styles.iconBtn} ${styles.mobileOnly}`}
+          onClick={toggleTheme}
+          aria-label="Basculer le thème clair / sombre"
+          title="Thème clair / sombre"
+        >
+          <ThemeIcon theme={theme} />
+        </button>
+
+        <button
+          type="button"
           className={styles.hamburger}
           onClick={() => setMenuOpen((v) => !v)}
           aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
@@ -381,9 +391,6 @@ export default function NavBar() {
             </NavLink>
           </nav>
           <div className={styles.mobileFoot}>
-            <button type="button" className={styles.textBtn} onClick={toggleTheme}>
-              <ThemeIcon theme={theme} /> Thème
-            </button>
             {authStatus === "authenticated" ? (
               <button
                 type="button"

@@ -272,9 +272,13 @@
   display: flex;
 }
 
-.hamburger {
+.mobileOnly {
   display: none;
   margin-left: auto;
+}
+
+.hamburger {
+  display: none;
   width: 40px;
   height: 40px;
   border-radius: 999px;
@@ -368,6 +372,9 @@
   }
   .desktopOnly {
     display: none;
+  }
+  .mobileOnly {
+    display: grid;
   }
   .hamburger {
     display: grid;
