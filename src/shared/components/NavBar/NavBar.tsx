@@ -56,11 +56,13 @@ function SearchResults({
   status,
   query,
   onPick,
+  onViewAll,
 }: {
   results: SearchMultiResult[];
   status: "idle" | "loading" | "success" | "error";
   query: string;
   onPick: (path: string) => void;
+  onViewAll: () => void;
 }) {
   return (
     <div className={styles.results} role="listbox">
@@ -127,7 +129,7 @@ function SearchResults({
         <Link
           to={`/recherche?q=${encodeURIComponent(query)}`}
           className={styles.allResults}
-          onClick={() => onPick("")}
+          onClick={onViewAll}
         >
           Voir tous les résultats pour « {query} » →
         </Link>
@@ -269,7 +271,13 @@ export default function NavBar() {
             />
           </form>
           {open && query.trim().length >= MIN_QUERY_LENGTH && (
-            <SearchResults results={results} status={status} query={query.trim()} onPick={goTo} />
+            <SearchResults
+              results={results}
+              status={status}
+              query={query.trim()}
+              onPick={goTo}
+              onViewAll={() => setOpen(false)}
+            />
           )}
         </div>
 
@@ -370,6 +378,7 @@ export default function NavBar() {
                 goTo(p);
                 setMenuOpen(false);
               }}
+              onViewAll={() => setMenuOpen(false)}
             />
           )}
           <nav className={styles.mobileLinks}>
