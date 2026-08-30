@@ -10,6 +10,7 @@ import MyList from "./modules/my-list/index.ts";
 import Profile from "./modules/profile/index.ts";
 import Search from "./modules/search/index.ts";
 import { LoginPage, VerifyAuthPage } from "./modules/auth/index.ts";
+import NotFound from "./modules/not-found/index.ts";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/recherche" element={<Search />} />
           <Route path="/connexion" element={<LoginPage />} />
           <Route path="/auth/verify" element={<VerifyAuthPage />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
       <Footer />
