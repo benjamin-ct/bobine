@@ -52,6 +52,7 @@ jobs:
           npm run verify:upcoming-badge
           npm run verify:movie-meta
           npm run verify:tmdb-concurrency-cap
+          npm run verify:numeric-range-filter
 
       - name: Build
         run: npm run build

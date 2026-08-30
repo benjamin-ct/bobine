@@ -10,6 +10,7 @@ import {
   FilterBar,
   AdvancedFilters,
   EMPTY_ADVANCED_FILTERS,
+  getAdvancedFiltersRangeError,
   Loading,
   ErrorMessage,
   EmptyState,
@@ -51,7 +52,9 @@ export default function DiscoverPage() {
   const [page, setPage] = useState(1);
   const [results, setResults] = useState<MediaItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error" | "invalid">(
+    "idle"
+  );
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const { region } = useRegion();
@@ -61,6 +64,7 @@ export default function DiscoverPage() {
   const { watchlist } = useLibrary();
 
   const advancedKey = JSON.stringify(advanced);
+  const advancedError = getAdvancedFiltersRangeError(advanced);
   const activeProviderIds = useMyPlatforms
     ? favoriteProviderIds
     : providerId
@@ -96,6 +100,13 @@ export default function DiscoverPage() {
   }, [mediaType, region]);
 
   useEffect(() => {
+    if (advancedError) {
+      // Plage min/max incohérente (ex. note min > note max) : on n'appelle
+      // pas l'API, qui retomberait silencieusement sur 0 résultat.
+      setResults([]);
+      setStatus("invalid");
+      return;
+    }
     let cancelled = false;
     setStatus("loading");
     discover(mediaType, {
@@ -142,7 +153,7 @@ export default function DiscoverPage() {
   ]);
 
   const loadMore = useCallback(() => {
-    if (loadingMore || page >= totalPages) {
+    if (loadingMore || page >= totalPages || advancedError) {
       return;
     }
     const nextPage = page + 1;
@@ -177,6 +188,7 @@ export default function DiscoverPage() {
     loadingMore,
     page,
     totalPages,
+    advancedError,
     mediaType,
     genreIds,
     excludedGenreIds,
@@ -259,6 +271,7 @@ export default function DiscoverPage() {
 
       {status === "loading" && <Loading />}
       {status === "error" && <ErrorMessage error={error} />}
+      {status === "invalid" && advancedError && <EmptyState label={advancedError} />}
       {status === "success" && results.length === 0 && (
         <EmptyState label="Aucun résultat pour ces filtres." />
       )}

@@ -56,3 +56,9 @@
   font-weight: 600;
   padding: 4px 0;
 }
+
+.rangeError {
+  grid-column: 1 / -1;
+  color: var(--accent-ink);
+  font-size: 13px;
+}
