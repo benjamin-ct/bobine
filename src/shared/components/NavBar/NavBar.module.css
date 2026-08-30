@@ -216,6 +216,8 @@
   flex: none;
   display: grid;
   place-items: center;
+  justify-content: center;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--fg);
