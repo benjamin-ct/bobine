@@ -54,7 +54,15 @@ export function useScrollRestoration(ready: boolean, versionKey: number | string
       return;
     }
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    window.scrollTo(0, Math.min(target, Math.max(maxScroll, 0)));
+    // `behavior: "instant"` explicite : le CSS global (`scroll-behavior: smooth`)
+    // s'applique sinon à ce scrollTo() aussi, et chaque nouveau lot chargé relance
+    // une animation fluide par-dessus la précédente pendant la restauration
+    // progressive, d'où les saccades observées.
+    window.scrollTo({
+      top: Math.min(target, Math.max(maxScroll, 0)),
+      left: 0,
+      behavior: "instant",
+    });
     if (maxScroll >= target) {
       restoringRef.current = false;
     }
