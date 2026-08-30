@@ -46,7 +46,7 @@ function ThemeIcon({ theme }: { theme: "dark" | "light" }) {
     </svg>
   ) : (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" transform="translate(0.97 -0.97)" />
     </svg>
   );
 }
@@ -57,12 +57,14 @@ function SearchResults({
   query,
   onPick,
   inline,
+  onViewAll,
 }: {
   results: SearchMultiResult[];
   status: "idle" | "loading" | "success" | "error";
   query: string;
   onPick: (path: string) => void;
   inline?: boolean;
+  onViewAll: () => void;
 }) {
   return (
     <div className={`${styles.results} ${inline ? styles.resultsInline : ""}`} role="listbox">
@@ -129,7 +131,7 @@ function SearchResults({
         <Link
           to={`/recherche?q=${encodeURIComponent(query)}`}
           className={styles.allResults}
-          onClick={() => onPick("")}
+          onClick={onViewAll}
         >
           Voir tous les résultats pour « {query} » →
         </Link>
@@ -271,7 +273,13 @@ export default function NavBar() {
             />
           </form>
           {open && query.trim().length >= MIN_QUERY_LENGTH && (
-            <SearchResults results={results} status={status} query={query.trim()} onPick={goTo} />
+            <SearchResults
+              results={results}
+              status={status}
+              query={query.trim()}
+              onPick={goTo}
+              onViewAll={() => setOpen(false)}
+            />
           )}
         </div>
 
@@ -373,6 +381,7 @@ export default function NavBar() {
                 goTo(p);
                 setMenuOpen(false);
               }}
+              onViewAll={() => setMenuOpen(false)}
             />
           )}
           <nav className={styles.mobileLinks}>
