@@ -9,25 +9,21 @@
   font-weight: 600;
 }
 
-.card {
+.authBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
-  box-shadow: var(--shadow);
+  padding: 14px 20px;
   margin-top: 24px;
 }
 
-.k {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.hint {
-  margin: 10px 0 16px;
+.authBannerText {
+  margin: 0;
   color: var(--muted);
   font-size: 14px;
 }

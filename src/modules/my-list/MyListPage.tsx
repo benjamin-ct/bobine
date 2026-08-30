@@ -17,28 +17,6 @@ export default function MyListPage() {
   const [creating, setCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
 
-  if (authStatus !== "authenticated") {
-    return (
-      <div className={styles.page}>
-        <PageHeader
-          eyebrow="Votre cinémathèque"
-          title="Ma liste"
-          lead="Vos titres suivis : ce que vous avez vu, ce que vous voulez voir, et vos listes perso."
-        />
-        <div className={styles.card}>
-          <span className={styles.k}>Compte</span>
-          <p className={styles.hint}>
-            Connecte-toi pour retrouver ta liste : elle n'a pas disparu, elle est simplement liée à
-            ton compte.
-          </p>
-          <Link to="/connexion" className={styles.loginBtn}>
-            Connexion
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   const continuingSeries = watchlist.filter(
     (item) => item.mediaType === "tv" && (item.watchedEpisodes?.length || 0) > 0
   );
@@ -69,6 +47,18 @@ export default function MyListPage() {
           </>
         }
       />
+
+      {authStatus !== "authenticated" && (
+        <div className={styles.authBanner}>
+          <p className={styles.authBannerText}>
+            Connecte-toi pour synchroniser cette liste entre tes appareils : elle n'a pas disparu,
+            elle reste enregistrée sur cet appareil.
+          </p>
+          <Link to="/connexion" className={styles.loginBtn}>
+            Connexion
+          </Link>
+        </div>
+      )}
 
       <div className={styles.tabs} role="tablist">
         <button
