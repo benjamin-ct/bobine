@@ -272,6 +272,10 @@
   display: flex;
 }
 
+.mobileOnly {
+  display: none;
+}
+
 .hamburger {
   display: none;
   margin-left: auto;
@@ -368,6 +372,9 @@
   }
   .desktopOnly {
     display: none;
+  }
+  .mobileOnly {
+    display: grid;
   }
   .hamburger {
     display: grid;
