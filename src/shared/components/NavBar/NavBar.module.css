@@ -134,6 +134,11 @@
   overflow-y: auto;
 }
 
+.resultsInline {
+  position: static;
+  margin-top: 8px;
+}
+
 .hint {
   padding: 16px 12px;
   color: var(--muted);

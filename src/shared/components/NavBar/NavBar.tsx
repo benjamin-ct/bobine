@@ -56,14 +56,16 @@ function SearchResults({
   status,
   query,
   onPick,
+  inline,
 }: {
   results: SearchMultiResult[];
   status: "idle" | "loading" | "success" | "error";
   query: string;
   onPick: (path: string) => void;
+  inline?: boolean;
 }) {
   return (
-    <div className={styles.results} role="listbox">
+    <div className={`${styles.results} ${inline ? styles.resultsInline : ""}`} role="listbox">
       {status === "loading" && <p className={styles.hint}>Recherche…</p>}
       {status === "success" && results.length === 0 && (
         <p className={styles.hint}>Aucun résultat.</p>
@@ -366,6 +368,7 @@ export default function NavBar() {
               results={results}
               status={status}
               query={query.trim()}
+              inline
               onPick={(p) => {
                 goTo(p);
                 setMenuOpen(false);
