@@ -65,7 +65,16 @@ export default function NewReleasesPage() {
       ? [providerId]
       : undefined;
 
+  // Ignore le premier montage : sinon `setGenreIds([])` y crée un nouveau
+  // tableau vide (référence différente de l'état initial), ce qui redéclenche
+  // l'effet discover() juste après le premier appel — deux appels API
+  // identiques à l'ouverture de la page pour rien.
+  const isFirstMediaTypeRender = useRef(true);
   useEffect(() => {
+    if (isFirstMediaTypeRender.current) {
+      isFirstMediaTypeRender.current = false;
+      return;
+    }
     setGenreIds([]);
     setPage(1);
   }, [mediaType]);
