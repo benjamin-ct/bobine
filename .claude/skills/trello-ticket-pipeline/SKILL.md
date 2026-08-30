@@ -185,3 +185,43 @@ carte de `En cours` sans label en traitement actif : l'exécution est terminée.
   état (ex. ne pas déplacer une carte si l'action associée a échoué). Réessayer une fois ; si l'échec persiste,
   s'arrêter et signaler l'erreur plutôt que de continuer sur un état incohérent.
 - Tous les commentaires postés sur Trello par ce skill sont préfixés par `🤖 [Claude]` pour les distinguer des messages humains.
+
+## Sortie attendue
+
+À la fin de l'exécution, produis **toujours** un résumé JSON structuré de la forme suivante, même si aucune action n'a été effectuée :
+
+```json
+{
+  "status": "success",
+  "merged": [
+    { "cardId": "...", "cardName": "...", "prUrl": "..." }
+  ],
+  "resumed": [
+    { "cardId": "...", "cardName": "...", "status": "in_progress" | "blocked" }
+  ],
+  "started": [
+    { "cardId": "...", "cardName": "...", "prUrl": "..." }
+  ],
+  "blocked": [
+    { "cardId": "...", "cardName": "...", "reason": "..." }
+  ],
+  "summary": "Résumé en une phrase des actions effectuées"
+}
+```
+
+- `merged` : cartes mergées de `To merge` → `Done`
+- `resumed` : cartes reprises de `En cours` (débloquées ou renvoyées après review KO)
+- `started` : nouveaux tickets démarrés depuis `A faire`
+- `blocked` : cartes bloquées avec le label `Bloqué — action requise` ajouté
+- `summary` : une phrase synthétique
+
+Si une erreur survient en cours d'exécution (rate limit, tokens épuisés, bug), produis ce JSON à la place :
+
+```json
+{
+  "status": "error",
+  "error": "Description courte de l'erreur"
+}
+```
+
+Ce résumé sera automatiquement envoyé comme notification de synthèse.
