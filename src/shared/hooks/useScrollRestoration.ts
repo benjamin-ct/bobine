@@ -54,16 +54,19 @@ export function useScrollRestoration(ready: boolean, versionKey: number | string
       return;
     }
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    // `behavior: "instant"` explicite : le CSS global (`scroll-behavior: smooth`)
-    // s'applique sinon à ce scrollTo() aussi, et chaque nouveau lot chargé relance
-    // une animation fluide par-dessus la précédente pendant la restauration
-    // progressive, d'où les saccades observées.
+    const isFinalStep = maxScroll >= target;
+    // Tant que l'infinite scroll charge encore du contenu manquant, les étapes
+    // intermédiaires restent instantanées : les enchaîner en `smooth` relance une
+    // animation par-dessus la précédente à chaque nouveau lot, d'où les saccades
+    // observées auparavant. Seule la dernière étape, une fois la cible atteignable,
+    // est animée (behavior explicite : le CSS global `scroll-behavior: smooth`
+    // ne s'applique qu'en son absence).
     window.scrollTo({
       top: Math.min(target, Math.max(maxScroll, 0)),
       left: 0,
-      behavior: "instant",
+      behavior: isFinalStep ? "smooth" : "instant",
     });
-    if (maxScroll >= target) {
+    if (isFinalStep) {
       restoringRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
