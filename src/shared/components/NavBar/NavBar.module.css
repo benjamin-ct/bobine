@@ -274,11 +274,11 @@
 
 .mobileOnly {
   display: none;
+  margin-left: auto;
 }
 
 .hamburger {
   display: none;
-  margin-left: auto;
   width: 40px;
   height: 40px;
   border-radius: 999px;
