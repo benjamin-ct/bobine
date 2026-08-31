@@ -195,64 +195,7 @@ carte de `En cours` sans label en traitement actif : l'exécution est terminée.
 - **Webhooks Trello** : ce skill peut être déclenché automatiquement par un webhook Trello → listener Docker →
   `claude -p`. Dans ce cas, traite la carte même si elle semble suspecte, sauf si un humain t'a explicitement dit de l'
   ignorer dans un commentaire.
-- **Notification Discord** : après chaque exécution, un résumé JSON est envoyé sur Discord. Ce JSON est crucial pour le
-  monitoring — produis-le toujours, même en cas d'erreur ou si aucune action n'a été effectuée.
 
-## Sortie attendue
-
-À la fin de l'exécution, produis **toujours** un résumé JSON structuré de la forme suivante, même si aucune action n'a
-été effectuée :
-
-```json
-{
-  "status": "success",
-  "merged": [
-    {
-      "cardId": "...",
-      "cardName": "...",
-      "prUrl": "..."
-    }
-  ],
-  "resumed": [
-    {
-      "cardId": "...",
-      "cardName": "...",
-      "status": "in_progress" | "blocked"
-    }
-  ],
-  "started": [
-    {
-      "cardId": "...",
-      "cardName": "...",
-      "prUrl": "..."
-    }
-  ],
-  "blocked": [
-    {
-      "cardId": "...",
-      "cardName": "...",
-      "reason": "..."
-    }
-  ],
-  "summary": "Résumé en une phrase des actions effectuées"
-}
-```
-
-- `merged` : cartes mergées de `To merge` → `Done`
-- `resumed` : cartes reprises de `En cours` (débloquées ou renvoyées après review KO)
-- `started` : nouveaux tickets démarrés depuis `A faire`
-- `blocked` : cartes bloquées avec le label `Bloqué — action requise` ajouté
-- `summary` : une phrase synthétique
-
-Si une erreur survient en cours d'exécution (rate limit, tokens épuisés, bug), produis ce JSON à la place :
-
-```json
-{
-  "status": "error",
-  "error": "Description courte de l'erreur"
-}
-```
-
-Ce résumé sera automatiquement envoyé comme notification de synthèse.
-**IMPORTANT** : Ce JSON doit être la **dernière chose** que tu produis, après avoir terminé toutes les actions. Ne
-produis aucun autre texte après ce JSON.
+**Notification Discord** : après chaque exécution, utilise le MCP Discord pour poster un résumé clair et contextualisé
+dans le channel dédié. Décris simplement ce qui a été fait (tickets mergés, démarrés, bloqués) avec les liens PR/preview
+si disponibles, ou indique qu'aucune action n'était nécessaire. En cas d'erreur, poste un message avec 🚨 et les détails.
