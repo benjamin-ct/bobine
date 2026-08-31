@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useTheme } from "../../../core/context/ThemeContext.tsx";
+import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
 import styles from "./NavBar.module.css";
 
@@ -66,6 +67,20 @@ function SearchResults({
   inline?: boolean;
   onViewAll: () => void;
 }) {
+  // Alimente le cache de préview (voir mediaPreviewCache) pour que la fiche
+  // puisse préafficher affiche/titre/date pendant son chargement.
+  useEffect(() => {
+    for (const item of results) {
+      if (item.media_type === "movie" || item.media_type === "tv") {
+        setMediaPreview(item.media_type, item.id, {
+          title: item.title || item.name || "",
+          posterPath: item.poster_path ?? null,
+          date: item.release_date || item.first_air_date,
+        });
+      }
+    }
+  }, [results]);
+
   return (
     <div className={`${styles.results} ${inline ? styles.resultsInline : ""}`} role="listbox">
       {status === "loading" && <p className={styles.hint}>Recherche…</p>}

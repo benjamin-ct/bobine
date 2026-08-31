@@ -16,18 +16,19 @@ import {
   MediaCard,
   PersonCard,
   RatingStars,
-  Loading,
   ErrorMessage,
   Dropdown,
 } from "../../shared/components/index.ts";
 import EpisodeTracker from "./components/EpisodeTracker.tsx";
 import CollectionSection from "./components/CollectionSection.tsx";
+import DetailSkeleton from "./components/DetailSkeleton.tsx";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../core/context/RegionContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import { ratingTier } from "../../shared/lib/ratingTier.ts";
+import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPreviewCache.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
@@ -43,6 +44,7 @@ export default function DetailPage() {
   const [providers, setProviders] = useState<RegionWatchProviders | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<Error | null>(null);
+  const [preview, setPreview] = useState<MediaPreview | null>(null);
   const [showFullCast, setShowFullCast] = useState(false);
   const [newListName, setNewListName] = useState("");
   const {
@@ -70,6 +72,7 @@ export default function DetailPage() {
     let cancelled = false;
     setStatus("loading");
     setShowFullCast(false);
+    setPreview(getMediaPreview(mediaType, id));
     getDetails(mediaType, id)
       .then((d) => {
         if (cancelled) {
@@ -104,7 +107,7 @@ export default function DetailPage() {
   if (status === "loading") {
     return (
       <div className={styles.page}>
-        <Loading />
+        <DetailSkeleton preview={preview} />
       </div>
     );
   }

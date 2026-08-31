@@ -1,0 +1,108 @@
+.hero {
+  min-height: 320px;
+}
+
+.block {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+}
+
+.block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--fg) 8%, transparent),
+    transparent
+  );
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.barTitle {
+  height: clamp(32px, 4.4vw, 54px);
+  width: min(420px, 70%);
+  border-radius: 8px;
+}
+
+.barMeta {
+  height: 15px;
+  width: 55%;
+  margin-top: 16px;
+  border-radius: 6px;
+}
+
+.barLine {
+  height: 13px;
+  width: 90%;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+
+.barLineShort {
+  height: 13px;
+  width: 40%;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+
+.actionsSkeleton {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.pill {
+  height: 40px;
+  width: 150px;
+  border-radius: 999px;
+}
+
+.sectionTitle {
+  height: 20px;
+  width: 220px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+}
+
+.providersSkeleton {
+  display: flex;
+  gap: 8px;
+}
+
+.providerLogo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}
+
+.personSkeleton {
+  text-align: center;
+}
+
+.avatar {
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.personSkeleton .barLine {
+  width: 70%;
+  margin: 0 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block::after {
+    animation: none;
+  }
+}
