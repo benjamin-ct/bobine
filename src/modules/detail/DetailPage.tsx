@@ -206,7 +206,7 @@ export default function DetailPage() {
     }
     const listId = createList(trimmed);
     if (listId) {
-      addToList(listId, mediaType, id);
+      addToList(listId, libItem);
       setNewListName("");
     }
   }
@@ -302,7 +302,9 @@ export default function DetailPage() {
                       key={list.id}
                       type="button"
                       className={`${dropdownStyles.option} ${on ? dropdownStyles.optionOn : ""}`}
-                      onClick={() => (on ? removeFromList : addToList)(list.id, mediaType, id)}
+                      onClick={() =>
+                        on ? removeFromList(list.id, mediaType, id) : addToList(list.id, libItem)
+                      }
                     >
                       <span className={dropdownStyles.check}>
                         <svg

@@ -41,7 +41,10 @@ export interface LibraryState {
 export interface CustomList {
   id: string;
   name: string;
-  itemKeys: string[];
+  /** Items stockés directement ici (pas juste des clés vers watched/watchlist) :
+   * une liste perso doit fonctionner pour un titre jamais marqué "vu" ni
+   * "envie de voir". L'ordre du tableau porte aussi le tri manuel. */
+  items: LibraryItem[];
   createdAt: number;
 }
 

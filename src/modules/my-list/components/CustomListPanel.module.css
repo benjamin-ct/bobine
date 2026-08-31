@@ -49,3 +49,115 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+.dragHint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.draggable {
+  cursor: grab;
+}
+
+.dragging {
+  opacity: 0.45;
+}
+
+.dropBefore {
+  box-shadow: -3px 0 0 var(--accent);
+}
+
+.dropAfter {
+  box-shadow: 3px 0 0 var(--accent);
+}
+
+.viewToggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.viewBtn {
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.viewBtn:hover {
+  color: var(--fg);
+}
+
+.viewBtnOn {
+  background: var(--surface-2);
+  color: var(--fg);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin-bottom: 10px;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.row:hover {
+  border-color: var(--border-2);
+}
+
+.rowThumb {
+  width: 46px;
+  height: 66px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: block;
+}
+
+.rowThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.rowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-weight: 700;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowSub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.rowDropBefore {
+  box-shadow: 0 -3px 0 var(--accent);
+}
+
+.rowDropAfter {
+  box-shadow: 0 3px 0 var(--accent);
+}
