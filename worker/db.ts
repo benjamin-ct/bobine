@@ -1,5 +1,5 @@
 // Petites fonctions d'accès à D1. Pas d'ORM : le schéma est simple (voir
-// worker/schema.sql) et les requêtes préparées suffisent largement.
+// migrations/) et les requêtes préparées suffisent largement.
 import { decodeHtmlEntities } from "./validate.ts";
 import type {
   CleanCustomListMap,
@@ -371,7 +371,7 @@ export async function applyLibraryChanges(
 // Listes personnalisées synchronisées par compte. -----------------------
 
 // Renvoie les listes perso au même format que l'état client (LibraryContext),
-// items déjà triés par `position` (le tri manuel, voir schema.sql).
+// items déjà triés par `position` (le tri manuel, voir migrations/).
 export async function getCustomListsForUser(
   db: D1Database,
   userId: number

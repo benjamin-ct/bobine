@@ -18,7 +18,7 @@ export interface Env {
   RESEND_FROM_EMAIL?: string;
 }
 
-// Lignes D1 (voir worker/schema.sql) — reflètent exactement les colonnes
+// Lignes D1 (voir migrations/) — reflètent exactement les colonnes
 // stockées ; le typage applicatif plus riche (LibraryItem...) vit dans
 // src/core/types, réutilisé ici où c'est le même format JSON.
 export interface SubscriptionRow {
