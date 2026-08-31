@@ -124,3 +124,32 @@ jobs:
             👉 ${{ steps.preview-url.outputs.url }}
 
             <sub>This url stays stable for the duration of the PR (alias : `${{ steps.branch-slug.outputs.slug }}`)</sub>
+
+  apply-d1-migrations:
+    name: Apply D1 migrations (remote)
+    needs:
+      - verify
+      - secrets-scan
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+
+      # Applique toute migration ajoutée sous migrations/ pas encore jouée
+      # sur la base D1 distante (voir migrations/README implicite : fichiers
+      # numérotés créés via `npx wrangler d1 migrations create`). Idempotent
+      # — `wrangler` ignore les migrations déjà marquées comme appliquées
+      # dans la table `d1_migrations` de la base. Remplace l'exécution
+      # manuelle de worker/schema.sql, plus sujette à l'oubli.
+      - name: Apply pending migrations
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply bobine-notifications --remote

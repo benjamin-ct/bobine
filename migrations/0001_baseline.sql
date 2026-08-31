@@ -1,6 +1,8 @@
--- Schéma de la base D1 "bobine-notifications" (notifications push).
--- Appliqué en prod via le MCP Cloudflare. Pour le développement local :
---   npx wrangler d1 execute bobine-notifications --local --file=worker/schema.sql
+-- Schéma de base de la base D1 "bobine-notifications", déjà en place en
+-- prod avant l'introduction des migrations Wrangler ci-dessous : cette
+-- première migration ne fait que le déclarer pour que `d1_migrations`
+-- s'accorde avec l'état réel de la base distante. `CREATE TABLE IF NOT
+-- EXISTS` la rend sans danger à rejouer sur une base déjà à jour.
 
 CREATE TABLE IF NOT EXISTS subscriptions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

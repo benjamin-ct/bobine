@@ -11,6 +11,8 @@ import {
   getLibraryForUser,
   replaceLibraryForUser,
   applyLibraryChanges,
+  getCustomListsForUser,
+  replaceCustomListsForUser,
 } from "./db.ts";
 import { runDailyCheck } from "./scheduled.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
@@ -33,6 +35,7 @@ import {
   sanitizeWatchlistItems,
   sanitizeGenrePrefs,
   sanitizeKeyList,
+  sanitizeCustomListsPayload,
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
 import { getTheatricalIndex } from "./tmdb.ts";
@@ -496,6 +499,39 @@ async function handleLibrarySync(request: Request, env: Env): Promise<Response> 
   return json({ ok: true });
 }
 
+// Listes personnalisées synchronisées ------------------------------------
+//
+// Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête.
+async function handleGetCustomLists(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const customLists = await getCustomListsForUser(env.DB, user.id);
+  return json(customLists);
+}
+
+// Remplacement complet à chaque appel (voir LibraryContext : anti-rebond côté
+// client, un PUT par salve de changements) — pas de synchronisation
+// incrémentale ici, contrairement à /api/library/sync : une liste perso
+// change par opérations multi-lignes (création, renommage, glisser-déposer)
+// qu'un diff incrémental compliquerait pour un gain nul à cette échelle.
+async function handlePutCustomLists(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  await replaceCustomListsForUser(env.DB, user.id, sanitizeCustomListsPayload(body));
+  return json({ ok: true });
+}
+
 // Index "au cinéma"/"bientôt" (voir getTheatricalIndex, worker/tmdb.ts) pour
 // une région : mis en cache à l'edge, si bien qu'un seul visiteur par région
 // et par heure paie le parcours complet de now_playing/upcoming — les
@@ -778,6 +814,14 @@ async function routeRequest(
 
   if (url.pathname === "/api/library/sync" && request.method === "POST") {
     return handleLibrarySync(request, env);
+  }
+
+  if (url.pathname === "/api/custom-lists" && request.method === "GET") {
+    return handleGetCustomLists(request, env);
+  }
+
+  if (url.pathname === "/api/custom-lists" && request.method === "PUT") {
+    return handlePutCustomLists(request, env);
   }
 
   if (url.pathname.startsWith("/api/tmdb/") && request.method === "GET") {

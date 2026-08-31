@@ -109,6 +109,8 @@ Le projet est configuré pour être déployé sur Cloudflare via `wrangler.jsonc
 | Build       | `npm run build`       |
 | Déploiement | `npx wrangler deploy` |
 
+En parallèle, le job `apply-d1-migrations` de la CI GitHub Actions (`.github/workflows/ci.yml`, déclenché lui aussi sur push `main`) applique automatiquement à la base distante toute migration D1 pas encore jouée (voir `migrations/`) via `npx wrangler d1 migrations apply bobine-notifications --remote`. Aucune migration ne doit jamais être lancée à la main : ajouter un fichier dans `migrations/` (`npx wrangler d1 migrations create bobine-notifications <nom>`) suffit, la CI se charge de l'appliquer au prochain merge sur `main`.
+
 **Avant le premier déploiement**, configure dans le dashboard Cloudflare (Worker `bobine` → **Settings → Variables and Secrets**, type **Secret** obligatoire — voir l'avertissement dans `wrangler.jsonc`) :
 
 | Nom                                    | Obligatoire        | Rôle                                                                                                                      |
@@ -121,7 +123,7 @@ Le projet est configuré pour être déployé sur Cloudflare via `wrangler.jsonc
 
 Pour tester la configuration localement sans rien déployer : `npm run build && npx wrangler deploy --dry-run`.
 
-Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.dev.vars` (jamais commité), puis `npx wrangler d1 execute bobine-notifications --local --file=worker/schema.sql && npx wrangler dev`.
+Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.dev.vars` (jamais commité), puis `npx wrangler d1 migrations apply bobine-notifications --local && npx wrangler dev`.
 
 ## Sécurité
 

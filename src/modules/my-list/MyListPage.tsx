@@ -89,7 +89,7 @@ export default function MyListPage() {
             className={`${styles.tab} ${tab === list.id ? styles.tabActive : ""}`}
             onClick={() => setTab(list.id)}
           >
-            {list.name} <span className={styles.count}>{list.itemKeys.length}</span>
+            {list.name} <span className={styles.count}>{list.items.length}</span>
           </button>
         ))}
         <button type="button" className={styles.newTab} onClick={() => setCreating((v) => !v)}>

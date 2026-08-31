@@ -355,6 +355,83 @@ export function sanitizeGenrePrefs(rawGenres: unknown, maxItems: number): CleanG
     .filter((g): g is CleanGenrePref => g !== null);
 }
 
+const MAX_CUSTOM_LISTS = 200; // large marge au-dessus d'un usage réel
+
+export interface CleanCustomList {
+  id: string;
+  name: string;
+  createdAt: number;
+  items: CleanLibraryItem[];
+}
+
+export type CleanCustomListMap = Record<string, CleanCustomList>;
+
+// Un item de liste perso porte son mediaType/id directement (contrairement à
+// `watched`/`watchlist`, où ils viennent de la clé englobante) — voir
+// CustomList dans src/core/types/library.ts. On les extrait ici pour
+// réutiliser sanitizeItem tel quel.
+function sanitizeCustomListItem(raw: unknown): CleanLibraryItem | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const r = raw as Record<string, unknown>;
+  return sanitizeItem(r.mediaType as string, r.id, r);
+}
+
+function sanitizeCustomList(id: string, raw: unknown): CleanCustomList | null {
+  if (typeof id !== "string" || !id || id.length > 100) {
+    return null;
+  }
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const r = raw as Record<string, unknown>;
+  const name = cleanString(r.name);
+  if (!name) {
+    return null;
+  }
+  const createdAt = cleanNumber(r.createdAt) ?? Date.now();
+  const seenKeys = new Set<string>();
+  const items = (Array.isArray(r.items) ? r.items : [])
+    .map(sanitizeCustomListItem)
+    .filter((item): item is CleanLibraryItem => {
+      if (!item) {
+        return false;
+      }
+      const key = `${item.mediaType}:${item.id}`;
+      if (seenKeys.has(key)) {
+        return false;
+      }
+      seenKeys.add(key);
+      return true;
+    })
+    .slice(0, MAX_ITEMS_PER_LIST);
+  return { id, name, createdAt, items };
+}
+
+// Listes perso complètes (voir PUT /api/custom-lists) : { "list-...": { name,
+// items, createdAt } }. Même politique que sanitizeLibraryPayload — clé non
+// exploitable silencieusement écartée plutôt que de rejeter tout le payload.
+export function sanitizeCustomListsPayload(body: unknown): CleanCustomListMap {
+  const out: CleanCustomListMap = {};
+  if (!body || typeof body !== "object") {
+    return out;
+  }
+  let count = 0;
+  for (const [id, raw] of Object.entries(body as Record<string, unknown>)) {
+    if (count >= MAX_CUSTOM_LISTS) {
+      break;
+    }
+    const list = sanitizeCustomList(id, raw);
+    if (!list) {
+      continue;
+    }
+    out[list.id] = list;
+    count += 1;
+  }
+  return out;
+}
+
 export interface CleanKey {
   mediaType: MediaTypeStr;
   id: number;
