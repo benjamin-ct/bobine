@@ -38,9 +38,7 @@
 }
 
 .panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
+  position: fixed;
   z-index: 60;
   min-width: 220px;
   max-height: 340px;
@@ -51,11 +49,6 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow-lift);
   animation: in 0.16s ease;
-}
-
-.panelRight {
-  left: auto;
-  right: 0;
 }
 
 @keyframes in {
