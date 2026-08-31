@@ -235,6 +235,7 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
         <div className={styles.recentRow}>
           {recent.map((item) => {
             const accentKey = posterAccentFromGenres(item.genreIds, `${item.mediaType}:${item.id}`);
+            const year = item.date ? item.date.slice(0, 4) : null;
             return (
               <Link
                 key={`${item.mediaType}:${item.id}`}
@@ -247,6 +248,15 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
                 ) : (
                   <div className={`${styles.recentEmpty} ${posterStyles[accentKey]}`} />
                 )}
+                <div className={styles.recentOverlay}>
+                  <p className={styles.recentTitle}>{item.title}</p>
+                  <p className={styles.recentMeta}>
+                    {year}
+                    {item.rating != null && (
+                      <span className={styles.recentRating}>★ {item.rating}/10</span>
+                    )}
+                  </p>
+                </div>
               </Link>
             );
           })}
