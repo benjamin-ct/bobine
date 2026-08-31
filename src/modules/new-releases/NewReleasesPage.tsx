@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
+import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useRegion } from "../../core/context/RegionContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
@@ -201,6 +202,8 @@ export default function NewReleasesPage() {
     observer.observe(el);
     return () => observer.disconnect();
   }, [status, loadMore]);
+
+  useScrollRestoration(status === "success", results.length);
 
   return (
     <div className={styles.page}>

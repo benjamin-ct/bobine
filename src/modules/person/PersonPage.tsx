@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { posterUrl, getPerson, getPersonCredits, getGenres } from "../../core/api/tmdb.ts";
 import { MediaCard, Loading, ErrorMessage, EmptyState } from "../../shared/components/index.ts";
 import FrequentCollaborators from "./components/FrequentCollaborators.tsx";
@@ -46,6 +46,7 @@ function sortByDateDesc<T extends { release_date?: string; first_air_date?: stri
 }
 
 export default function PersonPage() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [person, setPerson] = useState<PersonDetails | null>(null);
   const [credits, setCredits] = useState<PersonCredits | null>(null);
@@ -154,7 +155,16 @@ export default function PersonPage() {
 
   return (
     <div className={styles.page}>
-      <Link to="/" className={styles.back}>
+      <Link
+        to="/"
+        className={styles.back}
+        onClick={(e) => {
+          // Voir DetailPage : navigate(-1) déclenche un vrai POP, requis
+          // pour que useScrollRestoration restaure la liste d'origine.
+          e.preventDefault();
+          navigate(-1);
+        }}
+      >
         ← Retour
       </Link>
 

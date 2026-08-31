@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import {
   discover,
   getGenres,
@@ -315,6 +316,8 @@ export default function ComingSoonPage() {
     observer.observe(el);
     return () => observer.disconnect();
   }, [status, loadMore]);
+
+  useScrollRestoration(status === "success", visibleResults.length);
 
   // Regroupement par mois pour l'affichage calendrier (repris de la maquette
   // HTML) — calculé au rendu, pas de tri supplémentaire (visibleResults est
