@@ -16,18 +16,19 @@ import {
   MediaCard,
   PersonCard,
   RatingStars,
-  Loading,
   ErrorMessage,
   Dropdown,
 } from "../../shared/components/index.ts";
 import EpisodeTracker from "./components/EpisodeTracker.tsx";
 import CollectionSection from "./components/CollectionSection.tsx";
+import DetailSkeleton from "./components/DetailSkeleton.tsx";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../core/context/RegionContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import { ratingTier } from "../../shared/lib/ratingTier.ts";
+import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPreviewCache.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
@@ -43,6 +44,7 @@ export default function DetailPage() {
   const [providers, setProviders] = useState<RegionWatchProviders | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<Error | null>(null);
+  const [preview, setPreview] = useState<MediaPreview | null>(null);
   const [showFullCast, setShowFullCast] = useState(false);
   const [newListName, setNewListName] = useState("");
   const {
@@ -70,6 +72,7 @@ export default function DetailPage() {
     let cancelled = false;
     setStatus("loading");
     setShowFullCast(false);
+    setPreview(getMediaPreview(mediaType, id));
     getDetails(mediaType, id)
       .then((d) => {
         if (cancelled) {
@@ -101,16 +104,36 @@ export default function DetailPage() {
   if (!mediaType || !id) {
     return null;
   }
+
+  const backLink = (
+    <Link
+      to="/"
+      className={styles.back}
+      onClick={(e) => {
+        // navigate(-1) déclenche un vrai retour arrière (POP), nécessaire
+        // pour que useScrollRestoration restaure la position de la liste
+        // d'origine — un <Link> classique crée une nouvelle entrée
+        // d'historique (PUSH) et ne restaure jamais rien.
+        e.preventDefault();
+        navigate(-1);
+      }}
+    >
+      ← Retour
+    </Link>
+  );
+
   if (status === "loading") {
     return (
       <div className={styles.page}>
-        <Loading />
+        {backLink}
+        <DetailSkeleton mediaType={mediaType} id={id} preview={preview} />
       </div>
     );
   }
   if (status === "error") {
     return (
       <div className={styles.page}>
+        {backLink}
         <ErrorMessage error={error} />
       </div>
     );
@@ -192,20 +215,7 @@ export default function DetailPage() {
 
   return (
     <div className={styles.page}>
-      <Link
-        to="/"
-        className={styles.back}
-        onClick={(e) => {
-          // navigate(-1) déclenche un vrai retour arrière (POP), nécessaire
-          // pour que useScrollRestoration restaure la position de la liste
-          // d'origine — un <Link> classique crée une nouvelle entrée
-          // d'historique (PUSH) et ne restaure jamais rien.
-          e.preventDefault();
-          navigate(-1);
-        }}
-      >
-        ← Retour
-      </Link>
+      {backLink}
 
       <div className={`${styles.hero} ${posterStyles[accentKey]}`}>
         {details.backdrop_path && (

@@ -1,0 +1,12 @@
+.barTitle {
+  height: 14.5px;
+  width: 85%;
+  border-radius: 6px;
+}
+
+.barYear {
+  height: 12px;
+  width: 40%;
+  margin-top: 8px;
+  border-radius: 6px;
+}

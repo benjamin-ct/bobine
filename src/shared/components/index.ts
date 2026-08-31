@@ -2,6 +2,7 @@
 // (voir README, "Structure du projet"). Importés par tous les modules
 // métier ; n'importe jamais, à l'inverse, les internals d'un module.
 export { default as MediaCard } from "./MediaCard/MediaCard.tsx";
+export { default as MediaCardSkeleton } from "./MediaCard/MediaCardSkeleton.tsx";
 export { default as PersonCard } from "./PersonCard/PersonCard.tsx";
 export { Loading, ErrorMessage, EmptyState } from "./StateMessage/StateMessage.tsx";
 export { default as DonutChart } from "./DonutChart/DonutChart.tsx";

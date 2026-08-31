@@ -13,6 +13,7 @@ import {
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
+import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type {
   MediaItem,
   RegionWatchProviders,
@@ -59,6 +60,14 @@ function MediaCard({
   const date = item.release_date || item.first_air_date;
   const watched = isWatched(mediaType, item.id);
   const inWatchlist = isInWatchlist(mediaType, item.id);
+
+  // Alimente le cache de préview (voir mediaPreviewCache) pour que la fiche
+  // (DetailPage) puisse préafficher affiche/titre/date pendant son propre
+  // chargement, plutôt qu'un écran vide — ce sont les mêmes infos que
+  // celles déjà affichées ici.
+  useEffect(() => {
+    setMediaPreview(mediaType, item.id, { title, posterPath: item.poster_path ?? null, date });
+  }, [mediaType, item.id, title, item.poster_path, date]);
 
   // Statut "au cinéma" (France) : uniquement pour les films (les séries
   // n'ont pas de notion de sortie en salle). L'appartenance à l'index

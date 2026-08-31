@@ -8,11 +8,11 @@ import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx"
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import {
   MediaCard,
+  MediaCardSkeleton,
   FilterBar,
   AdvancedFilters,
   EMPTY_ADVANCED_FILTERS,
   getAdvancedFiltersRangeError,
-  Loading,
   ErrorMessage,
   EmptyState,
   PageHeader,
@@ -23,6 +23,8 @@ import type { Genre, MediaItem, MediaType } from "../../core/types/tmdb.ts";
 import type { DiscoverSortField, SortDirection, WatchProviderOption } from "../../core/api/tmdb.ts";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import styles from "./DiscoverPage.module.css";
+
+const GRID_SKELETON_COUNT = 12;
 
 // Convertit les valeurs texte des <input> en nombres (ou undefined si vide)
 // pour discover().
@@ -272,7 +274,13 @@ export default function DiscoverPage() {
 
       <AdvancedFilters filters={advanced} setFilters={setAdvanced} />
 
-      {status === "loading" && <Loading />}
+      {status === "loading" && (
+        <div className={gridStyles.grid}>
+          {Array.from({ length: GRID_SKELETON_COUNT }, (_, i) => (
+            <MediaCardSkeleton key={i} />
+          ))}
+        </div>
+      )}
       {status === "error" && <ErrorMessage error={error} />}
       {status === "invalid" && advancedError && <EmptyState label={advancedError} />}
       {status === "success" && results.length === 0 && (
