@@ -131,7 +131,7 @@
 
 .recentRow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(110px, 130px));
   gap: 14px;
   margin-top: 14px;
 }
@@ -139,6 +139,11 @@
 .recentItem {
   position: relative;
   display: block;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.recentItem:hover {
+  transform: translateY(-6px) rotate(-0.6deg);
 }
 
 .recentItem img,
@@ -149,6 +154,15 @@
   object-fit: cover;
   display: block;
   border: 1px solid var(--border);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.recentItem:hover img,
+.recentItem:hover .recentEmpty {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lift);
 }
 
 .recentOverlay {
