@@ -1,12 +1,17 @@
-import { posterUrl } from "../../../core/api/tmdb.ts";
+import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
 import type { MediaPreview } from "../../../shared/lib/mediaPreviewCache.ts";
+import { posterAccentFromSeed } from "../../../shared/lib/posterAccent.ts";
+import type { MediaType } from "../../../core/types/tmdb.ts";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
+import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import pageStyles from "../DetailPage.module.css";
 import styles from "./DetailSkeleton.module.css";
 
 const CAST_PLACEHOLDER_COUNT = 6;
 
 interface DetailSkeletonProps {
+  mediaType: MediaType;
+  id: string;
   preview: MediaPreview | null;
 }
 
@@ -14,10 +19,16 @@ interface DetailSkeletonProps {
 // / titre / date si on les connaît déjà (voir mediaPreviewCache — venant de
 // la grille ou de la recherche d'où on arrive), et affiche des blocs
 // grisés à la place du reste le temps que l'appel /movie ou /tv réponde.
-export default function DetailSkeleton({ preview }: DetailSkeletonProps) {
+export default function DetailSkeleton({ mediaType, id, preview }: DetailSkeletonProps) {
+  // Les genres (qui pilotent normalement la clé d'accent, voir
+  // posterAccentFromGenres côté DetailPage) ne sont connus qu'une fois
+  // /movie ou /tv répondu — on retombe ici sur le même hash déterministe
+  // que posterAccentFromGenres utilise déjà en repli, pour que le cadre
+  // hero ne reste pas plat/sans couleur pendant le chargement.
+  const accentKey = posterAccentFromSeed(`${mediaType}:${id}`);
   return (
     <>
-      <div className={`${pageStyles.hero} ${styles.hero}`}>
+      <div className={`${pageStyles.hero} ${styles.hero} ${posterStyles[accentKey]}`}>
         <div className={pageStyles.heroOverlay} />
         <div className={pageStyles.heroInner}>
           <div className={pageStyles.posterWrap}>
@@ -36,7 +47,9 @@ export default function DetailSkeleton({ preview }: DetailSkeletonProps) {
               <h1 className={pageStyles.title}>
                 {preview.title}{" "}
                 {preview.date && (
-                  <span className={pageStyles.year}>({preview.date.slice(0, 4)})</span>
+                  <span className={pageStyles.year}>
+                    ({formatFullDate(preview.date) || preview.date.slice(0, 4)})
+                  </span>
                 )}
               </h1>
             ) : (

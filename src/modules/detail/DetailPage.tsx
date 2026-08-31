@@ -104,16 +104,36 @@ export default function DetailPage() {
   if (!mediaType || !id) {
     return null;
   }
+
+  const backLink = (
+    <Link
+      to="/"
+      className={styles.back}
+      onClick={(e) => {
+        // navigate(-1) déclenche un vrai retour arrière (POP), nécessaire
+        // pour que useScrollRestoration restaure la position de la liste
+        // d'origine — un <Link> classique crée une nouvelle entrée
+        // d'historique (PUSH) et ne restaure jamais rien.
+        e.preventDefault();
+        navigate(-1);
+      }}
+    >
+      ← Retour
+    </Link>
+  );
+
   if (status === "loading") {
     return (
       <div className={styles.page}>
-        <DetailSkeleton preview={preview} />
+        {backLink}
+        <DetailSkeleton mediaType={mediaType} id={id} preview={preview} />
       </div>
     );
   }
   if (status === "error") {
     return (
       <div className={styles.page}>
+        {backLink}
         <ErrorMessage error={error} />
       </div>
     );
@@ -195,20 +215,7 @@ export default function DetailPage() {
 
   return (
     <div className={styles.page}>
-      <Link
-        to="/"
-        className={styles.back}
-        onClick={(e) => {
-          // navigate(-1) déclenche un vrai retour arrière (POP), nécessaire
-          // pour que useScrollRestoration restaure la position de la liste
-          // d'origine — un <Link> classique crée une nouvelle entrée
-          // d'historique (PUSH) et ne restaure jamais rien.
-          e.preventDefault();
-          navigate(-1);
-        }}
-      >
-        ← Retour
-      </Link>
+      {backLink}
 
       <div className={`${styles.hero} ${posterStyles[accentKey]}`}>
         {details.backdrop_path && (
