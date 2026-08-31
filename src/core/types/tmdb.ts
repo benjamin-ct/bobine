@@ -39,6 +39,13 @@ export interface MediaSummary {
   genre_ids?: number[];
   origin_country?: string[];
   original_language?: string;
+  /** Présent uniquement quand discover() est appelé avec includeProviderBadge :
+   * plateformes déjà résolues côté Worker (voir worker/index.ts), pour éviter
+   * un appel /watch/providers par carte depuis le navigateur. `undefined` (pas
+   * `null`) tant que le badge n'a pas été demandé — MediaCard s'en sert pour
+   * distinguer "pas encore enrichi" (fallback sur l'appel par carte) de
+   * "enrichi, aucune plateforme trouvée". */
+  watch_providers?: RegionWatchProviders | null;
 }
 
 /** MediaSummary enrichi côté client d'un `mediaType` non ambigu (voir
@@ -141,7 +148,7 @@ export interface CreatedBy {
   name: string;
 }
 
-/** Détails complets (append_to_response: credits,videos,recommendations,release_dates). */
+/** Détails complets (append_to_response: credits,videos,recommendations,release_dates,watch/providers). */
 export interface MediaDetails extends MediaSummary {
   runtime?: number; // films
   episode_run_time?: number[]; // séries
@@ -153,6 +160,9 @@ export interface MediaDetails extends MediaSummary {
   videos?: Videos;
   recommendations?: { results: MediaSummary[] };
   release_dates?: ReleaseDatesResponse;
+  // Clé littérale avec un slash : c'est ce que TMDB renvoie pour cette
+  // ressource quand elle est incluse via append_to_response.
+  "watch/providers"?: WatchProvidersResponse;
   networks?: Network[];
   created_by?: CreatedBy[];
   belongs_to_collection?: CollectionSummary | null;

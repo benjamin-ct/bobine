@@ -19,7 +19,7 @@ export {
   theatricalStatusFromDate,
 } from "./movieMeta.ts";
 export { posterUrl, backdropUrl, logoUrl, IMG_BASE, TmdbConfigError } from "./tmdbClient.ts";
-import { tmdbFetch } from "./tmdbClient.ts";
+import { tmdbFetch, IS_DEV } from "./tmdbClient.ts";
 
 import type {
   Country,
@@ -86,6 +86,14 @@ export interface DiscoverParams {
   originalLanguage?: string;
   runtimeMin?: number;
   runtimeMax?: number;
+  /** Demande au Worker (voir worker/index.ts) de résoudre le badge plateforme
+   * de chaque résultat côté serveur (un seul aller-retour pour toute la
+   * grille, avec réutilisation du cache d'edge par titre) plutôt que de
+   * laisser chaque MediaCard faire son propre appel /watch/providers une fois
+   * visible. Réservé aux pages qui affichent ce badge (voir
+   * showProviderBadge sur MediaCard) : sans intérêt ailleurs. Sans effet en
+   * dev (le Worker n'est pas dans la boucle, voir tmdbClient.ts). */
+  includeProviderBadge?: boolean;
 }
 
 export function discover(
@@ -111,6 +119,7 @@ export function discover(
     originalLanguage,
     runtimeMin,
     runtimeMax,
+    includeProviderBadge,
   }: DiscoverParams = {}
 ): Promise<PagedResponse<MediaSummary>> {
   const resolvedField: string =
@@ -151,6 +160,12 @@ export function discover(
     [`${dateField}.lte`]: dateLte,
     [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
     include_adult: false,
+    // Paramètres propres au Worker (retirés avant l'appel TMDB réel côté
+    // serveur, voir handleTmdbProxy) : region est renvoyée séparément de
+    // watch_region ci-dessus, qui ne part que combinée à un filtre
+    // providerIds et n'a donc pas toujours la bonne valeur pour ce besoin.
+    include_watch_providers_badge: includeProviderBadge ? 1 : undefined,
+    watch_providers_badge_region: includeProviderBadge ? region : undefined,
   });
 }
 
@@ -233,9 +248,10 @@ export function getDetails(mediaType: MediaType, id: string | number): Promise<M
   }
   const promise = tmdbFetch<MediaDetails>(`/${mediaType}/${id}`, {
     // release_dates : sorties par pays (dont FR), pour le statut "au
-    // cinéma" — inclus ici pour ne pas faire un second appel sur la fiche
-    // détail.
-    append_to_response: "credits,videos,recommendations,release_dates",
+    // cinéma". watch/providers : plateformes de streaming/achat/location —
+    // inclus ici pour ne pas faire un second appel séparé (voir
+    // watchProvidersFromDetails) sur la fiche détail / la roue aléatoire.
+    append_to_response: "credits,videos,recommendations,release_dates,watch/providers",
   }).catch((err: unknown) => {
     detailsCache.delete(key);
     throw err;
@@ -277,9 +293,16 @@ export function getCollection(collectionId: number): Promise<CollectionDetails> 
 // titres à la fois : faire un appel /release_dates par vignette enverrait
 // autant de requêtes que de cartes affichées. TMDB expose deux listes
 // dédiées, région-conscientes et déjà filtrées aux sorties en salle —
-// /movie/now_playing et /movie/upcoming — récupérées entièrement une fois
-// par région (cache mémoire) pour en faire un index consultable en O(1),
-// sans aucun appel réseau par carte.
+// /movie/now_playing et /movie/upcoming — parcourues entièrement pour en
+// faire un index consultable en O(1), sans aucun appel réseau par carte.
+//
+// En production, ce parcours (une dizaine de pages) est fait UNE FOIS côté
+// Worker et partagé par tous les visiteurs d'une région via le cache d'edge
+// (voir worker/tmdb.ts getTheatricalIndex et /api/theatrical-index) : sans
+// ça, chaque session navigateur repayait ce coût dès l'ouverture de l'app
+// (le cache mémoire ci-dessous ne survit pas à un rechargement). En dev
+// (Worker pas dans la boucle, voir tmdbClient.ts), on continue de parcourir
+// les pages directement depuis le navigateur.
 const MAX_THEATRICAL_PAGES = 10; // now_playing + upcoming restent largement sous ce plafond en pratique
 
 async function fetchAllPages(
@@ -299,6 +322,39 @@ async function fetchAllPages(
 
 export type TheatricalIndex = Map<number, "upcoming" | "in_theaters">;
 
+function buildTheatricalIndex(inTheaters: number[], upcoming: number[]): TheatricalIndex {
+  const index: TheatricalIndex = new Map();
+  for (const id of upcoming) {
+    index.set(id, "upcoming");
+  }
+  // now_playing en dernier : si un titre apparaît dans les deux listes
+  // (bascule en cours), "en salles" prime sur "bientôt".
+  for (const id of inTheaters) {
+    index.set(id, "in_theaters");
+  }
+  return index;
+}
+
+async function fetchTheatricalIndexDirect(region: string): Promise<TheatricalIndex> {
+  const [nowPlaying, upcoming] = await Promise.all([
+    fetchAllPages("/movie/now_playing", region, MAX_THEATRICAL_PAGES),
+    fetchAllPages("/movie/upcoming", region, MAX_THEATRICAL_PAGES),
+  ]);
+  return buildTheatricalIndex(
+    nowPlaying.map((movie) => movie.id),
+    upcoming.map((movie) => movie.id)
+  );
+}
+
+async function fetchTheatricalIndexFromWorker(region: string): Promise<TheatricalIndex> {
+  const res = await fetch(`/api/theatrical-index?region=${encodeURIComponent(region)}`);
+  if (!res.ok) {
+    throw new Error(`Erreur index théâtral (${res.status})`);
+  }
+  const data: { inTheaters: number[]; upcoming: number[] } = await res.json();
+  return buildTheatricalIndex(data.inTheaters, data.upcoming);
+}
+
 let theatricalIndexCache: { region: string; promise: Promise<TheatricalIndex> } | null = null;
 export function getTheatricalStatusIndex(
   region: string = DEFAULT_REGION
@@ -306,22 +362,9 @@ export function getTheatricalStatusIndex(
   if (theatricalIndexCache?.region === region) {
     return theatricalIndexCache.promise;
   }
-  const promise = (async () => {
-    const [nowPlaying, upcoming] = await Promise.all([
-      fetchAllPages("/movie/now_playing", region, MAX_THEATRICAL_PAGES),
-      fetchAllPages("/movie/upcoming", region, MAX_THEATRICAL_PAGES),
-    ]);
-    const index: TheatricalIndex = new Map();
-    for (const movie of upcoming) {
-      index.set(movie.id, "upcoming");
-    }
-    // now_playing en dernier : si un titre apparaît dans les deux listes
-    // (bascule en cours), "en salles" prime sur "bientôt".
-    for (const movie of nowPlaying) {
-      index.set(movie.id, "in_theaters");
-    }
-    return index;
-  })().catch((err: unknown) => {
+  const promise = (
+    IS_DEV ? fetchTheatricalIndexDirect(region) : fetchTheatricalIndexFromWorker(region)
+  ).catch((err: unknown) => {
     theatricalIndexCache = null;
     throw err;
   });
@@ -361,6 +404,20 @@ export function getWatchProviders(
     });
   watchProvidersCache.set(key, promise);
   return promise;
+}
+
+// Extrait les plateformes déjà incluses dans une fiche détail chargée via
+// getDetails() (append_to_response=watch/providers) — évite un second appel
+// getWatchProviders() en plus de getDetails() sur les écrans qui chargent
+// déjà la fiche complète (fiche détail, roue aléatoire). Réservé aux appels
+// "un titre à la fois" : les grilles (badge plateforme sur les cartes)
+// continuent d'utiliser getWatchProviders() seul, une fiche complète par
+// carte serait bien plus lourde que le nécessaire.
+export function watchProvidersFromDetails(
+  details: MediaDetails,
+  region: string = DEFAULT_REGION
+): RegionWatchProviders | null {
+  return details["watch/providers"]?.results?.[region] || null;
 }
 
 // Badge dynamique "Prochainement" (prochaine sortie/diffusion) -----------
