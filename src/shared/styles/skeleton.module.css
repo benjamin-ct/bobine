@@ -1,0 +1,36 @@
+/* Bloc de squelette de chargement générique (shimmer) — partagé par tous
+   les écrans qui préaffichent une structure grisée pendant un chargement
+   (fiche détail, Nouveautés, Prochainement...) plutôt qu'un état "Chargement…"
+   plein écran. */
+.block {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+}
+
+.block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--fg) 8%, transparent),
+    transparent
+  );
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block::after {
+    animation: none;
+  }
+}

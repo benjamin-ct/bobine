@@ -1,0 +1,43 @@
+.date {
+  height: 40px;
+  border-radius: 8px;
+}
+
+.thumb {
+  width: 46px;
+  height: 66px;
+  border-radius: 6px;
+}
+
+.body {
+  min-width: 0;
+}
+
+.barTitle {
+  height: 15px;
+  width: 70%;
+  border-radius: 6px;
+}
+
+.barSub {
+  height: 12px;
+  width: 40%;
+  margin-top: 8px;
+  border-radius: 6px;
+}
+
+.bell {
+  width: 120px;
+  height: 34px;
+  border-radius: 999px;
+}
+
+@media (max-width: 640px) {
+  .thumb {
+    display: none;
+  }
+  .bell {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}

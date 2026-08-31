@@ -17,11 +17,11 @@ import {
   FilterBar,
   CountryLanguageFilter,
   Chip,
-  Loading,
   ErrorMessage,
   EmptyState,
   PageHeader,
 } from "../../shared/components/index.ts";
+import ComingSoonSkeleton from "./components/ComingSoonSkeleton.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import type { DiscoverParams } from "../../core/api/tmdb.ts";
@@ -365,7 +365,7 @@ export default function ComingSoonPage() {
         ))}
       </div>
 
-      {status === "loading" && <Loading />}
+      {status === "loading" && <ComingSoonSkeleton />}
       {status === "error" && <ErrorMessage error={error} />}
       {status === "success" && visibleResults.length === 0 && (
         <EmptyState label="Aucune sortie prévue sur cette période pour ces filtres." />

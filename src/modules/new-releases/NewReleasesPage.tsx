@@ -7,10 +7,10 @@ import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx"
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import {
   MediaCard,
+  MediaCardSkeleton,
   FilterBar,
   CountryLanguageFilter,
   Chip,
-  Loading,
   ErrorMessage,
   EmptyState,
   PageHeader,
@@ -25,6 +25,8 @@ const WINDOWS = [
   { value: 30, label: "30 derniers jours" },
   { value: 90, label: "3 derniers mois" },
 ];
+
+const GRID_SKELETON_COUNT = 12;
 
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -257,7 +259,13 @@ export default function NewReleasesPage() {
         ))}
       </div>
 
-      {status === "loading" && <Loading />}
+      {status === "loading" && (
+        <div className={gridStyles.grid}>
+          {Array.from({ length: GRID_SKELETON_COUNT }, (_, i) => (
+            <MediaCardSkeleton key={i} />
+          ))}
+        </div>
+      )}
       {status === "error" && <ErrorMessage error={error} />}
       {status === "success" && results.length === 0 && (
         <EmptyState label="Aucune sortie sur cette période pour ces filtres." />

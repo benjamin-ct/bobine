@@ -4,6 +4,7 @@ import { posterAccentFromSeed } from "../../../shared/lib/posterAccent.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
+import skeletonStyles from "../../../shared/styles/skeleton.module.css";
 import pageStyles from "../DetailPage.module.css";
 import styles from "./DetailSkeleton.module.css";
 
@@ -39,7 +40,7 @@ export default function DetailSkeleton({ mediaType, id, preview }: DetailSkeleto
                 className={pageStyles.poster}
               />
             ) : (
-              <div className={`${pageStyles.poster} ${styles.block}`} />
+              <div className={`${pageStyles.poster} ${skeletonStyles.block}`} />
             )}
           </div>
           <div className={pageStyles.info}>
@@ -53,36 +54,36 @@ export default function DetailSkeleton({ mediaType, id, preview }: DetailSkeleto
                 )}
               </h1>
             ) : (
-              <div className={`${styles.block} ${styles.barTitle}`} />
+              <div className={`${skeletonStyles.block} ${styles.barTitle}`} />
             )}
-            <div className={`${styles.block} ${styles.barMeta}`} />
-            <div className={`${styles.block} ${styles.barLine}`} />
-            <div className={`${styles.block} ${styles.barLine}`} />
-            <div className={`${styles.block} ${styles.barLineShort}`} />
+            <div className={`${skeletonStyles.block} ${styles.barMeta}`} />
+            <div className={`${skeletonStyles.block} ${styles.barLine}`} />
+            <div className={`${skeletonStyles.block} ${styles.barLine}`} />
+            <div className={`${skeletonStyles.block} ${styles.barLineShort}`} />
             <div className={styles.actionsSkeleton}>
-              <div className={`${styles.block} ${styles.pill}`} />
-              <div className={`${styles.block} ${styles.pill}`} />
+              <div className={`${skeletonStyles.block} ${styles.pill}`} />
+              <div className={`${skeletonStyles.block} ${styles.pill}`} />
             </div>
           </div>
         </div>
       </div>
 
       <section className={pageStyles.section}>
-        <div className={`${styles.block} ${styles.sectionTitle}`} />
+        <div className={`${skeletonStyles.block} ${styles.sectionTitle}`} />
         <div className={styles.providersSkeleton}>
-          <div className={`${styles.block} ${styles.providerLogo}`} />
-          <div className={`${styles.block} ${styles.providerLogo}`} />
-          <div className={`${styles.block} ${styles.providerLogo}`} />
+          <div className={`${skeletonStyles.block} ${styles.providerLogo}`} />
+          <div className={`${skeletonStyles.block} ${styles.providerLogo}`} />
+          <div className={`${skeletonStyles.block} ${styles.providerLogo}`} />
         </div>
       </section>
 
       <section className={pageStyles.section}>
-        <div className={`${styles.block} ${styles.sectionTitle}`} />
+        <div className={`${skeletonStyles.block} ${styles.sectionTitle}`} />
         <div className={gridStyles.personGrid}>
           {Array.from({ length: CAST_PLACEHOLDER_COUNT }, (_, i) => (
             <div key={i} className={styles.personSkeleton}>
-              <div className={`${styles.block} ${styles.avatar}`} />
-              <div className={`${styles.block} ${styles.barLine}`} />
+              <div className={`${skeletonStyles.block} ${styles.avatar}`} />
+              <div className={`${skeletonStyles.block} ${styles.barLine}`} />
             </div>
           ))}
         </div>
