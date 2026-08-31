@@ -2,6 +2,7 @@
 // worker/schema.sql) et les requêtes préparées suffisent largement.
 import { decodeHtmlEntities } from "./validate.ts";
 import type {
+  CleanCustomListMap,
   CleanGenrePref,
   CleanKey,
   CleanLibraryItem,
@@ -10,7 +11,7 @@ import type {
   SyncUpsert,
 } from "./validate.ts";
 import type { GenrePreferenceRow, SubscriptionRow, WatchlistItemRow } from "./types.ts";
-import type { LibraryState } from "../src/core/types/library.ts";
+import type { CustomListMap, LibraryState } from "../src/core/types/library.ts";
 
 export async function upsertSubscription(
   db: D1Database,
@@ -365,6 +366,83 @@ export async function applyLibraryChanges(
   if (statements.length > 0) {
     await db.batch(statements);
   }
+}
+
+// Listes personnalisées synchronisées par compte. -----------------------
+
+// Renvoie les listes perso au même format que l'état client (LibraryContext),
+// items déjà triés par `position` (le tri manuel, voir schema.sql).
+export async function getCustomListsForUser(
+  db: D1Database,
+  userId: number
+): Promise<CustomListMap> {
+  const [{ results: listRows }, { results: itemRows }] = await Promise.all([
+    db
+      .prepare("SELECT id, name, created_at FROM custom_lists WHERE user_id = ?")
+      .bind(userId)
+      .all<{ id: string; name: string; created_at: number }>(),
+    db
+      .prepare(
+        "SELECT list_id, media_type, tmdb_id, data FROM custom_list_items WHERE user_id = ? ORDER BY list_id, position"
+      )
+      .bind(userId)
+      .all<{ list_id: string; media_type: string; tmdb_id: number; data: string }>(),
+  ]);
+
+  const customLists: CustomListMap = {};
+  for (const row of listRows) {
+    customLists[row.id] = { id: row.id, name: row.name, createdAt: row.created_at, items: [] };
+  }
+  for (const row of itemRows) {
+    const list = customLists[row.list_id];
+    if (!list) {
+      continue;
+    }
+    const item = JSON.parse(row.data);
+    if (typeof item.title === "string") {
+      item.title = decodeHtmlEntities(item.title);
+    }
+    list.items.push(item);
+  }
+  return customLists;
+}
+
+// Remplacement complet volontaire, comme replaceLibraryForUser ci-dessus :
+// contrairement à library_items (un toggle par item), une liste perso change
+// par opérations qui touchent plusieurs lignes à la fois (création,
+// renommage, glisser-déposer) — un vrai diff incrémental côté serveur
+// n'apporterait rien ici vu l'échelle (usage personnel).
+export async function replaceCustomListsForUser(
+  db: D1Database,
+  userId: number,
+  customLists: CleanCustomListMap
+): Promise<void> {
+  await db.batch([
+    db.prepare("DELETE FROM custom_list_items WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM custom_lists WHERE user_id = ?").bind(userId),
+  ]);
+
+  const lists = Object.values(customLists || {});
+  if (lists.length === 0) {
+    return;
+  }
+
+  const listStmt = db.prepare(
+    "INSERT INTO custom_lists (id, user_id, name, created_at) VALUES (?, ?, ?, ?)"
+  );
+  const itemStmt = db.prepare(
+    "INSERT INTO custom_list_items (user_id, list_id, media_type, tmdb_id, data, position) VALUES (?, ?, ?, ?, ?, ?)"
+  );
+  const statements: D1PreparedStatement[] = [];
+  for (const list of lists) {
+    statements.push(listStmt.bind(list.id, userId, list.name, list.createdAt));
+    list.items.forEach((item: CleanLibraryItem, index: number) => {
+      statements.push(
+        itemStmt.bind(userId, list.id, item.mediaType, item.id, JSON.stringify(item), index)
+      );
+    });
+  }
+  await db.batch(statements);
 }
 
 export async function wasAlreadyNotified(

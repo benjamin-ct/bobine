@@ -26,11 +26,16 @@ const STORAGE_KEY = "bobine.library.v1";
 // sur CET appareil (voir l'effet de synchronisation plus bas).
 const SYNCED_FOR_KEY = "bobine.library.syncedFor";
 const SYNC_DEBOUNCE_MS = 1200;
-// Listes personnalisées ("Soirée avec X", "Halloween"...) — stockage local
-// uniquement, comme les plateformes favorites : pas de sync compte pour
-// l'instant (décision volontaire). Le pattern de sync incrémental déjà en
-// place pour library_items pourrait être répliqué plus tard si besoin.
+// Listes personnalisées ("Soirée avec X", "Halloween"...) — synchronisées par
+// compte comme watched/watchlist ci-dessus (voir l'effet de synchronisation
+// plus bas), avec ce stockage local comme cache/repli hors connexion.
 const CUSTOM_LISTS_STORAGE_KEY = "bobine.customLists.v1";
+// Mémorise, par email, si on a déjà fait la fusion initiale local ↔ serveur
+// des listes perso sur CET appareil — même rôle que SYNCED_FOR_KEY pour
+// watched/watchlist, mais distinct : les deux synchronisations sont
+// indépendantes (une première connexion peut fusionner l'une sans l'autre si
+// une seule des deux requêtes échoue).
+const CUSTOM_LISTS_SYNCED_FOR_KEY = "bobine.customLists.syncedFor";
 // NOUVEAU (repris de la maquette HTML) : ordre manuel de "Envie de voir"
 // (glisser-déposer). Stockage local uniquement — un ordre d'affichage n'a
 // pas vocation à être synchronisé entre appareils au même titre que le
@@ -209,6 +214,28 @@ function mergeLists(local: LibraryItemMap, remote: LibraryItemMap): LibraryItemM
   return merged;
 }
 
+// Fusionne deux jeux de listes perso (locale + serveur), utilisé uniquement
+// lors de la toute première synchronisation sur un appareil — au-delà, le
+// serveur fait autorité (même logique que mergeLists ci-dessus). Les ids sont
+// générés aléatoirement par appareil (voir makeListId) : une même liste créée
+// avant la connexion sur deux appareils différents produit deux ids
+// distincts, donc une simple union suffit dans l'immense majorité des cas.
+// Dans le cas rare d'un id partagé (le serveur reflète déjà cet appareil),
+// on garde la version avec le plus d'items plutôt que de risquer d'en perdre.
+function mergeCustomLists(local: CustomListMap, remote: CustomListMap): CustomListMap {
+  const merged: CustomListMap = {};
+  for (const id of new Set([...Object.keys(local), ...Object.keys(remote)])) {
+    const a = local[id];
+    const b = remote[id];
+    if (a && b) {
+      merged[id] = a.items.length >= b.items.length ? a : b;
+    } else {
+      merged[id] = a || b;
+    }
+  }
+  return merged;
+}
+
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const { status: authStatus, email } = useAuth();
   const [state, setState] = useState<LibraryState>(loadInitialState);
@@ -225,6 +252,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const pendingOpsRef = useRef(new Map<string, PendingOp>());
   const [customLists, setCustomLists] = useState<CustomListMap>(loadInitialCustomLists);
   const isFirstCustomListsRender = useRef(true);
+  // Dernier JSON de `customLists` connu comme synchronisé avec le serveur
+  // (reçu du pull, ou déjà envoyé par le push) — voir les deux effets de
+  // synchronisation plus bas. `null` tant qu'aucune synchro n'a eu lieu.
+  const lastSyncedCustomListsJsonRef = useRef<string | null>(null);
+  // Tant que le pull initial (fusion) n'est pas allé à son terme, l'effet de
+  // push ci-dessous reste inactif : sans ça, il pourrait renvoyer au serveur
+  // l'état LOCAL seul (pas encore fusionné avec le serveur) pendant la
+  // fenêtre où le pull est en vol, et écraser des listes distantes que la
+  // fusion n'a pas encore eu la chance de rapatrier.
+  const customListsSyncSettledRef = useRef(false);
   const [watchlistOrder, setWatchlistOrder] = useState<string[]>(loadInitialWatchlistOrder);
   const isFirstWatchlistOrderRender = useRef(true);
 
@@ -457,6 +494,97 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }, SYNC_DEBOUNCE_MS);
     return () => clearTimeout(timeoutId);
   }, [state, authStatus]);
+
+  // Synchronisation des listes perso avec le compte — même principe que la
+  // synchronisation watched/watchlist ci-dessus (fusion à la première
+  // connexion sur un appareil, serveur autoritaire ensuite), mais sur son
+  // propre indicateur "déjà synchronisé" : les deux synchros sont
+  // indépendantes l'une de l'autre.
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !email) {
+      return;
+    }
+    let cancelled = false;
+    customListsSyncSettledRef.current = false;
+
+    fetch("/api/custom-lists")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("sync failed"))))
+      .then((remote: CustomListMap) => {
+        if (cancelled) {
+          return;
+        }
+        const alreadySyncedFor = localStorage.getItem(CUSTOM_LISTS_SYNCED_FOR_KEY);
+        if (alreadySyncedFor === email) {
+          // Le serveur fait autorité : on remplace l'état local. Mémorisé
+          // AVANT setCustomLists pour que l'effet de push ci-dessous (qui
+          // watche `customLists`) reconnaisse cette valeur comme déjà à jour
+          // côté serveur et ne la lui renvoie pas aussitôt.
+          lastSyncedCustomListsJsonRef.current = JSON.stringify(remote || {});
+          setCustomLists(remote || {});
+          return null;
+        }
+        // Première synchro sur cet appareil pour ce compte : fusion.
+        const merged = mergeCustomLists(customLists, remote || {});
+        lastSyncedCustomListsJsonRef.current = JSON.stringify(merged);
+        setCustomLists(merged);
+        localStorage.setItem(CUSTOM_LISTS_SYNCED_FOR_KEY, email);
+        return fetch("/api/custom-lists", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(merged),
+        });
+      })
+      .catch((err) =>
+        console.warn("Bobine : synchronisation des listes personnalisées impossible.", err)
+      )
+      .finally(() => {
+        if (!cancelled) {
+          customListsSyncSettledRef.current = true;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // On ne veut relancer la synchro que quand le statut d'auth ou le
+    // compte change, pas à chaque changement de `customLists` (sinon boucle).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus, email]);
+
+  // Envoie l'état complet des listes perso au serveur à chaque changement,
+  // avec anti-rebond (voir l'effet équivalent pour `state` ci-dessus). Pas de
+  // synchronisation incrémentale ici : une liste perso change par opérations
+  // multi-lignes (création, renommage, glisser-déposer) qu'un diff
+  // compliquerait pour un gain nul à l'échelle de cette app. Comparé à
+  // `lastSyncedCustomListsJsonRef` (plutôt qu'à un simple booléen "en cours
+  // de sync") pour éviter de renvoyer inutilement au serveur ce qu'il vient
+  // de nous envoyer, quel que soit l'ordre exact de résolution des promesses.
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !customListsSyncSettledRef.current) {
+      return;
+    }
+    const serialized = JSON.stringify(customLists);
+    if (serialized === lastSyncedCustomListsJsonRef.current) {
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      fetch("/api/custom-lists", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: serialized,
+      })
+        .then(() => {
+          lastSyncedCustomListsJsonRef.current = serialized;
+        })
+        .catch((err) =>
+          console.warn(
+            "Bobine : synchronisation des listes personnalisées impossible, nouvelle tentative au prochain changement.",
+            err
+          )
+        );
+    }, SYNC_DEBOUNCE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [customLists, authStatus]);
 
   const toggleWatched = useCallback((item: LibraryItemInput) => {
     const key = makeKey(item.mediaType, item.id);
