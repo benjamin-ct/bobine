@@ -222,7 +222,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
+  gap: 10px;
   margin-top: 12px;
 }
 
@@ -230,8 +230,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 11px 16px;
   border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
@@ -239,6 +241,7 @@
 
 .ghostBtn:hover {
   color: var(--fg);
+  border-color: var(--border-2);
   background: var(--surface-2);
 }
 
