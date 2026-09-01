@@ -39,9 +39,7 @@ export default function ProfilePage() {
         <div className={styles.discGrid}>
           <FavoriteProvidersSettings />
           <ExcludedGenresSettings />
-          <div className={styles.fullWidth}>
-            <ExcludedTitlesSettings />
-          </div>
+          <ExcludedTitlesSettings />
         </div>
       </section>
     </div>
