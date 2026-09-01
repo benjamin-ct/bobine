@@ -298,6 +298,16 @@ export default function NavBar() {
           )}
         </div>
 
+        <nav
+          className={`${styles.legalLinks} ${styles.desktopOnly}`}
+          aria-label="Informations légales"
+        >
+          <Link to="/conditions-utilisation" title="Conditions d'utilisation">
+            CGU
+          </Link>
+          <Link to="/confidentialite">Confidentialité</Link>
+        </nav>
+
         <button
           type="button"
           className={`${styles.iconBtn} ${styles.desktopOnly}`}
@@ -416,6 +426,14 @@ export default function NavBar() {
             <NavLink to="/profil" onClick={onNavClick} className={styles.mobileLink}>
               Profil
             </NavLink>
+          </nav>
+          <nav className={styles.mobileLegal} aria-label="Informations légales">
+            <Link to="/conditions-utilisation" onClick={onNavClick}>
+              Conditions d'utilisation
+            </Link>
+            <Link to="/confidentialite" onClick={onNavClick}>
+              Confidentialité
+            </Link>
           </nav>
           <div className={styles.mobileFoot}>
             {authStatus === "authenticated" ? (
