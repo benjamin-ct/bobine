@@ -1,0 +1,45 @@
+.page {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: 0 var(--gutter) 96px;
+}
+
+.updated {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: -8px 0 32px;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.section h2 {
+  font-size: 1.15rem;
+  margin-bottom: 10px;
+}
+
+.section p,
+.section li {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.section p + p {
+  margin-top: 10px;
+}
+
+.section ul {
+  padding-left: 20px;
+  margin-top: 8px;
+}
+
+.section li + li {
+  margin-top: 6px;
+}
+
+.section a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

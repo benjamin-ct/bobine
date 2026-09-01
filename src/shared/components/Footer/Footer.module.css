@@ -32,3 +32,16 @@
   height: 18px;
   color: var(--accent);
 }
+
+.links {
+  display: inline-flex;
+  gap: 16px;
+}
+
+.links a {
+  color: var(--muted);
+}
+
+.links a:hover {
+  color: var(--fg);
+}
