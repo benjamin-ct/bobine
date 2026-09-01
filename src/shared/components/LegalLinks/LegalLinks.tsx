@@ -1,8 +1,15 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import styles from "./LegalLinks.module.css";
+
+const INFINITE_SCROLL_PATHS = ["/", "/nouveautes", "/prochainement"];
 
 export default function LegalLinks() {
   const year = new Date().getFullYear();
+  const { pathname } = useLocation();
+
+  if (!INFINITE_SCROLL_PATHS.includes(pathname)) {
+    return null;
+  }
 
   return (
     <nav className={styles.bar} aria-label="Informations légales">
