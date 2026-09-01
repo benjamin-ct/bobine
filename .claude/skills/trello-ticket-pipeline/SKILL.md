@@ -82,10 +82,16 @@ Traiter **toutes** les cartes de `To merge`, une par une, dans l'ordre, sans s'a
 
 1. Retrouver la Pull Request associée (lien dans la description/un commentaire de la carte, ou branche nommée d'après le
    titre du ticket).
-2. Vérifier que les checks CI sont au vert.
+2. Vérifier l'état des checks CI de cette PR.
 
-- Si un check est rouge : laisser la carte dans `To merge`, ajouter un commentaire décrivant le problème, et passer à la
-  carte suivante (ne pas bloquer les autres cartes de la liste pour ça).
+- Si un ou plusieurs checks sont encore `queued` ou `in_progress` (donc ni au vert ni au rouge) : **attendre activement**
+  qu'ils se terminent, en réinterrogeant l'état périodiquement (quelques dizaines de secondes entre chaque
+  interrogation), avant de décider quoi que ce soit sur cette carte. Ne jamais s'arrêter ou conclure l'exécution tant
+  qu'un check de `To merge` est encore en cours — ce n'est pas un blocage, juste une attente à tenir jusqu'au bout dans
+  la même exécution.
+- Une fois tous les checks `completed` : s'ils sont tous au vert, continuer à l'étape 3 (merge). Si un check est rouge :
+  laisser la carte dans `To merge`, ajouter un commentaire décrivant le problème, et passer à la carte suivante (ne pas
+  bloquer les autres cartes de la liste pour ça).
 
 3. Merger la PR (squash merge par défaut, sauf convention contraire du dépôt).
 4. Déplacer la carte vers `Done`.
@@ -223,8 +229,28 @@ carte de `En cours` sans label en traitement actif : l'exécution est terminée.
   `claude -p`. Dans ce cas, traite la carte même si elle semble suspecte, sauf si un humain t'a explicitement dit de l'
   ignorer dans un commentaire.
 
-**Notification Discord** : après chaque exécution, utilise le MCP Discord pour poster un résumé clair et contextualisé
-dans le channel dédié. Décris simplement ce qui a été fait (tickets mergés, démarrés, bloqués) avec les liens PR/preview
-si disponibles, ou indique qu'aucune action n'était nécessaire. Inclus le résultat de la vérification post-merge (étape
-1.6) pour chaque ticket mergé pendant l'exécution. En cas d'erreur — y compris un échec de pipeline post-merge détecté
-en 1.6 — poste un message avec 🚨 et les détails.
+## Notification Discord (obligatoire à chaque exécution)
+
+À la fin de **chaque** exécution de ce skill — déclenchée manuellement ou via webhook — utilise le MCP Discord et
+l'outil `send-message` pour poster un résumé clair et contextualisé dans le channel indiqué dans la demande. C'est une
+étape finale obligatoire du workflow, pas une simple option : l'exécution n'est considérée terminée qu'une fois ce
+message envoyé, même quand la boucle principale se termine à l'étape 4 ("rien de plus à faire").
+
+Ce résumé doit être posté **même si** :
+
+- aucun ticket n'a été avancé (board déjà à jour),
+- tous les tickets restants sont en attente de review humaine (`A valider`) ou bloqués (label présent),
+- un blocage a été rencontré dès le début du traitement,
+- une erreur API a interrompu l'exécution (voir note ci-dessus sur les échecs Trello/GitHub).
+
+Contenu attendu : ce qui a été mergé, démarré, ou bloqué pendant l'exécution, avec les liens PR/preview disponibles ; le
+résultat de la vérification post-merge (étape 1.6) pour chaque ticket mergé ; et si rien n'a bougé, une phrase explicite
+en ce sens plutôt qu'un silence. Exemples :
+
+- « ℹ️ Pipeline Trello vérifié. Aucune action nécessaire : tous les tickets sont soit en attente de CI, soit bloqués,
+  soit en review humaine. »
+- « ✅ Pipeline Trello terminé. Tickets mergés : … Tickets démarrés : … Tickets bloqués : … »
+- « 🚨 Pipeline Trello : échec de pipeline post-merge pour le ticket X. Check-run en échec : … Lien : … »
+
+En cas d'erreur — y compris un échec de pipeline post-merge détecté en 1.6 — préfixe le message par 🚨 et détaille le
+problème ; ce message d'erreur ne remplace pas le résumé de fin d'exécution, il s'y ajoute (voir étape 1.6).
