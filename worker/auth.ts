@@ -27,6 +27,7 @@ const CODE_LENGTH = 6;
 export interface AuthUser {
   id: number;
   email: string;
+  displayName: string | null;
   sessionToken: string;
 }
 
@@ -156,16 +157,16 @@ export async function getUserFromRequest(
   }
   const row = await db
     .prepare(
-      `SELECT users.id, users.email, sessions.expires_at
+      `SELECT users.id, users.email, users.display_name, sessions.expires_at
        FROM sessions JOIN users ON users.id = sessions.user_id
        WHERE sessions.token = ?`
     )
     .bind(token)
-    .first<{ id: number; email: string; expires_at: number }>();
+    .first<{ id: number; email: string; display_name: string | null; expires_at: number }>();
   if (!row || row.expires_at < Date.now()) {
     return null;
   }
-  return { id: row.id, email: row.email, sessionToken: token };
+  return { id: row.id, email: row.email, displayName: row.display_name, sessionToken: token };
 }
 
 // `Secure` casse les cookies en local http (wrangler dev sans --local-protocol

@@ -25,10 +25,17 @@ interface VerifyResult {
 interface AuthContextValue {
   status: AuthStatus;
   email: string | null;
+  // Nom affiché (ticket #45) : source de vérité côté D1 (colonne
+  // users.display_name), chargé avec le reste de la session via
+  // /api/auth/me. `null` tant qu'aucune valeur n'a jamais été enregistrée.
+  displayName: string | null;
   requestLink: (email: string) => Promise<RequestLinkResult>;
   verify: (token: string) => Promise<VerifyResult>;
   verifyCode: (code: string) => Promise<VerifyResult>;
   logout: () => Promise<void>;
+  // Enregistre le nom affiché côté serveur (save manuel, pas de synchro
+  // automatique — voir AccountCard) et met à jour l'état local à l'identique.
+  updateDisplayName: (displayName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -41,6 +48,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [email, setEmail] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
   // `verify()` (consommation du jeton sur /auth/verify) et `refresh()` (la
   // vérification passive "suis-je déjà connecté" au montage) peuvent
@@ -62,10 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           throw new Error("not authenticated");
         }
-        return res.json() as Promise<{ email: string }>;
+        return res.json() as Promise<{ email: string; displayName: string | null }>;
       })
       .then((data) => {
         setEmail(data.email);
+        setDisplayName(data.displayName ?? null);
         setStatus("authenticated");
         pinnedRef.current = true;
       })
@@ -74,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         setEmail(null);
+        setDisplayName(null);
         setStatus("anonymous");
       });
   }, []);
@@ -139,11 +149,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     pinnedRef.current = false;
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     setEmail(null);
+    setDisplayName(null);
     setStatus("anonymous");
   }, []);
 
+  // Save manuel uniquement (voir AccountCard, bouton "Enregistrer") : pas de
+  // synchro automatique/temps réel — décision produit explicite pour le
+  // ticket #45.
+  const updateDisplayNameCallback = useCallback(async (newDisplayName: string): Promise<void> => {
+    const res = await fetch("/api/account/display-name", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ displayName: newDisplayName }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "Impossible d'enregistrer le nom affiché.");
+    }
+    setDisplayName(data.displayName);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ status, email, requestLink, verify, verifyCode, logout }}>
+    <AuthContext.Provider
+      value={{
+        status,
+        email,
+        displayName,
+        requestLink,
+        verify,
+        verifyCode,
+        logout,
+        updateDisplayName: updateDisplayNameCallback,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

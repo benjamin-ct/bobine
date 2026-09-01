@@ -1,17 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import styles from "./AccountCard.module.css";
-
-const DISPLAY_NAME_KEY = "bobine.displayName";
-
-function loadDisplayName(): string {
-  try {
-    return localStorage.getItem(DISPLAY_NAME_KEY) || "";
-  } catch {
-    return "";
-  }
-}
 
 function initials(name: string, fallback: string): string {
   const source = name.trim() || fallback;
@@ -25,9 +15,20 @@ function initials(name: string, fallback: string): string {
 }
 
 export default function AccountCard() {
-  const { status, email, logout } = useAuth();
-  const [name, setName] = useState(loadDisplayName);
+  const { status, email, displayName, updateDisplayName, logout } = useAuth();
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Source de vérité : D1 (colonne users.display_name), chargée avec le
+  // reste de la session (voir AuthContext, /api/auth/me) — c'est ce qui
+  // rend le nom identique sur tous les appareils une fois enregistré
+  // (ticket #45). Resynchronise le champ chaque fois que la valeur connue
+  // du serveur change (connexion, ou juste après un enregistrement réussi).
+  useEffect(() => {
+    setName(displayName ?? "");
+  }, [displayName]);
 
   if (status !== "authenticated") {
     return (
@@ -41,18 +42,23 @@ export default function AccountCard() {
     );
   }
 
-  function save() {
-    // Nom affiché : préférence purement locale (aucune colonne dédiée côté
-    // D1 pour ça aujourd'hui — voir README, "Fonctionnalités en stub" — le
-    // compte n'a qu'un email, pas de profil étendu). Pas de faux
-    // comportement de synchro simulé : ce choix reste sur cet appareil.
+  // Save manuel uniquement (bouton "Enregistrer" ci-dessous) : pas de
+  // synchro automatique/temps réel — décision produit explicite pour le
+  // ticket #45. Pas de gestion de conflit multi-appareils : dernier
+  // enregistrement gagnant, jugé suffisant tant qu'il n'y a pas
+  // d'utilisateurs réels.
+  async function save() {
+    setSaving(true);
+    setError(null);
     try {
-      localStorage.setItem(DISPLAY_NAME_KEY, name.trim());
-    } catch {
-      // Repli silencieux : le nom reste appliqué pour cette session.
+      await updateDisplayName(name.trim());
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible d'enregistrer le nom affiché.");
+    } finally {
+      setSaving(false);
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1800);
   }
 
   return (
@@ -62,7 +68,7 @@ export default function AccountCard() {
         <div className={styles.avatar}>{initials(name, email || "?")}</div>
         <div className={styles.fields}>
           <label className={styles.field}>
-            <span>Nom affiché (local à cet appareil)</span>
+            <span>Nom affiché</span>
             <input
               type="text"
               value={name}
@@ -77,13 +83,14 @@ export default function AccountCard() {
         </div>
       </div>
       <div className={styles.actions}>
-        <button type="button" className={styles.saveBtn} onClick={save}>
-          Enregistrer
+        <button type="button" className={styles.saveBtn} onClick={save} disabled={saving}>
+          {saving ? "Enregistrement…" : "Enregistrer"}
         </button>
         <button type="button" className={styles.logoutBtn} onClick={logout}>
           Se déconnecter
         </button>
         {saved && <span className={styles.savedHint}>✓ Modifications enregistrées</span>}
+        {error && <span className={styles.errorHint}>{error}</span>}
       </div>
     </div>
   );

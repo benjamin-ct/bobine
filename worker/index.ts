@@ -13,6 +13,7 @@ import {
   applyLibraryChanges,
   getCustomListsForUser,
   replaceCustomListsForUser,
+  updateDisplayName,
 } from "./db.ts";
 import { runDailyCheck } from "./scheduled.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
@@ -36,6 +37,7 @@ import {
   sanitizeGenrePrefs,
   sanitizeKeyList,
   sanitizeCustomListsPayload,
+  sanitizeDisplayName,
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
 import { getTheatricalIndex } from "./tmdb.ts";
@@ -416,7 +418,30 @@ async function handleMe(request: Request, env: Env): Promise<Response> {
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  return json({ email: user.email });
+  return json({ email: user.email, displayName: user.displayName });
+}
+
+// Nom affiché (ticket #45) : mis à jour uniquement sur un save manuel côté
+// client (bouton "Enregistrer" d'AccountCard), jamais en synchro automatique.
+// Même garde IDOR que les autres endpoints authentifiés ci-dessous :
+// user.id vient uniquement du cookie de session.
+async function handleUpdateDisplayName(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const displayName = sanitizeDisplayName(body?.displayName);
+  if (displayName === null) {
+    return json({ error: "Nom affiché invalide." }, 400);
+  }
+  await updateDisplayName(env.DB, user.id, displayName);
+  return json({ ok: true, displayName });
 }
 
 async function handleLogout(request: Request, env: Env): Promise<Response> {
@@ -802,6 +827,10 @@ async function routeRequest(
 
   if (url.pathname === "/api/auth/logout" && request.method === "POST") {
     return handleLogout(request, env);
+  }
+
+  if (url.pathname === "/api/account/display-name" && request.method === "PATCH") {
+    return handleUpdateDisplayName(request, env);
   }
 
   if (url.pathname === "/api/library" && request.method === "GET") {

@@ -55,5 +55,6 @@ export interface LibraryItemRow {
 export interface UserRow {
   id: number;
   email: string;
+  display_name: string | null;
   created_at: number;
 }
