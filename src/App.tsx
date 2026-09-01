@@ -5,6 +5,7 @@ import {
   ScrollToTopButton,
   RecaptchaBadge,
   Footer,
+  LegalLinks,
 } from "./shared/components/index.ts";
 import Discover from "./modules/discover/index.ts";
 import NewReleases from "./modules/new-releases/index.ts";
@@ -44,6 +45,7 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <LegalLinks />
       <ScrollToTopButton />
     </>
   );

@@ -275,22 +275,6 @@
   flex: 1;
 }
 
-.legalLinks {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.legalLinks a {
-  color: var(--muted);
-}
-
-.legalLinks a:hover {
-  color: var(--fg);
-}
-
 .desktopOnly {
   display: flex;
 }
@@ -377,20 +361,6 @@
 .mobileLinkActive {
   color: var(--accent-ink);
   background: var(--accent-soft);
-}
-
-.mobileLegal {
-  display: flex;
-  gap: 16px;
-  font-size: 12px;
-}
-
-.mobileLegal a {
-  color: var(--muted);
-}
-
-.mobileLegal a:hover {
-  color: var(--fg);
 }
 
 .mobileFoot {
