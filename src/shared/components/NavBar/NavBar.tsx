@@ -416,6 +416,15 @@ export default function NavBar() {
             <NavLink to="/profil" onClick={onNavClick} className={styles.mobileLink}>
               Profil
             </NavLink>
+            <div className={styles.mobileLegal}>
+              <Link to="/confidentialite" onClick={onNavClick}>
+                Confidentialité
+              </Link>
+              <span aria-hidden="true">·</span>
+              <Link to="/conditions-utilisation" onClick={onNavClick}>
+                CGU
+              </Link>
+            </div>
           </nav>
           <div className={styles.mobileFoot}>
             {authStatus === "authenticated" ? (
