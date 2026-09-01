@@ -254,3 +254,22 @@ en ce sens plutôt qu'un silence. Exemples :
 
 En cas d'erreur — y compris un échec de pipeline post-merge détecté en 1.6 — préfixe le message par 🚨 et détaille le
 problème ; ce message d'erreur ne remplace pas le résumé de fin d'exécution, il s'y ajoute (voir étape 1.6).
+
+### Attente CI : exécution synchrone obligatoire
+
+Ce skill est lancé via `claude -p` et chaque exécution est one-shot. Il ne faut jamais déléguer la surveillance de CI à un sous-agent asynchrone, ni terminer l'exécution en disant « je serai notifié automatiquement », « j'attends une notification », ou toute formulation équivalente.
+
+Si un check CI est `queued` ou `in_progress` :
+
+1. Rester dans l'exécution courante.
+2. Réinterroger les check-runs de la PR toutes les 30 secondes.
+3. Continuer jusqu'à ce que tous les checks concernés soient `completed`.
+4. Une fois terminés :
+   - si tous sont `success`, reprendre immédiatement le pipeline ;
+   - si l'un est en échec, signaler l'erreur puis poursuivre les autres cartes.
+5. Après 15 minutes d'attente maximum, ne pas quitter silencieusement :
+   - poster immédiatement le résumé Discord obligatoire ;
+   - indiquer que la CI est toujours en cours, avec le numéro de PR et son lien ;
+   - terminer seulement après l'envoi confirmé de ce message Discord.
+
+Ne jamais utiliser de sous-agent, de tâche de fond, de callback asynchrone ou de mécanisme de notification pour attendre la CI.
