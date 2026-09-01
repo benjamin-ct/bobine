@@ -16,6 +16,7 @@ import MyList from "./modules/my-list/index.ts";
 import Profile from "./modules/profile/index.ts";
 import Search from "./modules/search/index.ts";
 import { LoginPage, VerifyAuthPage } from "./modules/auth/index.ts";
+import { TermsPage, PrivacyPolicyPage } from "./modules/legal/index.ts";
 import NotFound from "./modules/not-found/index.ts";
 
 export default function App() {
@@ -37,6 +38,8 @@ export default function App() {
           <Route path="/recherche" element={<Search />} />
           <Route path="/connexion" element={<LoginPage />} />
           <Route path="/auth/verify" element={<VerifyAuthPage />} />
+          <Route path="/conditions-utilisation" element={<TermsPage />} />
+          <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

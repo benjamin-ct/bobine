@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import styles from "./Footer.module.css";
 
 export default function Footer() {
@@ -19,6 +20,10 @@ export default function Footer() {
           Bobine
         </span>
         <span className={styles.meta}>Découvre, suis, et retrouve tes films &amp; séries.</span>
+        <nav className={styles.links}>
+          <Link to="/conditions-utilisation">Conditions d'utilisation</Link>
+          <Link to="/confidentialite">Confidentialité</Link>
+        </nav>
       </div>
     </footer>
   );

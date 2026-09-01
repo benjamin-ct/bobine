@@ -167,6 +167,19 @@ précédente s'est arrêtée en cours de route) et continuer le développement (
    4. Ajouter un commentaire sur la carte avec le lien de la preview (et le lien de la PR).
       **Toujours préfixer le commentaire par `🤖 [Claude]`** pour indiquer clairement qu'il s'agit d'un message
       automatisé.
+5. **Vérifier la fraîcheur des CGU / politique de confidentialité** (`src/modules/legal/`, routes
+   `/conditions-utilisation` et `/confidentialite`) dès que le ticket traité change l'un des points suivants :
+   - les données personnelles collectées (nouvelle table/colonne stockant des données utilisateur, nouveau champ de
+     formulaire, etc.) ;
+   - les sous-traitants tiers utilisés (nouvel outil d'analytics, nouveau service d'email/paiement/hébergement...) ;
+   - le statut légal ou commercial du projet (structure, financement, tarification).
+   - Si la mise à jour nécessaire est claire et sans ambiguïté (ex. ajout d'un sous-traitant déjà nommé dans la
+     description du ticket) : la faire directement dans la même PR, en actualisant aussi la date en haut de la page
+     concernée.
+   - Sinon (incertitude sur ce qu'il faut écrire, portée légale pas évidente) : ne pas deviner — commenter sur la
+     carte pour signaler le point à vérifier et poser la question précise, sans bloquer le reste du ticket pour
+     autant (pas besoin du label `Bloqué — action requise` si le ticket lui-même n'est pas empêché d'avancer ;
+     l'utiliser seulement si la mise à jour légale conditionne le ticket en cours).
 
 ### 3. Démarrer un nouveau ticket (liste `A faire`)
 
