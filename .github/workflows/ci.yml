@@ -13,6 +13,10 @@ on:
   push:
     branches: [main]
   pull_request:
+    # "closed" (fermeture ou merge) est nécessaire en plus des types par
+    # défaut (opened/synchronize/reopened) pour déclencher le nettoyage de la
+    # base D1 de preview du job cleanup-preview-d1 ci-dessous.
+    types: [opened, synchronize, reopened, closed]
 
 # Annule une exécution précédente encore en cours sur la même réf (ex.
 # nouveau push sur une PR) pour ne pas gaspiller de runners.
@@ -23,6 +27,10 @@ concurrency:
 jobs:
   verify:
     name: Format, lint, typecheck, tests & build
+    # Rien à vérifier côté code à la fermeture d'une PR (cf. types:
+    # [..., closed] ajouté ci-dessus pour déclencher cleanup-preview-d1) :
+    # ne pas gaspiller un run pour ça.
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -59,6 +67,7 @@ jobs:
 
   secrets-scan:
     name: Scan secrets (gitleaks)
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -73,7 +82,7 @@ jobs:
     needs:
       - verify
       - secrets-scan
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -88,6 +97,17 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+
+      # Base D1 dédiée à cette PR (créée si besoin, réutilisée sur les pushs
+      # suivants) : voir scripts/preview-d1.ts pour la logique de
+      # provisioning et d'attente en cas de plan gratuit saturé. Génère
+      # wrangler.preview.generated.jsonc, utilisé par le déploiement
+      # ci-dessous à la place de wrangler.jsonc.
+      - name: Provision D1 preview database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-d1.ts provision ${{ github.event.pull_request.number }}
 
       - name: Generate branch slug for preview URL
         id: branch-slug
@@ -107,7 +127,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: versions upload --preview-alias ${{ steps.branch-slug.outputs.slug }}
+          command: versions upload --config wrangler.preview.generated.jsonc --preview-alias ${{ steps.branch-slug.outputs.slug }}
 
       - name: Build preview URL
         id: preview-url
@@ -124,6 +144,27 @@ jobs:
             👉 ${{ steps.preview-url.outputs.url }}
 
             <sub>This url stays stable for the duration of the PR (alias : `${{ steps.branch-slug.outputs.slug }}`)</sub>
+
+  cleanup-preview-d1:
+    name: Cleanup D1 preview database
+    # Ni verify/secrets-scan ni deploy-preview n'ont besoin d'avoir réussi
+    # pour nettoyer : indépendant du sort de la PR (mergée ou simplement
+    # fermée), on veut toujours libérer la base D1 si elle a été créée.
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Delete D1 preview database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-d1.ts cleanup ${{ github.event.pull_request.number }}
 
   apply-d1-migrations:
     name: Apply D1 migrations (remote)
