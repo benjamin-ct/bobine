@@ -45,6 +45,18 @@ body {
     color 0.35s ease;
 }
 
+/* Colonne flex pleine hauteur : pousse le footer en bas de l'écran même
+   quand le contenu d'une page est trop court pour remplir le viewport. */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+#root > main {
+  flex: 1;
+}
+
 img,
 svg {
   display: block;
