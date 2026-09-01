@@ -90,7 +90,21 @@ Traiter **toutes** les cartes de `To merge`, une par une, dans l'ordre, sans s'a
 3. Merger la PR (squash merge par défaut, sauf convention contraire du dépôt).
 4. Déplacer la carte vers `Done`.
 5. Supprimer la branche mergée (systématiquement, dès le merge fait).
-6. Passer à la carte suivante de `To merge`, jusqu'à ce que la liste soit vide (ou ne contienne plus que des cartes en
+6. **Vérifier la pipeline post-merge** avant de passer à la carte suivante :
+   - Récupérer le SHA du commit créé sur `main` par ce merge.
+   - Interroger les check-runs de ce commit (`gh api repos/<owner>/<repo>/commits/<sha>/check-runs`) : ils couvrent à la
+     fois les jobs GitHub Actions déclenchés par le push sur `main` (build/lint/typecheck, scan de secrets, migrations
+     D1) et le déploiement en prod, posté automatiquement comme check-run par l'intégration Git Cloudflare Workers
+     (`Workers Builds: <nom du projet>`).
+   - Attendre que tous les check-runs concernés soient `completed` (ils peuvent démarrer `queued`/`in_progress` ;
+     réinterroger après un court délai plutôt que conclure trop tôt).
+   - Si tous se terminent avec la conclusion `success` : rien à signaler individuellement, ce succès sera mentionné dans
+     le résumé Discord global de fin d'exécution.
+   - Si un check-run se termine avec une conclusion différente de `success` (`failure`, `cancelled`, `timed_out`...) :
+     poster immédiatement une alerte Discord (préfixée 🚨) précisant le ticket concerné, le check-run en échec et le
+     lien vers le run/commit — sans attendre le résumé de fin d'exécution, et sans bloquer le traitement des autres
+     cartes de `To merge`.
+7. Passer à la carte suivante de `To merge`, jusqu'à ce que la liste soit vide (ou ne contienne plus que des cartes en
    échec CI déjà signalées).
 
 ### 2. Recenser l'état de `En cours`
@@ -198,4 +212,6 @@ carte de `En cours` sans label en traitement actif : l'exécution est terminée.
 
 **Notification Discord** : après chaque exécution, utilise le MCP Discord pour poster un résumé clair et contextualisé
 dans le channel dédié. Décris simplement ce qui a été fait (tickets mergés, démarrés, bloqués) avec les liens PR/preview
-si disponibles, ou indique qu'aucune action n'était nécessaire. En cas d'erreur, poste un message avec 🚨 et les détails.
+si disponibles, ou indique qu'aucune action n'était nécessaire. Inclus le résultat de la vérification post-merge (étape
+1.6) pour chaque ticket mergé pendant l'exécution. En cas d'erreur — y compris un échec de pipeline post-merge détecté
+en 1.6 — poste un message avec 🚨 et les détails.
