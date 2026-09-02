@@ -1,97 +1,113 @@
 # Proposition : observabilité (erreurs, usage, disponibilité)
 
-> Ticket Trello : "Mettre en place des metrics d'erreur". Ce document est une **proposition**, pas une implémentation
-> — rien n'est mis en place à ce stade, conformément à la demande du ticket. Objectif : dresser un état des lieux,
-> comparer les options réalistes, et proposer une trajectoire, en restant gratuit et le plus possible intégré à
-> Cloudflare ou aux outils déjà en place.
+> Ticket Trello : "Mettre en place des metrics d'erreur". Ce document reste une **proposition** — rien n'est mis en
+> place à ce stade. Cette version répond aux retours du 2026-09-02 : recommandation ferme (plus un menu d'options),
+> réponse directe à "on serait en capacité de quoi et où", et un plan de migration one-shot avec la liste exacte de
+> ce qu'il y a à préparer côté humain.
 
-## 1. Constat actuel
+## 1. Réponse directe : on aurait quoi, et où
+
+Une fois la Phase unique décrite en section 4 mise en œuvre, en un seul PR/déploiement :
+
+| Besoin                     | Outil                                                 | Ce qu'on voit concrètement                                                                                                                                                                                                          | Où                                                                       |
+| -------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Erreurs (centralisé)       | **Sentry** (plan gratuit)                             | Chaque erreur client (React) ou worker remonte automatiquement : stack trace, route, regroupement par erreur similaire, recherche/filtre par message, route, date, fréquence — équivalent CloudWatch Logs Insights pour les erreurs | Interface web Sentry (recherche type moteur de recherche sur les events) |
+| Erreurs (alerte immédiate) | **Sentry → Discord**                                  | Notification dans un salon Discord dédié dès qu'une **nouvelle** erreur (ou une régression) apparaît, avec lien direct vers l'event Sentry — pas de spam à chaque occurrence répétée                                                | Salon Discord dédié (ex. `#erreurs-prod`)                                |
+| Usage / fonctionnalités    | **Cloudflare Web Analytics** + **Analytics Engine**   | Visiteurs uniques, pages vues, et événements custom (ajout à une liste, notification activée, recherche...)                                                                                                                         | Dashboard Grafana (voir ligne suivante)                                  |
+| Disponibilité              | **Route `/api/health` + GitHub Actions (cron 5 min)** | Ping périodique ; alerte Discord immédiate si le site ne répond pas, et message de rétablissement quand ça revient                                                                                                                  | Même salon Discord dédié                                                 |
+| Dashboard unique           | **Grafana Cloud** (plan gratuit)                      | Un board unique avec 3 sections : tendance des erreurs (source Sentry), usage/traffic (source Cloudflare), disponibilité (historique des checks) — vue d'ensemble dans le temps                                                     | `<votre-org>.grafana.net`                                                |
+
+Tout est gratuit à cette échelle, aucun développement d'outil maison : uniquement de la configuration et de
+l'instrumentation légère (quelques appels SDK/API), sur des services qui s'intègrent nativement entre eux
+(Sentry a une intégration Discord native ; Grafana a des plugins de datasource Sentry et Cloudflare tout faits).
+
+## 2. Constat actuel
 
 - Aucune dépendance d'observabilité dans `package.json` (pas de Sentry, PostHog, Datadog...).
 - Aucun binding Cloudflare dédié au monitoring dans `wrangler.jsonc` (pas d'Analytics Engine, pas de Logpush) : seul
   binding présent, `DB` (D1).
-- Le logging existant se limite à des `console.error`/`console.warn` non structurés, dispersés côté client
-  (`src/core/context/*Context.tsx`) et côté worker (`worker/scheduled.ts`, `worker/index.ts`) — invisibles en dehors
-  d'un `wrangler tail` lancé manuellement.
-- Aucune table D1 de type `events`/`analytics_events` : pas de tracking d'usage en base.
+- Le logging existant se limite à des `console.error`/`console.warn` non structurés et non uniformisés, dispersés
+  côté client (`src/core/context/*Context.tsx`) et côté worker (`worker/scheduled.ts`, `worker/index.ts`) —
+  invisibles en dehors d'un `wrangler tail` lancé manuellement.
+- Le bot Discord utilisé par le pipeline Trello (`DISCORD_TOKEN` / `DISCORD_CHANNEL_ID`) ne vit aujourd'hui que dans
+  le conteneur `infra/trello-claude` — ce ne sont **pas** des secrets GitHub Actions, et l'app Cloudflare Worker n'y a
+  pas accès. Toute alerte Discord depuis le worker ou depuis une GitHub Action nécessite donc soit ses propres
+  identifiants (nouveau webhook ou bot), soit la réutilisation de `DISCORD_TOKEN`/`DISCORD_CHANNEL_ID` ajoutés comme
+  secrets GitHub Actions (voir section 4).
 - La page confidentialité affirme explicitement que "Bobine n'utilise à ce jour aucun outil d'analytics ni traceur
-  publicitaire" (`src/modules/legal/PrivacyPolicyPage.tsx`) — **toute solution impliquant un outil tiers de
-  mesure d'audience nécessitera une mise à jour de cette page avant mise en prod** (cf. section 5).
-- Le dashboard Cloudflare (Workers, D1) expose déjà, sans aucun code à écrire, des métriques infra basiques :
-  volume de requêtes, taux d'erreurs 5xx du Worker, temps CPU, requêtes D1 — mais rien de spécifique à l'application
-  (pas de détail par route/fonctionnalité, pas de contexte métier sur les erreurs, pas de suivi d'usage).
+  publicitaire" (`src/modules/legal/PrivacyPolicyPage.tsx`) — **toute solution impliquant un outil tiers de mesure
+  d'audience nécessitera une mise à jour de cette page avant mise en prod** (cf. section 5).
 
-## 2. Besoins à couvrir
+## 3. Pourquoi cette combinaison plutôt que d'autres
 
-1. **Erreurs applicatives** : être notifié qu'une erreur survient, avec assez de contexte (stack, route, user
-   éventuellement) pour la diagnostiquer sans attendre un signalement utilisateur.
-2. **Usage / traffic** : nombre de visiteurs, pages vues, fonctionnalités utilisées (ex. ajout à une liste,
-   notifications activées).
-3. **Disponibilité** : être alerté si le site ou l'API worker est down, sans dépendre d'un utilisateur qui le
-   remonte.
-4. **Un board / dashboard** consultable pour visualiser ces trois axes dans la durée.
+- **Sentry plutôt que Cloudflare Workers Logs seul** : les logs Cloudflare natifs ont une rétention courte, pas de
+  regroupement/alerting, et ne couvrent pas le client React. Sentry est le seul outil de la liste qui couvre
+  proprement navigateur **et** worker, avec regroupement automatique des erreurs similaires et recherche — c'est
+  l'équivalent "CloudWatch" demandé. Plan gratuit : ~5k événements/mois, largement suffisant à ce trafic.
+- **Grafana Cloud plutôt qu'une page admin maison** : demande explicite de ne pas développer d'outil interne. Grafana
+  Cloud gratuit fournit un board prêt à l'emploi avec des plugins de datasource officiels pour Sentry et Cloudflare —
+  configuration une fois, pas de maintenance de code ensuite.
+- **GitHub Actions + Discord plutôt qu'UptimeRobot** : réutilise des minutes GitHub Actions déjà consommées par la CI
+  et le canal Discord déjà en place comme habitude d'alerting sur ce projet, plutôt que d'ajouter un compte tiers de
+  plus à gérer.
+- **Analytics Engine plutôt qu'un outil de tracking tiers pour les événements custom** : reste 100% Cloudflare, pas de
+  SDK supplémentaire, et pas de nouvel outil à déclarer légalement au-delà de Web Analytics (qui, lui, est sans
+  cookies et RGPD-friendly par nature).
 
-Contrainte transverse : rester gratuit (ou quasi), en priorisant ce qui est nativement disponible sur Cloudflare ou
-déjà utilisé par le projet (Discord, GitHub Actions), avant d'ajouter un nouvel outil tiers.
+## 4. Plan de migration one-shot
 
-## 3. Options étudiées
+Objectif : une seule PR qui active tout d'un coup (instrumentation code + config CI + config Cloudflare), une fois
+que les comptes/identifiants ci-dessous sont prêts. Chaque étape "à préparer" est à faire une seule fois, avant le
+merge de la PR d'implémentation.
 
-| Besoin           | Option                                                                                           | Coût                                                                                                 | Ce qu'elle apporte                                                                                                                                 | Limites                                                                                                                                                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Erreurs          | **Cloudflare Workers Logs** (observability native, activable dans `wrangler.jsonc`)              | Gratuit sur le plan Workers actuel, rétention limitée (~jours)                                       | Logs structurés interrogeables depuis le dashboard Cloudflare, sans SDK tiers                                                                      | Pas d'agrégation/alerting avancé, rétention courte, ne couvre que le worker (pas le client React)                                                                                                                          |
-| Erreurs          | **Sentry (plan gratuit)**                                                                        | Gratuit jusqu'à ~5k événements/mois, 1 projet                                                        | Stack traces avec source maps, regroupement d'erreurs, alerting (email/Slack/Discord via webhook), couvre client **et** worker                     | Outil tiers hors Cloudflare ; au-delà du quota gratuit ça devient payant ; nécessite d'ajouter un SDK et de builder les uploads de source maps                                                                             |
-| Erreurs + usage  | **Cloudflare Workers Analytics Engine** (binding natif, écriture de data points custom)          | Gratuit, inclus dans le plan Workers actuel avec un volume d'écriture quotidien généreux             | Permet d'enregistrer soi-même des événements custom (erreur avec tags, feature utilisée, etc.), interrogeables en SQL via l'API GraphQL Cloudflare | Nécessite d'instrumenter le code soi-même (pas de SDK plug-and-play) ; pas d'UI de dashboard prête à l'emploi, il faut soit interroger l'API à la demande, soit brancher un outil de visualisation                         |
-| Usage / traffic  | **Cloudflare Web Analytics**                                                                     | Gratuit                                                                                              | Pages vues, visiteurs uniques, sans cookies (compatible RGPD) ; juste un snippet à ajouter, activable en un clic dashboard                         | Implique de déclarer un outil de mesure d'audience dans la politique de confidentialité (actuellement elle dit explicitement qu'il n'y en a pas) ; ne couvre pas les "fonctionnalités utilisées" (pas d'événements custom) |
-| Usage détaillé   | **Analytics Engine + événements custom** (ex. "item ajouté à une liste", "notification activée") | Gratuit (même binding que ci-dessus)                                                                 | Mesure précise des fonctionnalités réellement utilisées, sans dépendre d'un outil externe ni de cookies                                            | Même limite que ci-dessus : instrumentation manuelle, pas de dashboard visuel out-of-the-box                                                                                                                               |
-| Disponibilité    | **Health check externe via GitHub Actions (cron) → alerte Discord**                              | Gratuit (minutes GitHub Actions déjà utilisées par la CI, webhook Discord déjà en place pour Trello) | Ping périodique d'une route de santé (`/api/health` à créer), alerte immédiate dans un salon Discord dédié si le site ne répond pas                | Fréquence limitée par le cron GitHub Actions (minimum réaliste ~5 min) ; pas de a niveau SLA garanti                                                                                                                       |
-| Disponibilité    | **UptimeRobot (plan gratuit)**                                                                   | Gratuit jusqu'à 50 moniteurs, intervalle 5 min                                                       | Solution clé en main, historique de disponibilité, alerte email/Discord/Slack                                                                      | Outil tiers de plus à gérer, alors que l'option GitHub Actions ci-dessus réutilise l'existant                                                                                                                              |
-| Dashboard global | **Grafana Cloud (plan gratuit)** branché sur l'API Analytics Engine / GraphQL Cloudflare         | Gratuit jusqu'à un quota de séries/requêtes largement suffisant à cette échelle                      | Un vrai board visuel unique (erreurs, usage, disponibilité) sans booster de l'existant                                                             | Configuration initiale (datasource, requêtes) à faire une fois ; nouvel outil externe (lecture seule)                                                                                                                      |
-| Dashboard global | **Page admin interne** (React, dans l'app) interrogeant directement l'API Analytics Engine       | Gratuit                                                                                              | Zéro outil externe, cohérent avec "le plus possible tout intégré"                                                                                  | Développement custom à maintenir (UI de graphes)                                                                                                                                                                           |
+### 4.1. Ce qu'il y a à préparer (côté humain, hors code)
 
-## 4. Proposition retenue
+1. **Compte Sentry** (gratuit, sentry.io) → créer un projet type "Cloudflare Workers" (ou générique JavaScript) →
+   récupérer le **DSN** du projet.
+2. **Intégration Discord de Sentry** : dans le projet Sentry, section Alertes/Intégrations → connecter le serveur
+   Discord et choisir le salon dédié (créer `#erreurs-prod` s'il n'existe pas déjà) → configurer une règle d'alerte
+   "nouvelle erreur / régression" (pas "chaque event", pour éviter le bruit).
+3. **Compte Grafana Cloud** (gratuit, grafana.com) → récupérer l'URL de l'instance (`<org>.grafana.net`) et un token
+   d'API pour ajouter les datasources.
+4. **Webhook ou bot Discord pour le healthcheck** : soit créer un webhook Discord dédié au salon `#erreurs-prod`
+   (le plus simple, une URL à copier depuis les paramètres du salon), soit ajouter `DISCORD_TOKEN` et
+   `DISCORD_CHANNEL_ID` (déjà utilisés par le pipeline Trello) comme **secrets GitHub Actions** du dépôt.
+5. **Secrets à ajouter** (dashboard Cloudflare pour le worker, `gh secret set` pour GitHub Actions) :
+   - Cloudflare (Secrets, pas `vars`, comme `TMDB_API_KEY`) : `SENTRY_DSN`.
+   - GitHub Actions : `SENTRY_AUTH_TOKEN` (upload des source maps au build), `DISCORD_WEBHOOK_URL` (ou
+     `DISCORD_TOKEN`/`DISCORD_CHANNEL_ID`) pour le healthcheck. `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`
+     existent déjà.
 
-Approche en couches, en partant de ce qui est gratuit et déjà disponible, avant d'ajouter quoi que ce soit de nouveau :
+### 4.2. Ce qui serait fait dans la PR d'implémentation, une fois ce qui précède prêt
 
-**Phase 0 — quick win, zéro développement**
-Se servir dès maintenant du dashboard Cloudflare existant (Workers → Metrics, D1 → Metrics) pour la visibilité infra
-de base (taux d'erreur 5xx, latence, requêtes D1). Aucune action de code requise.
+1. Ajouter le SDK Sentry (client React + worker), avec un wrapper de log unique (`src/core/logger.ts` ou équivalent)
+   qui remplace tous les `console.error`/`console.warn` existants — logs uniformisés, avec contexte structuré
+   (route, sévérité, éventuel id utilisateur).
+2. Activer le binding **Analytics Engine** dans `wrangler.jsonc`, et instrumenter les points d'usage clés (ajout à
+   une liste, activation des notifications, recherche...).
+3. Activer **Cloudflare Web Analytics** (snippet + activation dashboard).
+4. Ajouter la route `/api/health` (worker) et un workflow GitHub Actions planifié (cron ~5 min) qui l'appelle et
+   poste sur Discord en cas d'échec, avec message de rétablissement au retour au vert.
+5. Configurer Grafana Cloud : datasource Sentry (plugin officiel) + datasource Cloudflare (API GraphQL
+   Analytics/Analytics Engine), et un dashboard avec les 3 sections (erreurs / usage / disponibilité).
+6. Mettre à jour la politique de confidentialité (section 5 ci-dessous) dans la même PR, puisqu'à ce stade les outils
+   sont connus et nommés.
 
-**Phase 1 — erreurs applicatives**
-Activer **Cloudflare Workers Logs** côté worker (configuration `wrangler.jsonc`, pas de code applicatif à écrire) pour
-avoir des logs structurés et interrogeables. Si le besoin de regroupement d'erreurs / alerting s'avère insuffisant
-avec les logs bruts, ajouter **Sentry (plan gratuit)** côté client et worker en complément — c'est le seul outil de
-la liste qui couvre proprement les erreurs React côté navigateur avec source maps.
-
-**Phase 2 — usage et fonctionnalités**
-Instrumenter les points d'usage clés (ajout/retrait de liste, activation des notifications, recherche...) via le
-binding **Workers Analytics Engine**, en écrivant un data point à chaque événement métier significatif. C'est
-l'option qui couvre le mieux "fonctionnalités utilisées" sans dépendre d'un outil de mesure d'audience classique.
-
-**Phase 3 — traffic global**
-Activer **Cloudflare Web Analytics** pour le comptage de pages vues / visiteurs, en parallèle de la mise à jour de la
-politique de confidentialité (section 5).
-
-**Phase 4 — disponibilité**
-Ajouter une route `/api/health` légère côté worker, et un workflow GitHub Actions planifié qui l'appelle
-périodiquement et poste une alerte dans un salon Discord dédié en cas d'échec — en réutilisant l'intégration Discord
-déjà en place pour ce pipeline Trello.
-
-**Phase 5 — dashboard**
-Une fois les données custom (Analytics Engine) disponibles, décider entre une page admin interne (zéro dépendance
-externe, mais développement à maintenir) et Grafana Cloud gratuit (dashboard prêt à l'emploi, configuration
-ponctuelle). À trancher selon le temps qu'on veut y consacrer — les deux sont viables et gratuites à cette échelle.
-
-Chaque phase est indépendante et peut être découpée en ticket séparé si cette proposition est validée.
+Chaque sous-étape reste techniquement indépendante et pourrait être scindée en tickets si préféré, mais l'objectif
+de cette section est de permettre un déploiement en une seule fois si c'est ce qui est souhaité.
 
 ## 5. Point d'attention légal
 
-Dès que la Phase 3 (Web Analytics) ou toute solution impliquant un outil de mesure d'audience/erreur tiers (ex.
-Sentry) est mise en œuvre, la page confidentialité (`src/modules/legal/PrivacyPolicyPage.tsx`) devra être mise à
-jour : elle affirme actuellement qu'aucun outil d'analytics n'est utilisé. Cette mise à jour n'est pas ambiguë une
-fois l'outil choisi (nom de l'outil + finalité à ajouter), mais elle est volontairement laissée hors scope de cette
-proposition puisque rien n'est encore implémenté à ce stade.
+La mise en œuvre ci-dessus (Sentry, Cloudflare Web Analytics) implique de mettre à jour la page confidentialité
+(`src/modules/legal/PrivacyPolicyPage.tsx`), qui affirme actuellement qu'aucun outil d'analytics n'est utilisé.
+Concrètement, à ajouter lors de la PR d'implémentation : mention de Sentry (finalité : suivi et diagnostic des
+erreurs techniques) et de Cloudflare Web Analytics (finalité : mesure d'audience anonyme, sans cookies), avec mise à
+jour de la date en haut de page. Analytics Engine (événements custom internes, sans donnée personnelle identifiante)
+ne nécessite a priori pas de mention distincte, mais à confirmer selon la nature exacte des événements retenus en
+Phase usage.
 
 ## 6. Prochaine étape
 
-Ce document est soumis pour validation humaine avant de découper la phase retenue en ticket(s) de développement
-dans `A faire`.
+Ce document est de nouveau soumis pour validation humaine. Si cette recommandation convient, l'étape suivante est de
+préparer les comptes/identifiants listés en 4.1, puis de lancer le développement de la PR d'implémentation décrite
+en 4.2 (un seul ticket `A faire`, ou plusieurs si un découpage par étape est préféré).
