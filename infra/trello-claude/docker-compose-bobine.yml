@@ -22,9 +22,9 @@ services:
     command: sleep infinity
     user: claudeuser
     volumes:
-      - ./bobine:/workspace
+      - ../../:/workspace
       - ./ssh-keys:/home/claudeuser/.ssh
-      - claude-config:/home/claudeuser/.claude
+      - claude-config:/home/claudeuser/.claude:rw
     working_dir: /workspace
     environment:
       # Ne JAMAIS définir ANTHROPIC_API_KEY ici : sa seule présence
@@ -33,6 +33,8 @@ services:
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN}
       - TRELLO_API_KEY=${TRELLO_API_KEY}
       - TRELLO_TOKEN=${TRELLO_TOKEN}
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID}
       - GH_TOKEN=${GH_TOKEN}
     restart: unless-stopped
 
