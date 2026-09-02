@@ -4,7 +4,8 @@ title = "gitleaks config — bobine"
 useDefault = true
 
 [allowlist]
-description = "Faux positifs sur des valeurs publiques par conception, committées volontairement (voir commentaires dans wrangler.jsonc)"
+description = "Token Cloudflare Web Analytics — public par conception (exposé côté client), voir commentaire wrangler.jsonc"
+regexTarget = "secret"
 regexes = [
-  '''"CLOUDFLARE_ANALYTICS_TOKEN":\s*"[a-f0-9]{16,64}"''',
+  '''^d627aa22e73c4390952ff06afcc1f076$''',
 ]
