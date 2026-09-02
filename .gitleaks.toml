@@ -1,0 +1,10 @@
+title = "gitleaks config — bobine"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Faux positifs sur des valeurs publiques par conception, committées volontairement (voir commentaires dans wrangler.jsonc)"
+regexes = [
+  '''"CLOUDFLARE_ANALYTICS_TOKEN":\s*"[a-f0-9]{16,64}"''',
+]
