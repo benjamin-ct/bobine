@@ -101,8 +101,8 @@ function triggerClaude(action) {
   }
   console.log(`[${ts()}] Declenchement pour "${cardName}" (ID: ${cardId})`);
 
-  const cmd = `docker exec ${DOCKER_CONTAINER} bash -lc ${JSON.stringify(
-    `cd ${REPO_PATH} && git pull origin main 2>/dev/null && claude -p ${JSON.stringify(PROMPT)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' Read Write`
+  const cmd = `docker exec --user claudeuser ${DOCKER_CONTAINER} bash -lc ${JSON.stringify(
+    `cd ${REPO_PATH} && git pull --ff-only origin main && claude -p ${JSON.stringify(PROMPT)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' 'Bash(curl *)' Read Write`
   )}`;
 
   const child = exec(cmd, { maxBuffer: 1024 * 1024 * 50 }, async (err, stdout, stderr) => {
