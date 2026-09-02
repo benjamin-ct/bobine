@@ -287,7 +287,7 @@ Ne jamais utiliser de sous-agent, de tâche de fond, de callback asynchrone ou d
 Avant de produire la réponse finale, exécuter obligatoirement cette checklist, dans cet ordre :
 
 1. Vérifier qu'aucun check CI pertinent n'est encore `queued` ou `in_progress`, ou constater que le délai maximum de 15 minutes est atteint.
-2. Vérifier que l'appel MCP `discord.send-message` a été exécuté avec succès.
+2. Vérifier que la requête HTTP POST vers l’API Discord a réussi.
 3. Seulement après cette confirmation, écrire la réponse finale et terminer le processus.
 
 Une réponse finale qui contient « j'attends », « je serai notifié », « sous-agent », « notification automatique », « je poursuivrai », ou une formulation équivalente est invalide tant que le message Discord obligatoire n'a pas été envoyé.
