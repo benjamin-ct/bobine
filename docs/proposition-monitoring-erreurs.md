@@ -78,6 +78,29 @@ merge de la PR d'implémentation.
      `DISCORD_TOKEN`/`DISCORD_CHANNEL_ID`) pour le healthcheck. `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`
      existent déjà.
 
+### 4.1 bis. Réponses aux questions posées sur la mise en route
+
+- **Écran d'accueil Grafana Cloud ("How do you want to get started?")** : choisir **"Visualize existing data"**
+  (dernière tuile, en bas à droite). Les autres tuiles (app monitoring, infra monitoring, base de données...)
+  supposent d'installer un agent Grafana (Alloy) sur une infra à nous, ce qui ne s'applique pas ici — on ne fait que
+  brancher deux sources externes déjà existantes (Sentry, Cloudflare Analytics) en datasources, ce que couvre cette
+  option (ou, à défaut, "Skip setup" puis Connections → Data sources plus tard). Aucune donnée n'est à saisir sur cet
+  écran pour l'instant : le détail de configuration des deux datasources (Sentry, Cloudflare) est fait dans la PR
+  d'implémentation (étape 5 du 4.2), une fois le code en place.
+- **Le token généré à la création du compte Grafana Cloud** : c'est un token d'API/Access Policy Grafana Cloud, utilisé
+  uniquement si on provisionne les datasources par API/Terraform plutôt qu'à la main dans l'UI. Rien à en faire dans
+  l'immédiat : le conserver dans un gestionnaire de mots de passe. Ce n'est **pas** le même type de token que ceux
+  demandés côté Sentry ou Cloudflare pour connecter les datasources (ceux-là seront créés séparément, côté
+  Sentry/Cloudflare, au moment de l'étape 5 du 4.2).
+- **Brancher Sentry à GitHub** : il y a deux intégrations GitHub distinctes côté Sentry, à ne pas confondre.
+  - Celle déjà en place via `SENTRY_AUTH_TOKEN` (secret GitHub Actions) sert uniquement à uploader les source maps au
+    build — déjà fait, rien de plus à faire pour ça.
+  - L'intégration **Sentry → GitHub** (Sentry : Settings → Integrations → GitHub) est différente et optionnelle : elle
+    relie les erreurs aux commits/PR (suggestion du commit suspect, de l'assigné probable, commentaire automatique sur
+    la PR qui corrige un bug). Gratuite, recommandée pour le triage, mais pas bloquante — elle peut être connectée
+    maintenant (elle n'aura simplement rien à relier tant que le code d'instrumentation n'est pas mergé) ou plus tard,
+    au choix.
+
 ### 4.2. Ce qui serait fait dans la PR d'implémentation, une fois ce qui précède prêt
 
 1. Ajouter le SDK Sentry (client React + worker), avec un wrapper de log unique (`src/core/logger.ts` ou équivalent)
