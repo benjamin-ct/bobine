@@ -1,6 +1,7 @@
 .trigger {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 11px 18px;
   border-radius: 999px;

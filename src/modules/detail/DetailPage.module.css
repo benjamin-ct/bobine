@@ -177,16 +177,23 @@
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-top: 22px;
+}
+
+@media (max-width: 780px) {
+  .actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .actionBtn,
 .actionBtnSecondary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 11px 18px;
   border-radius: 999px;
@@ -218,17 +225,10 @@
   background: var(--accent-soft);
 }
 
-.actionsSecondary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-}
-
 .ghostBtn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 11px 16px;
   border-radius: 999px;

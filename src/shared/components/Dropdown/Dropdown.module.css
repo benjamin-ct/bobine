@@ -5,6 +5,8 @@
 .trigger {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   gap: 7px;
   padding: 9px 15px;
   border-radius: 999px;

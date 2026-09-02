@@ -284,8 +284,6 @@ export default function DetailPage() {
               >
                 {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
               </button>
-            </div>
-            <div className={styles.actionsSecondary}>
               <TrailerButton videos={details.videos?.results} />
               <Dropdown
                 label="Ajouter à…"
