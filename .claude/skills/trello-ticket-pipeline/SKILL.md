@@ -8,6 +8,16 @@ description: Pilote le développement à partir d'un board Trello relié à GitH
 Ce skill fait tourner un pipeline de développement autonome basé sur les listes d'un board Trello. Il s'appuie sur les
 connecteurs **Trello** et **GitHub**. Le skill vit dans le dépôt `bobine` et n'est jamais lancé depuis un autre dépôt.
 
+**Règle d'exécution impérative — environnement one-shot :**
+Ce skill s'exécute dans un unique processus `claude -p`. Il n'existe aucune reprise automatique après fin de ce processus.
+Avant de terminer, Claude doit obligatoirement :
+
+1. attendre activement les checks CI ou atteindre le timeout de 15 minutes ;
+2. effectuer les actions possibles une fois les checks terminés ;
+3. envoyer le résumé final via l’API REST Discord, en utilisant `DISCORD_TOKEN` et `DISCORD_CHANNEL_ID` ;
+4. vérifier que la requête HTTP a réussi.
+   Il est interdit de finir une réponse en indiquant qu'une CI, un sous-agent, une notification ou un callback reprendra le travail plus tard. Si la CI est encore en cours au timeout, envoyer le résumé Discord avec l'état « CI toujours en cours », puis quitter.
+
 ## Principe central : la colonne pilote le comportement
 
 La liste dans laquelle se trouve une carte détermine entièrement ce que Claude doit en faire. Il n'existe aucun signal
@@ -273,3 +283,11 @@ Si un check CI est `queued` ou `in_progress` :
    - terminer seulement après l'envoi confirmé de ce message Discord.
 
 Ne jamais utiliser de sous-agent, de tâche de fond, de callback asynchrone ou de mécanisme de notification pour attendre la CI.
+
+Avant de produire la réponse finale, exécuter obligatoirement cette checklist, dans cet ordre :
+
+1. Vérifier qu'aucun check CI pertinent n'est encore `queued` ou `in_progress`, ou constater que le délai maximum de 15 minutes est atteint.
+2. Vérifier que l'appel MCP `discord.send-message` a été exécuté avec succès.
+3. Seulement après cette confirmation, écrire la réponse finale et terminer le processus.
+
+Une réponse finale qui contient « j'attends », « je serai notifié », « sous-agent », « notification automatique », « je poursuivrai », ou une formulation équivalente est invalide tant que le message Discord obligatoire n'a pas été envoyé.

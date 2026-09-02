@@ -14,10 +14,12 @@ const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 const PROMPT = [
   "Traite le board Trello selon le skill trello-ticket-pipeline.",
-  "Si des PR dans To merge ont des checks CI en in_progress ou queued, attends activement qu'ils se terminent (en réinterrogeant périodiquement) avant de considérer l'exécution comme terminée.",
-  "Une fois les checks terminés, poursuis le workflow (merge si OK, alerte si KO).",
-  "A la fin, utilise le MCP discord et son outil send-message pour poster un resume clair et contextualise, meme si aucun ticket n'a ete avance.",
-  `Le salon Discord cible est ${DISCORD_CHANNEL_ID}.`,
+  "CONTEXTE CRITIQUE : tu es dans une execution one-shot via claude -p ; aucun processus ne reprendra apres ta sortie.",
+  "INTERDICTION : ne delegue pas une attente CI a un sous-agent et ne termine jamais en disant que tu seras notifie automatiquement.",
+  "Si une CI est queued ou in_progress, reinterroge les check-runs dans cette execution pendant au plus 15 minutes.",
+  "Avant toute reponse finale, envoie exactement un resume detaille dans Discord via l’API Discord REST.",
+  "Utilise DISCORD_TOKEN pour l’authentification et DISCORD_CHANNEL_ID comme salon cible.",
+  "Le message est obligatoire, y compris si la CI est toujours en cours au timeout.",
 ].join(" ");
 
 function ts() {
@@ -100,7 +102,7 @@ function triggerClaude(action) {
   console.log(`[${ts()}] Declenchement pour "${cardName}" (ID: ${cardId})`);
 
   const cmd = `docker exec ${DOCKER_CONTAINER} bash -lc ${JSON.stringify(
-    `cd ${REPO_PATH} && git pull origin main 2>/dev/null && claude -p ${JSON.stringify(PROMPT)} --mcp-config /workspace/.mcp.json --dangerously-skip-permissions --allowedTools 'Bash(git *)' Read Write`
+    `cd ${REPO_PATH} && git pull origin main 2>/dev/null && claude -p ${JSON.stringify(PROMPT)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' Read Write`
   )}`;
 
   const child = exec(cmd, { maxBuffer: 1024 * 1024 * 50 }, async (err, stdout, stderr) => {
@@ -206,17 +208,6 @@ function triggerClaude(action) {
     }
 
     console.log(`[${ts()}] Execution terminee avec succes`);
-    const claudeSummary = (stdout || "").trim();
-    const fallbackMessage = claudeSummary
-      ? `✅ Exécution du pipeline Trello terminée pour « ${cardName} ».\n\nRésumé Claude :\n${claudeSummary.slice(-1500)}`
-      : `✅ Exécution du pipeline Trello terminée pour « ${cardName} ». Aucun résumé textuel retourné.`;
-
-    try {
-      await postDiscordMessage(fallbackMessage);
-      console.log(`[${ts()}] [discord] notification de fin envoyée`);
-    } catch (e) {
-      console.error(`[${ts()}] [discord] échec notification de fin : ${e.message}`);
-    }
   });
 
   fs.writeFileSync(LOCK_FILE, String(child.pid));
