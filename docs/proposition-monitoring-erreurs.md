@@ -100,6 +100,17 @@ merge de la PR d'implémentation.
     la PR qui corrige un bug). Gratuite, recommandée pour le triage, mais pas bloquante — elle peut être connectée
     maintenant (elle n'aura simplement rien à relier tant que le code d'instrumentation n'est pas mergé) ou plus tard,
     au choix.
+- **Erreur "Couldn't connect through pdc-agent" en ajoutant Sentry comme datasource Grafana** : Sentry (`sentry.io`)
+  est une API publique — Grafana Cloud s'y connecte par défaut en accès direct/public, sans rien à installer. Cette
+  erreur ("network unreachable" vers `private-datasource-connect...svc.cluster.local`) signifie que la datasource a
+  été créée avec l'option **Private data source connect (PDC)** activée à la place de l'accès public par défaut : PDC
+  sert uniquement à exposer des données hébergées sur un réseau privé (interne, non joignable depuis Internet) via un
+  agent qu'il faut installer soi-même sur son infra — inutile ici, et c'est justement l'absence de cet agent qui cause
+  l'erreur. Pour corriger : ouvrir la datasource Sentry (Connections → Data sources → Sentry) et repasser son
+  "Network Access" sur l'accès public/direct par défaut plutôt que "Private data source connect network", puis
+  refaire "Save & test". Si ce réglage n'est pas modifiable une fois la datasource créée sur cette version du plugin,
+  le plus simple est de la supprimer et de la recréer depuis Connections → Add new connection → "Sentry", sans
+  activer l'option PDC proposée pendant l'assistant de création.
 
 ### 4.2. Ce qui serait fait dans la PR d'implémentation, une fois ce qui précède prêt
 
