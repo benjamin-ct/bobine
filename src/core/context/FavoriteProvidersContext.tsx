@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { logError } from "../logger.ts";
 
 // Plateformes de streaming que la personne a réellement (Netflix, Disney+...),
 // cochées une fois pour filtrer Découvrir/Nouveautés/Aléatoire en un clic
@@ -51,7 +52,7 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(favoriteProviderIds));
     } catch (err) {
-      console.error("Bobine : impossible de sauvegarder les plateformes favorites.", err);
+      logError("Bobine : impossible de sauvegarder les plateformes favorites.", err);
     }
   }, [favoriteProviderIds]);
 

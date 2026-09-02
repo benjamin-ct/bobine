@@ -1,0 +1,69 @@
+# Disponibilité (voir proposition d'observabilité, ticket Trello "Mettre en
+# place des metrics d'erreur") : ping périodique de la prod, alerte Discord
+# immédiate en cas d'échec, message de rétablissement au retour au vert.
+#
+# L'état précédent (up/down) est mémorisé via actions/cache (clé unique par
+# run, restaurée depuis le run précédent via `restore-keys`) plutôt que via
+# une variable de repo : ça évite d'alerter à chaque exécution tant que le
+# site reste down, en n'alertant que sur les TRANSITIONS d'état.
+name: Healthcheck
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        id: ping
+        run: |
+          if curl -fsS --max-time 10 https://bobine.creusatbenjamin.workers.dev/api/health > /dev/null; then
+            echo "status=up" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=down" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore previous status
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .health-status
+          key: health-status-${{ github.run_id }}
+          restore-keys: |
+            health-status-
+
+      - name: Read previous status
+        id: previous
+        run: |
+          if [ -f .health-status ]; then
+            echo "status=$(cat .health-status)" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=up" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Alert Discord on failure
+        if: steps.ping.outputs.status == 'down' && steps.previous.outputs.status == 'up'
+        run: |
+          curl -fsS -X POST -H "Content-Type: application/json" \
+            -d '{"content": "🚨 Bobine (prod) ne répond plus (échec de /api/health). https://bobine.creusatbenjamin.workers.dev"}' \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Notify Discord on recovery
+        if: steps.ping.outputs.status == 'up' && steps.previous.outputs.status == 'down'
+        run: |
+          curl -fsS -X POST -H "Content-Type: application/json" \
+            -d '{"content": "✅ Bobine (prod) est de nouveau disponible."}' \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Write current status
+        run: echo "${{ steps.ping.outputs.status }}" > .health-status
+
+      - name: Save status
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .health-status
+          key: health-status-${{ github.run_id }}

@@ -3,7 +3,7 @@ import LegalSection from "./LegalSection.tsx";
 import { LEGAL_CONTACT_LABEL, LEGAL_CONTACT_URL } from "./contact.ts";
 import styles from "./LegalPage.module.css";
 
-const LAST_UPDATED = "1 septembre 2026";
+const LAST_UPDATED = "2 septembre 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -81,16 +81,28 @@ export default function PrivacyPolicyPage() {
           <li>
             <strong>Cloudflare</strong> : héberge l'application et la base de données (Workers, D1).
           </li>
+          <li>
+            <strong>Sentry</strong> : reçoit les erreurs techniques survenant dans l'application
+            (navigateur et serveur), dans le seul but de les diagnostiquer et de les corriger. Une
+            erreur peut occasionnellement contenir des informations techniques (URL visitée, message
+            d'erreur) mais aucune donnée de compte n'y est envoyée intentionnellement.
+          </li>
+          <li>
+            <strong>Cloudflare Web Analytics</strong> : mesure d'audience anonyme (pages vues,
+            visiteurs) — sans cookies, sans identifiant persistant, sans donnée personnelle.
+          </li>
         </ul>
         <p>Aucune de ces données n'est vendue ni utilisée à des fins publicitaires.</p>
       </LegalSection>
 
       <LegalSection title="Cookies et outils de mesure">
         <p>
-          Bobine n'utilise à ce jour aucun outil d'analytics ni traceur publicitaire — seuls les
-          éléments techniques nécessaires au fonctionnement du compte (session) sont utilisés. Si un
-          outil de mesure d'audience venait à être ajouté, cette politique serait mise à jour au
-          préalable pour le refléter.
+          Bobine utilise Cloudflare Web Analytics pour mesurer la fréquentation du site de façon
+          anonyme, sans cookies ni identifiant permettant de suivre une personne d'une visite à
+          l'autre. Sentry est utilisé pour le suivi et le diagnostic des erreurs techniques (voir
+          ci-dessus). Aucun de ces deux outils ne sert à des fins publicitaires ou de profilage. Si
+          un nouvel outil de mesure d'audience ou de tracking publicitaire venait à être ajouté,
+          cette politique serait mise à jour au préalable pour le refléter.
         </p>
       </LegalSection>
 

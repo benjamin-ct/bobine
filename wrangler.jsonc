@@ -18,6 +18,12 @@
   "vars": {
     "VAPID_PUBLIC_KEY": "BJg-Rpv7wg8t4mSnGRG47SIhNovB4TEeB__fia4oyGe9opQ0lDT6z_aFWLBRZ3y1EMdbT8XE05uItXdsxiBufvY",
     "VAPID_SUBJECT": "mailto:tcreusatbenjamin@gmail.com",
+    // Token du beacon Cloudflare Web Analytics (public par nature) — vide par
+    // défaut : tant qu'il n'est pas renseigné, le client saute l'injection du
+    // beacon sans rien casser. À renseigner depuis le dashboard Cloudflare
+    // (Analytics & Logs → Web Analytics → Add site), voir README section
+    // Observabilité pour la procédure complète.
+    "CLOUDFLARE_ANALYTICS_TOKEN": "",
     // Clé "site" reCAPTCHA v3 (publique par nature, comme VAPID_PUBLIC_KEY
     // ci-dessus) — vide par défaut : tant qu'elle n'est pas renseignée, le
     // client saute la vérification anti-robot sans rien casser. Vide-la
@@ -32,6 +38,17 @@
       "database_id": "b22c3b3e-0364-4c46-9c01-1bfb61368a45"
     }
   ],
+  // Événements d'usage custom (recherche, activation notifs, watchlist...) —
+  // voir worker/analytics.ts. Binding VOLONTAIREMENT absent tant qu'Analytics
+  // Engine n'est pas activé côté compte Cloudflare (dashboard → Workers &
+  // Pages → Analytics Engine) : sans cette activation préalable, Cloudflare
+  // rejette purement et simplement tout déploiement déclarant ce binding
+  // (erreur API 10089), preview comme prod. Une fois activé, ajouter ici :
+  //   "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "bobine_events" }]
+  // — worker/analytics.ts gère déjà l'absence du binding sans crasher
+  // (`env.ANALYTICS?.writeDataPoint`), donc aucun autre changement de code
+  // n'est nécessaire pour activer le tracking une fois ce préalable fait.
+  //
   // Une fois par jour à 7h UTC : vérifie les nouveautés et envoie les
   // notifications push (voir worker/scheduled.ts).
   "triggers": {

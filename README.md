@@ -120,10 +120,33 @@ En parallèle, le job `apply-d1-migrations` de la CI GitHub Actions (`.github/wo
 | `DEBUG_TRIGGER_KEY`                    | optionnel          | Déclenchement manuel `/api/run-check`, `/api/test-notification`                                                           |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Comptes            | Envoi des liens de connexion par email (sans elle : le lien est renvoyé dans la réponse API, pour tester sans boîte mail) |
 | `RECAPTCHA_SECRET_KEY`                 | optionnel          | Anti-bot sur l'authentification                                                                                           |
+| `SENTRY_DSN`                           | optionnel          | Suivi des erreurs (client + Worker), voir section Observabilité ci-dessous                                                |
 
 Pour tester la configuration localement sans rien déployer : `npm run build && npx wrangler deploy --dry-run`.
 
 Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.dev.vars` (jamais commité), puis `npx wrangler d1 migrations apply bobine-notifications --local && npx wrangler dev`.
+
+## Observabilité
+
+- **Erreurs** (client + Worker) : [Sentry](https://sentry.io), via le secret Cloudflare `SENTRY_DSN` ci-dessus. Le
+  client le récupère à l'exécution via `GET /api/sentry-dsn` (voir `src/core/logger.ts`) plutôt que par une variable
+  Vite au build — pas de redéploiement du front nécessaire pour l'activer/désactiver. Tant que `SENTRY_DSN` n'est pas
+  configuré, tout reste no-op (dev local). Une alerte Discord est envoyée par l'intégration Sentry native dès qu'une
+  nouvelle erreur (ou une régression) apparaît.
+- **Usage** (recherche, activation des notifications, changements de bibliothèque) : Cloudflare **Analytics Engine**
+  (binding `ANALYTICS`, voir `wrangler.jsonc` et `worker/analytics.ts`) — aucune configuration supplémentaire, actif
+  dès le déploiement.
+- **Fréquentation** (pages vues, visiteurs) : Cloudflare **Web Analytics**. À activer une fois depuis le dashboard
+  Cloudflare (**Analytics & Logs → Web Analytics → Add site**), puis reporter le token obtenu dans
+  `CLOUDFLARE_ANALYTICS_TOKEN` (`wrangler.jsonc`, `vars`, pas un secret — ce token est fait pour être public). Le
+  client charge le beacon dynamiquement via `GET /api/web-analytics-token` (voir `src/core/webAnalytics.ts`) ; tant
+  que le token est vide, rien n'est chargé.
+- **Disponibilité** : `GET /api/health` (vérifie que D1 répond), pingé toutes les 5 minutes par
+  `.github/workflows/healthcheck.yml`, qui alerte sur `DISCORD_WEBHOOK_URL` (secret GitHub Actions) uniquement au
+  moment d'une transition d'état (passage down, puis retour up) — pas à chaque exécution.
+- **Dashboard unique** : [Grafana Cloud](https://grafana.com) (gratuit), avec les datasources Sentry et Cloudflare
+  Analytics branchées sur un board réunissant les trois sections ci-dessus — configuration faite une fois depuis
+  l'interface Grafana, en dehors de ce repo.
 
 ## Sécurité
 
