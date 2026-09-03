@@ -284,11 +284,10 @@ export default function DetailPage() {
               >
                 {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
               </button>
-            </div>
-            <div className={styles.actionsSecondary}>
               <TrailerButton videos={details.videos?.results} />
               <Dropdown
                 label="Ajouter à…"
+                pill
                 active={customLists.some((list) => isInList(list.id, mediaType, id))}
               >
                 <div className={dropdownStyles.head}>Ajouter à une liste</div>

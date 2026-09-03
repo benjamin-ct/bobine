@@ -6,6 +6,10 @@ interface DropdownProps {
   label: ReactNode;
   active?: boolean;
   align?: "left" | "right";
+  /** Aligne le déclencheur sur la pilule "action principale" de la fiche
+   * détail (voir .trigger.pill dans Dropdown.module.css) au lieu du style
+   * compact par défaut utilisé par la FilterBar et les panneaux de listes. */
+  pill?: boolean;
   children: ReactNode;
 }
 
@@ -28,6 +32,7 @@ export default function Dropdown({
   label,
   active = false,
   align = "left",
+  pill = false,
   children,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
@@ -92,7 +97,7 @@ export default function Dropdown({
       <button
         type="button"
         ref={triggerRef}
-        className={`${styles.trigger} ${active ? styles.active : ""}`}
+        className={`${styles.trigger} ${pill ? styles.pill : ""} ${active ? styles.active : ""}`}
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}

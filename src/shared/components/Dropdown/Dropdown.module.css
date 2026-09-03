@@ -5,6 +5,9 @@
 .trigger {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   gap: 7px;
   padding: 9px 15px;
   border-radius: 999px;
@@ -19,6 +22,16 @@
 .trigger:hover {
   border-color: var(--border-2);
   background: var(--surface-2);
+}
+
+/* Variant utilisé sur la fiche détail ("Ajouter à…"), pour rejoindre la
+   pilule "action principale" partagée avec .actionBtn/TrailerButton
+   (tokens --pill-* dans variables.css) sans changer le style par défaut,
+   plus compact, utilisé ailleurs (FilterBar, panneaux de listes). */
+.trigger.pill {
+  padding: var(--pill-padding);
+  font-size: var(--pill-font-size);
+  font-weight: var(--pill-font-weight);
 }
 
 .active {

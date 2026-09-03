@@ -177,21 +177,37 @@
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-top: 22px;
 }
 
+/* Seuil volontairement plus large que celui du hero ci-dessus : 4 colonnes
+   ne laissent pas assez de place pour le texte des boutons en paysage
+   mobile (~800-930px), qui finissait par passer sur plusieurs lignes et,
+   combiné à leur `border-radius` en pilule, les faisait paraître ronds. */
+@media (max-width: 960px) {
+  .actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Ces deux boutons partagent la pilule "action principale" avec
+   TrailerButton et le déclencheur "Ajouter à…" (Dropdown en variant
+   `pill`) — padding/taille/graisse viennent des tokens communs
+   --pill-* (voir variables.css) pour que les 4 restent identiques. */
 .actionBtn,
 .actionBtnSecondary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 11px 18px;
+  padding: var(--pill-padding);
   border-radius: 999px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--pill-font-size);
+  font-weight: var(--pill-font-weight);
+  white-space: nowrap;
 }
 
 .actionBtn {
@@ -218,20 +234,15 @@
   background: var(--accent-soft);
 }
 
-.actionsSecondary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  margin-top: 12px;
-}
-
 .ghostBtn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 11px 16px;
   border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
@@ -239,6 +250,7 @@
 
 .ghostBtn:hover {
   color: var(--fg);
+  border-color: var(--border-2);
   background: var(--surface-2);
 }
 

@@ -1,14 +1,19 @@
+/* Pilule "action principale" partagée avec .actionBtn/.actionBtnSecondary
+   de la fiche détail et le déclencheur "Ajouter à…" (Dropdown en variant
+   `pill`) — tokens communs --pill-* dans variables.css. */
 .trigger {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 11px 18px;
+  padding: var(--pill-padding);
   border-radius: 999px;
   border: 1px solid var(--border-2);
   background: var(--surface);
   color: var(--fg);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--pill-font-size);
+  font-weight: var(--pill-font-weight);
+  white-space: nowrap;
 }
 
 .trigger svg {

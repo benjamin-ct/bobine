@@ -70,6 +70,13 @@
   --radius-lg: 18px;
   --radius-xl: 26px;
 
+  /* pilule d'action partagée (fiche détail : Marquer comme vu, Envie de
+     voir, Bande-annonce, Ajouter à…) — une seule source de vérité pour que
+     ces boutons restent visuellement identiques entre eux. */
+  --pill-padding: 11px 18px;
+  --pill-font-size: 14px;
+  --pill-font-weight: 600;
+
   --shadow: 0 1px 2px oklch(0 0 0 / 0.25), 0 12px 34px -14px oklch(0 0 0 / 0.55);
   --shadow-lift: 0 2px 6px oklch(0 0 0 / 0.3), 0 22px 48px -18px oklch(0 0 0 / 0.7);
 
