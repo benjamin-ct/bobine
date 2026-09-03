@@ -38,8 +38,8 @@ jobs:
       - name: Ping /api/health
         id: ping
         run: |
-          # TEMPORAIRE : force "down" pour ce test pre-merge (voir bandeau ci-dessus).
-          echo "status=down" >> "$GITHUB_OUTPUT"
+          # TEMPORAIRE : force "up" pour ce test pre-merge (voir bandeau ci-dessus).
+          echo "status=up" >> "$GITHUB_OUTPUT"
 
       - name: Restore previous status
         id: restore
