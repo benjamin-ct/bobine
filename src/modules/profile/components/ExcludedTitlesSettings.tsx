@@ -11,12 +11,14 @@ const CROSS_SVG = (
 
 // NOUVEAU (repris de la maquette HTML, absent du Projet A avant migration) :
 // liste des titres exclus individuellement (bouton "Exclure ce titre" sur
-// la fiche détail, voir ExcludedTitlesContext). Le titre affiché ici est
-// résolu depuis la bibliothèque locale (déjà vu / envie de voir) quand
-// disponible — sinon on affiche juste l'identifiant TMDB, sans appel réseau
-// dédié pour un simple récapitulatif de réglage.
+// la fiche détail, voir ExcludedTitlesContext). Le titre affiché ici vient
+// en priorité de la bibliothèque locale (déjà vu / envie de voir, la plus à
+// jour), puis du libellé "Titre (année)" capturé au moment de l'exclusion —
+// sans appel réseau dédié pour un simple récapitulatif de réglage. Les deux
+// peuvent être absents pour une exclusion antérieure à l'introduction du
+// libellé capturé : on retombe alors sur l'identifiant TMDB brut.
 export default function ExcludedTitlesSettings() {
-  const { excludedTitleKeys, toggleExcludedTitle } = useExcludedTitles();
+  const { excludedTitleKeys, excludedTitleLabels, toggleExcludedTitle } = useExcludedTitles();
   const { watched, watchlist } = useLibrary();
 
   const knownTitles = new Map<string, string>();
@@ -47,7 +49,7 @@ export default function ExcludedTitlesSettings() {
                 onClick={() => toggleExcludedTitle(mediaType as "movie" | "tv", id)}
                 title="Réintégrer ce titre"
               >
-                {knownTitles.get(key) || `Titre #${id}`} {CROSS_SVG}
+                {knownTitles.get(key) || excludedTitleLabels[key] || `Titre #${id}`} {CROSS_SVG}
               </button>
             );
           })
