@@ -30,6 +30,13 @@ wrangler.preview.generated.jsonc
 # Cache incrémental de `tsc -b` (voir npm run typecheck)
 *.tsbuildinfo
 
+# Stack notifications Trello/Discord (voir infra/trello-claude) : secrets et clé SSH du
+# serveur, jamais commités même si un fichier réel apparaît à cet emplacement.
+infra/trello-claude/.env
+infra/trello-claude/ssh-keys/id_rsa_theapac
+infra/trello-claude/ssh-keys/id_rsa_theapac.pub
+infra/trello-claude/ssh-keys/known_hosts
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

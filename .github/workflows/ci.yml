@@ -20,9 +20,27 @@ on:
 
 # Annule une exécution précédente encore en cours sur la même réf (ex.
 # nouveau push sur une PR) pour ne pas gaspiller de runners.
+#
+# Le nom de l'événement est inclus dans le groupe en plus de la réf : pour
+# une PR fermée par merge, le push sur `main` et le `pull_request` "closed"
+# déclenchés au même instant partagent tous les deux `github.ref` =
+# `refs/heads/main` (GitHub réutilise la réf de la base une fois la réf de
+# fusion éphémère de la PR supprimée). Sans cette distinction, le run
+# "closed" — démarré quelques instants après le run "push" — annule ce
+# dernier avant qu'il n'exécute quoi que ce soit (lint/build/scan
+# secrets/migrations D1), et ce à chaque merge.
+#
+# `cancel-in-progress` est désactivé pour les runs `push` : deux merges
+# rapprochés sur `main` partagent le même groupe (`ci-push-refs/heads/main`)
+# puisque `github.ref` vaut toujours `refs/heads/main`. Si on annulait, le
+# run du premier merge — et donc ses migrations D1 — pourrait être coupé par
+# celui du second avant d'avoir tourné. En laissant `cancel-in-progress` à
+# `false` ici, les runs `push` se mettent en file et s'exécutent l'un après
+# l'autre au lieu de s'annuler ; les runs `pull_request` (superflus dès
+# qu'un nouveau push écrase le précédent) continuent, eux, à s'annuler.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
   verify:
