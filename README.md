@@ -113,14 +113,14 @@ En parallèle, le job `apply-d1-migrations` de la CI GitHub Actions (`.github/wo
 
 **Avant le premier déploiement**, configure dans le dashboard Cloudflare (Worker `bobine` → **Settings → Variables and Secrets**, type **Secret** obligatoire — voir l'avertissement dans `wrangler.jsonc`) :
 
-| Nom                                    | Obligatoire        | Rôle                                                                                                                      |
-| -------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `TMDB_API_KEY`                         | ✅                 | Proxy TMDB + tâche planifiée                                                                                              |
-| `VAPID_PRIVATE_KEY`                    | Notifications push | `node -e "console.log(require('web-push').generateVAPIDKeys())"`                                                          |
-| `DEBUG_TRIGGER_KEY`                    | optionnel          | Déclenchement manuel `/api/run-check`, `/api/test-notification`                                                           |
-| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Comptes            | Envoi des liens de connexion par email (sans elle : le lien est renvoyé dans la réponse API, pour tester sans boîte mail) |
-| `RECAPTCHA_SECRET_KEY`                 | optionnel          | Anti-bot sur l'authentification                                                                                           |
-| `SENTRY_DSN`                           | optionnel          | Suivi des erreurs (client + Worker), voir section Observabilité ci-dessous                                                |
+| Nom                                    | Obligatoire        | Rôle                                                                                                                                                                                                                                                                     |
+| -------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TMDB_API_KEY`                         | ✅                 | Proxy TMDB + tâche planifiée                                                                                                                                                                                                                                             |
+| `VAPID_PRIVATE_KEY`                    | Notifications push | `node -e "console.log(require('web-push').generateVAPIDKeys())"`                                                                                                                                                                                                         |
+| `DEBUG_TRIGGER_KEY`                    | optionnel          | À inventer toi-même (chaîne aléatoire, pas une clé fournie par un service externe) : sert de mot de passe partagé pour `/api/run-check`, `/api/test-notification`, `/api/test-error` — colle ensuite la même valeur dans le header `x-debug-key` de tes requêtes de test |
+| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Comptes            | Envoi des liens de connexion par email (sans elle : le lien est renvoyé dans la réponse API, pour tester sans boîte mail)                                                                                                                                                |
+| `RECAPTCHA_SECRET_KEY`                 | optionnel          | Anti-bot sur l'authentification                                                                                                                                                                                                                                          |
+| `SENTRY_DSN`                           | optionnel          | Suivi des erreurs (client + Worker), voir section Observabilité ci-dessous                                                                                                                                                                                               |
 
 Pour tester la configuration localement sans rien déployer : `npm run build && npx wrangler deploy --dry-run`.
 
