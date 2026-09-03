@@ -343,7 +343,13 @@ export default function DetailPage() {
               <button
                 type="button"
                 className={`${styles.ghostBtn} ${excluded ? styles.ghostBtnOn : ""}`}
-                onClick={() => toggleExcludedTitle(mediaType, id)}
+                onClick={() =>
+                  toggleExcludedTitle(
+                    mediaType,
+                    id,
+                    date ? `${title} (${date.slice(0, 4)})` : title
+                  )
+                }
                 title="Ne plus proposer ce titre dans les suggestions"
               >
                 {excluded ? "Titre exclu — réintégrer" : "Exclure ce titre"}
