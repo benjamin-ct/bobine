@@ -70,9 +70,11 @@ function json(data: unknown, status = 200, extraHeaders: Record<string, string> 
 // connect-src (pas img-src, qui ne couvre que les <img> natifs) — sans ça,
 // les affiches se chargent au premier accès mais disparaissent partout dès
 // qu'on recharge la page (SW actif, requêtes interceptées et bloquées).
-// `static.cloudflareinsights.com` sert et reçoit le beacon Web Analytics
-// (src/core/webAnalytics.ts) ; `*.ingest.de.sentry.io` reçoit les rapports
-// d'erreur du SDK Sentry client (src/core/logger.ts, région EU).
+// `static.cloudflareinsights.com` sert le script du beacon Web Analytics
+// (src/core/webAnalytics.ts) ; le beacon envoie ensuite ses données RUM en
+// XHR vers `cloudflareinsights.com` (sans le sous-domaine `static.`), d'où
+// les deux domaines en connect-src. `*.ingest.de.sentry.io` reçoit les
+// rapports d'erreur du SDK Sentry client (src/core/logger.ts, région EU).
 // ⚠️ Cette CSP est DUPLIQUÉE dans public/_headers (voir plus bas dans ce
 // fichier, "posés nativement via public/_headers") : toute modification ici
 // doit être répercutée là-bas, sinon les assets statiques (dont `/`) restent
@@ -83,7 +85,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     "script-src 'self' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https://image.tmdb.org https://i.ytimg.com data:",
-    "connect-src 'self' https://www.google.com https://image.tmdb.org https://static.cloudflareinsights.com https://*.ingest.de.sentry.io",
+    "connect-src 'self' https://www.google.com https://image.tmdb.org https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.ingest.de.sentry.io",
     "frame-src https://www.youtube.com https://www.google.com",
     "worker-src 'self'",
     "frame-ancestors 'none'",
@@ -250,6 +252,21 @@ async function handleManualRun(request: Request, env: Env): Promise<Response> {
     return json({ error: "Non autorisé." }, 401);
   }
   await runDailyCheck(env);
+  return json({ ok: true });
+}
+
+// Déclenche un envoi de test vers Sentry, pour vérifier la chaîne de
+// remontée d'erreurs (SDK Worker, DSN, projet Sentry) sans attendre qu'une
+// vraie erreur survienne en prod. Même protection que /api/run-check.
+async function handleTestError(request: Request, env: Env): Promise<Response> {
+  const expected = env.DEBUG_TRIGGER_KEY;
+  if (!expected || request.headers.get("x-debug-key") !== expected) {
+    return json({ error: "Non autorisé." }, 401);
+  }
+  logError(
+    "Erreur de test",
+    new Error("Erreur de test — déclenchée manuellement via /api/test-error")
+  );
   return json({ ok: true });
 }
 
@@ -824,6 +841,10 @@ async function routeRequest(
 
   if (url.pathname === "/api/run-check" && request.method === "POST") {
     return handleManualRun(request, env);
+  }
+
+  if (url.pathname === "/api/test-error" && request.method === "POST") {
+    return handleTestError(request, env);
   }
 
   if (url.pathname === "/api/test-notification" && request.method === "POST") {

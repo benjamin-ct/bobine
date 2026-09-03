@@ -6,12 +6,22 @@
 # run, restaurée depuis le run précédent via `restore-keys`) plutôt que via
 # une variable de repo : ça évite d'alerter à chaque exécution tant que le
 # site reste down, en n'alertant que sur les TRANSITIONS d'état.
+#
+# Pour tester l'alerte sans attendre une vraie panne : Actions → Healthcheck
+# → "Run workflow" → cocher `simulate_failure`. Le run suivant (planifié ou
+# manuel sans la case cochée) enverra alors le message de rétablissement,
+# ce qui permet de vérifier les deux messages Discord en une fois.
 name: Healthcheck
 
 on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: "Forcer un statut 'down' pour tester l'alerte Discord, sans dépendre d'une vraie panne"
+        type: boolean
+        default: false
 
 jobs:
   healthcheck:
@@ -20,7 +30,9 @@ jobs:
       - name: Ping /api/health
         id: ping
         run: |
-          if curl -fsS --max-time 10 https://bobine.creusatbenjamin.workers.dev/api/health > /dev/null; then
+          if [ "${{ inputs.simulate_failure }}" = "true" ]; then
+            echo "status=down" >> "$GITHUB_OUTPUT"
+          elif curl -fsS --max-time 10 https://bobine.creusatbenjamin.workers.dev/api/health > /dev/null; then
             echo "status=up" >> "$GITHUB_OUTPUT"
           else
             echo "status=down" >> "$GITHUB_OUTPUT"
