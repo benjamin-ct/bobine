@@ -14,7 +14,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 8px;
-  max-height: 320px;
+  height: 320px;
   overflow-y: auto;
 }
 
@@ -41,8 +41,11 @@
 .chips {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 8px;
   margin-top: 12px;
+  height: 320px;
+  overflow-y: auto;
 }
 
 .chipX {
