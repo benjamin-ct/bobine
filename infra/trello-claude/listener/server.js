@@ -20,6 +20,7 @@ const PROMPT = [
   "Avant toute reponse finale, envoie exactement un resume detaille dans Discord via l’API Discord REST.",
   "Utilise DISCORD_TOKEN pour l’authentification et DISCORD_CHANNEL_ID comme salon cible.",
   "Le message est obligatoire, y compris si la CI est toujours en cours au timeout.",
+  "CONTRAINTE GIT : tu es dans un clone de travail. Ne suppose pas que tu es sur main. Si tu as besoin d’une branche en particulier, fais toi-même git fetch / git switch / git pull.",
 ].join(" ");
 
 function ts() {
@@ -102,7 +103,7 @@ function triggerClaude(action) {
   console.log(`[${ts()}] Declenchement pour "${cardName}" (ID: ${cardId})`);
 
   const cmd = `docker exec --user claudeuser ${DOCKER_CONTAINER} bash -lc ${JSON.stringify(
-    `cd ${REPO_PATH} && git pull --ff-only origin main && claude -p ${JSON.stringify(PROMPT)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' 'Bash(curl *)' Read Write`
+    `cd ${REPO_PATH} && git fetch origin && claude -p ${JSON.stringify(PROMPT)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' 'Bash(curl *)' Read Write`
   )}`;
 
   const child = exec(cmd, { maxBuffer: 1024 * 1024 * 50 }, async (err, stdout, stderr) => {
