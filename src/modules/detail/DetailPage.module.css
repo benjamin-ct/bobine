@@ -183,7 +183,11 @@
   margin-top: 22px;
 }
 
-@media (max-width: 780px) {
+/* Seuil volontairement plus large que celui du hero ci-dessus : 4 colonnes
+   ne laissent pas assez de place pour le texte des boutons en paysage
+   mobile (~800-930px), qui finissait par passer sur plusieurs lignes et,
+   combiné à leur `border-radius` en pilule, les faisait paraître ronds. */
+@media (max-width: 960px) {
   .actions {
     grid-template-columns: repeat(2, 1fr);
   }
