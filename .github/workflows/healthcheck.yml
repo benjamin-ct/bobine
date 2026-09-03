@@ -11,9 +11,17 @@
 # → "Run workflow" → cocher `simulate_failure`. Le run suivant (planifié ou
 # manuel sans la case cochée) enverra alors le message de rétablissement,
 # ce qui permet de vérifier les deux messages Discord en une fois.
+# TEMPORAIRE — test pre-merge (ticket Trello "Mettre en place des metrics
+# d'erreur") : déclenchement sur push le temps de vérifier les deux messages
+# Discord (alerte + rétablissement) avant que la PR ne soit mergée, puisque
+# workflow_dispatch n'est utilisable qu'une fois le fichier présent sur
+# main. À retirer avant le merge (voir dernier commit de la PR).
 name: Healthcheck
 
 on:
+  push:
+    branches:
+      - docs/proposition-monitoring-erreurs
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
@@ -30,13 +38,8 @@ jobs:
       - name: Ping /api/health
         id: ping
         run: |
-          if [ "${{ inputs.simulate_failure }}" = "true" ]; then
-            echo "status=down" >> "$GITHUB_OUTPUT"
-          elif curl -fsS --max-time 10 https://bobine.creusatbenjamin.workers.dev/api/health > /dev/null; then
-            echo "status=up" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=down" >> "$GITHUB_OUTPUT"
-          fi
+          # TEMPORAIRE : force "down" pour ce test pre-merge (voir bandeau ci-dessus).
+          echo "status=down" >> "$GITHUB_OUTPUT"
 
       - name: Restore previous status
         id: restore
