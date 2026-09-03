@@ -55,18 +55,28 @@
 }
 
 .discGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
-  max-width: 820px;
 }
 
-@media (max-width: 640px) {
+@media (min-width: 861px) {
   .discGrid {
-    grid-template-columns: 1fr;
+    flex-direction: row;
+    align-items: flex-start;
   }
-}
 
-.fullWidth {
-  grid-column: 1 / -1;
+  .discGrid > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* Seuls les panneaux ouverts s'étirent à la hauteur du plus grand voisin
+     ouvert (contenu variable : texte d'intro et barre de recherche ne font
+     pas la même hauteur d'un panneau à l'autre) — un panneau fermé garde sa
+     hauteur naturelle (juste l'en-tête) pour ne pas réafficher le rectangle
+     vide corrigé par align-items: flex-start. */
+  .discGrid > details[open] {
+    align-self: stretch;
+  }
 }
