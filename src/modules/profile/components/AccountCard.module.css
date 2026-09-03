@@ -17,6 +17,7 @@
 
 .hint {
   margin: 10px 0 16px;
+  max-width: 46ch;
   color: var(--muted);
   font-size: 14px;
 }
