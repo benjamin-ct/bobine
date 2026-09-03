@@ -1,6 +1,8 @@
+import { useEffect, useMemo, useState } from "react";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useExcludedTitles } from "../../../core/context/ExcludedTitlesContext.tsx";
 import { Disclosure } from "../../../shared/components/index.ts";
+import { getMediaSummary } from "../../../core/api/tmdb.ts";
 import styles from "./SettingsPanel.module.css";
 
 const CROSS_SVG = (
@@ -13,23 +15,62 @@ const CROSS_SVG = (
 // liste des titres exclus individuellement (bouton "Exclure ce titre" sur
 // la fiche détail, voir ExcludedTitlesContext). Le titre affiché ici vient
 // en priorité de la bibliothèque locale (déjà vu / envie de voir, la plus à
-// jour), puis du libellé "Titre (année)" capturé au moment de l'exclusion —
-// sans appel réseau dédié pour un simple récapitulatif de réglage. Les deux
-// peuvent être absents pour une exclusion antérieure à l'introduction du
-// libellé capturé : on retombe alors sur l'identifiant TMDB brut.
+// jour), puis du libellé "Titre (année)" capturé au moment de l'exclusion.
+// Ces deux sources sont propres à cet appareil (localStorage) : un titre
+// exclu depuis un autre appareil n'y figure pas — on complète alors par un
+// appel réseau (voir effet ci-dessous), mis en cache localement ensuite pour
+// ne plus avoir à le refaire.
 export default function ExcludedTitlesSettings() {
-  const { excludedTitleKeys, excludedTitleLabels, toggleExcludedTitle } = useExcludedTitles();
+  const { excludedTitleKeys, excludedTitleLabels, toggleExcludedTitle, cacheExcludedTitleLabel } =
+    useExcludedTitles();
   const { watched, watchlist } = useLibrary();
+  const [loaded, setLoaded] = useState(false);
 
-  const knownTitles = new Map<string, string>();
-  for (const item of [...watched, ...watchlist]) {
-    knownTitles.set(`${item.mediaType}:${item.id}`, item.title);
-  }
+  const knownTitles = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of [...watched, ...watchlist]) {
+      map.set(`${item.mediaType}:${item.id}`, item.title);
+    }
+    return map;
+  }, [watched, watchlist]);
+
+  useEffect(() => {
+    if (!loaded) {
+      return;
+    }
+    let cancelled = false;
+    for (const key of excludedTitleKeys) {
+      if (knownTitles.has(key) || excludedTitleLabels[key]) {
+        continue;
+      }
+      const [mediaType, id] = key.split(":") as ["movie" | "tv", string];
+      getMediaSummary(mediaType, id)
+        .then((summary) => {
+          if (cancelled) {
+            return;
+          }
+          const name = summary.title || summary.name;
+          if (!name) {
+            return;
+          }
+          const date = summary.release_date || summary.first_air_date;
+          cacheExcludedTitleLabel(mediaType, id, date ? `${name} (${date.slice(0, 4)})` : name);
+        })
+        .catch(() => {
+          // Titre supprimé de TMDB ou requête en échec : on garde le
+          // fallback "Titre #id", pas d'erreur bloquante pour un libellé.
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [loaded, excludedTitleKeys, knownTitles, excludedTitleLabels, cacheExcludedTitleLabel]);
 
   return (
     <Disclosure
       summary="Titres exclus"
       meta={`${excludedTitleKeys.length} exclu${excludedTitleKeys.length > 1 ? "s" : ""}`}
+      onToggle={(open) => open && setLoaded(true)}
     >
       <p>
         Ces titres n'apparaîtront plus dans vos suggestions. Ajoutez-en depuis le bouton « Exclure

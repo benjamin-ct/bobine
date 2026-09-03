@@ -260,6 +260,26 @@ export function getDetails(mediaType: MediaType, id: string | number): Promise<M
   return promise;
 }
 
+// Résumé minimal (nom + année) d'un titre par id — utilisé pour résoudre le
+// nom d'un titre exclu quand ni la bibliothèque locale ni le libellé capturé
+// à l'exclusion ne suffisent (ex. titre exclu depuis un autre appareil).
+// Pas d'append_to_response : contrairement à getDetails, on n'a besoin ni
+// des crédits, ni des vidéos, ni des recommandations pour un simple libellé.
+const summaryCache = new Map<string, Promise<MediaSummary>>();
+export function getMediaSummary(mediaType: MediaType, id: string | number): Promise<MediaSummary> {
+  const key = `${mediaType}:${id}`;
+  const cached = summaryCache.get(key);
+  if (cached) {
+    return cached;
+  }
+  const promise = tmdbFetch<MediaSummary>(`/${mediaType}/${id}`).catch((err: unknown) => {
+    summaryCache.delete(key);
+    throw err;
+  });
+  summaryCache.set(key, promise);
+  return promise;
+}
+
 // Collection/saga (franchise) --------------------------------------------
 // Nouveau : section "La saga" de la fiche détail (repris de la maquette
 // HTML). `belongs_to_collection` sur MediaDetails ne donne que id/nom/

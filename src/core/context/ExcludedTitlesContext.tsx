@@ -35,6 +35,10 @@ interface ExcludedTitlesContextValue {
    * pour les exclusions antérieures. */
   excludedTitleLabels: Record<string, string>;
   toggleExcludedTitle: (mediaType: MediaType, id: number | string, label?: string) => void;
+  /** Complète le libellé d'un titre déjà exclu quand il vient d'être résolu
+   * par appel réseau (voir ExcludedTitlesSettings) — pour ne plus avoir à
+   * refaire cet appel au prochain chargement du panneau sur cet appareil. */
+  cacheExcludedTitleLabel: (mediaType: MediaType, id: number | string, label: string) => void;
   isExcludedTitle: (mediaType: MediaType, id: number | string) => boolean;
   /** Filtre un lot de résultats TMDB (id + mediaType déjà connu de
    * l'appelant) — TMDB n'a pas d'équivalent serveur à `without_genres` pour
@@ -114,6 +118,14 @@ export function ExcludedTitlesProvider({ children }: { children: ReactNode }) {
     [excludedTitleKeys]
   );
 
+  const cacheExcludedTitleLabel = useCallback(
+    (mediaType: MediaType, id: number | string, label: string) => {
+      const key = makeKey(mediaType, id);
+      setExcludedTitleLabels((prev) => (prev[key] === label ? prev : { ...prev, [key]: label }));
+    },
+    []
+  );
+
   const isExcludedTitle = useCallback(
     (mediaType: MediaType, id: number | string) =>
       excludedTitleKeys.includes(makeKey(mediaType, id)),
@@ -136,10 +148,18 @@ export function ExcludedTitlesProvider({ children }: { children: ReactNode }) {
       excludedTitleKeys,
       excludedTitleLabels,
       toggleExcludedTitle,
+      cacheExcludedTitleLabel,
       isExcludedTitle,
       filterExcluded,
     }),
-    [excludedTitleKeys, excludedTitleLabels, toggleExcludedTitle, isExcludedTitle, filterExcluded]
+    [
+      excludedTitleKeys,
+      excludedTitleLabels,
+      toggleExcludedTitle,
+      cacheExcludedTitleLabel,
+      isExcludedTitle,
+      filterExcluded,
+    ]
   );
 
   return <ExcludedTitlesContext.Provider value={value}>{children}</ExcludedTitlesContext.Provider>;
