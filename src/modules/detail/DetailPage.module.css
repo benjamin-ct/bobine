@@ -178,7 +178,7 @@
 
 .actions {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-top: 22px;
 }
@@ -189,20 +189,25 @@
    combiné à leur `border-radius` en pilule, les faisait paraître ronds. */
 @media (max-width: 960px) {
   .actions {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
+/* Ces deux boutons partagent la pilule "action principale" avec
+   TrailerButton et le déclencheur "Ajouter à…" (Dropdown en variant
+   `pill`) — padding/taille/graisse viennent des tokens communs
+   --pill-* (voir variables.css) pour que les 4 restent identiques. */
 .actionBtn,
 .actionBtnSecondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 18px;
+  padding: var(--pill-padding);
   border-radius: 999px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--pill-font-size);
+  font-weight: var(--pill-font-weight);
+  white-space: nowrap;
 }
 
 .actionBtn {

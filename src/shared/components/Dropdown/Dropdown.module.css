@@ -24,6 +24,16 @@
   background: var(--surface-2);
 }
 
+/* Variant utilisé sur la fiche détail ("Ajouter à…"), pour rejoindre la
+   pilule "action principale" partagée avec .actionBtn/TrailerButton
+   (tokens --pill-* dans variables.css) sans changer le style par défaut,
+   plus compact, utilisé ailleurs (FilterBar, panneaux de listes). */
+.trigger.pill {
+  padding: var(--pill-padding);
+  font-size: var(--pill-font-size);
+  font-weight: var(--pill-font-weight);
+}
+
 .active {
   border-color: var(--accent);
   color: var(--accent-ink);

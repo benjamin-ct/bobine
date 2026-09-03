@@ -287,6 +287,7 @@ export default function DetailPage() {
               <TrailerButton videos={details.videos?.results} />
               <Dropdown
                 label="Ajouter à…"
+                pill
                 active={customLists.some((list) => isInList(list.id, mediaType, id))}
               >
                 <div className={dropdownStyles.head}>Ajouter à une liste</div>
