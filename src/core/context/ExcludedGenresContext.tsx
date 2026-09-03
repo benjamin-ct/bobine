@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { logError } from "../logger.ts";
 
 // Genres que la personne ne veut jamais voir suggérés (Horreur,
 // Documentaire...), cochés une fois pour filtrer Découvrir/Nouveautés/
@@ -50,7 +51,7 @@ export function ExcludedGenresProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(excludedGenreIds));
     } catch (err) {
-      console.error("Bobine : impossible de sauvegarder les genres exclus.", err);
+      logError("Bobine : impossible de sauvegarder les genres exclus.", err);
     }
   }, [excludedGenreIds]);
 

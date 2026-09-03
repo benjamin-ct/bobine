@@ -14,6 +14,7 @@ import {
   type TmdbListItem,
 } from "./tmdb.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
+import { logError } from "./logger.ts";
 import type { Env, SubscriptionRow } from "./types.ts";
 
 const GENRE_WINDOW_DAYS = 2; // marge de sécurité au-delà de l'intervalle du cron (1x/jour)
@@ -33,7 +34,7 @@ async function notify(
     if (err instanceof ExpiredSubscriptionError) {
       await deleteSubscriptionById(db, subscription.id);
     } else {
-      console.error(`Push échoué pour l'abonnement ${subscription.id} :`, err);
+      logError(`Push échoué pour l'abonnement ${subscription.id} :`, err);
     }
   }
 }
@@ -50,7 +51,7 @@ async function checkWatchlistAvailability(
     try {
       currentProviders = await getFlatrateProviderIds(env, item.media_type, item.tmdb_id);
     } catch (err) {
-      console.error(`Providers TMDB indisponibles pour ${item.media_type}/${item.tmdb_id} :`, err);
+      logError(`Providers TMDB indisponibles pour ${item.media_type}/${item.tmdb_id} :`, err);
       continue;
     }
 
@@ -102,7 +103,7 @@ async function checkFavoriteGenreReleases(
     try {
       results = await discoverRecentByGenre(env, media_type, genre_id, GENRE_WINDOW_DAYS);
     } catch (err) {
-      console.error(`Discover TMDB échoué pour genre ${genre_id} (${media_type}) :`, err);
+      logError(`Discover TMDB échoué pour genre ${genre_id} (${media_type}) :`, err);
       continue;
     }
 
@@ -172,7 +173,7 @@ export async function runDailyCheck(env: Env): Promise<void> {
       (item) => isRecentRelease(item) && (item.popularity || 0) >= TRENDING_MIN_POPULARITY
     );
   } catch (err) {
-    console.error("Tendances TMDB indisponibles :", err);
+    logError("Tendances TMDB indisponibles :", err);
   }
 
   for (const subscription of subscriptions) {

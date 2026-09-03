@@ -10,6 +10,14 @@ import { FavoriteProvidersProvider } from "./core/context/FavoriteProvidersConte
 import { ExcludedGenresProvider } from "./core/context/ExcludedGenresContext.tsx";
 import { ExcludedTitlesProvider } from "./core/context/ExcludedTitlesContext.tsx";
 import { ThemeProvider } from "./core/context/ThemeContext.tsx";
+import { ensureSentryInit } from "./core/logger.ts";
+import { injectWebAnalytics } from "./core/webAnalytics.ts";
+
+// Best-effort, non bloquant pour le rendu initial : voir logger.ts et
+// webAnalytics.ts (no-op tant que les secrets Cloudflare correspondants ne
+// sont pas configurés).
+ensureSentryInit();
+injectWebAnalytics();
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {

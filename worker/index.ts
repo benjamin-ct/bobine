@@ -39,6 +39,9 @@ import {
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
 import { getTheatricalIndex } from "./tmdb.ts";
+import { withSentry } from "./sentry.ts";
+import { logError } from "./logger.ts";
+import { trackEvent } from "./analytics.ts";
 import type { Env } from "./types.ts";
 
 function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
@@ -67,13 +70,22 @@ function json(data: unknown, status = 200, extraHeaders: Record<string, string> 
 // connect-src (pas img-src, qui ne couvre que les <img> natifs) — sans ça,
 // les affiches se chargent au premier accès mais disparaissent partout dès
 // qu'on recharge la page (SW actif, requêtes interceptées et bloquées).
+// `static.cloudflareinsights.com` sert le script du beacon Web Analytics
+// (src/core/webAnalytics.ts) ; le beacon envoie ensuite ses données RUM en
+// XHR vers `cloudflareinsights.com` (sans le sous-domaine `static.`), d'où
+// les deux domaines en connect-src. `*.ingest.de.sentry.io` reçoit les
+// rapports d'erreur du SDK Sentry client (src/core/logger.ts, région EU).
+// ⚠️ Cette CSP est DUPLIQUÉE dans public/_headers (voir plus bas dans ce
+// fichier, "posés nativement via public/_headers") : toute modification ici
+// doit être répercutée là-bas, sinon les assets statiques (dont `/`) restent
+// sur l'ancienne policy.
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy": [
     "default-src 'self'",
-    "script-src 'self' https://www.google.com https://www.gstatic.com",
+    "script-src 'self' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https://image.tmdb.org https://i.ytimg.com data:",
-    "connect-src 'self' https://www.google.com https://image.tmdb.org",
+    "connect-src 'self' https://www.google.com https://image.tmdb.org https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.ingest.de.sentry.io",
     "frame-src https://www.youtube.com https://www.google.com",
     "worker-src 'self'",
     "frame-ancestors 'none'",
@@ -158,6 +170,7 @@ async function handleSubscribe(request: Request, env: Env): Promise<Response> {
     sanitizeGenrePrefs(favoriteGenres, MAX_GENRE_PREFS)
   );
 
+  trackEvent(env, "notifications_enabled");
   return json({ ok: true, subscriptionId });
 }
 
@@ -239,6 +252,21 @@ async function handleManualRun(request: Request, env: Env): Promise<Response> {
     return json({ error: "Non autorisé." }, 401);
   }
   await runDailyCheck(env);
+  return json({ ok: true });
+}
+
+// Déclenche un envoi de test vers Sentry, pour vérifier la chaîne de
+// remontée d'erreurs (SDK Worker, DSN, projet Sentry) sans attendre qu'une
+// vraie erreur survienne en prod. Même protection que /api/run-check.
+async function handleTestError(request: Request, env: Env): Promise<Response> {
+  const expected = env.DEBUG_TRIGGER_KEY;
+  if (!expected || request.headers.get("x-debug-key") !== expected) {
+    return json({ error: "Non autorisé." }, 401);
+  }
+  logError(
+    "Erreur de test",
+    new Error("Erreur de test — déclenchée manuellement via /api/test-error")
+  );
   return json({ ok: true });
 }
 
@@ -346,10 +374,7 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
     // client : elle peut révéler des détails de config (mode test, domaine
     // vérifié...) voire, selon le cas, l'email associé au compte. On la
     // journalise côté serveur et on renvoie un message générique.
-    console.error(
-      "Échec de l'envoi du lien de connexion :",
-      err instanceof Error ? err.message : err
-    );
+    logError("Échec de l'envoi du lien de connexion :", err);
     return json(
       { error: "Impossible d'envoyer le lien de connexion pour le moment. Réessaie plus tard." },
       502
@@ -496,6 +521,9 @@ async function handleLibrarySync(request: Request, env: Env): Promise<Response> 
     return json({ ok: true });
   }
   await applyLibraryChanges(env.DB, user.id, { upserts, deletes });
+  if (upserts.length > 0) {
+    trackEvent(env, "library_change");
+  }
   return json({ ok: true });
 }
 
@@ -669,6 +697,10 @@ async function handleTmdbProxy(
   }
   tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY);
 
+  if (tmdbPath.startsWith("/search/")) {
+    trackEvent(env, "search", [tmdbPath.replace(/^\/search\//, "")]);
+  }
+
   const discoverMediaType = tmdbPath.match(/^\/discover\/(movie|tv)$/)?.[1] as
     "movie" | "tv" | undefined;
   const shouldEnrichProviders =
@@ -723,7 +755,7 @@ async function handleTmdbProxy(
   return response;
 }
 
-export default {
+export default withSentry({
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     // `run_worker_first` (wrangler.jsonc) ne route que /api/* ici : les
@@ -742,7 +774,7 @@ export default {
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runDailyCheck(env));
   },
-};
+});
 
 async function routeRequest(
   request: Request,
@@ -768,6 +800,33 @@ async function routeRequest(
     return json({ siteKey: env.RECAPTCHA_SITE_KEY || null });
   }
 
+  // DSN Sentry pour l'init côté client (voir src/core/logger.ts) : servi
+  // depuis le worker plutôt que codé en dur/passé en variable Vite au build,
+  // même logique que /api/recaptcha-site-key ci-dessus — un DSN Sentry est
+  // par nature fait pour être exposé publiquement.
+  if (url.pathname === "/api/sentry-dsn" && request.method === "GET") {
+    return json({ dsn: env.SENTRY_DSN || null });
+  }
+
+  // Token du beacon Cloudflare Web Analytics (public par nature) : voir
+  // CLOUDFLARE_ANALYTICS_TOKEN dans wrangler.jsonc/types.ts.
+  if (url.pathname === "/api/web-analytics-token" && request.method === "GET") {
+    return json({ token: env.CLOUDFLARE_ANALYTICS_TOKEN || null });
+  }
+
+  // Healthcheck de disponibilité (voir .github/workflows/healthcheck.yml,
+  // ping toutes les 5 min) : vérifie que le Worker répond ET que D1 est
+  // accessible, pas juste que le process tourne.
+  if (url.pathname === "/api/health" && request.method === "GET") {
+    try {
+      await env.DB.prepare("SELECT 1").first();
+      return json({ status: "ok" });
+    } catch (err) {
+      logError("Healthcheck : D1 inaccessible.", err);
+      return json({ status: "error" }, 503);
+    }
+  }
+
   if (url.pathname === "/api/subscribe" && request.method === "POST") {
     return handleSubscribe(request, env);
   }
@@ -782,6 +841,10 @@ async function routeRequest(
 
   if (url.pathname === "/api/run-check" && request.method === "POST") {
     return handleManualRun(request, env);
+  }
+
+  if (url.pathname === "/api/test-error" && request.method === "POST") {
+    return handleTestError(request, env);
   }
 
   if (url.pathname === "/api/test-notification" && request.method === "POST") {

@@ -113,17 +113,44 @@ En parallèle, le job `apply-d1-migrations` de la CI GitHub Actions (`.github/wo
 
 **Avant le premier déploiement**, configure dans le dashboard Cloudflare (Worker `bobine` → **Settings → Variables and Secrets**, type **Secret** obligatoire — voir l'avertissement dans `wrangler.jsonc`) :
 
-| Nom                                    | Obligatoire        | Rôle                                                                                                                      |
-| -------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `TMDB_API_KEY`                         | ✅                 | Proxy TMDB + tâche planifiée                                                                                              |
-| `VAPID_PRIVATE_KEY`                    | Notifications push | `node -e "console.log(require('web-push').generateVAPIDKeys())"`                                                          |
-| `DEBUG_TRIGGER_KEY`                    | optionnel          | Déclenchement manuel `/api/run-check`, `/api/test-notification`                                                           |
-| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Comptes            | Envoi des liens de connexion par email (sans elle : le lien est renvoyé dans la réponse API, pour tester sans boîte mail) |
-| `RECAPTCHA_SECRET_KEY`                 | optionnel          | Anti-bot sur l'authentification                                                                                           |
+| Nom                                    | Obligatoire        | Rôle                                                                                                                                                                                                                                                                     |
+| -------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TMDB_API_KEY`                         | ✅                 | Proxy TMDB + tâche planifiée                                                                                                                                                                                                                                             |
+| `VAPID_PRIVATE_KEY`                    | Notifications push | `node -e "console.log(require('web-push').generateVAPIDKeys())"`                                                                                                                                                                                                         |
+| `DEBUG_TRIGGER_KEY`                    | optionnel          | À inventer toi-même (chaîne aléatoire, pas une clé fournie par un service externe) : sert de mot de passe partagé pour `/api/run-check`, `/api/test-notification`, `/api/test-error` — colle ensuite la même valeur dans le header `x-debug-key` de tes requêtes de test |
+| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Comptes            | Envoi des liens de connexion par email (sans elle : le lien est renvoyé dans la réponse API, pour tester sans boîte mail)                                                                                                                                                |
+| `RECAPTCHA_SECRET_KEY`                 | optionnel          | Anti-bot sur l'authentification                                                                                                                                                                                                                                          |
+| `SENTRY_DSN`                           | optionnel          | Suivi des erreurs (client + Worker), voir section Observabilité ci-dessous                                                                                                                                                                                               |
 
 Pour tester la configuration localement sans rien déployer : `npm run build && npx wrangler deploy --dry-run`.
 
 Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.dev.vars` (jamais commité), puis `npx wrangler d1 migrations apply bobine-notifications --local && npx wrangler dev`.
+
+## Observabilité
+
+- **Erreurs** (client + Worker) : [Sentry](https://sentry.io), via le secret Cloudflare `SENTRY_DSN` ci-dessus. Le
+  client le récupère à l'exécution via `GET /api/sentry-dsn` (voir `src/core/logger.ts`) plutôt que par une variable
+  Vite au build — pas de redéploiement du front nécessaire pour l'activer/désactiver. Tant que `SENTRY_DSN` n'est pas
+  configuré, tout reste no-op (dev local). L'alerte Discord n'est pas automatique avec la seule intégration Sentry :
+  il faut créer une règle dédiée (Sentry → **Alerts** → **Create Alert Rule** → **When** `A new issue is created` →
+  action `Send a Discord notification`) — pas le déclencheur par défaut basé sur une fréquence (« plus de N
+  événements en 5 minutes »), qui ne se déclenche jamais sur une erreur isolée. Chaque projet Sentry crée aussi une
+  règle par défaut (« Send a notification for new issues ») qui envoie un e-mail : à supprimer une fois la règle
+  Discord en place, pour ne garder que Discord.
+- **Usage** (recherche, activation des notifications, changements de bibliothèque) : Cloudflare **Analytics Engine**
+  (binding `ANALYTICS`, voir `wrangler.jsonc` et `worker/analytics.ts`) — aucune configuration supplémentaire, actif
+  dès le déploiement.
+- **Fréquentation** (pages vues, visiteurs) : Cloudflare **Web Analytics**. À activer une fois depuis le dashboard
+  Cloudflare (**Analytics & Logs → Web Analytics → Add site**), puis reporter le token obtenu dans
+  `CLOUDFLARE_ANALYTICS_TOKEN` (`wrangler.jsonc`, `vars`, pas un secret — ce token est fait pour être public). Le
+  client charge le beacon dynamiquement via `GET /api/web-analytics-token` (voir `src/core/webAnalytics.ts`) ; tant
+  que le token est vide, rien n'est chargé.
+- **Disponibilité** : `GET /api/health` (vérifie que D1 répond), pingé toutes les 5 minutes par
+  `.github/workflows/healthcheck.yml`, qui alerte sur `DISCORD_WEBHOOK_URL` (secret GitHub Actions) uniquement au
+  moment d'une transition d'état (passage down, puis retour up) — pas à chaque exécution.
+- **Dashboard unique** : [Grafana Cloud](https://grafana.com) (gratuit), avec les datasources Sentry et Cloudflare
+  Analytics branchées sur un board réunissant les trois sections ci-dessus — configuration faite une fois depuis
+  l'interface Grafana, en dehors de ce repo.
 
 ## Sécurité
 

@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { MediaType } from "../types/tmdb.ts";
+import { logError } from "../logger.ts";
 
 // NOUVEAU (repris de la maquette HTML, absent du Projet A avant migration) :
 // bouton "Exclure ce titre" sur la fiche détail — un titre précis, jamais
@@ -88,7 +89,7 @@ export function ExcludedTitlesProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(excludedTitleKeys));
     } catch (err) {
-      console.error("Bobine : impossible de sauvegarder les titres exclus.", err);
+      logError("Bobine : impossible de sauvegarder les titres exclus.", err);
     }
   }, [excludedTitleKeys]);
 

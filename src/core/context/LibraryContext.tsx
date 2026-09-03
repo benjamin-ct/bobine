@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "./AuthContext.tsx";
 import { getDetails } from "../api/tmdb.ts";
+import { logError, logWarn } from "../logger.ts";
 import type {
   CustomList,
   CustomListMap,
@@ -111,7 +112,7 @@ function loadInitialState(): LibraryState {
     // bien d'écraser tout de suite localStorage avec cet état vide (voir
     // l'effet ci-dessous) : si les vraies données sont encore là sous une
     // forme récupérable, mieux vaut ne pas les perdre définitivement.
-    console.warn("Bobine : lecture de la bibliothèque locale impossible, on repart à vide.", err);
+    logWarn("Bobine : lecture de la bibliothèque locale impossible, on repart à vide.", err);
     return { watched: {}, watchlist: {} };
   }
 }
@@ -159,7 +160,7 @@ function loadInitialCustomLists(): CustomListMap {
     }
     return normalized;
   } catch (err) {
-    console.warn("Bobine : lecture des listes personnalisées impossible, on repart à vide.", err);
+    logWarn("Bobine : lecture des listes personnalisées impossible, on repart à vide.", err);
     return {};
   }
 }
@@ -273,7 +274,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (err) {
-      console.error("Bobine : impossible de sauvegarder la bibliothèque locale.", err);
+      logError("Bobine : impossible de sauvegarder la bibliothèque locale.", err);
     }
   }, [state]);
 
@@ -285,7 +286,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(CUSTOM_LISTS_STORAGE_KEY, JSON.stringify(customLists));
     } catch (err) {
-      console.error("Bobine : impossible de sauvegarder les listes personnalisées.", err);
+      logError("Bobine : impossible de sauvegarder les listes personnalisées.", err);
     }
   }, [customLists]);
 
@@ -297,7 +298,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(WATCHLIST_ORDER_STORAGE_KEY, JSON.stringify(watchlistOrder));
     } catch (err) {
-      console.error("Bobine : impossible de sauvegarder l'ordre de la liste d'envies.", err);
+      logError("Bobine : impossible de sauvegarder l'ordre de la liste d'envies.", err);
     }
   }, [watchlistOrder]);
 
@@ -355,7 +356,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
             // Titre introuvable côté TMDB (supprimé du catalogue...) : on
             // laisse tomber cette entrée plutôt que de bloquer la migration
             // des autres listes/titres.
-            console.warn(`Bobine : migration impossible pour "${key}".`, err);
+            logWarn(`Bobine : migration impossible pour "${key}".`, err);
           }
         }
         if (cancelled) {
@@ -424,7 +425,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify(merged),
         });
       })
-      .catch((err) => console.warn("Bobine : synchronisation de la bibliothèque impossible.", err))
+      .catch((err) => logWarn("Bobine : synchronisation de la bibliothèque impossible.", err))
       .finally(() => {
         if (!cancelled) {
           syncingRef.current = false;
@@ -486,7 +487,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           }
         })
         .catch((err) =>
-          console.warn(
+          logWarn(
             "Bobine : synchronisation incrémentale impossible, nouvelle tentative au prochain changement.",
             err
           )
@@ -535,7 +536,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         });
       })
       .catch((err) =>
-        console.warn("Bobine : synchronisation des listes personnalisées impossible.", err)
+        logWarn("Bobine : synchronisation des listes personnalisées impossible.", err)
       )
       .finally(() => {
         if (!cancelled) {
@@ -577,7 +578,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           lastSyncedCustomListsJsonRef.current = serialized;
         })
         .catch((err) =>
-          console.warn(
+          logWarn(
             "Bobine : synchronisation des listes personnalisées impossible, nouvelle tentative au prochain changement.",
             err
           )

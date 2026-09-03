@@ -1,0 +1,11 @@
+title = "gitleaks config — bobine"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Token Cloudflare Web Analytics — public par conception (exposé côté client), voir commentaire wrangler.jsonc"
+regexTarget = "secret"
+regexes = [
+  '''^d627aa22e73c4390952ff06afcc1f076$''',
+]

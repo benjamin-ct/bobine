@@ -3,6 +3,12 @@
 export interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  // Événements d'usage (recherche, activation notifs, watchlist...) —
+  // consommés côté Grafana Cloud via la datasource Cloudflare Analytics.
+  // Voir worker/analytics.ts. Optionnel : le binding n'est déclaré dans
+  // wrangler.jsonc qu'une fois Analytics Engine activé côté compte
+  // Cloudflare (voir commentaire associé) — absent jusque-là.
+  ANALYTICS?: AnalyticsEngineDataset;
 
   // Secrets (dashboard Cloudflare, jamais commités).
   TMDB_API_KEY?: string;
@@ -10,12 +16,21 @@ export interface Env {
   DEBUG_TRIGGER_KEY?: string;
   RESEND_API_KEY?: string;
   RECAPTCHA_SECRET_KEY?: string;
+  // DSN Sentry (projet "Cloudflare Workers"/JavaScript) — voir worker/sentry.ts
+  // et logger.ts. Un DSN Sentry n'est pas un secret confidentiel par nature
+  // (conçu pour être exposé côté client), mais il vit en Secret ici comme
+  // TMDB_API_KEY par cohérence avec le reste des identifiants tiers.
+  SENTRY_DSN?: string;
 
   // Variables non sensibles (commitées dans wrangler.jsonc, voir vars).
   VAPID_PUBLIC_KEY: string;
   VAPID_SUBJECT: string;
   RECAPTCHA_SITE_KEY?: string;
   RESEND_FROM_EMAIL?: string;
+  // Token du beacon Cloudflare Web Analytics (public par nature, comme
+  // RECAPTCHA_SITE_KEY ci-dessus) — vide par défaut : tant qu'il n'est pas
+  // renseigné, le client saute l'injection du beacon sans rien casser.
+  CLOUDFLARE_ANALYTICS_TOKEN?: string;
 }
 
 // Lignes D1 (voir migrations/) — reflètent exactement les colonnes
