@@ -131,8 +131,12 @@ Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.
 - **Erreurs** (client + Worker) : [Sentry](https://sentry.io), via le secret Cloudflare `SENTRY_DSN` ci-dessus. Le
   client le récupère à l'exécution via `GET /api/sentry-dsn` (voir `src/core/logger.ts`) plutôt que par une variable
   Vite au build — pas de redéploiement du front nécessaire pour l'activer/désactiver. Tant que `SENTRY_DSN` n'est pas
-  configuré, tout reste no-op (dev local). Une alerte Discord est envoyée par l'intégration Sentry native dès qu'une
-  nouvelle erreur (ou une régression) apparaît.
+  configuré, tout reste no-op (dev local). L'alerte Discord n'est pas automatique avec la seule intégration Sentry :
+  il faut créer une règle dédiée (Sentry → **Alerts** → **Create Alert Rule** → **When** `A new issue is created` →
+  action `Send a Discord notification`) — pas le déclencheur par défaut basé sur une fréquence (« plus de N
+  événements en 5 minutes »), qui ne se déclenche jamais sur une erreur isolée. Chaque projet Sentry crée aussi une
+  règle par défaut (« Send a notification for new issues ») qui envoie un e-mail : à supprimer une fois la règle
+  Discord en place, pour ne garder que Discord.
 - **Usage** (recherche, activation des notifications, changements de bibliothèque) : Cloudflare **Analytics Engine**
   (binding `ANALYTICS`, voir `wrangler.jsonc` et `worker/analytics.ts`) — aucune configuration supplémentaire, actif
   dès le déploiement.
