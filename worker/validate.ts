@@ -432,6 +432,19 @@ export function sanitizeCustomListsPayload(body: unknown): CleanCustomListMap {
   return out;
 }
 
+const MAX_DISPLAY_NAME_LENGTH = 80;
+
+// Nom affiché (voir PATCH /api/account/display-name) : chaîne libre, juste
+// bornée en taille et décodée comme les autres champs texte utilisateur.
+// Une chaîne vide (après trim) est une valeur valide — c'est ainsi que
+// l'utilisateur efface son nom affiché.
+export function sanitizeDisplayName(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  return decodeHtmlEntities(value.trim().slice(0, MAX_DISPLAY_NAME_LENGTH));
+}
+
 export interface CleanKey {
   mediaType: MediaTypeStr;
   id: number;

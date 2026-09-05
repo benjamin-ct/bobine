@@ -29,7 +29,8 @@ export default function PrivacyPolicyPage() {
           <li>
             <strong>Compte</strong> : votre adresse email (seule information demandée à
             l'inscription), utilisée pour la connexion par lien/code à usage unique — aucun mot de
-            passe n'est stocké.
+            passe n'est stocké. Vous pouvez aussi renseigner un nom affiché, facultatif, visible sur
+            votre carte de compte et synchronisé entre vos appareils.
           </li>
           <li>
             <strong>Bibliothèque personnelle</strong> : les films/séries que vous marquez

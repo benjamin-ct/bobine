@@ -226,6 +226,20 @@ export async function updateKnownProviders(
     .run();
 }
 
+// Nom affiché (ticket #45), mis à jour uniquement sur un save manuel côté
+// client (voir AccountCard.tsx) — jamais de synchro automatique en tâche de
+// fond.
+export async function updateDisplayName(
+  db: D1Database,
+  userId: number,
+  displayName: string
+): Promise<void> {
+  await db
+    .prepare("UPDATE users SET display_name = ? WHERE id = ?")
+    .bind(displayName || null, userId)
+    .run();
+}
+
 // Bibliothèque "vu / envie de voir" synchronisée par compte. -------------
 
 // Renvoie la bibliothèque au même format que l'état client (LibraryContext) :
