@@ -29,17 +29,17 @@ createRoot(rootElement).render(
     <ThemeProvider>
       <BrowserRouter>
         <RegionProvider>
-          <FavoriteProvidersProvider>
-            <ExcludedGenresProvider>
-              <ExcludedTitlesProvider>
-                <AuthProvider>
+          <AuthProvider>
+            <FavoriteProvidersProvider>
+              <ExcludedGenresProvider>
+                <ExcludedTitlesProvider>
                   <LibraryProvider>
                     <App />
                   </LibraryProvider>
-                </AuthProvider>
-              </ExcludedTitlesProvider>
-            </ExcludedGenresProvider>
-          </FavoriteProvidersProvider>
+                </ExcludedTitlesProvider>
+              </ExcludedGenresProvider>
+            </FavoriteProvidersProvider>
+          </AuthProvider>
         </RegionProvider>
       </BrowserRouter>
     </ThemeProvider>

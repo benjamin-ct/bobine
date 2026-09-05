@@ -445,6 +445,59 @@ export async function replaceCustomListsForUser(
   await db.batch(statements);
 }
 
+// Genres exclus / plateformes favorites synchronisés par compte. ---------
+// Même principe que la bibliothèque : remplacement complet à chaque appel
+// (voir ExcludedGenresContext/FavoriteProvidersContext) — un simple id
+// n'a pas d'historique à fusionner ligne à ligne comme un item de
+// bibliothèque, un diff incrémental n'apporterait rien ici.
+
+export async function getExcludedGenresForUser(db: D1Database, userId: number): Promise<number[]> {
+  const { results } = await db
+    .prepare("SELECT genre_id FROM excluded_genre_prefs WHERE user_id = ?")
+    .bind(userId)
+    .all<{ genre_id: number }>();
+  return results.map((row) => row.genre_id);
+}
+
+export async function replaceExcludedGenresForUser(
+  db: D1Database,
+  userId: number,
+  genreIds: number[]
+): Promise<void> {
+  await db.prepare("DELETE FROM excluded_genre_prefs WHERE user_id = ?").bind(userId).run();
+  if (genreIds.length === 0) {
+    return;
+  }
+  const stmt = db.prepare("INSERT INTO excluded_genre_prefs (user_id, genre_id) VALUES (?, ?)");
+  await db.batch(genreIds.map((id) => stmt.bind(userId, id)));
+}
+
+export async function getFavoriteProvidersForUser(
+  db: D1Database,
+  userId: number
+): Promise<number[]> {
+  const { results } = await db
+    .prepare("SELECT provider_id FROM favorite_provider_prefs WHERE user_id = ?")
+    .bind(userId)
+    .all<{ provider_id: number }>();
+  return results.map((row) => row.provider_id);
+}
+
+export async function replaceFavoriteProvidersForUser(
+  db: D1Database,
+  userId: number,
+  providerIds: number[]
+): Promise<void> {
+  await db.prepare("DELETE FROM favorite_provider_prefs WHERE user_id = ?").bind(userId).run();
+  if (providerIds.length === 0) {
+    return;
+  }
+  const stmt = db.prepare(
+    "INSERT INTO favorite_provider_prefs (user_id, provider_id) VALUES (?, ?)"
+  );
+  await db.batch(providerIds.map((id) => stmt.bind(userId, id)));
+}
+
 export async function wasAlreadyNotified(
   db: D1Database,
   subscriptionId: number,
