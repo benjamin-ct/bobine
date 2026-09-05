@@ -52,6 +52,32 @@ function ThemeIcon({ theme }: { theme: "dark" | "light" }) {
   );
 }
 
+function HamburgerIcon({ open }: { open: boolean }) {
+  return open ? (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M5 5l14 14M19 5 5 19" />
+    </svg>
+  ) : (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+
 function SearchResults({
   results,
   status,
@@ -362,7 +388,7 @@ export default function NavBar() {
           aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
           aria-expanded={menuOpen}
         >
-          {menuOpen ? "✕" : "☰"}
+          <HamburgerIcon open={menuOpen} />
         </button>
       </div>
 
