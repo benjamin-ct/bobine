@@ -207,6 +207,7 @@ export default function RandomPage() {
         <div className={styles.range}>
           <input
             type="number"
+            inputMode="numeric"
             placeholder="Min"
             min={YEAR_MIN}
             max={YEAR_MAX}
@@ -217,6 +218,7 @@ export default function RandomPage() {
           <span>–</span>
           <input
             type="number"
+            inputMode="numeric"
             placeholder="Max"
             min={YEAR_MIN}
             max={YEAR_MAX}

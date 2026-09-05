@@ -105,6 +105,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
             <div className={styles.range}>
               <input
                 type="number"
+                inputMode="numeric"
                 placeholder="Min"
                 min={YEAR_MIN}
                 max={YEAR_MAX}
@@ -115,6 +116,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
               <span>–</span>
               <input
                 type="number"
+                inputMode="numeric"
                 placeholder="Max"
                 min={YEAR_MIN}
                 max={YEAR_MAX}
@@ -130,6 +132,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
             <div className={styles.range}>
               <input
                 type="number"
+                inputMode="decimal"
                 placeholder="Min"
                 min={VOTE_MIN}
                 max={VOTE_MAX}
@@ -141,6 +144,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
               <span>–</span>
               <input
                 type="number"
+                inputMode="decimal"
                 placeholder="Max"
                 min={VOTE_MIN}
                 max={VOTE_MAX}
@@ -156,6 +160,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
             <label>Nombre de votes minimum</label>
             <input
               type="number"
+              inputMode="numeric"
               placeholder="Ex: 100"
               min={0}
               value={filters.voteCountMin}
@@ -169,6 +174,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
             <div className={styles.range}>
               <input
                 type="number"
+                inputMode="numeric"
                 placeholder="Min"
                 min={0}
                 value={filters.runtimeMin}
@@ -178,6 +184,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
               <span>–</span>
               <input
                 type="number"
+                inputMode="numeric"
                 placeholder="Max"
                 min={0}
                 value={filters.runtimeMax}
