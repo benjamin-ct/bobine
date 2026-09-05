@@ -13,6 +13,10 @@ import {
   applyLibraryChanges,
   getCustomListsForUser,
   replaceCustomListsForUser,
+  getExcludedGenresForUser,
+  replaceExcludedGenresForUser,
+  getFavoriteProvidersForUser,
+  replaceFavoriteProvidersForUser,
 } from "./db.ts";
 import { runDailyCheck } from "./scheduled.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
@@ -36,6 +40,7 @@ import {
   sanitizeGenrePrefs,
   sanitizeKeyList,
   sanitizeCustomListsPayload,
+  sanitizeIdList,
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
 import { getTheatricalIndex } from "./tmdb.ts";
@@ -560,6 +565,64 @@ async function handlePutCustomLists(request: Request, env: Env): Promise<Respons
   return json({ ok: true });
 }
 
+// Genres exclus synchronisés ----------------------------------------------
+//
+// Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête.
+async function handleGetExcludedGenres(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const genreIds = await getExcludedGenresForUser(env.DB, user.id);
+  return json({ genreIds });
+}
+
+async function handlePutExcludedGenres(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const genreIds = sanitizeIdList((body as { genreIds?: unknown })?.genreIds);
+  await replaceExcludedGenresForUser(env.DB, user.id, genreIds);
+  return json({ ok: true });
+}
+
+// Plateformes favorites synchronisées -------------------------------------
+//
+// Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête.
+async function handleGetFavoriteProviders(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const providerIds = await getFavoriteProvidersForUser(env.DB, user.id);
+  return json({ providerIds });
+}
+
+async function handlePutFavoriteProviders(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const providerIds = sanitizeIdList((body as { providerIds?: unknown })?.providerIds);
+  await replaceFavoriteProvidersForUser(env.DB, user.id, providerIds);
+  return json({ ok: true });
+}
+
 // Index "au cinéma"/"bientôt" (voir getTheatricalIndex, worker/tmdb.ts) pour
 // une région : mis en cache à l'edge, si bien qu'un seul visiteur par région
 // et par heure paie le parcours complet de now_playing/upcoming — les
@@ -885,6 +948,22 @@ async function routeRequest(
 
   if (url.pathname === "/api/custom-lists" && request.method === "PUT") {
     return handlePutCustomLists(request, env);
+  }
+
+  if (url.pathname === "/api/excluded-genres" && request.method === "GET") {
+    return handleGetExcludedGenres(request, env);
+  }
+
+  if (url.pathname === "/api/excluded-genres" && request.method === "PUT") {
+    return handlePutExcludedGenres(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-providers" && request.method === "GET") {
+    return handleGetFavoriteProviders(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-providers" && request.method === "PUT") {
+    return handlePutFavoriteProviders(request, env);
   }
 
   if (url.pathname.startsWith("/api/tmdb/") && request.method === "GET") {

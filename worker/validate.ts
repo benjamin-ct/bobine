@@ -355,6 +355,30 @@ export function sanitizeGenrePrefs(rawGenres: unknown, maxItems: number): CleanG
     .filter((g): g is CleanGenrePref => g !== null);
 }
 
+// Genres exclus / plateformes favorites : simple liste d'ids TMDB, sans
+// media_type ni payload associé (voir excluded_genre_prefs/
+// favorite_provider_prefs). TMDB compte au plus quelques dizaines de genres
+// et quelques centaines de plateformes ; 500 laisse une large marge sans
+// permettre un abus qui gonflerait la base indéfiniment.
+const MAX_ID_LIST = 500;
+
+export function sanitizeIdList(rawIds: unknown): number[] {
+  if (!Array.isArray(rawIds)) {
+    return [];
+  }
+  const out = new Set<number>();
+  for (const raw of rawIds) {
+    if (out.size >= MAX_ID_LIST) {
+      break;
+    }
+    const id = cleanNumber(raw);
+    if (id !== null && id > 0) {
+      out.add(id);
+    }
+  }
+  return [...out];
+}
+
 const MAX_CUSTOM_LISTS = 200; // large marge au-dessus d'un usage réel
 
 export interface CleanCustomList {
