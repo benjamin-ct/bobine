@@ -97,10 +97,14 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
         const merged = [...new Set([...favoriteProviderIds, ...remoteIds])];
         setFavoriteProviderIds(merged);
         localStorage.setItem(SYNCED_FOR_KEY, email);
+        // `merge: true` : `remoteIds` peut déjà être périmé si un autre
+        // appareil vient de synchroniser entre le GET ci-dessus et ce PUT —
+        // le serveur fait l'union avec ce qu'il a réellement plutôt que de
+        // remplacer à l'aveugle (voir replaceFavoriteProvidersForUser).
         return fetch("/api/favorite-providers", {
           method: "PUT",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ providerIds: merged }),
+          body: JSON.stringify({ providerIds: merged, merge: true }),
         });
       })
       .catch((err) =>

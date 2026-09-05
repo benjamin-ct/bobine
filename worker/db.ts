@@ -278,15 +278,56 @@ export async function getLibraryForUser(db: D1Database, userId: number): Promise
   return { watched, watchlist };
 }
 
-// Remplace entièrement la bibliothèque du compte par l'état envoyé par le
-// client (le client fusionne avec le serveur avant d'appeler ceci — voir
-// LibraryContext — donc un simple remplacement complet est correct et
-// évite d'avoir à gérer des suppressions "orphelines" côté serveur).
+// Pour chaque clé, garde l'entrée la plus récente (updatedAt) ; sinon garde
+// celle qui existe. Même logique que mergeLists côté client
+// (LibraryContext), dupliquée ici : voir replaceLibraryForUser ci-dessous
+// pour le pourquoi.
+function mergeLibraryList(
+  a: Record<string, CleanLibraryItem>,
+  b: Record<string, CleanLibraryItem>
+): Record<string, CleanLibraryItem> {
+  const merged: Record<string, CleanLibraryItem> = {};
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const itemA = a[key];
+    const itemB = b[key];
+    if (itemA && itemB) {
+      merged[key] =
+        (itemA.updatedAt || itemA.addedAt || 0) >= (itemB.updatedAt || itemB.addedAt || 0)
+          ? itemA
+          : itemB;
+    } else {
+      merged[key] = itemA || itemB;
+    }
+  }
+  return merged;
+}
+
+// Fusionne avec la bibliothèque déjà en base plutôt que de la remplacer à
+// l'aveugle : cet endpoint ne sert qu'à la toute première synchro sur un
+// nouvel appareil (voir LibraryContext, SYNCED_FOR_KEY), donc le payload
+// client a été construit à partir d'un GET potentiellement déjà périmé.
+// Deux appareils qui se connectent au même compte à quelques secondes
+// d'intervalle déclenchent chacun ce flux : sans cette fusion côté serveur,
+// celui qui écrit en second efface intégralement ce que le premier venait
+// d'envoyer (perte de données constatée en test — voir carte Trello
+// Au5Ses9w).
 export async function replaceLibraryForUser(
   db: D1Database,
   userId: number,
   { watched, watchlist }: LibraryState
 ): Promise<void> {
+  const current = await getLibraryForUser(db, userId);
+  const merged = {
+    watched: mergeLibraryList(
+      current.watched as unknown as Record<string, CleanLibraryItem>,
+      (watched || {}) as unknown as Record<string, CleanLibraryItem>
+    ),
+    watchlist: mergeLibraryList(
+      current.watchlist as unknown as Record<string, CleanLibraryItem>,
+      (watchlist || {}) as unknown as Record<string, CleanLibraryItem>
+    ),
+  };
+
   await db.prepare("DELETE FROM library_items WHERE user_id = ?").bind(userId).run();
 
   const rows: Array<{
@@ -295,11 +336,11 @@ export async function replaceLibraryForUser(
     status: "watched" | "watchlist";
     item: CleanLibraryItem;
   }> = [];
-  for (const [key, item] of Object.entries(watched || {})) {
+  for (const [key, item] of Object.entries(merged.watched)) {
     const [mediaType, tmdbId] = key.split(":");
     rows.push({ mediaType, tmdbId, status: "watched", item: item as unknown as CleanLibraryItem });
   }
-  for (const [key, item] of Object.entries(watchlist || {})) {
+  for (const [key, item] of Object.entries(merged.watchlist)) {
     const [mediaType, tmdbId] = key.split(":");
     rows.push({
       mediaType,
@@ -464,6 +505,17 @@ export async function replaceCustomListsForUser(
 // (voir ExcludedGenresContext/FavoriteProvidersContext) — un simple id
 // n'a pas d'historique à fusionner ligne à ligne comme un item de
 // bibliothèque, un diff incrémental n'apporterait rien ici.
+//
+// `merge` (utilisé uniquement par la toute première synchro sur un nouvel
+// appareil, voir SYNCED_FOR_KEY côté client) fait l'union avec ce qui est
+// déjà en base plutôt que de remplacer à l'aveugle : deux appareils qui se
+// connectent au même compte à quelques secondes d'intervalle envoient chacun
+// un payload construit à partir d'un GET déjà périmé, et sans cette union
+// celui qui écrit en second efface ce que le premier venait d'envoyer (même
+// bug que la bibliothèque — voir replaceLibraryForUser). Les mises à jour
+// normales (un genre/une plateforme qu'on décoche) doivent en revanche
+// rester un vrai remplacement, sans quoi il deviendrait impossible de
+// retirer un id déjà synchronisé — `merge` reste donc à `false` par défaut.
 
 export async function getExcludedGenresForUser(db: D1Database, userId: number): Promise<number[]> {
   const { results } = await db
@@ -476,14 +528,18 @@ export async function getExcludedGenresForUser(db: D1Database, userId: number): 
 export async function replaceExcludedGenresForUser(
   db: D1Database,
   userId: number,
-  genreIds: number[]
+  genreIds: number[],
+  merge = false
 ): Promise<void> {
+  const finalIds = merge
+    ? [...new Set([...(await getExcludedGenresForUser(db, userId)), ...genreIds])]
+    : genreIds;
   await db.prepare("DELETE FROM excluded_genre_prefs WHERE user_id = ?").bind(userId).run();
-  if (genreIds.length === 0) {
+  if (finalIds.length === 0) {
     return;
   }
   const stmt = db.prepare("INSERT INTO excluded_genre_prefs (user_id, genre_id) VALUES (?, ?)");
-  await db.batch(genreIds.map((id) => stmt.bind(userId, id)));
+  await db.batch(finalIds.map((id) => stmt.bind(userId, id)));
 }
 
 export async function getFavoriteProvidersForUser(
@@ -500,16 +556,20 @@ export async function getFavoriteProvidersForUser(
 export async function replaceFavoriteProvidersForUser(
   db: D1Database,
   userId: number,
-  providerIds: number[]
+  providerIds: number[],
+  merge = false
 ): Promise<void> {
+  const finalProviderIds = merge
+    ? [...new Set([...(await getFavoriteProvidersForUser(db, userId)), ...providerIds])]
+    : providerIds;
   await db.prepare("DELETE FROM favorite_provider_prefs WHERE user_id = ?").bind(userId).run();
-  if (providerIds.length === 0) {
+  if (finalProviderIds.length === 0) {
     return;
   }
   const stmt = db.prepare(
     "INSERT INTO favorite_provider_prefs (user_id, provider_id) VALUES (?, ?)"
   );
-  await db.batch(providerIds.map((id) => stmt.bind(userId, id)));
+  await db.batch(finalProviderIds.map((id) => stmt.bind(userId, id)));
 }
 
 export async function wasAlreadyNotified(

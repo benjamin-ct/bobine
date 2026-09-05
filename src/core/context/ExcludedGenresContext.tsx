@@ -97,10 +97,14 @@ export function ExcludedGenresProvider({ children }: { children: ReactNode }) {
         const merged = [...new Set([...excludedGenreIds, ...remoteIds])];
         setExcludedGenreIds(merged);
         localStorage.setItem(SYNCED_FOR_KEY, email);
+        // `merge: true` : `remoteIds` peut déjà être périmé si un autre
+        // appareil vient de synchroniser entre le GET ci-dessus et ce PUT —
+        // le serveur fait l'union avec ce qu'il a réellement plutôt que de
+        // remplacer à l'aveugle (voir replaceExcludedGenresForUser).
         return fetch("/api/excluded-genres", {
           method: "PUT",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ genreIds: merged }),
+          body: JSON.stringify({ genreIds: merged, merge: true }),
         });
       })
       .catch((err) => logWarn("Bobine : synchronisation des genres exclus impossible.", err))

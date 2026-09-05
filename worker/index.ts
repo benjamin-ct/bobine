@@ -615,7 +615,8 @@ async function handlePutExcludedGenres(request: Request, env: Env): Promise<Resp
     return json({ error: "JSON invalide." }, 400);
   }
   const genreIds = sanitizeIdList((body as { genreIds?: unknown })?.genreIds);
-  await replaceExcludedGenresForUser(env.DB, user.id, genreIds);
+  const merge = (body as { merge?: unknown })?.merge === true;
+  await replaceExcludedGenresForUser(env.DB, user.id, genreIds, merge);
   return json({ ok: true });
 }
 
@@ -644,7 +645,8 @@ async function handlePutFavoriteProviders(request: Request, env: Env): Promise<R
     return json({ error: "JSON invalide." }, 400);
   }
   const providerIds = sanitizeIdList((body as { providerIds?: unknown })?.providerIds);
-  await replaceFavoriteProvidersForUser(env.DB, user.id, providerIds);
+  const merge = (body as { merge?: unknown })?.merge === true;
+  await replaceFavoriteProvidersForUser(env.DB, user.id, providerIds, merge);
   return json({ ok: true });
 }
 
