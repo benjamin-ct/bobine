@@ -20,7 +20,7 @@ export default defineConfig({
       },
       registerType: "autoUpdate",
       devOptions: { enabled: true, type: "module" },
-      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
+      includeAssets: ["favicon.svg", "apple-touch-icon.png", "apple-touch-icon-dark.png"],
       manifest: {
         name: "Bobine — Films & séries à regarder",
         short_name: "Bobine",

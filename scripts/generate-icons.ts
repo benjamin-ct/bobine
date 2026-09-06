@@ -7,8 +7,10 @@ import zlib from "node:zlib";
 
 type Rgba = readonly [number, number, number, number];
 
-const BG: Rgba = [0x13, 0x0e, 0x0a, 0xff]; // #130e0a (--bg thème sombre, src/styles/variables.css)
-const ACCENT: Rgba = [0xaa, 0x38, 0x36, 0xff]; // #aa3836 (--accent, même couleur que le logo NavBar)
+const BG_DARK: Rgba = [0x13, 0x0e, 0x0a, 0xff]; // #130e0a (--bg thème sombre, src/styles/variables.css)
+const ACCENT_DARK: Rgba = [0xaa, 0x38, 0x36, 0xff]; // #aa3836 (--accent thème sombre, idem logo NavBar)
+const BG_LIGHT: Rgba = [0xfb, 0xf6, 0xee, 0xff]; // #fbf6ee (--bg thème clair)
+const ACCENT_LIGHT: Rgba = [0xa5, 0x2e, 0x2e, 0xff]; // #a52e2e (--accent thème clair)
 
 const CRC_TABLE: readonly number[] = (() => {
   const table: number[] = [];
@@ -47,7 +49,9 @@ function drawIcon(
   {
     rounded = true,
     markDiameterRatio = 0.62,
-  }: { rounded?: boolean; markDiameterRatio?: number } = {}
+    bg = BG_DARK,
+    accent = ACCENT_DARK,
+  }: { rounded?: boolean; markDiameterRatio?: number; bg?: Rgba; accent?: Rgba } = {}
 ): Buffer {
   const cx = size / 2;
   const cy = size / 2;
@@ -71,7 +75,7 @@ function drawIcon(
   for (let y = 0; y < size; y++) {
     raw[offset++] = 0; // filter type 0 (none) for this scanline
     for (let x = 0; x < size; x++) {
-      let color: Rgba = BG;
+      let color: Rgba = bg;
       let alpha = 255;
 
       if (rounded) {
@@ -89,16 +93,16 @@ function drawIcon(
       const dy = y - cy;
       const distSq = dx * dx + dy * dy;
       if (distSq >= ringInnerR * ringInnerR && distSq <= ringOuterR * ringOuterR) {
-        color = ACCENT;
+        color = accent;
       }
       if (dx * dx + dy * dy <= centerDotR * centerDotR) {
-        color = ACCENT;
+        color = accent;
       }
       for (const [dcx, dcy] of dots) {
         const ddx = x - dcx;
         const ddy = y - dcy;
         if (ddx * ddx + ddy * ddy <= satelliteDotR * satelliteDotR) {
-          color = ACCENT;
+          color = accent;
         }
       }
 
@@ -114,7 +118,7 @@ function drawIcon(
 function writePng(
   filePath: string,
   size: number,
-  opts?: { rounded?: boolean; markDiameterRatio?: number }
+  opts?: { rounded?: boolean; markDiameterRatio?: number; bg?: Rgba; accent?: Rgba }
 ): void {
   const raw = drawIcon(size, opts);
   const idat = zlib.deflateSync(raw, { level: 9 });
@@ -141,6 +145,9 @@ function writePng(
 }
 
 const publicDir = path.join(import.meta.dirname, "..", "public");
+// Android (manifest PWA) : le standard `icons` du Web App Manifest ne permet
+// pas de varier selon le thème système, donc un seul jeu, sur le thème
+// sombre (par défaut de l'app).
 writePng(path.join(publicDir, "icon-192.png"), 192, { rounded: true });
 writePng(path.join(publicDir, "icon-512.png"), 512, { rounded: true });
 // Icône maskable : le motif doit rester dans la zone de sécurité (cercle de
@@ -150,4 +157,16 @@ writePng(path.join(publicDir, "icon-maskable-512.png"), 512, {
   rounded: false,
   markDiameterRatio: 0.42,
 });
-writePng(path.join(publicDir, "apple-touch-icon.png"), 180, { rounded: true });
+// iOS ("Ajouter à l'écran d'accueil") : Safari choisit entre ces deux icônes
+// au moment de l'ajout selon le thème système (voir les deux
+// <link rel="apple-touch-icon"> dans index.html).
+writePng(path.join(publicDir, "apple-touch-icon.png"), 180, {
+  rounded: true,
+  bg: BG_LIGHT,
+  accent: ACCENT_LIGHT,
+});
+writePng(path.join(publicDir, "apple-touch-icon-dark.png"), 180, {
+  rounded: true,
+  bg: BG_DARK,
+  accent: ACCENT_DARK,
+});
