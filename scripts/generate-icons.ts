@@ -159,14 +159,18 @@ writePng(path.join(publicDir, "icon-maskable-512.png"), 512, {
 });
 // iOS ("Ajouter à l'écran d'accueil") : Safari choisit entre ces deux icônes
 // au moment de l'ajout selon le thème système (voir les deux
-// <link rel="apple-touch-icon"> dans index.html).
+// <link rel="apple-touch-icon"> dans index.html). Carré plein, sans coins
+// arrondis ni transparence : depuis iOS 26 (Liquid Glass), c'est le système
+// qui applique lui-même le masque et l'effet verre/spéculaire sur l'icône
+// fournie — une icône pré-découpée avec des coins transparents produit un
+// double masquage et empêche ce rendu.
 writePng(path.join(publicDir, "apple-touch-icon.png"), 180, {
-  rounded: true,
+  rounded: false,
   bg: BG_LIGHT,
   accent: ACCENT_LIGHT,
 });
 writePng(path.join(publicDir, "apple-touch-icon-dark.png"), 180, {
-  rounded: true,
+  rounded: false,
   bg: BG_DARK,
   accent: ACCENT_DARK,
 });
