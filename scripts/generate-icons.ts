@@ -1,14 +1,14 @@
-// Génère des icônes PWA simples (fond accent + logo "play" blanc) en PNG brut,
-// sans dépendance externe (juste zlib, déjà fourni par Node).
+// Génère des icônes PWA reprenant le logo "bobine" (anneau + 5 points, voir
+// ReelIcon dans src/shared/components/NavBar/NavBar.tsx) en PNG brut, sans
+// dépendance externe (juste zlib, déjà fourni par Node).
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 
 type Rgba = readonly [number, number, number, number];
-type Point = readonly [number, number];
 
-const ACCENT: Rgba = [0x7a, 0x26, 0x36, 0xff]; // #7a2636 (rouge velours, voir src/styles/variables.css)
-const WHITE: Rgba = [0xff, 0xff, 0xff, 0xff];
+const BG: Rgba = [0x13, 0x0e, 0x0a, 0xff]; // #130e0a (--bg thème sombre, src/styles/variables.css)
+const ACCENT: Rgba = [0xaa, 0x38, 0x36, 0xff]; // #aa3836 (--accent, même couleur que le logo NavBar)
 
 const CRC_TABLE: readonly number[] = (() => {
   const table: number[] = [];
@@ -39,33 +39,36 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, typeBuf, data, crcBuf]);
 }
 
-function pointInTriangle(px: number, py: number, p1: Point, p2: Point, p3: Point): boolean {
-  const sign = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number) =>
-    (ax - cx) * (by - cy) - (bx - cx) * (ay - cy);
-  const d1 = sign(px, py, p1[0], p1[1], p2[0], p2[1]);
-  const d2 = sign(px, py, p2[0], p2[1], p3[0], p3[1]);
-  const d3 = sign(px, py, p3[0], p3[1], p1[0], p1[1]);
-  const hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
-  const hasPos = d1 > 0 || d2 > 0 || d3 > 0;
-  return !(hasNeg && hasPos);
-}
-
-function drawIcon(size: number, { rounded = true }: { rounded?: boolean } = {}): Buffer {
+// Reprend les proportions du ReelIcon de la NavBar (viewBox 0..24, centre
+// 12,12, anneau r=9 d'épaisseur 1.6, points r=1.5/2.2 décalés de 5.4) mises à
+// l'échelle sur le canevas de sortie.
+function drawIcon(
+  size: number,
+  { rounded = true, markDiameterRatio = 0.62 }: { rounded?: boolean; markDiameterRatio?: number } = {}
+): Buffer {
   const cx = size / 2;
   const cy = size / 2;
-  const circleR = size * 0.34;
   const cornerR = rounded ? size * 0.18 : 0;
 
-  const p1: Point = [cx - circleR * 0.32, cy - circleR * 0.52];
-  const p2: Point = [cx - circleR * 0.32, cy + circleR * 0.52];
-  const p3: Point = [cx + circleR * 0.58, cy];
+  const scale = (markDiameterRatio * size) / 18;
+  const ringOuterR = scale * 9.8;
+  const ringInnerR = scale * 8.2;
+  const centerDotR = scale * 2.2;
+  const satelliteDotR = scale * 1.5;
+  const satelliteOffset = scale * 5.4;
+  const dots: readonly [number, number][] = [
+    [cx, cy - satelliteOffset],
+    [cx, cy + satelliteOffset],
+    [cx - satelliteOffset, cy],
+    [cx + satelliteOffset, cy],
+  ];
 
   const raw = Buffer.alloc((size * 4 + 1) * size);
   let offset = 0;
   for (let y = 0; y < size; y++) {
     raw[offset++] = 0; // filter type 0 (none) for this scanline
     for (let x = 0; x < size; x++) {
-      let color: Rgba = ACCENT;
+      let color: Rgba = BG;
       let alpha = 255;
 
       if (rounded) {
@@ -81,11 +84,19 @@ function drawIcon(size: number, { rounded = true }: { rounded?: boolean } = {}):
 
       const dx = x - cx;
       const dy = y - cy;
-      if (dx * dx + dy * dy <= circleR * circleR) {
-        color = WHITE;
-      }
-      if (pointInTriangle(x, y, p1, p2, p3)) {
+      const distSq = dx * dx + dy * dy;
+      if (distSq >= ringInnerR * ringInnerR && distSq <= ringOuterR * ringOuterR) {
         color = ACCENT;
+      }
+      if (dx * dx + dy * dy <= centerDotR * centerDotR) {
+        color = ACCENT;
+      }
+      for (const [dcx, dcy] of dots) {
+        const ddx = x - dcx;
+        const ddy = y - dcy;
+        if (ddx * ddx + ddy * ddy <= satelliteDotR * satelliteDotR) {
+          color = ACCENT;
+        }
       }
 
       raw[offset++] = color[0];
@@ -97,7 +108,11 @@ function drawIcon(size: number, { rounded = true }: { rounded?: boolean } = {}):
   return raw;
 }
 
-function writePng(filePath: string, size: number, opts?: { rounded?: boolean }): void {
+function writePng(
+  filePath: string,
+  size: number,
+  opts?: { rounded?: boolean; markDiameterRatio?: number }
+): void {
   const raw = drawIcon(size, opts);
   const idat = zlib.deflateSync(raw, { level: 9 });
 
@@ -125,5 +140,11 @@ function writePng(filePath: string, size: number, opts?: { rounded?: boolean }):
 const publicDir = path.join(import.meta.dirname, "..", "public");
 writePng(path.join(publicDir, "icon-192.png"), 192, { rounded: true });
 writePng(path.join(publicDir, "icon-512.png"), 512, { rounded: true });
-writePng(path.join(publicDir, "icon-maskable-512.png"), 512, { rounded: false });
+// Icône maskable : le motif doit rester dans la zone de sécurité (cercle de
+// 80% de diamètre centré) du masque adaptatif Android, qui gère lui-même la
+// forme — donc pas de coins arrondis ici, et un motif plus petit.
+writePng(path.join(publicDir, "icon-maskable-512.png"), 512, {
+  rounded: false,
+  markDiameterRatio: 0.42,
+});
 writePng(path.join(publicDir, "apple-touch-icon.png"), 180, { rounded: true });
