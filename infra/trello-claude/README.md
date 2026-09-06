@@ -16,8 +16,29 @@ conteneur qui a le repo `bobine` monté, puis notifie Discord.
   en pratique, quand `listener/server.js` est modifié).
 
 **Aucun secret n'est présent dans ce dossier.** Toutes les valeurs sensibles (clé/token Trello,
-webhook Discord, token GitHub, token OAuth Claude Code) sont injectées via `.env`, qui reste sur
-le serveur et n'est jamais commité (voir `.gitignore` à la racine du repo).
+webhook Discord, token GitHub, token OAuth Claude Code, token API Sentry) sont injectées via
+`.env`, qui reste sur le serveur et n'est jamais commité (voir `.gitignore` à la racine du repo).
+
+## Webhook Sentry → Claude (triage automatique)
+
+En plus de `/trello-webhook`, le listener expose `POST /sentry-webhook?secret=<SENTRY_WEBHOOK_SECRET>` :
+une alerte Sentry déclenche une notification Discord immédiate, puis (si le pipeline n'est pas déjà
+occupé) un `claude -p` dans `bobine-repo` qui suit le skill `sentry-triage` (lecture du détail de
+l'issue via l'API Sentry, correctif direct en PR ou création d'une carte Trello "A faire" selon le
+cas). Voir `.claude/skills/sentry-triage/SKILL.md` à la racine du repo pour le détail du
+comportement de Claude une fois déclenché.
+
+Étapes manuelles pour l'activer (ne peuvent pas être faites depuis ce repo) :
+
+1. Renseigner dans `.env` : `SENTRY_WEBHOOK_SECRET` (valeur aléatoire, ex. `openssl rand -hex 32`),
+   `SENTRY_AUTH_TOKEN` (Sentry > Settings > Auth Tokens, scope `event:read` a minima), `SENTRY_ORG_SLUG`
+   et `SENTRY_PROJECT_SLUG`.
+2. Redéployer avec les nouvelles variables (`docker-compose -f docker-compose-bobine.yml up -d`
+   pour recréer les deux services avec le `.env` à jour, ou `./update.sh` si seul le listener a
+   changé — ici il faut aussi recréer `bobine-repo` pour lui injecter `SENTRY_AUTH_TOKEN`).
+3. Dans Sentry, sur le projet concerné : Alerts > Create Alert Rule > condition souhaitée (ex. "a
+   new issue is created") > action "Send a notification via a webhook" > URL =
+   `https://<host-du-listener>:29000/sentry-webhook?secret=<SENTRY_WEBHOOK_SECRET>`.
 
 ## Déploiement initial sur le serveur
 
