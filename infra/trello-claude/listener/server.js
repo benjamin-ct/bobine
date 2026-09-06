@@ -225,7 +225,9 @@ function triggerClaude(action) {
     console.log(`[${ts()}] [debug] action sans carte, skip`);
     return;
   }
-  runClaude(`"${cardName}" (ID: ${cardId})`, PROMPT, (errorMsg) => postTrelloComment(cardId, errorMsg));
+  runClaude(`"${cardName}" (ID: ${cardId})`, PROMPT, (errorMsg) =>
+    postTrelloComment(cardId, errorMsg)
+  );
 }
 
 function triggerClaudeForSentry(rawPayload, issueLabel) {
@@ -293,7 +295,9 @@ const server = http.createServer((req, res) => {
       }
 
       if (isLocked()) {
-        console.log(`[${ts()}] /sentry-webhook: pipeline deja verrouillee, alerte ignoree pour Claude (Discord seul)`);
+        console.log(
+          `[${ts()}] /sentry-webhook: pipeline deja verrouillee, alerte ignoree pour Claude (Discord seul)`
+        );
         return;
       }
       triggerClaudeForSentry(JSON.stringify(payload), issueLabel);

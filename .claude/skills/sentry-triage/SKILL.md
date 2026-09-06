@@ -56,7 +56,7 @@ terminer.
      (`fix/<description-courte>`), corriger, committer, ouvrir une PR avec un lien vers l'issue
      Sentry en description. Ne pas créer de carte Trello dans ce cas (la PR suffit ; un humain la
      review normalement via GitHub). Commenter sur l'issue Sentry (`POST
-     .../issues/{issue_id}/comments/`) avec un lien vers la PR ouverte.
+.../issues/{issue_id}/comments/`) avec un lien vers la PR ouverte.
    - **4b. Créer un ticket Trello** : ajouter une carte dans la liste "A faire" du board Bobine,
      avec un titre clair et une description reprenant le lien de l'issue Sentry, le résumé du
      problème, les hypothèses envisagées et pourquoi une décision humaine est nécessaire. Cette
