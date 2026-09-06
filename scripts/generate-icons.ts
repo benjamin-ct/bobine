@@ -44,7 +44,10 @@ function chunk(type: string, data: Buffer): Buffer {
 // l'échelle sur le canevas de sortie.
 function drawIcon(
   size: number,
-  { rounded = true, markDiameterRatio = 0.62 }: { rounded?: boolean; markDiameterRatio?: number } = {}
+  {
+    rounded = true,
+    markDiameterRatio = 0.62,
+  }: { rounded?: boolean; markDiameterRatio?: number } = {}
 ): Buffer {
   const cx = size / 2;
   const cy = size / 2;
