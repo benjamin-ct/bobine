@@ -20,7 +20,7 @@ export default defineConfig({
       },
       registerType: "autoUpdate",
       devOptions: { enabled: true, type: "module" },
-      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
+      includeAssets: ["favicon.svg", "apple-touch-icon.png", "apple-touch-icon-dark.png"],
       manifest: {
         name: "Bobine — Films & séries à regarder",
         short_name: "Bobine",
@@ -28,8 +28,8 @@ export default defineConfig({
           "Découvre où regarder tes films et séries en streaming, tire un titre au hasard, et suis ce que tu as déjà vu.",
         start_url: "/",
         display: "standalone",
-        background_color: "#0f1115",
-        theme_color: "#e94560",
+        background_color: "#130e0a",
+        theme_color: "#aa3836",
         lang: "fr",
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

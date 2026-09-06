@@ -26,6 +26,7 @@ wrangler.preview.generated.jsonc
 /public/icon-512.png
 /public/icon-maskable-512.png
 /public/apple-touch-icon.png
+/public/apple-touch-icon-dark.png
 
 # Cache incrémental de `tsc -b` (voir npm run typecheck)
 *.tsbuildinfo
