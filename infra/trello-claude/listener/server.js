@@ -12,6 +12,8 @@ const TRELLO_TOKEN = process.env.TRELLO_TOKEN;
 const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || "1543573331335315497";
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
+const SENTRY_WEBHOOK_SECRET = process.env.SENTRY_WEBHOOK_SECRET;
+
 const PROMPT = [
   "Traite le board Trello selon le skill trello-ticket-pipeline.",
   "CONTEXTE CRITIQUE : tu es dans une execution one-shot via claude -p ; aucun processus ne reprendra apres ta sortie.",
@@ -22,6 +24,18 @@ const PROMPT = [
   "Le message est obligatoire, y compris si la CI est toujours en cours au timeout.",
   "CONTRAINTE GIT : tu es dans un clone de travail. Ne suppose pas que tu es sur main. Si tu as besoin d’une branche en particulier, fais toi-même git fetch / git switch / git pull.",
 ].join(" ");
+
+function sentryPrompt(rawPayload) {
+  return [
+    "Traite cette alerte Sentry selon le skill sentry-triage.",
+    "CONTEXTE CRITIQUE : tu es dans une execution one-shot via claude -p ; aucun processus ne reprendra apres ta sortie.",
+    "INTERDICTION : ne delegue pas une attente CI a un sous-agent et ne termine jamais en disant que tu seras notifie automatiquement.",
+    "Avant toute reponse finale, envoie un resume dans Discord via l'API Discord REST (DISCORD_TOKEN / DISCORD_CHANNEL_ID).",
+    "CONTRAINTE GIT : tu es dans un clone de travail. Ne suppose pas que tu es sur main. Si tu as besoin d'une branche en particulier, fais toi-même git fetch / git switch / git pull.",
+    "Voici le payload brut du webhook Sentry (JSON) :",
+    rawPayload,
+  ].join(" ");
+}
 
 function ts() {
   return new Date().toISOString();
@@ -93,17 +107,11 @@ async function postDiscordMessage(text) {
   return JSON.parse(raw);
 }
 
-function triggerClaude(action) {
-  const cardId = action?.data?.card?.id;
-  const cardName = action?.data?.card?.name;
-  if (!cardId || !cardName) {
-    console.log(`[${ts()}] [debug] action sans carte, skip`);
-    return;
-  }
-  console.log(`[${ts()}] Declenchement pour "${cardName}" (ID: ${cardId})`);
+function runClaude(label, prompt, onError) {
+  console.log(`[${ts()}] Declenchement pour ${label}`);
 
   const cmd = `docker exec --user claudeuser ${DOCKER_CONTAINER} bash -lc ${JSON.stringify(
-    `cd ${REPO_PATH} && git fetch origin && claude -p ${JSON.stringify(PROMPT)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' 'Bash(curl *)' Read Write`
+    `cd ${REPO_PATH} && git fetch origin && claude -p ${JSON.stringify(prompt)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' 'Bash(curl *)' Read Write`
   )}`;
 
   const child = exec(cmd, { maxBuffer: 1024 * 1024 * 50 }, async (err, stdout, stderr) => {
@@ -189,22 +197,18 @@ function triggerClaude(action) {
     if (err && hasStderr) {
       console.error(`[${ts()}] Echec execution : ${stderr.slice(0, 1000)}`);
       const errorMsg = `🤖 [Claude] Echec de l'execution : ${stderr.slice(0, 1000)}`;
-      if (cardId) {
-        try {
-          await postTrelloComment(cardId, errorMsg);
-        } catch (e) {}
-      }
+      try {
+        await onError(errorMsg);
+      } catch (e) {}
       return;
     }
 
     if (err) {
       console.error(`[${ts()}] Echec execution : ${err.message || "erreur inconnue"}`);
       const errorMsg = `🤖 [Claude] Echec de l'execution : ${err.message || "erreur inconnue"}`;
-      if (cardId) {
-        try {
-          await postTrelloComment(cardId, errorMsg);
-        } catch (e) {}
-      }
+      try {
+        await onError(errorMsg);
+      } catch (e) {}
       return;
     }
 
@@ -212,6 +216,24 @@ function triggerClaude(action) {
   });
 
   fs.writeFileSync(LOCK_FILE, String(child.pid));
+}
+
+function triggerClaude(action) {
+  const cardId = action?.data?.card?.id;
+  const cardName = action?.data?.card?.name;
+  if (!cardId || !cardName) {
+    console.log(`[${ts()}] [debug] action sans carte, skip`);
+    return;
+  }
+  runClaude(`"${cardName}" (ID: ${cardId})`, PROMPT, (errorMsg) =>
+    postTrelloComment(cardId, errorMsg)
+  );
+}
+
+function triggerClaudeForSentry(rawPayload, issueLabel) {
+  runClaude(`alerte Sentry (${issueLabel})`, sentryPrompt(rawPayload), (errorMsg) =>
+    postDiscordMessage(`${errorMsg}\n(déclenché par l'alerte Sentry : ${issueLabel})`)
+  );
 }
 
 const server = http.createServer((req, res) => {
@@ -240,6 +262,45 @@ const server = http.createServer((req, res) => {
         return;
       }
       triggerClaude(action);
+    });
+  } else if (req.method === "POST" && req.url.startsWith("/sentry-webhook")) {
+    const { searchParams } = new URL(req.url, `http://localhost:${PORT}`);
+    if (!SENTRY_WEBHOOK_SECRET || searchParams.get("secret") !== SENTRY_WEBHOOK_SECRET) {
+      console.error(`[${ts()}] /sentry-webhook: secret invalide ou absent`);
+      res.writeHead(403);
+      return res.end();
+    }
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      res.writeHead(200);
+      res.end("ok");
+      let payload;
+      try {
+        payload = JSON.parse(body);
+      } catch (e) {
+        console.error(`[${ts()}] /sentry-webhook: payload JSON invalide`);
+        return;
+      }
+      const issue = payload?.data?.issue || payload?.data?.event || payload;
+      const issueLabel = issue?.title || issue?.culprit || issue?.id || "detail indisponible";
+      const issueUrl = issue?.web_url || issue?.url || null;
+
+      try {
+        await postDiscordMessage(
+          `🚨 Nouvelle alerte Sentry : ${issueLabel}${issueUrl ? `\n${issueUrl}` : ""}`
+        );
+      } catch (e) {
+        console.error(`[${ts()}] [discord] echec notification alerte Sentry : ${e.message}`);
+      }
+
+      if (isLocked()) {
+        console.log(
+          `[${ts()}] /sentry-webhook: pipeline deja verrouillee, alerte ignoree pour Claude (Discord seul)`
+        );
+        return;
+      }
+      triggerClaudeForSentry(JSON.stringify(payload), issueLabel);
     });
   } else {
     res.writeHead(404);
