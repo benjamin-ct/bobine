@@ -17,6 +17,12 @@ const BOTTOM_MARGIN = 24;
 // dessous (footer). Deux listes ouvertes côte à côte, même avec un contenu
 // au-dessus de hauteur différente, se retrouvent ainsi limitées à la même
 // position verticale plutôt que de s'arrêter à des hauteurs différentes.
+//
+// La hauteur du <footer> (seul élément après <main> dans le flux — voir
+// App.tsx) est explicitement réservée : sans ça, le calcul ne laissait de la
+// place que jusqu'au bas du viewport, sans compter que le footer a lui-même
+// une hauteur à faire tenir en dessous, ce qui continuait à pousser la page
+// en scroll d'exactement cette hauteur-là.
 export function useAvailableListHeight(active: boolean, ref: RefObject<HTMLElement | null>) {
   const [maxHeight, setMaxHeight] = useState(COMFORTABLE_HEIGHT);
 
@@ -26,7 +32,9 @@ export function useAvailableListHeight(active: boolean, ref: RefObject<HTMLEleme
     }
     const el = ref.current;
     const recompute = () => {
-      const available = window.innerHeight - el.getBoundingClientRect().top - BOTTOM_MARGIN;
+      const footerHeight = document.querySelector("footer")?.getBoundingClientRect().height ?? 0;
+      const available =
+        window.innerHeight - el.getBoundingClientRect().top - footerHeight - BOTTOM_MARGIN;
       setMaxHeight(Math.max(MIN_HEIGHT, Math.min(COMFORTABLE_HEIGHT, available)));
     };
     recompute();
