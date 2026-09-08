@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getWatchProvidersList } from "../../../core/api/tmdb.ts";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useFavoriteProviders } from "../../../core/context/FavoriteProvidersContext.tsx";
 import { Disclosure } from "../../../shared/components/index.ts";
+import { useAvailableListHeight } from "../../../shared/hooks/useAvailableListHeight.ts";
 import type { WatchProviderOption } from "../../../core/api/tmdb.ts";
 import styles from "./SettingsPanel.module.css";
 
@@ -17,6 +18,9 @@ export default function FavoriteProvidersSettings() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [open, setOpen] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const maxHeight = useAvailableListHeight(open, gridRef);
 
   // `status` n'est délibérément PAS une dépendance : ce `setStatus("loading")`
   // synchrone changerait `status` et redéclencherait l'effet immédiatement
@@ -60,7 +64,12 @@ export default function FavoriteProvidersSettings() {
       summary="Mes plateformes"
       meta={`${favoriteProviderIds.length} active${favoriteProviderIds.length > 1 ? "s" : ""}`}
       defaultOpen={false}
-      onToggle={(open) => open && setLoaded(true)}
+      onToggle={(isOpen) => {
+        setOpen(isOpen);
+        if (isOpen) {
+          setLoaded(true);
+        }
+      }}
     >
       <p>Cochez les services que vous avez pour filtrer « disponible chez moi » en un clic.</p>
       {status === "loading" && <p>Chargement…</p>}
@@ -74,7 +83,7 @@ export default function FavoriteProvidersSettings() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <div className={styles.grid}>
+          <div className={styles.grid} ref={gridRef} style={{ maxHeight }}>
             {visibleProviders.map((p) => (
               <label key={p.id} className={styles.item}>
                 <input

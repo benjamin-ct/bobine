@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useExcludedTitles } from "../../../core/context/ExcludedTitlesContext.tsx";
 import { Disclosure } from "../../../shared/components/index.ts";
+import { useAvailableListHeight } from "../../../shared/hooks/useAvailableListHeight.ts";
 import { getMediaSummary } from "../../../core/api/tmdb.ts";
 import styles from "./SettingsPanel.module.css";
 
@@ -25,6 +26,9 @@ export default function ExcludedTitlesSettings() {
     useExcludedTitles();
   const { watched, watchlist } = useLibrary();
   const [loaded, setLoaded] = useState(false);
+  const [open, setOpen] = useState(false);
+  const chipsRef = useRef<HTMLDivElement>(null);
+  const maxHeight = useAvailableListHeight(open, chipsRef);
 
   const knownTitles = useMemo(() => {
     const map = new Map<string, string>();
@@ -70,13 +74,18 @@ export default function ExcludedTitlesSettings() {
     <Disclosure
       summary="Titres exclus"
       meta={`${excludedTitleKeys.length} exclu${excludedTitleKeys.length > 1 ? "s" : ""}`}
-      onToggle={(open) => open && setLoaded(true)}
+      onToggle={(isOpen) => {
+        setOpen(isOpen);
+        if (isOpen) {
+          setLoaded(true);
+        }
+      }}
     >
       <p>
         Ces titres n'apparaîtront plus dans vos suggestions. Ajoutez-en depuis le bouton « Exclure
         ce titre » sur la fiche d'un film ou d'une série.
       </p>
-      <div className={styles.chips}>
+      <div className={styles.chips} ref={chipsRef} style={{ maxHeight }}>
         {excludedTitleKeys.length === 0 ? (
           <span className={styles.emptyHint}>Aucun titre exclu pour l'instant.</span>
         ) : (

@@ -14,14 +14,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 8px;
-  /* Plafond proportionnel à la hauteur de viewport plutôt qu'une valeur
-     fixe : ouvrir un de ces panneaux ajoute d'un coup jusqu'à ~400px au
-     document, ce qui ne dépasse le "vide" laissé par #root/main en flex
-     (voir global.css) que sur les écrans avec peu de hauteur disponible.
-     Le min() garde donc la pleine hauteur de confort (320px) tant que le
-     viewport est assez grand, et ne la réduit que sur les écrans plus bas
-     où elle pousserait sinon le footer hors du viewport initial. */
-  max-height: min(320px, 30vh);
+  /* Plafond de secours (avant que useAvailableListHeight ne pose son
+     max-height inline, calculé à partir de la place réellement restante
+     sous ce point précis de la page) — voir ce hook pour le détail. */
+  max-height: 320px;
   overflow-y: auto;
 }
 
@@ -51,9 +47,8 @@
   align-content: flex-start;
   gap: 8px;
   margin-top: 12px;
-  /* Voir le commentaire sur .grid ci-dessus : même plafond proportionnel
-     au viewport, pour la même raison. */
-  max-height: min(320px, 30vh);
+  /* Voir le commentaire sur .grid ci-dessus : même plafond de secours. */
+  max-height: 320px;
   overflow-y: auto;
 }
 

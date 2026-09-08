@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getGenres } from "../../../core/api/tmdb.ts";
 import { useExcludedGenres } from "../../../core/context/ExcludedGenresContext.tsx";
 import { Disclosure } from "../../../shared/components/index.ts";
+import { useAvailableListHeight } from "../../../shared/hooks/useAvailableListHeight.ts";
 import type { Genre } from "../../../core/types/tmdb.ts";
 import styles from "./SettingsPanel.module.css";
 
@@ -13,6 +14,9 @@ export default function ExcludedGenresSettings() {
   const [genres, setGenres] = useState<Genre[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [loaded, setLoaded] = useState(false);
+  const [open, setOpen] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const maxHeight = useAvailableListHeight(open, gridRef);
 
   // `status` n'est délibérément PAS une dépendance : ce `setStatus("loading")`
   // synchrone changerait `status` et redéclencherait l'effet immédiatement
@@ -50,13 +54,18 @@ export default function ExcludedGenresSettings() {
     <Disclosure
       summary="Genres à exclure"
       meta={`${excludedGenreIds.length} exclu${excludedGenreIds.length > 1 ? "s" : ""}`}
-      onToggle={(open) => open && setLoaded(true)}
+      onToggle={(isOpen) => {
+        setOpen(isOpen);
+        if (isOpen) {
+          setLoaded(true);
+        }
+      }}
     >
       <p>Ces genres ne seront jamais suggérés, où que ce soit dans Bobine.</p>
       {status === "loading" && <p>Chargement des genres…</p>}
       {status === "error" && <p>Impossible de charger la liste des genres.</p>}
       {status === "success" && (
-        <div className={styles.grid}>
+        <div className={styles.grid} ref={gridRef} style={{ maxHeight }}>
           {genres.map((g) => (
             <label key={g.id} className={styles.item}>
               <input
