@@ -14,7 +14,14 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 8px;
-  max-height: 320px;
+  /* Plafonné plus bas que la hauteur de contenu habituelle (auparavant
+     320px) : ouvrir un seul de ces panneaux ajoutait d'un coup jusqu'à
+     ~400px (en-tête + intro + padding + grille) au document, dépassant
+     souvent le "vide" laissé par #root/main en flex (voir global.css) sur
+     la page Profil et forçant un scroll de page qui fait disparaître le
+     footer du viewport. Le scroll interne reste inchangé, juste sur une
+     zone plus compacte. */
+  max-height: 220px;
   overflow-y: auto;
 }
 
@@ -44,7 +51,9 @@
   align-content: flex-start;
   gap: 8px;
   margin-top: 12px;
-  max-height: 320px;
+  /* Voir le commentaire sur .grid ci-dessus : même plafond réduit pour la
+     même raison (footer poussé hors du viewport à l'ouverture). */
+  max-height: 220px;
   overflow-y: auto;
 }
 
