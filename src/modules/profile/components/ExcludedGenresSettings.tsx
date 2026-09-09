@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getGenres } from "../../../core/api/tmdb.ts";
 import { useExcludedGenres } from "../../../core/context/ExcludedGenresContext.tsx";
 import { Disclosure } from "../../../shared/components/index.ts";
@@ -15,8 +15,7 @@ export default function ExcludedGenresSettings() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const maxHeight = useAvailableListHeight(open, gridRef);
+  const [maxHeight, gridRef] = useAvailableListHeight(open);
 
   // `status` n'est délibérément PAS une dépendance : ce `setStatus("loading")`
   // synchrone changerait `status` et redéclencherait l'effet immédiatement

@@ -71,12 +71,10 @@
     min-width: 0;
   }
 
-  /* Seuls les panneaux ouverts s'étirent à la hauteur du plus grand voisin
-     ouvert (contenu variable : texte d'intro et barre de recherche ne font
-     pas la même hauteur d'un panneau à l'autre) — un panneau fermé garde sa
-     hauteur naturelle (juste l'en-tête) pour ne pas réafficher le rectangle
-     vide corrigé par align-items: flex-start. */
-  .discGrid > details[open] {
-    align-self: stretch;
-  }
+  /* Pas de align-self: stretch sur les panneaux ouverts : leur contenu
+     (texte d'intro, barre de recherche, liste) n'a aucune raison de faire
+     la même hauteur d'un panneau à l'autre, et étirer la boîte au-delà de
+     ce contenu laissait un vide visible en bas des panneaux les plus
+     courts. Chaque panneau, ouvert ou fermé, garde donc sa hauteur
+     naturelle (align-items: flex-start sur .discGrid). */
 }

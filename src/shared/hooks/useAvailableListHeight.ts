@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type RefObject } from "react";
+import { useCallback, useLayoutEffect, useState } from "react";
 
 // Hauteur "confortable" visée quand la place ne manque pas, et plancher en
 // dessous duquel la liste resterait inutilisable même si la page doit
@@ -23,24 +23,34 @@ const BOTTOM_MARGIN = 24;
 // place que jusqu'au bas du viewport, sans compter que le footer a lui-même
 // une hauteur à faire tenir en dessous, ce qui continuait à pousser la page
 // en scroll d'exactement cette hauteur-là.
-export function useAvailableListHeight(active: boolean, ref: RefObject<HTMLElement | null>) {
+//
+// Le nœud DOM est suivi via une callback ref (état React), pas un
+// `useRef` classique : "Mes plateformes" et "Genres à exclure" ne montent
+// leur grille qu'une fois leurs données chargées (`status === "success"`),
+// donc `open` passe à `true` *avant* que le nœud n'existe. Avec un
+// `useRef`, l'effet ne se redéclenche jamais une fois le nœud monté (ni
+// `active` ni l'identité du ref n'ont changé depuis) et `maxHeight` reste
+// bloqué sur la valeur par défaut, non plafonnée par la place réelle — ce
+// qui repoussait le footer hors du viewport à la première ouverture.
+export function useAvailableListHeight(active: boolean) {
+  const [node, setNode] = useState<HTMLElement | null>(null);
   const [maxHeight, setMaxHeight] = useState(COMFORTABLE_HEIGHT);
+  const ref = useCallback((el: HTMLElement | null) => setNode(el), []);
 
   useLayoutEffect(() => {
-    if (!active || !ref.current) {
+    if (!active || !node) {
       return;
     }
-    const el = ref.current;
     const recompute = () => {
       const footerHeight = document.querySelector("footer")?.getBoundingClientRect().height ?? 0;
       const available =
-        window.innerHeight - el.getBoundingClientRect().top - footerHeight - BOTTOM_MARGIN;
+        window.innerHeight - node.getBoundingClientRect().top - footerHeight - BOTTOM_MARGIN;
       setMaxHeight(Math.max(MIN_HEIGHT, Math.min(COMFORTABLE_HEIGHT, available)));
     };
     recompute();
     window.addEventListener("resize", recompute);
     return () => window.removeEventListener("resize", recompute);
-  }, [active, ref]);
+  }, [active, node]);
 
-  return maxHeight;
+  return [maxHeight, ref] as const;
 }

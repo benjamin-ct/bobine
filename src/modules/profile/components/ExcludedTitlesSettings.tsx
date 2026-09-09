@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useExcludedTitles } from "../../../core/context/ExcludedTitlesContext.tsx";
 import { Disclosure } from "../../../shared/components/index.ts";
@@ -27,8 +27,7 @@ export default function ExcludedTitlesSettings() {
   const { watched, watchlist } = useLibrary();
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
-  const chipsRef = useRef<HTMLDivElement>(null);
-  const maxHeight = useAvailableListHeight(open, chipsRef);
+  const [maxHeight, chipsRef] = useAvailableListHeight(open);
 
   const knownTitles = useMemo(() => {
     const map = new Map<string, string>();

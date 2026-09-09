@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getWatchProvidersList } from "../../../core/api/tmdb.ts";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useFavoriteProviders } from "../../../core/context/FavoriteProvidersContext.tsx";
@@ -19,8 +19,7 @@ export default function FavoriteProvidersSettings() {
   const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const maxHeight = useAvailableListHeight(open, gridRef);
+  const [maxHeight, gridRef] = useAvailableListHeight(open);
 
   // `status` n'est délibérément PAS une dépendance : ce `setStatus("loading")`
   // synchrone changerait `status` et redéclencherait l'effet immédiatement
