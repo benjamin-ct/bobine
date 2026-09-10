@@ -49,6 +49,9 @@
     "workbox-strategies": "^7.4.1",
     "wrangler": "^4.127.1"
   },
+  "overrides": {
+    "sharp": "^0.35.4"
+  },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,cjs,mjs}": [
       "oxlint",
