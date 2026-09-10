@@ -47,7 +47,7 @@
     "workbox-precaching": "^7.4.1",
     "workbox-routing": "^7.4.1",
     "workbox-strategies": "^7.4.1",
-    "wrangler": "^4.127.1"
+    "wrangler": "^4.129.0"
   },
   "overrides": {
     "sharp": "^0.35.4"
