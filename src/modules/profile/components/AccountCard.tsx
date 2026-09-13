@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
+import { gravatarUrl } from "../../../shared/lib/gravatar.ts";
 import styles from "./AccountCard.module.css";
 
 function initials(name: string, fallback: string): string {
@@ -20,6 +21,16 @@ export default function AccountCard() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
+  // Réinitialise l'état d'échec quand l'e-mail change (ex. après connexion
+  // avec un autre compte), sinon un précédent 404 Gravatar resterait collé
+  // au nouvel utilisateur.
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [email]);
+
+  const avatarUrl = useMemo(() => (email ? gravatarUrl(email) : null), [email]);
 
   // Source de vérité : D1 (colonne users.display_name), chargée avec le
   // reste de la session (voir AuthContext, /api/auth/me) — c'est ce qui
@@ -65,7 +76,18 @@ export default function AccountCard() {
     <div className={styles.card}>
       <span className={styles.k}>Compte</span>
       <div className={styles.row}>
-        <div className={styles.avatar}>{initials(name, email || "?")}</div>
+        <div className={styles.avatar}>
+          {avatarUrl && !avatarFailed ? (
+            <img
+              className={styles.avatarImg}
+              src={avatarUrl}
+              alt=""
+              onError={() => setAvatarFailed(true)}
+            />
+          ) : (
+            initials(name, email || "?")
+          )}
+        </div>
         <div className={styles.fields}>
           <label className={styles.field}>
             <span>Nom affiché</span>
