@@ -12,6 +12,7 @@ export default function ExcludedGenresSettings() {
   const { excludedGenreIds, toggleExcludedGenre } = useExcludedGenres();
   const [genres, setGenres] = useState<Genre[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(false);
 
   // `status` n'est délibérément PAS une dépendance : ce `setStatus("loading")`
@@ -46,6 +47,11 @@ export default function ExcludedGenresSettings() {
     };
   }, [loaded]);
 
+  const trimmedQuery = query.trim().toLowerCase();
+  const visibleGenres = trimmedQuery
+    ? genres.filter((g) => g.name.toLowerCase().includes(trimmedQuery))
+    : genres;
+
   return (
     <Disclosure
       summary="Genres à exclure"
@@ -56,18 +62,27 @@ export default function ExcludedGenresSettings() {
       {status === "loading" && <p>Chargement des genres…</p>}
       {status === "error" && <p>Impossible de charger la liste des genres.</p>}
       {status === "success" && (
-        <div className={styles.grid}>
-          {genres.map((g) => (
-            <label key={g.id} className={styles.item}>
-              <input
-                type="checkbox"
-                checked={excludedGenreIds.includes(g.id)}
-                onChange={() => toggleExcludedGenre(g.id)}
-              />
-              {g.name}
-            </label>
-          ))}
-        </div>
+        <>
+          <input
+            type="search"
+            className={styles.search}
+            placeholder="Rechercher un genre…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div className={styles.grid}>
+            {visibleGenres.map((g) => (
+              <label key={g.id} className={styles.item}>
+                <input
+                  type="checkbox"
+                  checked={excludedGenreIds.includes(g.id)}
+                  onChange={() => toggleExcludedGenre(g.id)}
+                />
+                {g.name}
+              </label>
+            ))}
+          </div>
+        </>
       )}
     </Disclosure>
   );
