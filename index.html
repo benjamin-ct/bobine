@@ -22,9 +22,67 @@
       content="Découvre où regarder tes films et séries en streaming, tire un titre au hasard, et suis ce que tu as déjà vu."
     />
     <title>Bobine — Films &amp; séries à regarder</title>
+    <style>
+      /* Loader affiché avant que React (et global.css/variables.css) ne soit
+         chargé : couleurs dupliquées en dur ici (pas d'accès aux custom
+         properties tant que ce fichier n'est pas chargé), calées sur le
+         thème sombre par défaut de variables.css, avec repli clair si
+         l'utilisateur préfère ce thème au niveau système. Retiré par
+         main.tsx une fois React monté. */
+      #app-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #130e0a;
+        transition: opacity 0.2s ease;
+      }
+
+      #app-loader__spinner {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 3px solid oklch(0.38 0.02 66);
+        border-top-color: #c1443f;
+        animation: app-loader-spin 0.8s linear infinite;
+      }
+
+      @media (prefers-color-scheme: light) {
+        #app-loader {
+          background-color: #fbf9f5;
+        }
+
+        #app-loader__spinner {
+          border-color: oklch(0.9 0.014 80);
+          border-top-color: #a53a35;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #app-loader__spinner {
+          animation: none;
+        }
+      }
+
+      @keyframes app-loader-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      #app-loader.app-loader--hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="app-loader" role="status" aria-label="Chargement de Bobine">
+      <div id="app-loader__spinner"></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
