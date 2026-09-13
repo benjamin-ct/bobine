@@ -46,11 +46,21 @@ createRoot(rootElement).render(
   </StrictMode>
 );
 
-// Retire le loader statique de index.html : le rendu initial ci-dessus est
-// synchrone (aucun <Suspense> ne le fait attendre), donc l'app est déjà à
-// l'écran dès cette ligne.
+// Retire le loader statique de index.html une fois la page entièrement
+// chargée (fonts, images, styles), pas seulement une fois React monté :
+// le rendu initial ci-dessus est synchrone, mais les ressources externes
+// (polices Google Fonts, images) peuvent encore être en cours de
+// chargement à ce moment-là.
 const initialLoader = document.getElementById("app-loader");
 if (initialLoader) {
-  initialLoader.addEventListener("transitionend", () => initialLoader.remove(), { once: true });
-  initialLoader.classList.add("app-loader--hidden");
+  const hideInitialLoader = () => {
+    initialLoader.addEventListener("transitionend", () => initialLoader.remove(), { once: true });
+    initialLoader.classList.add("app-loader--hidden");
+  };
+
+  if (document.readyState === "complete") {
+    hideInitialLoader();
+  } else {
+    window.addEventListener("load", hideInitialLoader, { once: true });
+  }
 }
