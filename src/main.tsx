@@ -45,3 +45,12 @@ createRoot(rootElement).render(
     </ThemeProvider>
   </StrictMode>
 );
+
+// Retire le loader statique de index.html : le rendu initial ci-dessus est
+// synchrone (aucun <Suspense> ne le fait attendre), donc l'app est déjà à
+// l'écran dès cette ligne.
+const initialLoader = document.getElementById("app-loader");
+if (initialLoader) {
+  initialLoader.addEventListener("transitionend", () => initialLoader.remove(), { once: true });
+  initialLoader.classList.add("app-loader--hidden");
+}
