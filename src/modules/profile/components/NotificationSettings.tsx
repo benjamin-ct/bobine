@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
-import { logError } from "../../../core/logger.ts";
+import { logWarn } from "../../../core/logger.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
 import styles from "./NotificationSettings.module.css";
@@ -174,7 +174,7 @@ export default function NotificationSettings() {
           return;
         }
         syncSubscriptionDelta(endpoint, watchlist, watched, lastSyncedRef).catch((err) =>
-          logError("Bobine : resync notifications échouée.", err)
+          logWarn("Bobine : resync notifications échouée.", err)
         );
       })
     );
