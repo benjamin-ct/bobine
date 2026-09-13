@@ -3,7 +3,7 @@ import LegalSection from "./LegalSection.tsx";
 import { LEGAL_CONTACT_LABEL, LEGAL_CONTACT_URL } from "./contact.ts";
 import styles from "./LegalPage.module.css";
 
-const LAST_UPDATED = "2 septembre 2026";
+const LAST_UPDATED = "13 septembre 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -91,6 +91,12 @@ export default function PrivacyPolicyPage() {
           <li>
             <strong>Cloudflare Web Analytics</strong> : mesure d'audience anonyme (pages vues,
             visiteurs) — sans cookies, sans identifiant persistant, sans donnée personnelle.
+          </li>
+          <li>
+            <strong>Gravatar</strong> (Automattic) : affiche votre photo de profil si vous en avez
+            configuré une associée à votre adresse email. Nous ne transmettons jamais votre email en
+            clair à Gravatar, seulement son empreinte (hash MD5), conformément au fonctionnement de
+            ce service.
           </li>
         </ul>
         <p>Aucune de ces données n'est vendue ni utilisée à des fins publicitaires.</p>
