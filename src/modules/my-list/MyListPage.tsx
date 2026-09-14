@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useAuth } from "../../core/context/AuthContext.tsx";
 import { PageHeader, ContinueWatchingRow, EmptyState } from "../../shared/components/index.ts";
+import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
 import StatsPanel from "./components/StatsPanel.tsx";
 import WatchlistPanel from "./components/WatchlistPanel.tsx";
 import CustomListPanel from "./components/CustomListPanel.tsx";
@@ -17,9 +18,7 @@ export default function MyListPage() {
   const [creating, setCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
 
-  const continuingSeries = watchlist.filter(
-    (item) => item.mediaType === "tv" && (item.watchedEpisodes?.length || 0) > 0
-  );
+  const continuingSeries = useResumableSeries(watchlist);
   const activeCustomList = customLists.find((l) => l.id === tab);
 
   function submitNewList() {

@@ -19,7 +19,10 @@ export interface UpcomingRelease {
 // Date : évite tout décalage de fuseau horaire au moment de la
 // comparaison (un `new Date("2026-08-17")` UTC minuit comparé à un `Date`
 // local peut basculer d'un jour selon l'heure et le fuseau du visiteur).
-function isStrictlyFutureDate(dateString: string | null | undefined, todayIso: string): boolean {
+export function isStrictlyFutureDate(
+  dateString: string | null | undefined,
+  todayIso: string
+): boolean {
   if (!dateString) {
     return false;
   }
