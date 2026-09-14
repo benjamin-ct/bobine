@@ -175,6 +175,14 @@ export const SORT_FIELDS: Array<{ value: DiscoverSortField; label: string }> = [
   { value: "year", label: "Année" },
 ];
 
+// Surcharges manuelles de noms de pays, appliquées PARTOUT où un nom de pays
+// est affiché (fiche film, bloc "Où regarder", et les <select> de filtres).
+// Le point d'entrée unique est countryName()/regionName() ; getCountries()
+// applique aussi ces surcharges aux libellés des listes déroulantes.
+export const COUNTRY_NAME_OVERRIDES: Record<string, string> = {
+  IL: "Territoires palestiniens",
+};
+
 // Liste des pays (code ISO 3166-1 + nom localisé), pour le filtre "pays de
 // production". Résultat quasi-statique côté TMDB, sans dépendance à une
 // région particulière.
@@ -184,7 +192,12 @@ export async function getCountries(): Promise<Country[]> {
     return countriesCache;
   }
   const list = await tmdbFetch<Country[]>("/configuration/countries");
-  countriesCache = list.slice().sort((a, b) => a.english_name.localeCompare(b.english_name));
+  countriesCache = list
+    .map((c) => {
+      const override = COUNTRY_NAME_OVERRIDES[c.iso_3166_1.toUpperCase()];
+      return override ? { ...c, english_name: override } : c;
+    })
+    .sort((a, b) => a.english_name.localeCompare(b.english_name));
   return countriesCache;
 }
 
