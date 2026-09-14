@@ -18,6 +18,8 @@ export {
   formatFullDate,
   theatricalStatusFromDate,
 } from "./movieMeta.ts";
+export { getSeriesEpisodeBadge } from "./seriesEpisodeBadge.ts";
+export type { SeriesEpisodeBadge } from "./seriesEpisodeBadge.ts";
 export { posterUrl, backdropUrl, logoUrl, IMG_BASE, TmdbConfigError } from "./tmdbClient.ts";
 import { tmdbFetch, IS_DEV } from "./tmdbClient.ts";
 

@@ -3,6 +3,7 @@ import { useLocation, useNavigationType } from "react-router-dom";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
+import { useFeaturedSeries } from "../../shared/hooks/useFeaturedSeries.ts";
 import { useRegion } from "../../core/context/RegionContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
@@ -19,6 +20,7 @@ import {
   EmptyState,
   PageHeader,
   ContinueWatchingRow,
+  FeaturedSeriesRow,
 } from "../../shared/components/index.ts";
 import type { AdvancedFiltersState } from "../../shared/components/index.ts";
 import type { Genre, MediaItem, MediaType } from "../../core/types/tmdb.ts";
@@ -106,6 +108,10 @@ export default function DiscoverPage() {
   // sorti (indépendant du filtre Films/Séries de la grille de suggestions
   // ci-dessous).
   const continuingSeries = useResumableSeries(watchlist);
+
+  // "Mise en avant" : séries suivies (watchlist incluse, pas seulement
+  // entamées) dont un épisode vient de sortir ou arrive bientôt.
+  const featuredSeries = useFeaturedSeries(watchlist);
 
   // Ignore le premier passage : au montage, mediaType "change" (de rien à sa
   // valeur initiale, éventuellement restaurée après un retour arrière) sans
@@ -311,6 +317,22 @@ export default function DiscoverPage() {
             </h2>
           </div>
           <ContinueWatchingRow items={continuingSeries} />
+        </section>
+      )}
+
+      {featuredSeries.length > 0 && (
+        <section className={styles.resumeShelf}>
+          <div className={styles.blockTitle}>
+            <span className={styles.resumeIcon}>
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+                <path d="M12 2l1.9 5.9H20l-5 3.6 1.9 5.9-5-3.6-5 3.6 1.9-5.9-5-3.6h6.1z" />
+              </svg>
+            </span>
+            <h2>
+              Mise en avant <span className={styles.meta}>· sorties d'épisodes</span>
+            </h2>
+          </div>
+          <FeaturedSeriesRow items={featuredSeries} />
         </section>
       )}
 
