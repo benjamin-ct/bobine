@@ -256,7 +256,14 @@ export default function DetailPage() {
                 : ""}
               {runtime ? ` · ${runtime} min${mediaType === "tv" ? "/épisode" : ""}` : ""}
               {details.vote_average && tier ? (
-                <span className={`${styles.score} ${styles[`s-${tier.cls}`]}`}>
+                <span
+                  className={`${styles.score} ${styles[`s-${tier.cls}`]}`}
+                  title={
+                    details.vote_count
+                      ? `${details.vote_count.toLocaleString("fr-FR")} vote${details.vote_count > 1 ? "s" : ""}`
+                      : undefined
+                  }
+                >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17.3 5.8 20.9l1.6-6.8L2.2 8.9l6.9-.6z" />
                   </svg>
