@@ -27,7 +27,9 @@ export function useResumableSeries(watchlist: LibraryItem[]): LibraryItem[] {
     startedSeries.forEach((item) => {
       hasResumableEpisode(item).then((result) => {
         if (!cancelled) {
-          setResumable((prev) => (prev[item.id] === result ? prev : { ...prev, [item.id]: result }));
+          setResumable((prev) =>
+            prev[item.id] === result ? prev : { ...prev, [item.id]: result }
+          );
         }
       });
     });
