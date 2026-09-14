@@ -61,6 +61,45 @@ check(
 );
 
 check(
+  "Nouvelle série jamais diffusée, next_episode_to_air pas encore renseigné par TMDB, first_air_date dans 2 jours -> prochainement (repli)",
+  getSeriesEpisodeBadge(
+    {
+      last_episode_to_air: null,
+      next_episode_to_air: null,
+      first_air_date: dateAt(2),
+    },
+    TODAY
+  ),
+  { kind: "upcoming", label: "Prochainement", date: dateAt(2) }
+);
+
+check(
+  "Nouvelle série jamais diffusée, ni next_episode_to_air ni first_air_date exploitable dans la fenêtre -> null",
+  getSeriesEpisodeBadge(
+    {
+      last_episode_to_air: null,
+      next_episode_to_air: null,
+      first_air_date: dateAt(45),
+    },
+    TODAY
+  ),
+  null
+);
+
+check(
+  "next_episode_to_air déjà renseigné : first_air_date ignoré (pas de double calcul)",
+  getSeriesEpisodeBadge(
+    {
+      last_episode_to_air: null,
+      next_episode_to_air: { air_date: dateAt(35), episode_number: 1, season_number: 1 },
+      first_air_date: dateAt(2),
+    },
+    TODAY
+  ),
+  null
+);
+
+check(
   "Série déjà sortie, nouvelle saison (S2E1) dans 13 jours -> prochainement",
   getSeriesEpisodeBadge(
     {

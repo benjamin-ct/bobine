@@ -5,12 +5,18 @@
 // API navigateur, importable tel quel par Node (voir
 // scripts/verify-series-episode-badge.ts) et par le client Vite.
 //
-// S'appuie uniquement sur `next_episode_to_air`/`last_episode_to_air`
+// S'appuie principalement sur `next_episode_to_air`/`last_episode_to_air`
 // (TMDB /tv/{id}, champs de base toujours présents, aucun appel
 // supplémentaire par saison nécessaire) plutôt que de reparcourir
 // seasons/episodes comme useResumableSeries : ces deux champs donnent déjà,
 // pour n'importe quelle série, le dernier épisode diffusé et le prochain
 // annoncé.
+//
+// Repli sur `first_air_date` (même champ que getUpcomingSeriesRelease dans
+// releaseBadge.ts) pour une série jamais diffusée : TMDB ne remplit
+// `next_episode_to_air` que tardivement pour les séries encore "In
+// Production"/"Planned", parfois même à quelques jours de la sortie,
+// alors que `first_air_date` est renseigné dès l'annonce officielle.
 //
 // Fenêtres et règles produit (issues du ticket, réponse du 2026-09-14) :
 //   "prochainement" :
@@ -39,7 +45,10 @@ const UPCOMING_WINDOW_NEW_SERIES_DAYS = 30;
 const UPCOMING_WINDOW_NEW_SEASON_DAYS = 14;
 const UPCOMING_WINDOW_CURRENT_SEASON_DAYS = 7;
 
-type EpisodeBadgeSource = Pick<MediaDetails, "next_episode_to_air" | "last_episode_to_air">;
+type EpisodeBadgeSource = Pick<
+  MediaDetails,
+  "next_episode_to_air" | "last_episode_to_air" | "first_air_date"
+>;
 
 // Différence en jours calendaires entre deux dates YYYY-MM-DD, comparées en
 // UTC minuit (même raison que isStrictlyFutureDate dans releaseBadge.ts :
@@ -82,6 +91,17 @@ export function getSeriesEpisodeBadge(
       if (daysUntil <= window) {
         return { kind: "upcoming", label: "Prochainement", date: nextDate };
       }
+    }
+  }
+
+  // Aucune donnée épisode par épisode (série jamais diffusée, next/last
+  // absents) : repli sur first_air_date, avec la même fenêtre que "nouvelle
+  // série pas encore sortie" ci-dessus.
+  if (!last?.air_date && !next?.air_date && details?.first_air_date) {
+    const premiereDate = details.first_air_date.slice(0, 10);
+    const daysUntil = daysBetween(todayIso, premiereDate);
+    if (daysUntil >= 0 && daysUntil <= UPCOMING_WINDOW_NEW_SERIES_DAYS) {
+      return { kind: "upcoming", label: "Prochainement", date: premiereDate };
     }
   }
 
