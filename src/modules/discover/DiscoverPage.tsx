@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigationType } from "react-router-dom";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
@@ -27,6 +28,22 @@ import styles from "./DiscoverPage.module.css";
 
 const GRID_SKELETON_COUNT = 12;
 
+interface FiltersSnapshot {
+  mediaType: MediaType;
+  genreIds: number[];
+  providerId: string;
+  useMyPlatforms: boolean;
+  sortField: DiscoverSortField;
+  sortDirection: SortDirection;
+  advanced: AdvancedFiltersState;
+}
+
+// Derniers filtres appliqués, mémorisés par entrée d'historique (même
+// principe que scrollPositions dans useScrollRestoration) : comme DiscoverPage
+// est démonté/remonté à chaque retour arrière, seul un état hors du cycle de
+// vie du composant peut survivre pour être réappliqué au remontage.
+const filtersMemory = new Map<string, FiltersSnapshot>();
+
 // Convertit les valeurs texte des <input> en nombres (ou undefined si vide)
 // pour discover().
 function toDiscoverParams(advanced: AdvancedFiltersState) {
@@ -44,13 +61,23 @@ function toDiscoverParams(advanced: AdvancedFiltersState) {
 }
 
 export default function DiscoverPage() {
-  const [mediaType, setMediaType] = useState<MediaType>("movie");
-  const [genreIds, setGenreIds] = useState<number[]>([]);
-  const [providerId, setProviderId] = useState("");
-  const [useMyPlatforms, setUseMyPlatforms] = useState(false);
-  const [sortField, setSortField] = useState<DiscoverSortField>("popularity");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [advanced, setAdvanced] = useState<AdvancedFiltersState>(EMPTY_ADVANCED_FILTERS);
+  const location = useLocation();
+  const navigationType = useNavigationType();
+  const restoredFilters = navigationType === "POP" ? filtersMemory.get(location.key) : undefined;
+
+  const [mediaType, setMediaType] = useState<MediaType>(restoredFilters?.mediaType ?? "movie");
+  const [genreIds, setGenreIds] = useState<number[]>(restoredFilters?.genreIds ?? []);
+  const [providerId, setProviderId] = useState(restoredFilters?.providerId ?? "");
+  const [useMyPlatforms, setUseMyPlatforms] = useState(restoredFilters?.useMyPlatforms ?? false);
+  const [sortField, setSortField] = useState<DiscoverSortField>(
+    restoredFilters?.sortField ?? "popularity"
+  );
+  const [sortDirection, setSortDirection] = useState<SortDirection>(
+    restoredFilters?.sortDirection ?? "desc"
+  );
+  const [advanced, setAdvanced] = useState<AdvancedFiltersState>(
+    restoredFilters?.advanced ?? EMPTY_ADVANCED_FILTERS
+  );
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
   const [page, setPage] = useState(1);
@@ -80,7 +107,16 @@ export default function DiscoverPage() {
   // ci-dessous).
   const continuingSeries = useResumableSeries(watchlist);
 
+  // Ignore le premier passage : au montage, mediaType "change" (de rien à sa
+  // valeur initiale, éventuellement restaurée après un retour arrière) sans
+  // que ce soit une action de l'utilisateur — réinitialiser genreIds à ce
+  // moment-là écraserait les genres restaurés.
+  const skipGenreResetRef = useRef(true);
   useEffect(() => {
+    if (skipGenreResetRef.current) {
+      skipGenreResetRef.current = false;
+      return;
+    }
     setGenreIds([]);
     setPage(1);
   }, [mediaType]);
@@ -88,6 +124,31 @@ export default function DiscoverPage() {
   useEffect(() => {
     setPage(1);
   }, [genreIds, providerId, useMyPlatforms, sortField, sortDirection, advancedKey]);
+
+  // Mémorise les filtres actifs pour cette entrée d'historique, afin de les
+  // réappliquer si l'utilisateur revient sur cette page via un retour arrière
+  // (bouton navigateur ou bouton "Retour" de la fiche détail, qui déclenche
+  // aussi un vrai POP).
+  useEffect(() => {
+    filtersMemory.set(location.key, {
+      mediaType,
+      genreIds,
+      providerId,
+      useMyPlatforms,
+      sortField,
+      sortDirection,
+      advanced,
+    });
+  }, [
+    location.key,
+    mediaType,
+    genreIds,
+    providerId,
+    useMyPlatforms,
+    sortField,
+    sortDirection,
+    advanced,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
