@@ -24,7 +24,7 @@ import EpisodeTracker from "./components/EpisodeTracker.tsx";
 import CollectionSection from "./components/CollectionSection.tsx";
 import DetailSkeleton from "./components/DetailSkeleton.tsx";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
-import { useRegion } from "../../core/context/RegionContext.tsx";
+import { regionName as countryDisplayName, useRegion } from "../../core/context/RegionContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
@@ -264,6 +264,11 @@ export default function DetailPage() {
                 ? ` · ${details.number_of_episodes} épisodes`
                 : ""}
               {runtime ? ` · ${runtime} min${mediaType === "tv" ? "/épisode" : ""}` : ""}
+              {details.production_countries && details.production_countries.length > 0
+                ? ` · ${details.production_countries
+                    .map((c) => countryDisplayName(c.iso_3166_1) || c.name)
+                    .join(", ")}`
+                : ""}
               {details.vote_average && tier ? (
                 <span
                   className={`${styles.score} ${styles[`s-${tier.cls}`]}`}

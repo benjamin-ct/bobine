@@ -156,6 +156,11 @@ export interface CreatedBy {
   name: string;
 }
 
+export interface ProductionCountry {
+  iso_3166_1: string;
+  name: string;
+}
+
 /** Détails complets (append_to_response: credits,videos,recommendations,release_dates,watch/providers). */
 export interface MediaDetails extends MediaSummary {
   runtime?: number; // films
@@ -179,6 +184,7 @@ export interface MediaDetails extends MediaSummary {
   next_episode_to_air?: EpisodeAirInfo | null;
   last_episode_to_air?: EpisodeAirInfo | null;
   status?: string; // "Returning Series" | "Ended" | "Canceled" | ...
+  production_countries?: ProductionCountry[];
 }
 
 export interface WatchProviderEntry {

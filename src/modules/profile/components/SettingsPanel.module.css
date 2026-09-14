@@ -16,6 +16,12 @@
   gap: 8px;
   max-height: 320px;
   overflow-y: auto;
+  /* Sans ça, une fois cette liste scrollée jusqu'à son bord, le geste de
+     scroll (molette/trackpad/tactile) continue dans la page : sur
+     trackpad/mobile, l'overscroll élastique de la page se déclenche alors
+     par-dessus cette liste et « rebondit » en arrière, rendant la fin de
+     la page (section suivante, footer) inatteignable au scroll normal. */
+  overscroll-behavior: contain;
 }
 
 .item {
@@ -46,6 +52,9 @@
   margin-top: 12px;
   max-height: 320px;
   overflow-y: auto;
+  /* Voir .grid ci-dessus : même correctif, même raison (liste capée en
+     hauteur dans le panneau « Titres exclus »). */
+  overscroll-behavior: contain;
 }
 
 .chipX {
