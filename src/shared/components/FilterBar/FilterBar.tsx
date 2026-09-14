@@ -114,19 +114,21 @@ export default function FilterBar({
         ))}
       </Dropdown>
 
-      <select
-        value={providerId}
-        onChange={(e) => onProviderSelect(e.target.value)}
-        className={styles.select}
-        disabled={useFavoriteProviders}
-      >
-        <option value="">Toutes les plateformes</option>
-        {providers.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+      <div className={styles.selectWrap}>
+        <select
+          value={providerId}
+          onChange={(e) => onProviderSelect(e.target.value)}
+          className={styles.select}
+          disabled={useFavoriteProviders}
+        >
+          <option value="">Toutes les plateformes</option>
+          {providers.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {hasFavorites && (
         <Chip
