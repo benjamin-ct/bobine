@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
+import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
 import { useRegion } from "../../core/context/RegionContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
@@ -74,11 +75,10 @@ export default function DiscoverPage() {
       ? [providerId]
       : undefined;
 
-  // "Reprendre" : séries entamées, tous types confondus (indépendant du
-  // filtre Films/Séries de la grille de suggestions ci-dessous).
-  const continuingSeries = watchlist.filter(
-    (item) => item.mediaType === "tv" && (item.watchedEpisodes?.length || 0) > 0
-  );
+  // "Reprendre" : séries entamées avec au moins un épisode non vu déjà
+  // sorti (indépendant du filtre Films/Séries de la grille de suggestions
+  // ci-dessous).
+  const continuingSeries = useResumableSeries(watchlist);
 
   useEffect(() => {
     setGenreIds([]);
