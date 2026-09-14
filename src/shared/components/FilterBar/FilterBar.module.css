@@ -28,13 +28,24 @@
   color: var(--on-accent) !important;
 }
 
+/* `appearance: none` + chevron en background-image : la flèche native du
+   navigateur se colle au bord de la pilule (pas de marge, contrairement au
+   caret des Dropdown custom juste à côté qui a un `gap` avant le padding).
+   `currentColor` dans le SVG suit `color` ci-dessous, donc le thème
+   clair/sombre (var(--fg)) sans dupliquer la couleur en dur. */
 .select {
-  padding: 9px 14px;
+  padding: 9px 34px 9px 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
   color: var(--fg);
   font-size: 13.5px;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .select:disabled {
