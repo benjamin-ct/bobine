@@ -7,7 +7,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { DEFAULT_REGION, getTheatricalStatusIndex, type TheatricalIndex } from "../api/tmdb.ts";
+import {
+  COUNTRY_NAME_OVERRIDES,
+  DEFAULT_REGION,
+  getTheatricalStatusIndex,
+  type TheatricalIndex,
+} from "../api/tmdb.ts";
 
 interface RegionContextValue {
   region: string;
@@ -28,6 +33,10 @@ const regionDisplayNames =
 export function regionName(code: string | null | undefined): string | null {
   if (!code) {
     return null;
+  }
+  const override = COUNTRY_NAME_OVERRIDES[code.toUpperCase()];
+  if (override) {
+    return override;
   }
   try {
     return regionDisplayNames?.of(code) || code;
