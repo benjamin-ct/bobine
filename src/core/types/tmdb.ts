@@ -148,6 +148,11 @@ export interface CreatedBy {
   name: string;
 }
 
+export interface ProductionCountry {
+  iso_3166_1: string;
+  name: string;
+}
+
 /** Détails complets (append_to_response: credits,videos,recommendations,release_dates,watch/providers). */
 export interface MediaDetails extends MediaSummary {
   runtime?: number; // films
@@ -166,6 +171,7 @@ export interface MediaDetails extends MediaSummary {
   networks?: Network[];
   created_by?: CreatedBy[];
   belongs_to_collection?: CollectionSummary | null;
+  production_countries?: ProductionCountry[];
 }
 
 export interface WatchProviderEntry {

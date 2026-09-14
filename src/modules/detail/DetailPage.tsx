@@ -255,6 +255,9 @@ export default function DetailPage() {
                 ? ` · ${details.number_of_episodes} épisodes`
                 : ""}
               {runtime ? ` · ${runtime} min${mediaType === "tv" ? "/épisode" : ""}` : ""}
+              {details.production_countries && details.production_countries.length > 0
+                ? ` · ${details.production_countries.map((c) => c.name).join(", ")}`
+                : ""}
               {details.vote_average && tier ? (
                 <span className={`${styles.score} ${styles[`s-${tier.cls}`]}`}>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
