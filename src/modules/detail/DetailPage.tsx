@@ -8,6 +8,7 @@ import {
   estimateRuntimeMinutes,
   getFrenchTheatricalDateFromDetails,
   theatricalStatusFromDate,
+  getSeriesEpisodeBadge,
   formatFullDate,
 } from "../../core/api/tmdb.ts";
 import {
@@ -164,6 +165,14 @@ export default function DetailPage() {
       }[theatricalStatus]
     : null;
 
+  const episodeBadge = mediaType === "tv" ? getSeriesEpisodeBadge(details) : null;
+  const episodeBadgeDateFormatted = episodeBadge ? formatFullDate(episodeBadge.date) : null;
+  const episodeBadgeMessage = episodeBadge
+    ? episodeBadge.kind === "just_released"
+      ? `🆕 Vient de sortir (le ${episodeBadgeDateFormatted})`
+      : `📅 Prochainement (le ${episodeBadgeDateFormatted})`
+    : null;
+
   const cast = details.credits?.cast || [];
   const visibleCast = showFullCast ? cast : cast.slice(0, MAIN_CAST_COUNT);
   const remainingCastCount = cast.length - visibleCast.length;
@@ -277,6 +286,7 @@ export default function DetailPage() {
               ) : null}
             </p>
             {theatricalMessage && <p className={styles.statusPill}>{theatricalMessage}</p>}
+            {episodeBadgeMessage && <p className={styles.statusPill}>{episodeBadgeMessage}</p>}
             <p className={styles.overview}>{details.overview || "Pas de synopsis disponible."}</p>
 
             <div className={styles.actions}>
