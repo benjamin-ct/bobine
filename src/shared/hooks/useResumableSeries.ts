@@ -46,7 +46,10 @@ export function useResumableSeries(watchlist: LibraryItem[]): LibraryItem[] {
 // Dernier épisode vu, au sens chronologique saison/épisode (pas ordre
 // d'ajout dans watchedEpisodes) : point de départ pour déterminer "le
 // prochain épisode" à proposer dans Reprendre.
-function lastWatchedEntry(watchedEpisodes: string[]): { seasonNumber: number; episodeNumber: number } {
+function lastWatchedEntry(watchedEpisodes: string[]): {
+  seasonNumber: number;
+  episodeNumber: number;
+} {
   return watchedEpisodes
     .map((key) => {
       const [seasonNumber, episodeNumber] = key.split("-").map(Number);
