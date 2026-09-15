@@ -124,6 +124,54 @@ check(
 );
 
 check(
+  "Série renouvelée, next_episode_to_air pas encore renseigné, saison 2 annoncée (seasons[].air_date) dans 10 jours -> prochainement (repli saison)",
+  getSeriesEpisodeBadge(
+    {
+      last_episode_to_air: { air_date: dateAt(-200), episode_number: 8, season_number: 1 },
+      next_episode_to_air: null,
+      seasons: [
+        { id: 1, season_number: 1, episode_count: 8, air_date: dateAt(-200) },
+        { id: 2, season_number: 2, episode_count: 8, air_date: dateAt(10) },
+      ],
+    },
+    TODAY
+  ),
+  { kind: "upcoming", label: "Prochainement", date: dateAt(10) }
+);
+
+check(
+  "Série renouvelée, repli saison hors fenêtre (16 jours) -> null",
+  getSeriesEpisodeBadge(
+    {
+      last_episode_to_air: { air_date: dateAt(-200), episode_number: 8, season_number: 1 },
+      next_episode_to_air: null,
+      seasons: [
+        { id: 1, season_number: 1, episode_count: 8, air_date: dateAt(-200) },
+        { id: 2, season_number: 2, episode_count: 8, air_date: dateAt(16) },
+      ],
+    },
+    TODAY
+  ),
+  null
+);
+
+check(
+  "next_episode_to_air déjà renseigné : repli saison ignoré (pas de double calcul)",
+  getSeriesEpisodeBadge(
+    {
+      last_episode_to_air: { air_date: dateAt(-200), episode_number: 8, season_number: 1 },
+      next_episode_to_air: { air_date: dateAt(13), episode_number: 1, season_number: 2 },
+      seasons: [
+        { id: 1, season_number: 1, episode_count: 8, air_date: dateAt(-200) },
+        { id: 2, season_number: 2, episode_count: 8, air_date: dateAt(50) },
+      ],
+    },
+    TODAY
+  ),
+  { kind: "upcoming", label: "Prochainement", date: dateAt(13) }
+);
+
+check(
   "Série déjà sortie, saison en cours (S2E5) dans 6 jours, épisode précédent hors fenêtre -> prochainement",
   getSeriesEpisodeBadge(
     {

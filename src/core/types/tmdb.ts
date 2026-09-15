@@ -110,6 +110,9 @@ export interface Season {
   season_number: number;
   name?: string;
   episode_count: number;
+  // Date de première de la saison, renseignée par TMDB dès l'annonce (avant
+  // même que next_episode_to_air ne le soit pour l'épisode 1 de la saison).
+  air_date?: string | null;
 }
 
 export interface Episode {

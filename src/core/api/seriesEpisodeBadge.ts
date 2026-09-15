@@ -18,6 +18,11 @@
 // Production"/"Planned", parfois même à quelques jours de la sortie,
 // alors que `first_air_date` est renseigné dès l'annonce officielle.
 //
+// Même repli, mais au niveau saison (`seasons[].air_date`), pour une série
+// déjà diffusée qui revient pour une nouvelle saison annoncée : le même
+// retard TMDB s'applique à `next_episode_to_air` dans ce cas (une série
+// renouvelée n'a pas de first_air_date à venir puisqu'elle a déjà commencé).
+//
 // Fenêtres et règles produit (issues du ticket, réponse du 2026-09-14) :
 //   "prochainement" :
 //     - nouvelle série pas encore sortie (aucun last_episode_to_air) : 1 mois avant
@@ -47,7 +52,7 @@ const UPCOMING_WINDOW_CURRENT_SEASON_DAYS = 7;
 
 type EpisodeBadgeSource = Pick<
   MediaDetails,
-  "next_episode_to_air" | "last_episode_to_air" | "first_air_date"
+  "next_episode_to_air" | "last_episode_to_air" | "first_air_date" | "seasons"
 >;
 
 // Différence en jours calendaires entre deux dates YYYY-MM-DD, comparées en
@@ -90,6 +95,23 @@ export function getSeriesEpisodeBadge(
           : UPCOMING_WINDOW_CURRENT_SEASON_DAYS;
       if (daysUntil <= window) {
         return { kind: "upcoming", label: "Prochainement", date: nextDate };
+      }
+    }
+  }
+
+  // Série déjà diffusée (last présent) dont TMDB n'a pas encore renseigné
+  // next_episode_to_air pour la saison suivante : repli sur la date de
+  // première de la prochaine saison connue dans `seasons`, avec la même
+  // fenêtre que "nouvelle saison" ci-dessus.
+  if (!next?.air_date && last?.air_date && details?.seasons) {
+    const upcomingSeason = details.seasons
+      .filter((s) => s.season_number > last.season_number && s.air_date)
+      .sort((a, b) => a.season_number - b.season_number)[0];
+    if (upcomingSeason?.air_date) {
+      const seasonDate = upcomingSeason.air_date.slice(0, 10);
+      const daysUntil = daysBetween(todayIso, seasonDate);
+      if (daysUntil >= 0 && daysUntil <= UPCOMING_WINDOW_NEW_SEASON_DAYS) {
+        return { kind: "upcoming", label: "Prochainement", date: seasonDate };
       }
     }
   }
