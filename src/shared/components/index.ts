@@ -28,5 +28,6 @@ export type { AdvancedFiltersState } from "./AdvancedFilters/AdvancedFilters.tsx
 export { default as CountryLanguageFilter } from "./CountryLanguageFilter/CountryLanguageFilter.tsx";
 export { default as PageHeader } from "./PageHeader/PageHeader.tsx";
 export { default as ContinueWatchingRow } from "./ContinueWatchingRow/ContinueWatchingRow.tsx";
-export { default as FeaturedSeriesRow } from "./FeaturedSeriesRow/FeaturedSeriesRow.tsx";
+export { default as FeaturedMediaRow } from "./FeaturedMediaRow/FeaturedMediaRow.tsx";
+export type { FeaturedMediaEntry } from "./FeaturedMediaRow/FeaturedMediaRow.tsx";
 export { default as Disclosure } from "./Disclosure/Disclosure.tsx";

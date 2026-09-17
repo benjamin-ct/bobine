@@ -16,6 +16,7 @@
     "format:check": "prettier --check .",
     "verify:upcoming-badge": "node scripts/verify-upcoming-badge.ts",
     "verify:series-episode-badge": "node scripts/verify-series-episode-badge.ts",
+    "verify:movie-release-badge": "node scripts/verify-movie-release-badge.ts",
     "verify:movie-meta": "node scripts/verify-movie-meta.ts",
     "verify:tmdb-concurrency-cap": "node scripts/verify-tmdb-concurrency-cap.ts",
     "verify:numeric-range-filter": "node scripts/verify-numeric-range-filter.ts",

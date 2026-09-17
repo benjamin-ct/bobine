@@ -2,19 +2,25 @@ import { Link } from "react-router-dom";
 import { posterUrl } from "../../../core/api/tmdb.ts";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
 import { formatFullDate } from "../../../core/api/tmdb.ts";
-import type { FeaturedSeries } from "../../hooks/useFeaturedSeries.ts";
+import type { LibraryItem } from "../../../core/types/library.ts";
 import posterStyles from "../../styles/posterAccents.module.css";
-import styles from "./FeaturedSeriesRow.module.css";
+import styles from "./FeaturedMediaRow.module.css";
 
-interface FeaturedSeriesRowProps {
-  items: FeaturedSeries[];
+export interface FeaturedMediaEntry {
+  item: LibraryItem;
+  badge: { kind: "just_released" | "upcoming"; label: string; date: string };
 }
 
-/** "Mise en avant" (Découvrir) : séries suivies dont un épisode vient de
- * sortir ou arrive bientôt (voir useFeaturedSeries/seriesEpisodeBadge.ts).
- * Même structure que ContinueWatchingRow, avec le badge à la place du
- * décompte d'épisodes vus. */
-export default function FeaturedSeriesRow({ items }: FeaturedSeriesRowProps) {
+interface FeaturedMediaRowProps {
+  items: FeaturedMediaEntry[];
+}
+
+/** "Mise en avant" (Découvrir) : films et séries suivis dont une sortie
+ * (épisode pour une série, sortie initiale pour un film) vient d'avoir lieu
+ * ou arrive bientôt — voir useFeaturedSeries/useFeaturedMovies. Même
+ * structure que ContinueWatchingRow, avec le badge à la place du décompte
+ * d'épisodes vus. */
+export default function FeaturedMediaRow({ items }: FeaturedMediaRowProps) {
   if (items.length === 0) {
     return null;
   }
