@@ -92,5 +92,27 @@
   "countryLanguageFilter": {
     "allCountries": "Tous les pays",
     "allLanguages": "Toutes les langues"
+  },
+  "accountCard": {
+    "title": "Compte",
+    "loginHint": "Connecte-toi pour synchroniser ta liste entre appareils.",
+    "login": "Connexion",
+    "saveError": "Impossible d'enregistrer le nom affiché.",
+    "displayName": "Nom affiché",
+    "displayNamePlaceholder": "Ton nom",
+    "email": "Adresse e-mail",
+    "saving": "Enregistrement…",
+    "save": "Enregistrer",
+    "logout": "Se déconnecter",
+    "saved": "✓ Modifications enregistrées"
+  },
+  "excludedGenres": {
+    "summary": "Genres à exclure",
+    "meta_one": "{{count}} exclu",
+    "meta_other": "{{count}} exclus",
+    "description": "Ces genres ne seront jamais suggérés, où que ce soit dans Bobine.",
+    "loading": "Chargement des genres…",
+    "error": "Impossible de charger la liste des genres.",
+    "searchPlaceholder": "Rechercher un genre…"
   }
 }

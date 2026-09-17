@@ -92,5 +92,27 @@
   "countryLanguageFilter": {
     "allCountries": "All countries",
     "allLanguages": "All languages"
+  },
+  "accountCard": {
+    "title": "Account",
+    "loginHint": "Sign in to sync your list across devices.",
+    "login": "Sign in",
+    "saveError": "Couldn't save the display name.",
+    "displayName": "Display name",
+    "displayNamePlaceholder": "Your name",
+    "email": "Email address",
+    "saving": "Saving…",
+    "save": "Save",
+    "logout": "Sign out",
+    "saved": "✓ Changes saved"
+  },
+  "excludedGenres": {
+    "summary": "Genres to exclude",
+    "meta_one": "{{count}} excluded",
+    "meta_other": "{{count}} excluded",
+    "description": "These genres will never be suggested anywhere in Bobine.",
+    "loading": "Loading genres…",
+    "error": "Couldn't load the genre list.",
+    "searchPlaceholder": "Search a genre…"
   }
 }
