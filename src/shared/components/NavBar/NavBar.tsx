@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useTheme } from "../../../core/context/ThemeContext.tsx";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
 import styles from "./NavBar.module.css";
@@ -191,6 +192,8 @@ export default function NavBar() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { status: authStatus, email, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { locale, setLocale } = useLocale();
+  const toggleLocale = () => setLocale(locale === "fr" ? "en" : "fr");
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -334,6 +337,16 @@ export default function NavBar() {
           <ThemeIcon theme={theme} />
         </button>
 
+        <button
+          type="button"
+          className={`${styles.textBtn} ${styles.desktopOnly}`}
+          onClick={toggleLocale}
+          aria-label="Changer la langue de l'interface"
+          title="Langue de l'interface"
+        >
+          {locale.toUpperCase()}
+        </button>
+
         <Link
           to="/profil"
           className={`${styles.iconBtn} ${styles.desktopOnly}`}
@@ -379,6 +392,16 @@ export default function NavBar() {
           title="Thème clair / sombre"
         >
           <ThemeIcon theme={theme} />
+        </button>
+
+        <button
+          type="button"
+          className={`${styles.textBtn} ${styles.mobileOnly}`}
+          onClick={toggleLocale}
+          aria-label="Changer la langue de l'interface"
+          title="Langue de l'interface"
+        >
+          {locale.toUpperCase()}
         </button>
 
         <button
