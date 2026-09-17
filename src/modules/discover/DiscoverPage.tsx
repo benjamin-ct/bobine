@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
@@ -61,6 +62,7 @@ function toDiscoverParams(advanced: AdvancedFiltersState) {
 }
 
 export default function DiscoverPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigationType = useNavigationType();
   const restoredFilters = navigationType === "POP" ? filtersMemory.get(location.key) : undefined;
@@ -293,9 +295,9 @@ export default function DiscoverPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        eyebrow="Rien que pour vous"
-        title="Découvrir"
-        lead="Une sélection qui apprend de vos goûts — ce que vous avez vu, aimé, zappé, et ce qui patiente dans votre liste."
+        eyebrow={t("discoverPage.eyebrow")}
+        title={t("discoverPage.title")}
+        lead={t("discoverPage.lead")}
       />
 
       {continuingSeries.length > 0 && (
@@ -307,14 +309,15 @@ export default function DiscoverPage() {
               </svg>
             </span>
             <h2>
-              Reprendre <span className={styles.meta}>· là où vous en êtes</span>
+              {t("discoverPage.resumeTitle")}{" "}
+              <span className={styles.meta}>{t("discoverPage.resumeSubtitle")}</span>
             </h2>
           </div>
           <ContinueWatchingRow items={continuingSeries} />
         </section>
       )}
 
-      <p className={styles.eyebrowSmall}>Suggestions pour vous</p>
+      <p className={styles.eyebrowSmall}>{t("discoverPage.suggestionsEyebrow")}</p>
       <FilterBar
         mediaType={mediaType}
         setMediaType={setMediaType}
@@ -345,7 +348,7 @@ export default function DiscoverPage() {
       {status === "error" && <ErrorMessage error={error} />}
       {status === "invalid" && advancedError && <EmptyState label={advancedError} />}
       {status === "success" && results.length === 0 && (
-        <EmptyState label="Aucun résultat pour ces filtres." />
+        <EmptyState label={t("discoverPage.emptyState")} />
       )}
 
       {status === "success" && results.length > 0 && (
@@ -357,7 +360,7 @@ export default function DiscoverPage() {
           </div>
           {page < totalPages && (
             <div ref={sentinelRef} className={gridStyles.loadMore}>
-              {loadingMore && <span>Chargement…</span>}
+              {loadingMore && <span>{t("common.loading")}</span>}
             </div>
           )}
         </>

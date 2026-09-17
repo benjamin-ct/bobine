@@ -114,5 +114,69 @@
     "loading": "Chargement des genres…",
     "error": "Impossible de charger la liste des genres.",
     "searchPlaceholder": "Rechercher un genre…"
+  },
+  "navBar": {
+    "mainNavAriaLabel": "Navigation principale",
+    "navLinks": {
+      "discover": "Découvrir",
+      "newReleases": "Nouveautés",
+      "comingSoon": "Prochainement",
+      "random": "Aléatoire",
+      "myList": "Ma liste"
+    },
+    "searching": "Recherche…",
+    "noResults": "Aucun résultat.",
+    "personRoleHint": "Acteur/Actrice, réalisateur·rice…",
+    "mediaTypeMovie": "Film",
+    "mediaTypeSeries": "Série",
+    "viewAllResults": "Voir tous les résultats pour « {{query}} » →",
+    "searchPlaceholder": "Film, série, acteur, réalisateur…",
+    "searchAriaLabel": "Rechercher",
+    "themeToggleAriaLabel": "Basculer le thème clair / sombre",
+    "themeToggleTitle": "Thème clair / sombre",
+    "localeToggleAriaLabel": "Changer la langue de l'interface",
+    "localeToggleTitle": "Langue de l'interface",
+    "profileAriaLabel": "Profil",
+    "profileTitle": "Profil",
+    "logout": "Déconnexion",
+    "login": "Connexion",
+    "openMenuAriaLabel": "Ouvrir le menu",
+    "closeMenuAriaLabel": "Fermer le menu"
+  },
+  "comingSoonPage": {
+    "windows": {
+      "next7Days": "7 prochains jours",
+      "next30Days": "30 prochains jours",
+      "next3Months": "3 prochains mois"
+    },
+    "eyebrow": "Calendrier · France",
+    "title": "Prochainement",
+    "lead": "Les sorties à venir, en salles et en streaming. Activez la cloche pour être prévenu·e le jour J.",
+    "unknownTitle": "Titre inconnu",
+    "dateTbd": "Date à confirmer",
+    "notifyTitle": "Être prévenu·e de la sortie (ajoute à Envie de voir)",
+    "notified": "Prévenu·e",
+    "notifyMe": "Me prévenir",
+    "emptyState": "Aucune sortie prévue sur cette période pour ces filtres."
+  },
+  "newReleasesPage": {
+    "windows": {
+      "last7Days": "7 derniers jours",
+      "last30Days": "30 derniers jours",
+      "last3Months": "3 derniers mois"
+    },
+    "eyebrow": "Mis à jour aujourd'hui",
+    "title": "Nouveautés",
+    "lead": "Les derniers ajouts en streaming et les sorties fraîches en salles — filtrés pour vos plateformes.",
+    "emptyState": "Aucune sortie sur cette période pour ces filtres."
+  },
+  "discoverPage": {
+    "eyebrow": "Rien que pour vous",
+    "title": "Découvrir",
+    "lead": "Une sélection qui apprend de vos goûts — ce que vous avez vu, aimé, zappé, et ce qui patiente dans votre liste.",
+    "resumeTitle": "Reprendre",
+    "resumeSubtitle": "· là où vous en êtes",
+    "suggestionsEyebrow": "Suggestions pour vous",
+    "emptyState": "Aucun résultat pour ces filtres."
   }
 }

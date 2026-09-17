@@ -114,5 +114,69 @@
     "loading": "Loading genres…",
     "error": "Couldn't load the genre list.",
     "searchPlaceholder": "Search a genre…"
+  },
+  "navBar": {
+    "mainNavAriaLabel": "Main navigation",
+    "navLinks": {
+      "discover": "Discover",
+      "newReleases": "New releases",
+      "comingSoon": "Coming soon",
+      "random": "Random",
+      "myList": "My list"
+    },
+    "searching": "Searching…",
+    "noResults": "No results.",
+    "personRoleHint": "Actor/Actress, director…",
+    "mediaTypeMovie": "Movie",
+    "mediaTypeSeries": "Series",
+    "viewAllResults": "See all results for “{{query}}” →",
+    "searchPlaceholder": "Movie, series, actor, director…",
+    "searchAriaLabel": "Search",
+    "themeToggleAriaLabel": "Toggle light / dark theme",
+    "themeToggleTitle": "Light / dark theme",
+    "localeToggleAriaLabel": "Change interface language",
+    "localeToggleTitle": "Interface language",
+    "profileAriaLabel": "Profile",
+    "profileTitle": "Profile",
+    "logout": "Log out",
+    "login": "Sign in",
+    "openMenuAriaLabel": "Open menu",
+    "closeMenuAriaLabel": "Close menu"
+  },
+  "comingSoonPage": {
+    "windows": {
+      "next7Days": "Next 7 days",
+      "next30Days": "Next 30 days",
+      "next3Months": "Next 3 months"
+    },
+    "eyebrow": "Calendar · France",
+    "title": "Coming soon",
+    "lead": "Upcoming releases, in theaters and streaming. Turn on the bell to get notified on release day.",
+    "unknownTitle": "Unknown title",
+    "dateTbd": "Date to be confirmed",
+    "notifyTitle": "Get notified on release (adds to Want to watch)",
+    "notified": "Notified",
+    "notifyMe": "Notify me",
+    "emptyState": "No releases scheduled for this period with these filters."
+  },
+  "newReleasesPage": {
+    "windows": {
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days",
+      "last3Months": "Last 3 months"
+    },
+    "eyebrow": "Updated today",
+    "title": "New releases",
+    "lead": "The latest streaming additions and fresh theater releases — filtered for your platforms.",
+    "emptyState": "No releases in this period for these filters."
+  },
+  "discoverPage": {
+    "eyebrow": "Just for you",
+    "title": "Discover",
+    "lead": "A selection that learns from your taste — what you've watched, liked, skipped, and what's waiting in your list.",
+    "resumeTitle": "Resume",
+    "resumeSubtitle": "· right where you left off",
+    "suggestionsEyebrow": "Suggestions for you",
+    "emptyState": "No results for these filters."
   }
 }
