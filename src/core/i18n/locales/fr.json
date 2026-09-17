@@ -1,1 +1,96 @@
-{}
+{
+  "common": {
+    "loading": "Chargement…",
+    "errorGeneric": "Une erreur est survenue.",
+    "close": "Fermer"
+  },
+  "notFound": {
+    "eyebrow": "Erreur 404",
+    "title": "Page introuvable",
+    "lead": "Cette page n'existe pas ou plus. Vérifiez l'adresse saisie, ou revenez à l'accueil.",
+    "backToHome": "Retour à l'accueil"
+  },
+  "legalLinks": {
+    "ariaLabel": "Informations légales",
+    "privacy": "Confidentialité",
+    "terms": "CGU"
+  },
+  "footer": {
+    "tagline": "Découvre, suis, et retrouve tes films & séries.",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Confidentialité"
+  },
+  "scrollToTop": {
+    "ariaLabel": "Remonter en haut de la page",
+    "title": "Remonter en haut"
+  },
+  "profile": {
+    "eyebrow": "Réglages",
+    "title": "Profil",
+    "lead": "Votre compte et vos préférences de recommandation, réunis au même endroit.",
+    "notifications": "Notifications",
+    "notificationsHint": "Prévenu·e quand un titre « envie de voir » arrive en streaming, pour vos genres préférés et les grosses sorties.",
+    "recommendations": "Recommandations"
+  },
+  "providerBadges": {
+    "unavailable": "Non disponible en streaming en France pour le moment.",
+    "subscription": "Inclus avec abonnement",
+    "rent": "Location",
+    "buy": "Achat",
+    "justwatchLink": "Voir toutes les options sur JustWatch →"
+  },
+  "continueWatching": {
+    "episodesWatched_one": "{{count}} épisode vu",
+    "episodesWatched_other": "{{count}} épisodes vus",
+    "resume": "Reprendre →"
+  },
+  "personCard": {
+    "departmentActing": "Acteur/Actrice",
+    "departmentDirecting": "Réalisateur/Réalisatrice",
+    "departmentWriting": "Scénariste",
+    "departmentProduction": "Production"
+  },
+  "auth": {
+    "verify": {
+      "title": "Connexion",
+      "incompleteLink": "Lien de connexion incomplet.",
+      "unknownError": "Erreur inconnue.",
+      "success": "✅ Tu es connecté·e !",
+      "goToMyList": "Aller à Ma liste",
+      "requestNewLink": "Redemander un lien"
+    }
+  },
+  "trailer": {
+    "button": "Bande-annonce",
+    "iframeTitle": "Bande-annonce"
+  },
+  "ratingStars": {
+    "yourRating": "Votre note :",
+    "notRatedYet": "Pas encore noté",
+    "starAriaLabel": "{{n}}/10 — {{label}}"
+  },
+  "ratingTier": {
+    "high": "Coup de cœur",
+    "mid": "Recommandé",
+    "low": "Mitigé",
+    "star1": "À fuir",
+    "star2": "Raté",
+    "star3": "Faible",
+    "star4": "Bof",
+    "star5": "Passable",
+    "star6": "Correct",
+    "star7": "Bien",
+    "star8": "Très bien",
+    "star9": "Excellent",
+    "star10": "Chef-d'œuvre"
+  },
+  "collection": {
+    "heading": "La saga",
+    "filmsCount_one": "{{count}} film",
+    "filmsCount_other": "{{count}} films"
+  },
+  "countryLanguageFilter": {
+    "allCountries": "Tous les pays",
+    "allLanguages": "Toutes les langues"
+  }
+}

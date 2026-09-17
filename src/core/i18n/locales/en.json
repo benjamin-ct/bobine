@@ -1,1 +1,96 @@
-{}
+{
+  "common": {
+    "loading": "Loading…",
+    "errorGeneric": "Something went wrong.",
+    "close": "Close"
+  },
+  "notFound": {
+    "eyebrow": "Error 404",
+    "title": "Page not found",
+    "lead": "This page doesn't exist anymore. Check the address, or head back home.",
+    "backToHome": "Back to home"
+  },
+  "legalLinks": {
+    "ariaLabel": "Legal information",
+    "privacy": "Privacy",
+    "terms": "Terms"
+  },
+  "footer": {
+    "tagline": "Discover, follow, and find your movies & shows.",
+    "terms": "Terms of use",
+    "privacy": "Privacy"
+  },
+  "scrollToTop": {
+    "ariaLabel": "Scroll back to top",
+    "title": "Back to top"
+  },
+  "profile": {
+    "eyebrow": "Settings",
+    "title": "Profile",
+    "lead": "Your account and your recommendation preferences, all in one place.",
+    "notifications": "Notifications",
+    "notificationsHint": "Get notified when a \"want to watch\" title lands on streaming, for your favorite genres and big releases.",
+    "recommendations": "Recommendations"
+  },
+  "providerBadges": {
+    "unavailable": "Not available to stream in France right now.",
+    "subscription": "Included with subscription",
+    "rent": "Rent",
+    "buy": "Buy",
+    "justwatchLink": "See all options on JustWatch →"
+  },
+  "continueWatching": {
+    "episodesWatched_one": "{{count}} episode watched",
+    "episodesWatched_other": "{{count}} episodes watched",
+    "resume": "Resume →"
+  },
+  "personCard": {
+    "departmentActing": "Actor/Actress",
+    "departmentDirecting": "Director",
+    "departmentWriting": "Screenwriter",
+    "departmentProduction": "Production"
+  },
+  "auth": {
+    "verify": {
+      "title": "Sign in",
+      "incompleteLink": "Incomplete sign-in link.",
+      "unknownError": "Unknown error.",
+      "success": "✅ You're signed in!",
+      "goToMyList": "Go to My List",
+      "requestNewLink": "Request a new link"
+    }
+  },
+  "trailer": {
+    "button": "Trailer",
+    "iframeTitle": "Trailer"
+  },
+  "ratingStars": {
+    "yourRating": "Your rating:",
+    "notRatedYet": "Not rated yet",
+    "starAriaLabel": "{{n}}/10 — {{label}}"
+  },
+  "ratingTier": {
+    "high": "Favorite",
+    "mid": "Recommended",
+    "low": "Mixed",
+    "star1": "Avoid",
+    "star2": "Bad",
+    "star3": "Weak",
+    "star4": "Meh",
+    "star5": "Passable",
+    "star6": "Decent",
+    "star7": "Good",
+    "star8": "Very good",
+    "star9": "Excellent",
+    "star10": "Masterpiece"
+  },
+  "collection": {
+    "heading": "The saga",
+    "filmsCount_one": "{{count}} film",
+    "filmsCount_other": "{{count}} films"
+  },
+  "countryLanguageFilter": {
+    "allCountries": "All countries",
+    "allLanguages": "All languages"
+  }
+}
