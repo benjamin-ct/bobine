@@ -108,10 +108,15 @@ export default function DiscoverPage() {
   // sorti (indépendant du filtre Films/Séries de la grille de suggestions
   // ci-dessous).
   const continuingSeries = useResumableSeries(watchlist);
+  const continuingSeriesIds = new Set(continuingSeries.map((item) => item.id));
 
   // "Mise en avant" : séries suivies (watchlist incluse, pas seulement
-  // entamées) dont un épisode vient de sortir ou arrive bientôt.
-  const featuredSeries = useFeaturedSeries(watchlist);
+  // entamées) dont un épisode vient de sortir ou arrive bientôt — sauf
+  // celles déjà affichées dans "Reprendre" juste au-dessus, pour ne pas
+  // dupliquer la même série dans les deux rangées.
+  const featuredSeries = useFeaturedSeries(watchlist).filter(
+    ({ item }) => !continuingSeriesIds.has(item.id)
+  );
 
   // Ignore le premier passage : au montage, mediaType "change" (de rien à sa
   // valeur initiale, éventuellement restaurée après un retour arrière) sans
