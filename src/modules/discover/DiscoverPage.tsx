@@ -346,7 +346,7 @@ export default function DiscoverPage() {
         </div>
       )}
       {status === "error" && <ErrorMessage error={error} />}
-      {status === "invalid" && advancedError && <EmptyState label={advancedError} />}
+      {status === "invalid" && advancedError && <EmptyState label={t(advancedError)} />}
       {status === "success" && results.length === 0 && (
         <EmptyState label={t("discoverPage.emptyState")} />
       )}

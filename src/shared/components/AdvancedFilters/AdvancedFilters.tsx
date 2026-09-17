@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FocusEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { getCountries } from "../../../core/api/tmdb.ts";
 import type { Country } from "../../../core/types/tmdb.ts";
 import { clampNumericValue, isRangeInverted } from "../../lib/numericRangeFilter.ts";
@@ -37,15 +38,18 @@ export const EMPTY_ADVANCED_FILTERS: AdvancedFiltersState = {
 // Message explicite affiché (et appel API court-circuité côté pages) dès
 // qu'une plage min/max saisie est incohérente, plutôt que de laisser la
 // recherche retomber silencieusement sur "Aucun résultat".
+// Fonction PURE (pas de useTranslation ici, voir ratingTier.ts) : renvoie
+// une clé i18n (namespace "advancedFilters"), à résoudre via t() côté
+// composant appelant.
 export function getAdvancedFiltersRangeError(filters: AdvancedFiltersState): string | null {
   if (isRangeInverted(filters.yearMin, filters.yearMax)) {
-    return "L'année minimum est supérieure à l'année maximum.";
+    return "advancedFilters.yearRangeError";
   }
   if (isRangeInverted(filters.voteAverageMin, filters.voteAverageMax)) {
-    return "La note minimum est supérieure à la note maximum.";
+    return "advancedFilters.ratingRangeError";
   }
   if (isRangeInverted(filters.runtimeMin, filters.runtimeMax)) {
-    return "La durée minimum est supérieure à la durée maximum.";
+    return "advancedFilters.runtimeRangeError";
   }
   return null;
 }
@@ -56,6 +60,7 @@ interface AdvancedFiltersProps {
 }
 
 export default function AdvancedFilters({ filters, setFilters }: AdvancedFiltersProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
 
@@ -95,18 +100,19 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
   return (
     <div className={styles.wrap}>
       <Chip active={open} onClick={() => setOpen((o) => !o)}>
-        {open ? "▲" : "▼"} Filtres avancés{activeCount > 0 ? ` (${activeCount})` : ""}
+        {open ? "▲" : "▼"} {t("advancedFilters.toggle")}
+        {activeCount > 0 ? ` (${activeCount})` : ""}
       </Chip>
 
       {open && (
         <div className={styles.panel}>
           <div className={styles.field}>
-            <label>Année de sortie</label>
+            <label>{t("advancedFilters.releaseYear")}</label>
             <div className={styles.range}>
               <input
                 type="number"
                 inputMode="numeric"
-                placeholder="Min"
+                placeholder={t("advancedFilters.min")}
                 min={YEAR_MIN}
                 max={YEAR_MAX}
                 value={filters.yearMin}
@@ -117,7 +123,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
               <input
                 type="number"
                 inputMode="numeric"
-                placeholder="Max"
+                placeholder={t("advancedFilters.max")}
                 min={YEAR_MIN}
                 max={YEAR_MAX}
                 value={filters.yearMax}
@@ -128,12 +134,12 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
           </div>
 
           <div className={styles.field}>
-            <label>Note (sur 10)</label>
+            <label>{t("advancedFilters.ratingOutOf10")}</label>
             <div className={styles.range}>
               <input
                 type="number"
                 inputMode="decimal"
-                placeholder="Min"
+                placeholder={t("advancedFilters.min")}
                 min={VOTE_MIN}
                 max={VOTE_MAX}
                 step={0.5}
@@ -145,7 +151,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
               <input
                 type="number"
                 inputMode="decimal"
-                placeholder="Max"
+                placeholder={t("advancedFilters.max")}
                 min={VOTE_MIN}
                 max={VOTE_MAX}
                 step={0.5}
@@ -157,11 +163,11 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
           </div>
 
           <div className={styles.field}>
-            <label>Nombre de votes minimum</label>
+            <label>{t("advancedFilters.minVoteCount")}</label>
             <input
               type="number"
               inputMode="numeric"
-              placeholder="Ex: 100"
+              placeholder={t("advancedFilters.minVoteCountPlaceholder")}
               min={0}
               value={filters.voteCountMin}
               onChange={(e) => update("voteCountMin", e.target.value)}
@@ -170,12 +176,12 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
           </div>
 
           <div className={styles.field}>
-            <label>Durée (minutes)</label>
+            <label>{t("advancedFilters.runtimeMinutes")}</label>
             <div className={styles.range}>
               <input
                 type="number"
                 inputMode="numeric"
-                placeholder="Min"
+                placeholder={t("advancedFilters.min")}
                 min={0}
                 value={filters.runtimeMin}
                 onChange={(e) => update("runtimeMin", e.target.value)}
@@ -185,7 +191,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
               <input
                 type="number"
                 inputMode="numeric"
-                placeholder="Max"
+                placeholder={t("advancedFilters.max")}
                 min={0}
                 value={filters.runtimeMax}
                 onChange={(e) => update("runtimeMax", e.target.value)}
@@ -195,12 +201,12 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
           </div>
 
           <div className={styles.field}>
-            <label>Pays de production</label>
+            <label>{t("advancedFilters.originCountry")}</label>
             <select
               value={filters.originCountry}
               onChange={(e) => update("originCountry", e.target.value)}
             >
-              <option value="">Tous les pays</option>
+              <option value="">{t("advancedFilters.allCountries")}</option>
               {countries.map((c) => (
                 <option key={c.iso_3166_1} value={c.iso_3166_1}>
                   {c.english_name}
@@ -211,13 +217,13 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
 
           {rangeError && (
             <p className={styles.rangeError} role="alert">
-              ⚠️ {rangeError}
+              ⚠️ {t(rangeError)}
             </p>
           )}
 
           {activeCount > 0 && (
             <button type="button" className={styles.reset} onClick={reset}>
-              ✕ Réinitialiser les filtres avancés
+              ✕ {t("advancedFilters.reset")}
             </button>
           )}
         </div>
