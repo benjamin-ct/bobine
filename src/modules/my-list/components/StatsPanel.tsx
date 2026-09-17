@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   getGenres,
   getDetails,
@@ -35,6 +36,7 @@ function extractDirectors(details: Awaited<ReturnType<typeof getDetails>>, media
 }
 
 export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
+  const { t } = useTranslation();
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
   // Distingue "pas encore chargé" de "chargé, ce genre est introuvable" : sans
   // ça, `topGenres` retombe sur "…" le temps du premier fetch — un nom de
@@ -151,48 +153,46 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
   return (
     <div className={styles.grid}>
       <div className={`${styles.ticket} ${styles.span5}`}>
-        <span className={styles.k}>Répartition</span>
+        <span className={styles.k}>{t("statsPanel.distribution")}</span>
         <div className={styles.donutRow}>
           <DonutChart
             centerValue={watched.length}
-            centerLabel="vus"
+            centerLabel={t("statsPanel.watchedLabel")}
             segments={[
-              { label: "Films", value: movieCount, color: DONUT_COLORS.movie },
-              { label: "Séries", value: seriesCount, color: DONUT_COLORS.tv },
+              { label: t("statsPanel.movies"), value: movieCount, color: DONUT_COLORS.movie },
+              { label: t("statsPanel.series"), value: seriesCount, color: DONUT_COLORS.tv },
             ]}
           />
         </div>
         <p className={styles.hint}>
-          {movieCount} film{movieCount > 1 ? "s" : ""} ({filmsPct}%) · {seriesCount} série
-          {seriesCount > 1 ? "s" : ""} ({100 - filmsPct}%)
+          {t("statsPanel.moviesCount", { count: movieCount })} ({filmsPct}%) ·{" "}
+          {t("statsPanel.seriesCount", { count: seriesCount })} ({100 - filmsPct}%)
         </p>
       </div>
 
       <div className={`${styles.ticket} ${styles.span4}`}>
-        <span className={styles.k}>Temps de visionnage</span>
+        <span className={styles.k}>{t("statsPanel.watchTime")}</span>
         <div className={styles.bigNum}>
-          {totalHours} <span className={styles.unit}>heures</span>
+          {totalHours} <span className={styles.unit}>{t("statsPanel.hours")}</span>
         </div>
         <p className={styles.hint}>
-          ≈ {totalDays} jours · {totalEpisodes} épisode{totalEpisodes > 1 ? "s" : ""} de série
-          {knownRuntimeItems.length < watched.length ? " (estimation en cours de complétion)" : ""}
+          ≈ {totalDays} {t("statsPanel.daysUnit")} ·{" "}
+          {t("statsPanel.episodesCount", { count: totalEpisodes })}
+          {knownRuntimeItems.length < watched.length ? t("statsPanel.estimationInProgress") : ""}
         </p>
       </div>
 
       <div className={`${styles.ticket} ${styles.span3}`}>
-        <span className={styles.k}>Note moyenne</span>
+        <span className={styles.k}>{t("statsPanel.averageRating")}</span>
         <div className={styles.bigNum}>
           {averageRating != null ? averageRating.toFixed(1).replace(".", ",") : "—"}
           <span className={styles.unit}>/10</span>
         </div>
-        <p className={styles.hint}>
-          sur {ratedItems.length} titre{ratedItems.length > 1 ? "s" : ""} noté
-          {ratedItems.length > 1 ? "s" : ""}
-        </p>
+        <p className={styles.hint}>{t("statsPanel.ratedCount", { count: ratedItems.length })}</p>
       </div>
 
       <div className={`${styles.ticket} ${styles.span7}`}>
-        <span className={styles.k}>Vus par année</span>
+        <span className={styles.k}>{t("statsPanel.watchedByYear")}</span>
         <div className={styles.bars}>
           {years.length ? (
             years.map(([year, n]) => (
@@ -208,16 +208,16 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
               </div>
             ))
           ) : (
-            <p className={styles.hint}>Aucune donnée pour l'instant.</p>
+            <p className={styles.hint}>{t("statsPanel.noDataYet")}</p>
           )}
         </div>
       </div>
 
       <div className={`${styles.ticket} ${styles.span5}`}>
-        <span className={styles.k}>Genres préférés</span>
+        <span className={styles.k}>{t("statsPanel.topGenres")}</span>
         <div className={styles.genreTags}>
           {!genresLoaded ? (
-            <p className={styles.hint}>Chargement…</p>
+            <p className={styles.hint}>{t("common.loading")}</p>
           ) : topGenres.length ? (
             topGenres.map((g) => (
               <span key={g.id} className={styles.gtag}>
@@ -225,13 +225,13 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
               </span>
             ))
           ) : (
-            <p className={styles.hint}>Aucun genre pour l'instant.</p>
+            <p className={styles.hint}>{t("statsPanel.noGenreYet")}</p>
           )}
         </div>
       </div>
 
       <div className={`${styles.ticket} ${styles.span12}`}>
-        <span className={styles.k}>Vus récemment</span>
+        <span className={styles.k}>{t("statsPanel.recentlyWatched")}</span>
         <div className={styles.recentRow}>
           {recent.map((item) => {
             const accentKey = posterAccentFromGenres(item.genreIds, `${item.mediaType}:${item.id}`);
