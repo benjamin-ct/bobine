@@ -7,8 +7,11 @@ import {
   getWatchProvidersList,
   posterUrl,
   formatFullDate,
+  dateLocaleTag,
+  type DateLocale,
 } from "../../core/api/tmdb.ts";
 import { useRegion } from "../../core/context/RegionContext.tsx";
+import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
@@ -76,9 +79,9 @@ function dedupe(items: MediaItem[]): MediaItem[] {
   });
 }
 
-function monthLabel(dateStr: string): string {
+function monthLabel(dateStr: string, locale: DateLocale): string {
   const d = new Date(dateStr);
-  const label = d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const label = d.toLocaleDateString(dateLocaleTag(locale), { month: "long", year: "numeric" });
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
@@ -96,6 +99,7 @@ async function fetchPages(
 
 function TimelineItem({ item }: { item: MediaItem }) {
   const { isInWatchlist, toggleWatchlist } = useLibrary();
+  const { locale } = useLocale();
   const title = item.title || item.name || "Titre inconnu";
   const date = item.release_date || item.first_air_date;
   const notifying = isInWatchlist(item.mediaType, item.id);
@@ -107,7 +111,9 @@ function TimelineItem({ item }: { item: MediaItem }) {
         <b>{date ? new Date(date).getDate() : "—"}</b>
         <span>
           {date
-            ? new Date(date).toLocaleDateString("fr-FR", { month: "short" }).replace(".", "")
+            ? new Date(date)
+                .toLocaleDateString(dateLocaleTag(locale), { month: "short" })
+                .replace(".", "")
             : ""}
         </span>
       </div>
@@ -121,7 +127,7 @@ function TimelineItem({ item }: { item: MediaItem }) {
       <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.body}>
         <div className={styles.title}>{title}</div>
         <div className={styles.sub}>
-          {formatFullDate(date) || (date ? date.slice(0, 4) : "Date à confirmer")}
+          {formatFullDate(date, locale) || (date ? date.slice(0, 4) : "Date à confirmer")}
         </div>
       </Link>
       <button
@@ -170,6 +176,7 @@ export default function ComingSoonPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const { region } = useRegion();
+  const { locale } = useLocale();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
   const { filterExcluded } = useExcludedTitles();
@@ -376,7 +383,7 @@ export default function ComingSoonPage() {
           <div className={styles.timeline}>
             {visibleResults.map((item) => {
               const date = item.release_date || item.first_air_date;
-              const label = date ? monthLabel(date) : "Date à confirmer";
+              const label = date ? monthLabel(date, locale) : "Date à confirmer";
               const showMonthHeading = label !== currentMonth;
               currentMonth = label;
               return (

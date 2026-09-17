@@ -16,8 +16,10 @@ export {
   estimateRuntimeMinutes,
   getFrenchTheatricalDateFromDetails,
   formatFullDate,
+  dateLocaleTag,
   theatricalStatusFromDate,
 } from "./movieMeta.ts";
+export type { DateLocale } from "./movieMeta.ts";
 export { posterUrl, backdropUrl, logoUrl, IMG_BASE, TmdbConfigError } from "./tmdbClient.ts";
 import { tmdbFetch, IS_DEV } from "./tmdbClient.ts";
 
