@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getWatchProvidersList } from "../../../core/api/tmdb.ts";
+import { withGlobalProviders } from "../../../core/api/globalProviders.ts";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useFavoriteProviders } from "../../../core/context/FavoriteProvidersContext.tsx";
 import { Disclosure } from "../../../shared/components/index.ts";
@@ -41,7 +42,8 @@ export default function FavoriteProvidersSettings() {
             merged.set(p.id, p);
           }
         }
-        setProviders([...merged.values()].sort((a, b) => a.name.localeCompare(b.name)));
+        const regional = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
+        setProviders(withGlobalProviders(regional));
         setStatus("success");
       })
       .catch(() => !cancelled && setStatus("error"));
