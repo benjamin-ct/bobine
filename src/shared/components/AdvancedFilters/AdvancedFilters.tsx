@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FocusEvent } from "react";
 import { getCountries } from "../../../core/api/tmdb.ts";
 import type { Country } from "../../../core/types/tmdb.ts";
+import { regionName } from "../../../core/context/RegionContext.tsx";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { clampNumericValue, isRangeInverted } from "../../lib/numericRangeFilter.ts";
 import Chip from "../Chip/Chip.tsx";
 import styles from "./AdvancedFilters.module.css";
@@ -56,6 +58,7 @@ interface AdvancedFiltersProps {
 }
 
 export default function AdvancedFilters({ filters, setFilters }: AdvancedFiltersProps) {
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
 
@@ -68,6 +71,16 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
       cancelled = true;
     };
   }, []);
+
+  // Nom localisé (locale active) plutôt que le english_name figé renvoyé par
+  // TMDB, avec repli sur ce dernier si Intl.DisplayNames est indisponible.
+  const localizedCountries = useMemo(
+    () =>
+      countries
+        .map((c) => ({ ...c, displayName: regionName(c.iso_3166_1, locale) || c.english_name }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName, locale)),
+    [countries, locale]
+  );
 
   const activeCount = Object.values(filters).filter((v) => v !== "" && v != null).length;
   const rangeError = getAdvancedFiltersRangeError(filters);
@@ -201,9 +214,9 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
               onChange={(e) => update("originCountry", e.target.value)}
             >
               <option value="">Tous les pays</option>
-              {countries.map((c) => (
+              {localizedCountries.map((c) => (
                 <option key={c.iso_3166_1} value={c.iso_3166_1}>
-                  {c.english_name}
+                  {c.displayName}
                 </option>
               ))}
             </select>

@@ -5,6 +5,7 @@ import { MediaCard, Dropdown, EmptyState } from "../../../shared/components/inde
 import dropdownStyles from "../../../shared/components/Dropdown/Dropdown.module.css";
 import { libraryItemToMediaItem } from "../../../shared/lib/libraryItem.ts";
 import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
@@ -31,6 +32,7 @@ function makeKey(item: LibraryItem): string {
 
 export default function CustomListPanel({ list, onDeleted }: CustomListPanelProps) {
   const { getListItems, deleteList, renameList, reorderList } = useLibrary();
+  const { locale } = useLocale();
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(list.name);
   const [sortMode, setSortMode] = useState<SortMode>("manual");
@@ -237,7 +239,9 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
                   <span className={styles.rowTitle}>{item.title}</span>
                   <span className={styles.rowSub}>
                     {item.mediaType === "movie" ? "Film" : "Série"}
-                    {item.date ? ` · ${formatFullDate(item.date) || item.date.slice(0, 4)}` : ""}
+                    {item.date
+                      ? ` · ${formatFullDate(item.date, locale) || item.date.slice(0, 4)}`
+                      : ""}
                   </span>
                 </Link>
               </div>

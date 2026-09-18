@@ -24,6 +24,7 @@ import CollectionSection from "./components/CollectionSection.tsx";
 import DetailSkeleton from "./components/DetailSkeleton.tsx";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { regionName as countryDisplayName, useRegion } from "../../core/context/RegionContext.tsx";
+import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
@@ -61,6 +62,7 @@ export default function DetailPage() {
     createList,
   } = useLibrary();
   const { region, regionName } = useRegion();
+  const { locale } = useLocale();
   const { excludedGenreIds } = useExcludedGenres();
   const { isExcludedTitle, toggleExcludedTitle } = useExcludedTitles();
   const recommendationsRef = useRef<HTMLDivElement>(null);
@@ -155,7 +157,7 @@ export default function DetailPage() {
 
   const theatricalDate = mediaType === "movie" ? getFrenchTheatricalDateFromDetails(details) : null;
   const theatricalStatus = theatricalStatusFromDate(theatricalDate);
-  const theatricalDateFormatted = theatricalDate ? formatFullDate(theatricalDate) : null;
+  const theatricalDateFormatted = theatricalDate ? formatFullDate(theatricalDate, locale) : null;
   const theatricalMessage = theatricalStatus
     ? {
         in_theaters: `🎬 Actuellement au cinéma (sorti le ${theatricalDateFormatted})`,
@@ -243,7 +245,9 @@ export default function DetailPage() {
             <h1 className={styles.title}>
               {title}{" "}
               {date && (
-                <span className={styles.year}>({formatFullDate(date) || date.slice(0, 4)})</span>
+                <span className={styles.year}>
+                  ({formatFullDate(date, locale) || date.slice(0, 4)})
+                </span>
               )}
             </h1>
             <p className={styles.meta}>
@@ -257,7 +261,7 @@ export default function DetailPage() {
               {runtime ? ` · ${runtime} min${mediaType === "tv" ? "/épisode" : ""}` : ""}
               {details.production_countries && details.production_countries.length > 0
                 ? ` · ${details.production_countries
-                    .map((c) => countryDisplayName(c.iso_3166_1) || c.name)
+                    .map((c) => countryDisplayName(c.iso_3166_1, locale) || c.name)
                     .join(", ")}`
                 : ""}
               {details.vote_average && tier ? (

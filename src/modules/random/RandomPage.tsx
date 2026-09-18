@@ -12,6 +12,7 @@ import {
 } from "../../core/api/tmdb.ts";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../core/context/RegionContext.tsx";
+import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
@@ -62,6 +63,7 @@ export default function RandomPage() {
 
   const { watchedIds, isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
   const { region } = useRegion();
+  const { locale } = useLocale();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
   const { filterExcluded } = useExcludedTitles();
@@ -279,7 +281,7 @@ export default function RandomPage() {
             <p className={styles.badge}>Tirage du soir</p>
             <h2 className={styles.title}>{title}</h2>
             <p className={styles.meta}>
-              {date ? formatFullDate(date) || date.slice(0, 4) : "—"}
+              {date ? formatFullDate(date, locale) || date.slice(0, 4) : "—"}
               {pickDetails?.genres?.length
                 ? ` · ${pickDetails.genres.map((g) => g.name).join(", ")}`
                 : ""}

@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { posterUrl, getPerson, getPersonCredits, getGenres } from "../../core/api/tmdb.ts";
+import {
+  posterUrl,
+  getPerson,
+  getPersonCredits,
+  getGenres,
+  dateLocaleTag,
+} from "../../core/api/tmdb.ts";
+import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { MediaCard, Loading, ErrorMessage, EmptyState } from "../../shared/components/index.ts";
 import FrequentCollaborators from "./components/FrequentCollaborators.tsx";
 import { posterAccentFromSeed } from "../../shared/lib/posterAccent.ts";
@@ -48,6 +55,7 @@ function sortByDateDesc<T extends { release_date?: string; first_air_date?: stri
 export default function PersonPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { locale } = useLocale();
   const [person, setPerson] = useState<PersonDetails | null>(null);
   const [credits, setCredits] = useState<PersonCredits | null>(null);
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
@@ -187,7 +195,9 @@ export default function PersonPage() {
           <h1 className={styles.name}>{person.name}</h1>
           <div className={styles.facts}>
             {person.birthday && (
-              <span>Né·e le {new Date(person.birthday).toLocaleDateString("fr-FR")}</span>
+              <span>
+                Né·e le {new Date(person.birthday).toLocaleDateString(dateLocaleTag(locale))}
+              </span>
             )}
             {person.place_of_birth && <span>{person.place_of_birth}</span>}
           </div>
