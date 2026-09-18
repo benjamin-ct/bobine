@@ -184,6 +184,43 @@ export function sessionCookieHeader(
   return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`;
 }
 
+// Langue du destinataire de l'email : celle active dans son navigateur au
+// moment où il a lui-même demandé le lien (voir handleRequestLink), pas une
+// donnée stockée en base — contrairement aux notifications push envoyées
+// par le scheduler à retardement, le destinataire ici EST la personne qui
+// vient de faire la demande, dans la même requête.
+export type EmailLocale = "fr" | "en";
+
+const MAGIC_LINK_EMAIL_CONTENT: Record<
+  EmailLocale,
+  { subject: string; html: (link: string, code: string) => string }
+> = {
+  fr: {
+    subject: "Ton lien de connexion Bobine 🎬",
+    html: (link, code) => `
+        <p>Clique sur le lien ci-dessous pour te connecter à Bobine (valable 15 minutes) :</p>
+        <p><a href="${link}">${link}</a></p>
+        <p>Si tu as installé Bobine sur ton écran d'accueil (iPhone/Android), le lien
+        ci-dessus risque de s'ouvrir dans ton navigateur au lieu de l'app installée.
+        Dans ce cas, ouvre plutôt l'app Bobine et entre ce code à la place :</p>
+        <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+        <p>Si tu n'es pas à l'origine de cette demande, ignore cet email.</p>
+      `,
+  },
+  en: {
+    subject: "Your Bobine sign-in link 🎬",
+    html: (link, code) => `
+        <p>Click the link below to sign in to Bobine (valid for 15 minutes):</p>
+        <p><a href="${link}">${link}</a></p>
+        <p>If you installed Bobine on your home screen (iPhone/Android), the link
+        above might open in your browser instead of the installed app.
+        In that case, open the Bobine app instead and enter this code:</p>
+        <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+      `,
+  },
+};
+
 // Envoie l'email du lien magique via l'API Resend (https://resend.com).
 // Sans RESEND_API_KEY configurée (dev local), on ne bloque pas le flux :
 // on renvoie le jeton directement dans la réponse API pour pouvoir tester
@@ -194,12 +231,14 @@ export async function sendMagicLinkEmail(
   env: Env,
   email: string,
   link: string,
-  code: string
+  code: string,
+  locale: EmailLocale
 ): Promise<{ skipped: boolean }> {
   if (!env.RESEND_API_KEY) {
     return { skipped: true };
   }
 
+  const content = MAGIC_LINK_EMAIL_CONTENT[locale];
   const from = env.RESEND_FROM_EMAIL || "Bobine <onboarding@resend.dev>";
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -210,16 +249,8 @@ export async function sendMagicLinkEmail(
     body: JSON.stringify({
       from,
       to: [email],
-      subject: "Ton lien de connexion Bobine 🎬",
-      html: `
-        <p>Clique sur le lien ci-dessous pour te connecter à Bobine (valable 15 minutes) :</p>
-        <p><a href="${link}">${link}</a></p>
-        <p>Si tu as installé Bobine sur ton écran d'accueil (iPhone/Android), le lien
-        ci-dessus risque de s'ouvrir dans ton navigateur au lieu de l'app installée.
-        Dans ce cas, ouvre plutôt l'app Bobine et entre ce code à la place :</p>
-        <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-        <p>Si tu n'es pas à l'origine de cette demande, ignore cet email.</p>
-      `,
+      subject: content.subject,
+      html: content.html(link, code),
     }),
   });
   if (!res.ok) {

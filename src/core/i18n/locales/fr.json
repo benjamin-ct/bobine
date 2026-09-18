@@ -58,7 +58,9 @@
       "success": "✅ Tu es connecté·e !",
       "goToMyList": "Aller à Ma liste",
       "requestNewLink": "Redemander un lien"
-    }
+    },
+    "updateDisplayNameError": "Impossible d'enregistrer le nom affiché.",
+    "requestLinkError": "Impossible d'envoyer le lien de connexion."
   },
   "trailer": {
     "button": "Bande-annonce",

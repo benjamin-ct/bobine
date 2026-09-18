@@ -7,7 +7,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { getRecaptchaToken } from "../lib/recaptcha.ts";
+import { useLocale } from "./LocaleContext.tsx";
 
 export type AuthStatus = "loading" | "authenticated" | "anonymous";
 
@@ -46,6 +48,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // besoin de `credentials: "include"` ni de gestion CORS.
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  const { locale } = useLocale();
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [email, setEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -94,19 +98,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Demande un lien de connexion par email. Renvoie la réponse du serveur
   // (peut contenir `devLink` en local sans service d'email configuré).
-  const requestLink = useCallback(async (emailToSend: string): Promise<RequestLinkResult> => {
-    const recaptchaToken = await getRecaptchaToken("request_link");
-    const res = await fetch("/api/auth/request-link", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: emailToSend, recaptchaToken }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data.error || "Impossible d'envoyer le lien de connexion.");
-    }
-    return data;
-  }, []);
+  const requestLink = useCallback(
+    async (emailToSend: string): Promise<RequestLinkResult> => {
+      const recaptchaToken = await getRecaptchaToken("request_link");
+      const res = await fetch("/api/auth/request-link", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: emailToSend, recaptchaToken, locale }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || t("auth.requestLinkError"));
+      }
+      return data;
+    },
+    [locale, t]
+  );
 
   // Consomme le jeton (lien cliqué) ou le code (saisi à la main — voir
   // Login, utile quand le lien s'ouvre dans le navigateur au lieu de
@@ -164,10 +171,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || "Impossible d'enregistrer le nom affiché.");
+      throw new Error(data.error || t("auth.updateDisplayNameError"));
     }
     setDisplayName(data.displayName);
-  }, []);
+  }, [t]);
 
   return (
     <AuthContext.Provider

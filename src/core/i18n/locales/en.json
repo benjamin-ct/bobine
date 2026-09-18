@@ -58,7 +58,9 @@
       "success": "✅ You're signed in!",
       "goToMyList": "Go to My List",
       "requestNewLink": "Request a new link"
-    }
+    },
+    "updateDisplayNameError": "Unable to save the display name.",
+    "requestLinkError": "Unable to send the sign-in link."
   },
   "trailer": {
     "button": "Trailer",

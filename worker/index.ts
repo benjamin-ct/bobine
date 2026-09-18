@@ -32,7 +32,14 @@ import {
   getUserFromRequest,
   sessionCookieHeader,
   sendMagicLinkEmail,
+  type EmailLocale,
 } from "./auth.ts";
+
+const EMAIL_LOCALES: EmailLocale[] = ["fr", "en"];
+
+function sanitizeEmailLocale(value: unknown): EmailLocale {
+  return EMAIL_LOCALES.includes(value as EmailLocale) ? (value as EmailLocale) : "fr";
+}
 import { checkRateLimit, getClientIp } from "./rate-limit.ts";
 import {
   sanitizeLibraryPayload,
@@ -339,6 +346,7 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
   if (!isValidEmail(email)) {
     return json({ error: "Adresse email invalide." }, 400);
   }
+  const locale = sanitizeEmailLocale(body?.locale);
 
   const recaptcha = await verifyRecaptcha(
     env,
@@ -366,7 +374,7 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
   const link = `${new URL(request.url).origin}/auth/verify?token=${token}`;
 
   try {
-    const { skipped } = await sendMagicLinkEmail(env, email, link, code);
+    const { skipped } = await sendMagicLinkEmail(env, email, link, code, locale);
     // Uniquement quand RESEND_API_KEY n'est pas configurée (dev local) : pas
     // de vraie boîte mail à disposition, donc on renvoie le lien et le code
     // directement pour pouvoir tester le flux. Ne se produit jamais en
