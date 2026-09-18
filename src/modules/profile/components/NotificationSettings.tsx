@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../../../core/i18n/i18n.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { logWarn } from "../../../core/logger.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
@@ -68,7 +69,8 @@ async function fullSyncSubscription(
   endpoint: string,
   keys: PushSubscriptionJSON["keys"],
   watchlist: LibraryItem[],
-  watched: LibraryItem[]
+  watched: LibraryItem[],
+  locale: string
 ): Promise<void> {
   const res = await fetch("/api/subscribe", {
     method: "POST",
@@ -78,11 +80,24 @@ async function fullSyncSubscription(
       keys,
       watchlist: watchlist.map(toWatchlistPayload),
       favoriteGenres: computeFavoriteGenres(watched),
+      locale,
     }),
   });
   if (!res.ok) {
     throw new Error(i18n.t("notificationSettings.syncFailed", { status: res.status }));
   }
+}
+
+// Langue à utiliser par le scheduler pour les notifications envoyées à cet
+// abonnement (voir worker/scheduled.ts) : resynchronisée à chaque
+// changement de langue tant que les notifications sont actives, en plus de
+// l'envoi initial fait par fullSyncSubscription.
+async function syncSubscriptionLocale(endpoint: string, locale: string): Promise<void> {
+  await fetch("/api/subscribe/locale", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ endpoint, locale }),
+  }).catch((err) => logWarn("Bobine : resynchronisation de la langue des notifs échouée.", err));
 }
 
 interface SyncedState {
@@ -153,6 +168,7 @@ async function syncSubscriptionDelta(
 export default function NotificationSettings() {
   const { t } = useTranslation();
   const { watchlist, watched } = useLibrary();
+  const { locale } = useLocale();
   const [endpoint, setEndpoint] = useState<string | null>(() =>
     localStorage.getItem(ENDPOINT_STORAGE_KEY)
   );
@@ -160,6 +176,7 @@ export default function NotificationSettings() {
   const [error, setError] = useState<string | null>(null);
   const isFirstSync = useRef(true);
   const lastSyncedRef = useRef<SyncedState>({ watchlistKeys: new Set(), genreKeys: new Set() });
+  const isFirstLocaleSync = useRef(true);
 
   // Resynchronise la watchlist / les genres favoris côté serveur à chaque
   // changement, tant que les notifications sont actives.
@@ -182,6 +199,20 @@ export default function NotificationSettings() {
       })
     );
   }, [endpoint, watchlist, watched]);
+
+  // Resynchronise la langue des notifications quand l'utilisateur la change
+  // en cours de route (le premier envoi a lieu via fullSyncSubscription, à
+  // l'activation).
+  useEffect(() => {
+    if (!endpoint) {
+      return;
+    }
+    if (isFirstLocaleSync.current) {
+      isFirstLocaleSync.current = false;
+      return;
+    }
+    syncSubscriptionLocale(endpoint, locale);
+  }, [endpoint, locale]);
 
   if (!isSupported()) {
     return <p className={styles.hint}>{t("notificationSettings.unsupported")}</p>;
@@ -217,7 +248,7 @@ export default function NotificationSettings() {
       if (!subEndpoint || !keys) {
         throw new Error(t("notificationSettings.incompleteSubscription"));
       }
-      await fullSyncSubscription(subEndpoint, keys, watchlist, watched);
+      await fullSyncSubscription(subEndpoint, keys, watchlist, watched, locale);
       lastSyncedRef.current = keysOf(watchlist, watched);
 
       localStorage.setItem(ENDPOINT_STORAGE_KEY, subEndpoint);

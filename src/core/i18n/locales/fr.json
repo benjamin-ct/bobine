@@ -79,6 +79,7 @@
     "verifying": "Vérification…",
     "submitCode": "Valider le code",
     "emailLabel": "Adresse email",
+    "emailPlaceholder": "toi@exemple.com",
     "sending": "Envoi…",
     "submitEmail": "Recevoir mon lien de connexion"
   },

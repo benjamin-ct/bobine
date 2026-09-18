@@ -79,6 +79,7 @@
     "verifying": "Verifying…",
     "submitCode": "Submit code",
     "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
     "sending": "Sending…",
     "submitEmail": "Get my sign-in link"
   },
