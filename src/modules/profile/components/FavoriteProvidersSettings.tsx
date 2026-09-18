@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getWatchProvidersList } from "../../../core/api/tmdb.ts";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useFavoriteProviders } from "../../../core/context/FavoriteProvidersContext.tsx";
@@ -11,6 +12,7 @@ import styles from "./SettingsPanel.module.css";
 // (chip "🎯 Mes plateformes" dans FilterBar) plutôt que de chercher dans le
 // menu déroulant d'~100 entrées à chaque visite.
 export default function FavoriteProvidersSettings() {
+  const { t } = useTranslation();
   const { region } = useRegion();
   const { favoriteProviderIds, toggleFavoriteProvider } = useFavoriteProviders();
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
@@ -57,20 +59,20 @@ export default function FavoriteProvidersSettings() {
 
   return (
     <Disclosure
-      summary="Mes plateformes"
-      meta={`${favoriteProviderIds.length} active${favoriteProviderIds.length > 1 ? "s" : ""}`}
+      summary={t("favoriteProvidersSettings.title")}
+      meta={t("favoriteProvidersSettings.activeCount", { count: favoriteProviderIds.length })}
       defaultOpen={false}
       onToggle={(open) => open && setLoaded(true)}
     >
-      <p>Cochez les services que vous avez pour filtrer « disponible chez moi » en un clic.</p>
-      {status === "loading" && <p>Chargement…</p>}
-      {status === "error" && <p>Impossible de charger la liste des plateformes.</p>}
+      <p>{t("favoriteProvidersSettings.description")}</p>
+      {status === "loading" && <p>{t("common.loading")}</p>}
+      {status === "error" && <p>{t("favoriteProvidersSettings.loadError")}</p>}
       {status === "success" && (
         <>
           <input
             type="search"
             className={styles.search}
-            placeholder="Rechercher une plateforme…"
+            placeholder={t("favoriteProvidersSettings.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

@@ -310,5 +310,34 @@
     "renameButton": "✏️ Renommer",
     "deleteButton": "🗑️ Supprimer la liste",
     "emptyState": "« {{name}} » est vide. Ouvrez un titre et utilisez « Ajouter à… » pour le ranger ici."
+  },
+  "favoriteProvidersSettings": {
+    "title": "Mes plateformes",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} actives",
+    "description": "Cochez les services que vous avez pour filtrer « disponible chez moi » en un clic.",
+    "loadError": "Impossible de charger la liste des plateformes.",
+    "searchPlaceholder": "Rechercher une plateforme…"
+  },
+  "excludedTitlesSettings": {
+    "title": "Titres exclus",
+    "excludedCount_one": "{{count}} exclu",
+    "excludedCount_other": "{{count}} exclus",
+    "description": "Ces titres n'apparaîtront plus dans vos suggestions. Ajoutez-en depuis le bouton « Exclure ce titre » sur la fiche d'un film ou d'une série.",
+    "empty": "Aucun titre exclu pour l'instant.",
+    "reincludeTitle": "Réintégrer ce titre",
+    "unknownTitle": "Titre #{{id}}"
+  },
+  "notificationSettings": {
+    "unsupported": "Les notifications push ne sont pas supportées par ce navigateur.",
+    "permissionDenied": "Permission refusée. Autorise les notifications dans les réglages du navigateur pour ce site.",
+    "syncFailed": "Synchronisation échouée ({{status}})",
+    "keyFetchError": "Impossible de récupérer la clé du serveur.",
+    "incompleteSubscription": "Abonnement push incomplet.",
+    "disableButton": "🔔 Notifications activées — désactiver",
+    "enabledHint": "Tu seras prévenu·e quand un titre de ta liste \"Envie de voir\" arrive en streaming, pour les nouveautés dans tes genres préférés, et pour les grosses sorties du moment.",
+    "enabling": "Activation…",
+    "enableButton": "🔕 Activer les notifications",
+    "disabledHint": "Sois prévenu·e des nouveautés même sans avoir l'app ouverte."
   }
 }

@@ -310,5 +310,34 @@
     "renameButton": "✏️ Rename",
     "deleteButton": "🗑️ Delete list",
     "emptyState": "\"{{name}}\" is empty. Open a title and use \"Add to…\" to file it here."
+  },
+  "favoriteProvidersSettings": {
+    "title": "My platforms",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} active",
+    "description": "Check the services you have to filter \"available to me\" in one click.",
+    "loadError": "Unable to load the list of platforms.",
+    "searchPlaceholder": "Search for a platform…"
+  },
+  "excludedTitlesSettings": {
+    "title": "Excluded titles",
+    "excludedCount_one": "{{count}} excluded",
+    "excludedCount_other": "{{count}} excluded",
+    "description": "These titles will no longer appear in your suggestions. Add some via the \"Exclude this title\" button on a movie or show's page.",
+    "empty": "No excluded titles yet.",
+    "reincludeTitle": "Bring this title back",
+    "unknownTitle": "Title #{{id}}"
+  },
+  "notificationSettings": {
+    "unsupported": "Push notifications are not supported by this browser.",
+    "permissionDenied": "Permission denied. Allow notifications in your browser settings for this site.",
+    "syncFailed": "Sync failed ({{status}})",
+    "keyFetchError": "Unable to retrieve the server key.",
+    "incompleteSubscription": "Incomplete push subscription.",
+    "disableButton": "🔔 Notifications enabled — disable",
+    "enabledHint": "You'll be notified when a title from your \"Want to watch\" list becomes available to stream, for new releases in your favorite genres, and for major current releases.",
+    "enabling": "Enabling…",
+    "enableButton": "🔕 Enable notifications",
+    "disabledHint": "Get notified about new releases even without the app open."
   }
 }
