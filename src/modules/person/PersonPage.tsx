@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { posterUrl, getPerson, getPersonCredits, getGenres } from "../../core/api/tmdb.ts";
 import { MediaCard, Loading, ErrorMessage, EmptyState } from "../../shared/components/index.ts";
 import FrequentCollaborators from "./components/FrequentCollaborators.tsx";
@@ -46,6 +47,7 @@ function sortByDateDesc<T extends { release_date?: string; first_air_date?: stri
 }
 
 export default function PersonPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [person, setPerson] = useState<PersonDetails | null>(null);
@@ -150,8 +152,8 @@ export default function PersonPage() {
   const accentKey = posterAccentFromSeed(person.name);
   const job =
     person.known_for_department === "Directing"
-      ? "Réalisateur/Réalisatrice"
-      : person.known_for_department || "Personnalité";
+      ? t("personPage.directorRole")
+      : person.known_for_department || t("personPage.personality");
 
   return (
     <div className={styles.page}>
@@ -165,7 +167,7 @@ export default function PersonPage() {
           navigate(-1);
         }}
       >
-        ← Retour
+        {t("personPage.back")}
       </Link>
 
       <div className={`${styles.hero} ${posterStyles[accentKey]}`}>
@@ -187,7 +189,11 @@ export default function PersonPage() {
           <h1 className={styles.name}>{person.name}</h1>
           <div className={styles.facts}>
             {person.birthday && (
-              <span>Né·e le {new Date(person.birthday).toLocaleDateString("fr-FR")}</span>
+              <span>
+                {t("personPage.bornOn", {
+                  date: new Date(person.birthday).toLocaleDateString("fr-FR"),
+                })}
+              </span>
             )}
             {person.place_of_birth && <span>{person.place_of_birth}</span>}
           </div>
@@ -195,15 +201,15 @@ export default function PersonPage() {
           <div className={styles.statRow}>
             <div className={styles.stat}>
               <b>{stats.total}</b>
-              <span>Titres</span>
+              <span>{t("personPage.titles")}</span>
             </div>
             <div className={styles.stat}>
               <b>{stats.avgRating != null ? stats.avgRating.toFixed(1) : "—"}</b>
-              <span>Note moyenne</span>
+              <span>{t("personPage.averageRating")}</span>
             </div>
             <div className={styles.stat}>
               <b>{stats.topGenre || "—"}</b>
-              <span>Genre fétiche</span>
+              <span>{t("personPage.favoriteGenre")}</span>
             </div>
           </div>
         </div>
@@ -211,10 +217,13 @@ export default function PersonPage() {
 
       <section className={styles.section}>
         <h3>
-          Filmographie <span className={styles.count}>· {asActor.length} titres</span>
+          {t("personPage.filmography")}{" "}
+          <span className={styles.count}>
+            · {t("personPage.titlesCount", { count: asActor.length })}
+          </span>
         </h3>
         {asActor.length === 0 ? (
-          <EmptyState label="Aucune apparition connue." />
+          <EmptyState label={t("personPage.noKnownAppearance")} />
         ) : (
           <div className={gridStyles.grid}>
             {asActor.map((item) => (
@@ -229,7 +238,7 @@ export default function PersonPage() {
 
       {asCrew.length > 0 && (
         <section className={styles.section}>
-          <h3>Comme réalisateur·rice/scénariste</h3>
+          <h3>{t("personPage.asDirectorWriter")}</h3>
           <div className={gridStyles.grid}>
             {asCrew.map((item) => (
               <MediaCard

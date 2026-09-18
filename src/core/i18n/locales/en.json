@@ -1,5 +1,6 @@
 {
   "common": {
+    "unknownTitle": "Unknown title",
     "loading": "Loading…",
     "errorGeneric": "Something went wrong.",
     "close": "Close"
@@ -491,5 +492,84 @@
       "title": "Changes to this policy",
       "text": "This policy may evolve along with the service, in particular if new tools (audience measurement, crowdfunding...) are added. The date of the last update is shown at the top of this page."
     }
+  },
+  "mediaCard": {
+    "inTheaters": "🎬 In theaters",
+    "upcomingTheatrical": "🗓️ Coming soon to theaters",
+    "watchedBadge": "✔ Watched",
+    "movie": "Movie",
+    "series": "Series",
+    "upcomingFallback": "Theaters",
+    "unknownReleaseStatus": "❔ Release not announced yet",
+    "wantToWatch": "Want to watch",
+    "wantToWatchOn": "★ Want to watch",
+    "wantToWatchOff": "☆ Want to watch",
+    "markAsWatched": "Mark as watched",
+    "watchedOn": "✔ Watched",
+    "watchedOff": "○ Watched"
+  },
+  "detailPage": {
+    "back": "← Back",
+    "seasonsCount_one": "{{count}} season",
+    "seasonsCount_other": "{{count}} seasons",
+    "episodesCount": "{{count}} episodes",
+    "runtimeMinutes": "{{count}} min",
+    "perEpisodeSuffix": "/episode",
+    "votesCount_one": "{{formattedCount}} vote",
+    "votesCount_other": "{{formattedCount}} votes",
+    "inTheatersNow": "🎬 Currently in theaters (released on {{date}})",
+    "upcomingTheatrical": "🗓️ Theatrical release planned for {{date}}",
+    "pastTheatrical": "Released in theaters on {{date}}",
+    "noOverview": "No synopsis available.",
+    "watchedOn": "✔ Watched",
+    "watchedOff": "○ Mark as watched",
+    "wantToWatchOn": "★ Want to watch",
+    "wantToWatchOff": "☆ Want to watch",
+    "addTo": "Add to…",
+    "addToListHeading": "Add to a list",
+    "noListsYet": "No lists yet.",
+    "createListPlaceholder": "Create a list…",
+    "create": "Create",
+    "similar": "🔁 Similar",
+    "excludeTitleHint": "Stop suggesting this title",
+    "excludedReinclude": "Excluded title — bring it back",
+    "excludeTitle": "Exclude this title",
+    "whereToWatch": "Where to watch",
+    "directing": "Directing",
+    "createdBy": "Created by",
+    "directorRole": "Director",
+    "creatorRole": "Creator",
+    "mainCast": "Main cast",
+    "showFullCast": "Show full cast ({{count}} more)",
+    "ifYouLiked": "If you liked \"{{title}}\""
+  },
+  "personPage": {
+    "back": "← Back",
+    "directorRole": "Director",
+    "personality": "Personality",
+    "bornOn": "Born on {{date}}",
+    "titles": "Titles",
+    "averageRating": "Average rating",
+    "favoriteGenre": "Favorite genre",
+    "filmography": "Filmography",
+    "titlesCount_one": "{{count}} title",
+    "titlesCount_other": "{{count}} titles",
+    "noKnownAppearance": "No known appearances.",
+    "asDirectorWriter": "As director/writer"
+  },
+  "frequentCollaborators": {
+    "title": "Frequently seen with",
+    "searching": "Looking for collaborators…",
+    "titlesTogether_one": "{{count}} title together",
+    "titlesTogether_other": "{{count}} titles together"
+  },
+  "episodeTracker": {
+    "title": "Episodes",
+    "watchedCount": "({{watched}}/{{total}} watched)",
+    "seasonNumber": "Season {{number}}",
+    "uncheckAll": "Uncheck all",
+    "markAllWatched": "Mark all as watched",
+    "untitled": "Untitled",
+    "noEpisodesFound": "No episodes found for this season."
   }
 }

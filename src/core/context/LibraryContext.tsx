@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext.tsx";
 import { getDetails } from "../api/tmdb.ts";
 import { logError, logWarn } from "../logger.ts";
@@ -238,6 +239,7 @@ function mergeCustomLists(local: CustomListMap, remote: CustomListMap): CustomLi
 }
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const { status: authStatus, email } = useAuth();
   const [state, setState] = useState<LibraryState>(loadInitialState);
   // Évite d'écraser le localStorage dès le premier rendu : on ne persiste
@@ -345,7 +347,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
             recovered.push({
               id: Number(rawId),
               mediaType: mediaType as MediaType,
-              title: details.title || details.name || "Titre inconnu",
+              title: details.title || details.name || t("common.unknownTitle"),
               posterPath: details.poster_path ?? null,
               date: details.release_date || details.first_air_date,
               genreIds: details.genres?.map((g) => g.id) || [],

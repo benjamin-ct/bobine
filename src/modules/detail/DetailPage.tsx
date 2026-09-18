@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   backdropUrl,
   posterUrl,
@@ -38,6 +39,7 @@ import styles from "./DetailPage.module.css";
 const MAIN_CAST_COUNT = 12;
 
 export default function DetailPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
   const [details, setDetails] = useState<MediaDetails | null>(null);
@@ -118,7 +120,7 @@ export default function DetailPage() {
         navigate(-1);
       }}
     >
-      ← Retour
+      {t("detailPage.back")}
     </Link>
   );
 
@@ -142,7 +144,7 @@ export default function DetailPage() {
     return null;
   }
 
-  const title = details.title || details.name || "Titre inconnu";
+  const title = details.title || details.name || t("common.unknownTitle");
   const date = details.release_date || details.first_air_date;
   const runtime = details.runtime || details.episode_run_time?.[0];
   const watched = isWatched(mediaType, id);
@@ -158,9 +160,9 @@ export default function DetailPage() {
   const theatricalDateFormatted = theatricalDate ? formatFullDate(theatricalDate) : null;
   const theatricalMessage = theatricalStatus
     ? {
-        in_theaters: `🎬 Actuellement au cinéma (sorti le ${theatricalDateFormatted})`,
-        upcoming: `🗓️ Sortie au cinéma prévue le ${theatricalDateFormatted}`,
-        past: `Sorti au cinéma le ${theatricalDateFormatted}`,
+        in_theaters: t("detailPage.inTheatersNow", { date: theatricalDateFormatted }),
+        upcoming: t("detailPage.upcomingTheatrical", { date: theatricalDateFormatted }),
+        past: t("detailPage.pastTheatrical", { date: theatricalDateFormatted }),
       }[theatricalStatus]
     : null;
 
@@ -249,12 +251,14 @@ export default function DetailPage() {
             <p className={styles.meta}>
               {details.genres?.map((g) => g.name).join(" · ")}
               {mediaType === "tv" && details.number_of_seasons
-                ? ` · ${details.number_of_seasons} saison${details.number_of_seasons > 1 ? "s" : ""}`
+                ? ` · ${t("detailPage.seasonsCount", { count: details.number_of_seasons })}`
                 : ""}
               {mediaType === "tv" && details.number_of_episodes
-                ? ` · ${details.number_of_episodes} épisodes`
+                ? ` · ${t("detailPage.episodesCount", { count: details.number_of_episodes })}`
                 : ""}
-              {runtime ? ` · ${runtime} min${mediaType === "tv" ? "/épisode" : ""}` : ""}
+              {runtime
+                ? ` · ${t("detailPage.runtimeMinutes", { count: runtime })}${mediaType === "tv" ? t("detailPage.perEpisodeSuffix") : ""}`
+                : ""}
               {details.production_countries && details.production_countries.length > 0
                 ? ` · ${details.production_countries
                     .map((c) => countryDisplayName(c.iso_3166_1) || c.name)
@@ -265,7 +269,10 @@ export default function DetailPage() {
                   className={`${styles.score} ${styles[`s-${tier.cls}`]}`}
                   title={
                     details.vote_count
-                      ? `${details.vote_count.toLocaleString("fr-FR")} vote${details.vote_count > 1 ? "s" : ""}`
+                      ? t("detailPage.votesCount", {
+                          count: details.vote_count,
+                          formattedCount: details.vote_count.toLocaleString("fr-FR"),
+                        })
                       : undefined
                   }
                 >
@@ -277,7 +284,7 @@ export default function DetailPage() {
               ) : null}
             </p>
             {theatricalMessage && <p className={styles.statusPill}>{theatricalMessage}</p>}
-            <p className={styles.overview}>{details.overview || "Pas de synopsis disponible."}</p>
+            <p className={styles.overview}>{details.overview || t("detailPage.noOverview")}</p>
 
             <div className={styles.actions}>
               <button
@@ -286,7 +293,7 @@ export default function DetailPage() {
                 onClick={() => toggleWatched(libItem)}
                 aria-pressed={watched}
               >
-                {watched ? "✔ Déjà vu" : "○ Marquer comme vu"}
+                {watched ? t("detailPage.watchedOn") : t("detailPage.watchedOff")}
               </button>
               <button
                 type="button"
@@ -294,17 +301,17 @@ export default function DetailPage() {
                 onClick={() => toggleWatchlist(libItem)}
                 aria-pressed={inWatchlist}
               >
-                {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
+                {inWatchlist ? t("detailPage.wantToWatchOn") : t("detailPage.wantToWatchOff")}
               </button>
               <TrailerButton videos={details.videos?.results} />
               <Dropdown
-                label="Ajouter à…"
+                label={t("detailPage.addTo")}
                 pill
                 active={customLists.some((list) => isInList(list.id, mediaType, id))}
               >
-                <div className={dropdownStyles.head}>Ajouter à une liste</div>
+                <div className={dropdownStyles.head}>{t("detailPage.addToListHeading")}</div>
                 {customLists.length === 0 && (
-                  <p className={styles.emptyHint}>Aucune liste pour l'instant.</p>
+                  <p className={styles.emptyHint}>{t("detailPage.noListsYet")}</p>
                 )}
                 {customLists.map((list) => {
                   const on = isInList(list.id, mediaType, id);
@@ -335,20 +342,20 @@ export default function DetailPage() {
                 <div className={styles.newListRow}>
                   <input
                     type="text"
-                    placeholder="Créer une liste…"
+                    placeholder={t("detailPage.createListPlaceholder")}
                     maxLength={40}
                     value={newListName}
                     onChange={(e) => setNewListName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && submitNewList()}
                   />
                   <button type="button" onClick={submitNewList}>
-                    Créer
+                    {t("detailPage.create")}
                   </button>
                 </div>
               </Dropdown>
               {recommendations.length > 0 && (
                 <button type="button" className={styles.ghostBtn} onClick={scrollToRecommendations}>
-                  🔁 Similaire
+                  {t("detailPage.similar")}
                 </button>
               )}
               <button
@@ -361,9 +368,9 @@ export default function DetailPage() {
                     date ? `${title} (${date.slice(0, 4)})` : title
                   )
                 }
-                title="Ne plus proposer ce titre dans les suggestions"
+                title={t("detailPage.excludeTitleHint")}
               >
-                {excluded ? "Titre exclu — réintégrer" : "Exclure ce titre"}
+                {excluded ? t("detailPage.excludedReinclude") : t("detailPage.excludeTitle")}
               </button>
             </div>
 
@@ -378,7 +385,10 @@ export default function DetailPage() {
       </div>
 
       <section className={styles.section}>
-        <h2>Où regarder{regionName ? ` · ${regionName}` : ""}</h2>
+        <h2>
+          {t("detailPage.whereToWatch")}
+          {regionName ? ` · ${regionName}` : ""}
+        </h2>
         <ProviderBadges providers={providers} />
       </section>
 
@@ -390,7 +400,9 @@ export default function DetailPage() {
         <section className={styles.section}>
           {directors.length > 0 && (
             <>
-              <h3>{mediaType === "movie" ? "Réalisation" : "Créé par"}</h3>
+              <h3>
+                {mediaType === "movie" ? t("detailPage.directing") : t("detailPage.createdBy")}
+              </h3>
               <div className={gridStyles.personGrid}>
                 {directors.map((person) => (
                   <PersonCard
@@ -398,7 +410,11 @@ export default function DetailPage() {
                     id={person.id}
                     name={person.name}
                     profilePath={person.profilePath}
-                    role={mediaType === "movie" ? "Réalisateur/Réalisatrice" : "Créateur/Créatrice"}
+                    role={
+                      mediaType === "movie"
+                        ? t("detailPage.directorRole")
+                        : t("detailPage.creatorRole")
+                    }
                   />
                 ))}
               </div>
@@ -407,7 +423,7 @@ export default function DetailPage() {
 
           {cast.length > 0 && (
             <>
-              <h3 style={{ marginTop: 32 }}>Casting principal</h3>
+              <h3 style={{ marginTop: 32 }}>{t("detailPage.mainCast")}</h3>
               <div className={gridStyles.personGrid}>
                 {visibleCast.map((member) => (
                   <PersonCard
@@ -426,7 +442,7 @@ export default function DetailPage() {
                     className={styles.ghostBtn}
                     onClick={() => setShowFullCast(true)}
                   >
-                    Afficher tout le casting ({remainingCastCount} de plus)
+                    {t("detailPage.showFullCast", { count: remainingCastCount })}
                   </button>
                 </div>
               )}
@@ -444,7 +460,7 @@ export default function DetailPage() {
 
       {recommendations.length > 0 && (
         <section className={styles.section} ref={recommendationsRef}>
-          <h3>Si vous avez aimé « {title} »</h3>
+          <h3>{t("detailPage.ifYouLiked", { title })}</h3>
           <div className={gridStyles.grid}>
             {recommendations.slice(0, 12).map((item) => (
               <MediaCard

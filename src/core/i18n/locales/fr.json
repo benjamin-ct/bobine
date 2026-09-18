@@ -2,7 +2,8 @@
   "common": {
     "loading": "Chargement…",
     "errorGeneric": "Une erreur est survenue.",
-    "close": "Fermer"
+    "close": "Fermer",
+    "unknownTitle": "Titre inconnu"
   },
   "notFound": {
     "eyebrow": "Erreur 404",
@@ -491,5 +492,84 @@
       "title": "Modification de cette politique",
       "text": "Cette politique peut évoluer avec le service, notamment si de nouveaux outils (mesure d'audience, financement participatif...) sont ajoutés. La date de dernière mise à jour est indiquée en haut de cette page."
     }
+  },
+  "mediaCard": {
+    "inTheaters": "🎬 En salles",
+    "upcomingTheatrical": "🗓️ Bientôt au cinéma",
+    "watchedBadge": "✔ Vu",
+    "movie": "Film",
+    "series": "Série",
+    "upcomingFallback": "Cinéma",
+    "unknownReleaseStatus": "❔ Diffusion pas encore annoncée",
+    "wantToWatch": "Envie de voir",
+    "wantToWatchOn": "★ Envie de voir",
+    "wantToWatchOff": "☆ Envie de voir",
+    "markAsWatched": "Marquer comme vu",
+    "watchedOn": "✔ Vu",
+    "watchedOff": "○ Vu"
+  },
+  "detailPage": {
+    "back": "← Retour",
+    "seasonsCount_one": "{{count}} saison",
+    "seasonsCount_other": "{{count}} saisons",
+    "episodesCount": "{{count}} épisodes",
+    "runtimeMinutes": "{{count}} min",
+    "perEpisodeSuffix": "/épisode",
+    "votesCount_one": "{{formattedCount}} vote",
+    "votesCount_other": "{{formattedCount}} votes",
+    "inTheatersNow": "🎬 Actuellement au cinéma (sorti le {{date}})",
+    "upcomingTheatrical": "🗓️ Sortie au cinéma prévue le {{date}}",
+    "pastTheatrical": "Sorti au cinéma le {{date}}",
+    "noOverview": "Pas de synopsis disponible.",
+    "watchedOn": "✔ Déjà vu",
+    "watchedOff": "○ Marquer comme vu",
+    "wantToWatchOn": "★ Envie de voir",
+    "wantToWatchOff": "☆ Envie de voir",
+    "addTo": "Ajouter à…",
+    "addToListHeading": "Ajouter à une liste",
+    "noListsYet": "Aucune liste pour l'instant.",
+    "createListPlaceholder": "Créer une liste…",
+    "create": "Créer",
+    "similar": "🔁 Similaire",
+    "excludeTitleHint": "Ne plus proposer ce titre dans les suggestions",
+    "excludedReinclude": "Titre exclu — réintégrer",
+    "excludeTitle": "Exclure ce titre",
+    "whereToWatch": "Où regarder",
+    "directing": "Réalisation",
+    "createdBy": "Créé par",
+    "directorRole": "Réalisateur/Réalisatrice",
+    "creatorRole": "Créateur/Créatrice",
+    "mainCast": "Casting principal",
+    "showFullCast": "Afficher tout le casting ({{count}} de plus)",
+    "ifYouLiked": "Si vous avez aimé « {{title}} »"
+  },
+  "personPage": {
+    "back": "← Retour",
+    "directorRole": "Réalisateur/Réalisatrice",
+    "personality": "Personnalité",
+    "bornOn": "Né·e le {{date}}",
+    "titles": "Titres",
+    "averageRating": "Note moyenne",
+    "favoriteGenre": "Genre fétiche",
+    "filmography": "Filmographie",
+    "titlesCount_one": "{{count}} titre",
+    "titlesCount_other": "{{count}} titres",
+    "noKnownAppearance": "Aucune apparition connue.",
+    "asDirectorWriter": "Comme réalisateur·rice/scénariste"
+  },
+  "frequentCollaborators": {
+    "title": "Souvent à l'affiche avec",
+    "searching": "Recherche des collaborateur·rices…",
+    "titlesTogether_one": "{{count}} titre ensemble",
+    "titlesTogether_other": "{{count}} titres ensemble"
+  },
+  "episodeTracker": {
+    "title": "Épisodes",
+    "watchedCount": "({{watched}}/{{total}} vus)",
+    "seasonNumber": "Saison {{number}}",
+    "uncheckAll": "Tout décocher",
+    "markAllWatched": "Tout marquer comme vu",
+    "untitled": "Sans titre",
+    "noEpisodesFound": "Aucun épisode trouvé pour cette saison."
   }
 }
