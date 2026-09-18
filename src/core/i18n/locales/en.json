@@ -57,10 +57,29 @@
       "unknownError": "Unknown error.",
       "success": "✅ You're signed in!",
       "goToMyList": "Go to My List",
-      "requestNewLink": "Request a new link"
+      "requestNewLink": "Request a new link",
+      "expiredLink": "This sign-in link is no longer valid.",
+      "expiredCode": "This code is no longer valid."
     },
     "updateDisplayNameError": "Unable to save the display name.",
     "requestLinkError": "Unable to send the sign-in link."
+  },
+  "loginPage": {
+    "title": "Sign in",
+    "subtitle": "Sign in to access your \"want to watch\" / \"watched\" list on all your devices. No password: we'll email you a sign-in link.",
+    "unknownError": "Unknown error.",
+    "linkSentBefore": "📬 A sign-in link has been sent to ",
+    "linkSentAfter": ".",
+    "checkInbox": "Check your inbox (and spam folder) — the link is valid for 15 minutes.",
+    "devModeLinkLabel": "Development mode (no email configured): ",
+    "codeLabel": "Or enter the code you received by email",
+    "codeHint": "If Bobine is installed on your home screen, the link might open in the browser instead of the app — the code always works here.",
+    "devModeCodeLabel": "Development mode: code {{code}}",
+    "verifying": "Verifying…",
+    "submitCode": "Submit code",
+    "emailLabel": "Email address",
+    "sending": "Sending…",
+    "submitEmail": "Get my sign-in link"
   },
   "trailer": {
     "button": "Trailer",
@@ -341,5 +360,136 @@
     "enabling": "Enabling…",
     "enableButton": "🔕 Enable notifications",
     "disabledHint": "Get notified about new releases even without the app open."
+  },
+  "legal": {
+    "eyebrow": "Legal information",
+    "contactLabel": "by opening an issue on the project's GitHub repository"
+  },
+  "termsPage": {
+    "title": "Terms of Use",
+    "lastUpdated": "Last updated: {{date}}",
+    "lastUpdatedValue": "September 1, 2026",
+    "publisher": {
+      "title": "Publisher",
+      "textBefore": "Bobine is a personal project, with no commercial structure, developed and operated from France. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
+    },
+    "service": {
+      "title": "The service",
+      "textBefore": "Bobine lets you discover movies and shows, keep track of a personal library (\"watched\", \"want to watch\", custom lists), and receive notifications about new releases. Catalog data, pages, posters, and streaming availability come from third-party services (see our ",
+      "privacyLink": "privacy policy",
+      "textAfter": ") and are provided for informational purposes only: we do not guarantee their accuracy or completeness."
+    },
+    "account": {
+      "title": "Account and sign-in",
+      "text": "Creating an account is done via email, using a single-use sign-in link (no password is stored). You are responsible for the security of access to your email inbox, the only way to access your account."
+    },
+    "usage": {
+      "title": "Permitted use",
+      "text": "The service is provided free of charge, for personal, non-commercial use. Any automated or abusive use (mass data scraping, bypassing security measures or rate limits) is prohibited."
+    },
+    "availability": {
+      "title": "Availability and evolution of the service",
+      "text1": "Bobine is a personal project under active development: features, appearance, and availability may change, including being interrupted, without notice. No guarantee of continuous availability is provided (no service level commitment).",
+      "text2": "The service is free today and will remain so for its current features; an optional funding method (one-off donations) may be introduced in the future, without making access to the service paid."
+    },
+    "liability": {
+      "title": "Liability",
+      "text": "The service is provided \"as is\", without warranty of any kind. To the extent permitted by French law, the publisher cannot be held liable for damages resulting from the use or inability to use the service."
+    },
+    "law": {
+      "title": "Governing law",
+      "text": "These terms are governed by French law."
+    },
+    "changes": {
+      "title": "Changes to these terms",
+      "text": "These terms may be updated as the service evolves. The date of the last update is shown at the top of this page; we encourage you to check it regularly."
+    }
+  },
+  "privacyPolicyPage": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: {{date}}",
+    "lastUpdatedValue": "September 13, 2026",
+    "controller": {
+      "title": "Data controller",
+      "textBefore": "Bobine is a personal project, with no commercial structure, operated from France. The data processing described below is therefore governed by French law and the GDPR. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
+    },
+    "dataCollected": {
+      "title": "Data we collect",
+      "account": {
+        "label": "Account",
+        "text": ": your email address (the only information requested at sign-up), used for single-use link/code sign-in — no password is stored. You can also set an optional display name, visible on your account card and synced across your devices."
+      },
+      "library": {
+        "label": "Personal library",
+        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", your custom lists, and their content."
+      },
+      "preferences": {
+        "label": "Preferences",
+        "text": ": excluded genres, favorite streaming platforms, region."
+      },
+      "push": {
+        "label": "Push notifications",
+        "text": " (if you enable them): your browser's technical subscription identifier and the associated encryption keys, used solely to send you the new-release notifications you requested."
+      },
+      "technical": {
+        "label": "Technical data",
+        "text": ": your IP address is processed briefly to limit abuse (anti-spam on sign-in), without being kept in a form identifiable to your account."
+      }
+    },
+    "why": {
+      "title": "Why we use it",
+      "text": "This data is used solely to operate the account, library, and notifications you explicitly requested. The legal basis is the performance of the service you ask us for (account, watchlist) and, for push notifications, your explicit consent (manually enabled in the app, revocable at any time)."
+    },
+    "sharing": {
+      "title": "Who this data is shared with",
+      "intro": "Bobine relies on the following providers to operate:",
+      "tmdb": {
+        "label": "TMDB",
+        "text": " (The Movie Database): provides the catalog, pages, and posters — no personal data is sent to it, only content requests."
+      },
+      "resend": {
+        "label": "Resend",
+        "text": ": sends the emails containing your sign-in link/code — receives your email address for this purpose only."
+      },
+      "recaptcha": {
+        "label": "Google reCAPTCHA",
+        "text": ": protects certain forms against bots, under Google's privacy policy."
+      },
+      "cloudflare": {
+        "label": "Cloudflare",
+        "text": ": hosts the application and the database (Workers, D1)."
+      },
+      "sentry": {
+        "label": "Sentry",
+        "text": ": receives technical errors occurring in the application (browser and server), for the sole purpose of diagnosing and fixing them. An error may occasionally contain technical details (URL visited, error message) but no account data is intentionally sent to it."
+      },
+      "analytics": {
+        "label": "Cloudflare Web Analytics",
+        "text": ": anonymous audience measurement (page views, visitors) — no cookies, no persistent identifier, no personal data."
+      },
+      "gravatar": {
+        "label": "Gravatar",
+        "text": " (Automattic): displays your profile picture if you've set one up linked to your email address. We never send your email address in clear text to Gravatar, only its fingerprint (MD5 hash), in line with how this service works."
+      },
+      "outro": "None of this data is sold or used for advertising purposes."
+    },
+    "cookies": {
+      "title": "Cookies and measurement tools",
+      "text": "Bobine uses Cloudflare Web Analytics to measure site traffic anonymously, without cookies or identifiers that would allow tracking a person from one visit to another. Sentry is used to track and diagnose technical errors (see above). Neither of these two tools is used for advertising or profiling purposes. Should a new audience-measurement or ad-tracking tool ever be added, this policy will be updated beforehand to reflect it."
+    },
+    "retention": {
+      "title": "Retention period",
+      "textBefore": "Your data is kept for as long as your account exists. On-request account deletion is not yet automated in the app: in the meantime, you can request the deletion of your account and your data ",
+      "textAfter": "."
+    },
+    "rights": {
+      "title": "Your rights",
+      "textBefore": "Under the GDPR, you have the right to access, rectify, erase, restrict, port, and object with regard to your data. You can exercise these rights ",
+      "textAfter": ", and lodge a complaint with the CNIL if you believe your rights are not being respected."
+    },
+    "changes": {
+      "title": "Changes to this policy",
+      "text": "This policy may evolve along with the service, in particular if new tools (audience measurement, crowdfunding...) are added. The date of the last update is shown at the top of this page."
+    }
   }
 }

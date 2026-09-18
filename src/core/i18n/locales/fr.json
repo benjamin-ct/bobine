@@ -57,10 +57,29 @@
       "unknownError": "Erreur inconnue.",
       "success": "✅ Tu es connecté·e !",
       "goToMyList": "Aller à Ma liste",
-      "requestNewLink": "Redemander un lien"
+      "requestNewLink": "Redemander un lien",
+      "expiredLink": "Ce lien de connexion n'est plus valide.",
+      "expiredCode": "Ce code n'est plus valide."
     },
     "updateDisplayNameError": "Impossible d'enregistrer le nom affiché.",
     "requestLinkError": "Impossible d'envoyer le lien de connexion."
+  },
+  "loginPage": {
+    "title": "Se connecter",
+    "subtitle": "Connecte-toi pour retrouver ta liste \"envie de voir\" / \"déjà vu\" sur tous tes appareils. Pas de mot de passe : on t'envoie un lien de connexion par email.",
+    "unknownError": "Erreur inconnue.",
+    "linkSentBefore": "📬 Un lien de connexion a été envoyé à ",
+    "linkSentAfter": ".",
+    "checkInbox": "Vérifie ta boîte mail (et tes spams) — le lien est valable 15 minutes.",
+    "devModeLinkLabel": "Mode développement (pas d'email configuré) : ",
+    "codeLabel": "Ou entre le code reçu par email",
+    "codeHint": "Si Bobine est installée sur ton écran d'accueil, le lien risque de s'ouvrir dans le navigateur au lieu de l'app — le code, lui, fonctionne toujours ici.",
+    "devModeCodeLabel": "Mode développement : code {{code}}",
+    "verifying": "Vérification…",
+    "submitCode": "Valider le code",
+    "emailLabel": "Adresse email",
+    "sending": "Envoi…",
+    "submitEmail": "Recevoir mon lien de connexion"
   },
   "trailer": {
     "button": "Bande-annonce",
@@ -341,5 +360,136 @@
     "enabling": "Activation…",
     "enableButton": "🔕 Activer les notifications",
     "disabledHint": "Sois prévenu·e des nouveautés même sans avoir l'app ouverte."
+  },
+  "legal": {
+    "eyebrow": "Informations légales",
+    "contactLabel": "en ouvrant une issue sur le dépôt GitHub du projet"
+  },
+  "termsPage": {
+    "title": "Conditions d'utilisation",
+    "lastUpdated": "Dernière mise à jour : {{date}}",
+    "lastUpdatedValue": "1 septembre 2026",
+    "publisher": {
+      "title": "Éditeur",
+      "textBefore": "Bobine est un projet personnel, sans structure commerciale, développé et opéré depuis la France. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
+    },
+    "service": {
+      "title": "Le service",
+      "textBefore": "Bobine permet de découvrir des films et séries, de suivre une bibliothèque personnelle (« vu », « envie de voir », listes personnalisées) et de recevoir des notifications sur les nouveautés. Les catalogues, fiches, affiches et disponibilités par plateforme de streaming proviennent de services tiers (voir notre ",
+      "privacyLink": "politique de confidentialité",
+      "textAfter": ") et sont fournis à titre indicatif : nous ne garantissons pas leur exactitude ni leur exhaustivité."
+    },
+    "account": {
+      "title": "Compte et connexion",
+      "text": "La création d'un compte se fait par email, via un lien de connexion à usage unique (aucun mot de passe n'est stocké). Vous êtes responsable de la sécurité de l'accès à votre boîte email, seul moyen d'accéder à votre compte."
+    },
+    "usage": {
+      "title": "Usage autorisé",
+      "text": "Le service est proposé gratuitement, pour un usage personnel et non commercial. Toute utilisation automatisée ou abusive (extraction massive de données, contournement des mesures de sécurité ou des limites de requêtes) est interdite."
+    },
+    "availability": {
+      "title": "Disponibilité et évolution du service",
+      "text1": "Bobine est un projet personnel en développement actif : fonctionnalités, apparence et disponibilité peuvent évoluer, y compris être interrompues, sans préavis. Aucune garantie de disponibilité continue n'est fournie (pas d'engagement de niveau de service).",
+      "text2": "Le service est gratuit à ce jour et le restera pour ses fonctionnalités actuelles ; un moyen de financement libre (dons ponctuels) pourra être proposé à l'avenir, sans que cela ne rende l'accès au service payant."
+    },
+    "liability": {
+      "title": "Responsabilité",
+      "text": "Le service est fourni « en l'état », sans garantie d'aucune sorte. Dans les limites permises par la loi française, l'éditeur ne pourra être tenu responsable des dommages résultant de l'utilisation ou de l'impossibilité d'utiliser le service."
+    },
+    "law": {
+      "title": "Droit applicable",
+      "text": "Les présentes conditions sont soumises au droit français."
+    },
+    "changes": {
+      "title": "Modification des présentes conditions",
+      "text": "Ces conditions peuvent être modifiées à mesure que le service évolue. La date de dernière mise à jour est indiquée en haut de cette page ; nous vous invitons à la consulter régulièrement."
+    }
+  },
+  "privacyPolicyPage": {
+    "title": "Politique de confidentialité",
+    "lastUpdated": "Dernière mise à jour : {{date}}",
+    "lastUpdatedValue": "13 septembre 2026",
+    "controller": {
+      "title": "Responsable du traitement",
+      "textBefore": "Bobine est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
+    },
+    "dataCollected": {
+      "title": "Données que nous collectons",
+      "account": {
+        "label": "Compte",
+        "text": " : votre adresse email (seule information demandée à l'inscription), utilisée pour la connexion par lien/code à usage unique — aucun mot de passe n'est stocké. Vous pouvez aussi renseigner un nom affiché, facultatif, visible sur votre carte de compte et synchronisé entre vos appareils."
+      },
+      "library": {
+        "label": "Bibliothèque personnelle",
+        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu."
+      },
+      "preferences": {
+        "label": "Préférences",
+        "text": " : genres exclus, plateformes de streaming favorites, région."
+      },
+      "push": {
+        "label": "Notifications push",
+        "text": " (si vous les activez) : l'identifiant technique d'abonnement de votre navigateur et les clés de chiffrement associées, utilisés uniquement pour vous envoyer les notifications de nouveautés que vous avez demandées."
+      },
+      "technical": {
+        "label": "Données techniques",
+        "text": " : votre adresse IP est traitée brièvement pour limiter les abus (anti-spam sur la connexion), sans être conservée sous une forme identifiable liée à votre compte."
+      }
+    },
+    "why": {
+      "title": "Pourquoi nous les utilisons",
+      "text": "Ces données servent uniquement à faire fonctionner le compte, la bibliothèque et les notifications que vous avez explicitement demandées. La base légale est l'exécution du service que vous nous demandez (compte, watchlist) et, pour les notifications push, votre consentement explicite (activation manuelle dans l'application, révocable à tout moment)."
+    },
+    "sharing": {
+      "title": "Avec qui ces données sont partagées",
+      "intro": "Bobine s'appuie sur les prestataires suivants pour fonctionner :",
+      "tmdb": {
+        "label": "TMDB",
+        "text": " (The Movie Database) : fournit le catalogue, les fiches et les affiches — aucune donnée personnelle ne lui est transmise, seules des requêtes de contenu."
+      },
+      "resend": {
+        "label": "Resend",
+        "text": " : envoie les emails contenant votre lien/code de connexion — reçoit votre adresse email à cette seule fin."
+      },
+      "recaptcha": {
+        "label": "Google reCAPTCHA",
+        "text": " : protège certains formulaires contre les robots, selon la politique de confidentialité de Google."
+      },
+      "cloudflare": {
+        "label": "Cloudflare",
+        "text": " : héberge l'application et la base de données (Workers, D1)."
+      },
+      "sentry": {
+        "label": "Sentry",
+        "text": " : reçoit les erreurs techniques survenant dans l'application (navigateur et serveur), dans le seul but de les diagnostiquer et de les corriger. Une erreur peut occasionnellement contenir des informations techniques (URL visitée, message d'erreur) mais aucune donnée de compte n'y est envoyée intentionnellement."
+      },
+      "analytics": {
+        "label": "Cloudflare Web Analytics",
+        "text": " : mesure d'audience anonyme (pages vues, visiteurs) — sans cookies, sans identifiant persistant, sans donnée personnelle."
+      },
+      "gravatar": {
+        "label": "Gravatar",
+        "text": " (Automattic) : affiche votre photo de profil si vous en avez configuré une associée à votre adresse email. Nous ne transmettons jamais votre email en clair à Gravatar, seulement son empreinte (hash MD5), conformément au fonctionnement de ce service."
+      },
+      "outro": "Aucune de ces données n'est vendue ni utilisée à des fins publicitaires."
+    },
+    "cookies": {
+      "title": "Cookies et outils de mesure",
+      "text": "Bobine utilise Cloudflare Web Analytics pour mesurer la fréquentation du site de façon anonyme, sans cookies ni identifiant permettant de suivre une personne d'une visite à l'autre. Sentry est utilisé pour le suivi et le diagnostic des erreurs techniques (voir ci-dessus). Aucun de ces deux outils ne sert à des fins publicitaires ou de profilage. Si un nouvel outil de mesure d'audience ou de tracking publicitaire venait à être ajouté, cette politique serait mise à jour au préalable pour le refléter."
+    },
+    "retention": {
+      "title": "Durée de conservation",
+      "textBefore": "Vos données sont conservées tant que votre compte existe. La suppression de compte à la demande n'est pas encore automatisée dans l'application : en attendant, vous pouvez demander la suppression de votre compte et de vos données ",
+      "textAfter": "."
+    },
+    "rights": {
+      "title": "Vos droits",
+      "textBefore": "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, de portabilité et d'opposition sur vos données. Vous pouvez exercer ces droits ",
+      "textAfter": ", et introduire une réclamation auprès de la CNIL si vous estimez que vos droits ne sont pas respectés."
+    },
+    "changes": {
+      "title": "Modification de cette politique",
+      "text": "Cette politique peut évoluer avec le service, notamment si de nouveaux outils (mesure d'audience, financement participatif...) sont ajoutés. La date de dernière mise à jour est indiquée en haut de cette page."
+    }
   }
 }
