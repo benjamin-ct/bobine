@@ -261,7 +261,7 @@ export default function DetailPage() {
               {runtime ? ` · ${runtime} min${mediaType === "tv" ? "/épisode" : ""}` : ""}
               {details.production_countries && details.production_countries.length > 0
                 ? ` · ${details.production_countries
-                    .map((c) => countryDisplayName(c.iso_3166_1) || c.name)
+                    .map((c) => countryDisplayName(c.iso_3166_1, locale) || c.name)
                     .join(", ")}`
                 : ""}
               {details.vote_average && tier ? (
