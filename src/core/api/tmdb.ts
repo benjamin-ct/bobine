@@ -14,7 +14,7 @@ export {
 import { DEFAULT_REGION } from "./releaseBadge.ts";
 export {
   estimateRuntimeMinutes,
-  getFrenchTheatricalDateFromDetails,
+  getTheatricalDateFromDetails,
   formatFullDate,
   dateLocaleTag,
   theatricalStatusFromDate,
