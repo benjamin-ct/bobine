@@ -62,7 +62,7 @@ function toDiscoverParams(advanced: AdvancedFiltersState) {
 }
 
 export default function DiscoverPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigationType = useNavigationType();
   const restoredFilters = navigationType === "POP" ? filtersMemory.get(location.key) : undefined;
@@ -163,7 +163,10 @@ export default function DiscoverPage() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, region]);
+    // i18n.language : les libellés de genres/plateformes viennent de TMDB
+    // dans la langue active (tmdbClient.ts), donc un changement de langue
+    // doit redéclencher cet appel comme un changement de mediaType/region.
+  }, [mediaType, region, i18n.language]);
 
   useEffect(() => {
     if (advancedError) {
@@ -204,6 +207,10 @@ export default function DiscoverPage() {
     return () => {
       cancelled = true;
     };
+    // i18n.language : discover() renvoie titres/synopsis dans la langue
+    // active (tmdbClient.ts) ; sans cette dépendance, changer de langue ne
+    // redéclenche pas l'appel et les résultats restent dans l'ancienne
+    // langue jusqu'au prochain changement de filtre ou remontage.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     mediaType,
@@ -216,6 +223,7 @@ export default function DiscoverPage() {
     sortField,
     sortDirection,
     advancedKey,
+    i18n.language,
   ]);
 
   const loadMore = useCallback(() => {
@@ -265,6 +273,7 @@ export default function DiscoverPage() {
     sortField,
     sortDirection,
     advancedKey,
+    i18n.language,
   ]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
