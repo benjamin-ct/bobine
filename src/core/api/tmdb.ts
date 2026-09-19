@@ -171,10 +171,13 @@ export function discover(
   });
 }
 
-export const SORT_FIELDS: Array<{ value: DiscoverSortField; label: string }> = [
-  { value: "popularity", label: "Popularité" },
-  { value: "vote_average", label: "Note" },
-  { value: "year", label: "Année" },
+// `labelKey` plutôt qu'un libellé en dur (même raison que STAR_LABEL_KEYS
+// dans ratingTier.ts) : ce module ne dépend pas de React, à résoudre via
+// t() côté composant appelant (voir FilterBar).
+export const SORT_FIELDS: Array<{ value: DiscoverSortField; labelKey: string }> = [
+  { value: "popularity", labelKey: "filterBar.sortByPopularity" },
+  { value: "vote_average", labelKey: "filterBar.sortByRating" },
+  { value: "year", labelKey: "filterBar.sortByYear" },
 ];
 
 // Liste des pays (code ISO 3166-1 + nom localisé), pour le filtre "pays de

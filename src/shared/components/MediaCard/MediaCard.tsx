@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   posterUrl,
   logoUrl,
@@ -23,11 +24,6 @@ import type {
 } from "../../../core/types/tmdb.ts";
 import posterStyles from "../../styles/posterAccents.module.css";
 import styles from "./MediaCard.module.css";
-
-const THEATRICAL_BADGES: Record<string, string> = {
-  in_theaters: "🎬 En salles",
-  upcoming: "🗓️ Bientôt au cinéma",
-};
 
 interface MediaCardProps {
   item: MediaItem;
@@ -54,11 +50,16 @@ function MediaCard({
   showProviderBadge = false,
   showFutureReleaseBadge = false,
 }: MediaCardProps) {
+  const { t } = useTranslation();
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
   const { getTheatricalStatus, region } = useRegion();
   const { locale } = useLocale();
+  const theatricalBadges: Record<string, string> = {
+    in_theaters: t("mediaCard.inTheaters"),
+    upcoming: t("mediaCard.upcomingTheatrical"),
+  };
   const mediaType = item.mediaType;
-  const title = item.title || item.name || "Titre inconnu";
+  const title = item.title || item.name || t("common.unknownTitle");
   const date = item.release_date || item.first_air_date;
   const watched = isWatched(mediaType, item.id);
   const inWatchlist = isInWatchlist(mediaType, item.id);
@@ -154,7 +155,7 @@ function MediaCard({
   // Sur Nouveautés, un titre sans badge cinéma ET sans plateforme connue
   // est ambigu : on le dit explicitement plutôt que de laisser un badge
   // muet passer pour un oubli.
-  const hasTheatricalBadge = Boolean(theatricalStatus && THEATRICAL_BADGES[theatricalStatus]);
+  const hasTheatricalBadge = Boolean(theatricalStatus && theatricalBadges[theatricalStatus]);
   const showUnknownStatus =
     showProviderBadge && providerStatus === "done" && !provider && !hasTheatricalBadge;
 
@@ -199,7 +200,7 @@ function MediaCard({
   const futureReleaseLabel =
     upcomingRelease?.label ||
     (mediaType === "movie" && theatricalStatus === "upcoming" && upcomingStatus === "done"
-      ? "Cinéma"
+      ? t("mediaCard.upcomingFallback")
       : null);
   const effectiveDate = (showFutureReleaseBadge && upcomingRelease?.date) || date;
   const displayDate =
@@ -225,8 +226,10 @@ function MediaCard({
           ) : (
             <div className={`${styles.noPoster} ${posterStyles[accentKey]}`}>{title}</div>
           )}
-          {watched && <span className={styles.badgeWatched}>✔ Vu</span>}
-          <span className={styles.type}>{mediaType === "movie" ? "Film" : "Série"}</span>
+          {watched && <span className={styles.badgeWatched}>{t("mediaCard.watchedBadge")}</span>}
+          <span className={styles.type}>
+            {mediaType === "movie" ? t("mediaCard.movie") : t("mediaCard.series")}
+          </span>
           {showFutureReleaseBadge ? (
             futureReleaseLabel && (
               <span className={styles.theatrical} title={futureReleaseLabel}>
@@ -236,11 +239,11 @@ function MediaCard({
           ) : (
             <>
               {hasTheatricalBadge && theatricalStatus && (
-                <span className={styles.theatrical}>{THEATRICAL_BADGES[theatricalStatus]}</span>
+                <span className={styles.theatrical}>{theatricalBadges[theatricalStatus]}</span>
               )}
               {showUnknownStatus && (
                 <span className={`${styles.theatrical} ${styles.theatricalUnknown}`}>
-                  ❔ Diffusion pas encore annoncée
+                  {t("mediaCard.unknownReleaseStatus")}
                 </span>
               )}
               {provider?.logo_path && (
@@ -267,18 +270,18 @@ function MediaCard({
           className={`${styles.actionBtn} ${inWatchlist ? styles.actionBtnGold : ""}`}
           onClick={() => toggleWatchlist(libItem)}
           aria-pressed={inWatchlist}
-          title="Envie de voir"
+          title={t("mediaCard.wantToWatch")}
         >
-          {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
+          {inWatchlist ? t("mediaCard.wantToWatchOn") : t("mediaCard.wantToWatchOff")}
         </button>
         <button
           type="button"
           className={`${styles.actionBtn} ${watched ? styles.actionBtnGreen : ""}`}
           onClick={() => toggleWatched(libItem)}
           aria-pressed={watched}
-          title="Marquer comme vu"
+          title={t("mediaCard.markAsWatched")}
         >
-          {watched ? "✔ Vu" : "○ Vu"}
+          {watched ? t("mediaCard.watchedOn") : t("mediaCard.watchedOff")}
         </button>
       </div>
     </div>

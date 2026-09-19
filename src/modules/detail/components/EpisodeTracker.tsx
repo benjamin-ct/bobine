@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getSeasonDetails, dateLocaleTag } from "../../../core/api/tmdb.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
@@ -16,6 +17,7 @@ interface EpisodeTrackerProps {
 // d'épisodes par saison mais pas leur liste : celle-ci n'est chargée qu'à
 // l'ouverture d'une saison (un appel TMDB dédié par saison).
 export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
+  const { t } = useTranslation();
   const { getWatchedEpisodes, isEpisodeWatched, toggleEpisodeWatched, setSeasonEpisodesWatched } =
     useLibrary();
   const { locale } = useLocale();
@@ -64,9 +66,12 @@ export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
   return (
     <section className={styles.tracker}>
       <h3>
-        Épisodes{" "}
+        {t("episodeTracker.title")}{" "}
         <span className={styles.total}>
-          ({watchedEpisodes.size}/{totalEpisodes} vus)
+          {t("episodeTracker.watchedCount", {
+            watched: watchedEpisodes.size,
+            total: totalEpisodes,
+          })}
         </span>
       </h3>
       <div className={styles.seasonList}>
@@ -85,7 +90,8 @@ export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
                 aria-expanded={isOpen}
               >
                 <span className={styles.seasonName}>
-                  {season.name || `Saison ${season.season_number}`}
+                  {season.name ||
+                    t("episodeTracker.seasonNumber", { number: season.season_number })}
                 </span>
                 <span
                   className={`${styles.seasonCount} ${allWatched ? styles.seasonCountDone : ""}`}
@@ -98,7 +104,7 @@ export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
               {isOpen && (
                 <div className={styles.seasonBody}>
                   {loadingSeason === season.season_number && (
-                    <p className={styles.loading}>Chargement…</p>
+                    <p className={styles.loading}>{t("common.loading")}</p>
                   )}
 
                   {episodes && episodes.length > 0 && (
@@ -115,7 +121,9 @@ export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
                           )
                         }
                       >
-                        {allWatched ? "Tout décocher" : "Tout marquer comme vu"}
+                        {allWatched
+                          ? t("episodeTracker.uncheckAll")
+                          : t("episodeTracker.markAllWatched")}
                       </button>
                       <ul className={styles.episodeList}>
                         {episodes.map((ep) => (
@@ -138,7 +146,9 @@ export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
                                 }
                               />
                               <span className={styles.epNumber}>E{ep.episode_number}</span>
-                              <span className={styles.epTitle}>{ep.name || "Sans titre"}</span>
+                              <span className={styles.epTitle}>
+                                {ep.name || t("episodeTracker.untitled")}
+                              </span>
                               {ep.air_date && (
                                 <span className={styles.epDate}>
                                   {new Date(ep.air_date).toLocaleDateString(dateLocaleTag(locale))}
@@ -152,7 +162,7 @@ export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
                   )}
 
                   {episodes && episodes.length === 0 && (
-                    <p className={styles.loading}>Aucun épisode trouvé pour cette saison.</p>
+                    <p className={styles.loading}>{t("episodeTracker.noEpisodesFound")}</p>
                   )}
                 </div>
               )}

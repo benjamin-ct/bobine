@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useRegion } from "../../core/context/RegionContext.tsx";
@@ -21,9 +22,9 @@ import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import styles from "./NewReleasesPage.module.css";
 
 const WINDOWS = [
-  { value: 7, label: "7 derniers jours" },
-  { value: 30, label: "30 derniers jours" },
-  { value: 90, label: "3 derniers mois" },
+  { value: 7, key: "last7Days" },
+  { value: 30, key: "last30Days" },
+  { value: 90, key: "last3Months" },
 ];
 
 const GRID_SKELETON_COUNT = 12;
@@ -43,6 +44,7 @@ function dateRangeFor(windowDays: number) {
 }
 
 export default function NewReleasesPage() {
+  const { t } = useTranslation();
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerId, setProviderId] = useState("");
@@ -221,9 +223,9 @@ export default function NewReleasesPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        eyebrow="Mis à jour aujourd'hui"
-        title="Nouveautés"
-        lead="Les derniers ajouts en streaming et les sorties fraîches en salles — filtrés pour vos plateformes."
+        eyebrow={t("newReleasesPage.eyebrow")}
+        title={t("newReleasesPage.title")}
+        lead={t("newReleasesPage.lead")}
       />
 
       <FilterBar
@@ -254,7 +256,7 @@ export default function NewReleasesPage() {
             active={windowDays === w.value}
             onClick={() => setWindowDays(w.value)}
           >
-            {w.label}
+            {t(`newReleasesPage.windows.${w.key}`)}
           </Chip>
         ))}
       </div>
@@ -268,7 +270,7 @@ export default function NewReleasesPage() {
       )}
       {status === "error" && <ErrorMessage error={error} />}
       {status === "success" && results.length === 0 && (
-        <EmptyState label="Aucune sortie sur cette période pour ces filtres." />
+        <EmptyState label={t("newReleasesPage.emptyState")} />
       )}
 
       {status === "success" && results.length > 0 && (
@@ -280,7 +282,7 @@ export default function NewReleasesPage() {
           </div>
           {page < totalPages && (
             <div ref={sentinelRef} className={gridStyles.loadMore}>
-              {loadingMore && <span>Chargement…</span>}
+              {loadingMore && <span>{t("common.loading")}</span>}
             </div>
           )}
         </>

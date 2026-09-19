@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getDetails } from "../../../core/api/tmdb.ts";
 import { PersonCard } from "../../../shared/components/index.ts";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
@@ -34,6 +35,7 @@ export default function FrequentCollaborators({
   personId: number;
   credits: CreditRef[];
 }) {
+  const { t } = useTranslation();
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [status, setStatus] = useState<"loading" | "done">("loading");
 
@@ -88,9 +90,9 @@ export default function FrequentCollaborators({
 
   return (
     <section style={{ marginTop: 48 }}>
-      <h3 style={{ marginBottom: 16 }}>Souvent à l'affiche avec</h3>
+      <h3 style={{ marginBottom: 16 }}>{t("frequentCollaborators.title")}</h3>
       {status === "loading" ? (
-        <p style={{ color: "var(--muted)" }}>Recherche des collaborateur·rices…</p>
+        <p style={{ color: "var(--muted)" }}>{t("frequentCollaborators.searching")}</p>
       ) : (
         <div className={gridStyles.personGrid}>
           {collaborators.map((c) => (
@@ -99,7 +101,7 @@ export default function FrequentCollaborators({
               id={c.id}
               name={c.name}
               profilePath={c.profilePath}
-              role={`${c.count} titres ensemble`}
+              role={t("frequentCollaborators.titlesTogether", { count: c.count })}
             />
           ))}
         </div>

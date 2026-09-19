@@ -22,6 +22,53 @@ const TRENDING_WINDOW_DAYS = 2;
 const TRENDING_MIN_POPULARITY = 40; // filtre les tendances "confidentielles"
 const TRENDING_MAX_PER_RUN = 3; // évite une avalanche de notifs le même jour
 
+// Langue des notifications : celle enregistrée sur l'abonnement (voir
+// migration 0005), pas de contexte de requête disponible ici puisque ces
+// envois sont déclenchés par le cron, pas par une action de l'utilisateur.
+type PushLocale = "fr" | "en";
+
+function pushLocaleOf(subscription: SubscriptionRow): PushLocale {
+  return subscription.locale === "en" ? "en" : "fr";
+}
+
+const PUSH_CONTENT: Record<
+  PushLocale,
+  {
+    watchlistAvailable: (title: string) => { title: string; body: string };
+    favoriteGenreRelease: (title: string) => { title: string; body: string };
+    trendingRelease: (title: string) => { title: string; body: string };
+  }
+> = {
+  fr: {
+    watchlistAvailable: (title) => ({
+      title: "Bobine : nouvelle dispo 🎬",
+      body: `« ${title} » est maintenant disponible en streaming.`,
+    }),
+    favoriteGenreRelease: (title) => ({
+      title: "Bobine : nouveauté dans tes genres préférés 🍿",
+      body: `« ${title} » vient de sortir.`,
+    }),
+    trendingRelease: (title) => ({
+      title: "Bobine : ça sort en ce moment 🔥",
+      body: `« ${title} » fait parler de lui.`,
+    }),
+  },
+  en: {
+    watchlistAvailable: (title) => ({
+      title: "Bobine: new availability 🎬",
+      body: `"${title}" is now available to stream.`,
+    }),
+    favoriteGenreRelease: (title) => ({
+      title: "Bobine: new in your favorite genres 🍿",
+      body: `"${title}" was just released.`,
+    }),
+    trendingRelease: (title) => ({
+      title: "Bobine: trending right now 🔥",
+      body: `"${title}" is getting a lot of buzz.`,
+    }),
+  },
+};
+
 async function notify(
   env: Env,
   db: D1Database,
@@ -63,8 +110,7 @@ async function checkWatchlistAvailability(
 
     if (newlyAvailable) {
       await notify(env, db, subscription, {
-        title: "Bobine : nouvelle dispo 🎬",
-        body: `« ${item.title} » est maintenant disponible en streaming.`,
+        ...PUSH_CONTENT[pushLocaleOf(subscription)].watchlistAvailable(item.title),
         url: `/media/${item.media_type}/${item.tmdb_id}`,
       });
     }
@@ -112,8 +158,9 @@ async function checkFavoriteGenreReleases(
         continue;
       }
       await notify(env, db, subscription, {
-        title: "Bobine : nouveauté dans tes genres préférés 🍿",
-        body: `« ${item.title || item.name} » vient de sortir.`,
+        ...PUSH_CONTENT[pushLocaleOf(subscription)].favoriteGenreRelease(
+          item.title || item.name || ""
+        ),
         url: `/media/${media_type}/${item.id}`,
       });
       await markNotified(db, subscription.id, media_type, item.id, "genre");
@@ -142,8 +189,7 @@ async function checkTrendingReleases(
     }
 
     await notify(env, db, subscription, {
-      title: "Bobine : ça sort en ce moment 🔥",
-      body: `« ${item.title || item.name} » fait parler de lui.`,
+      ...PUSH_CONTENT[pushLocaleOf(subscription)].trendingRelease(item.title || item.name || ""),
       url: `/media/${mediaType}/${item.id}`,
     });
     await markNotified(db, subscription.id, mediaType, item.id, "trending");

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../core/context/AuthContext.tsx";
 import { Loading } from "../../shared/components/index.ts";
 import styles from "./AuthPages.module.css";
 
 export default function VerifyAuthPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const { verify } = useAuth();
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
@@ -15,7 +17,7 @@ export default function VerifyAuthPage() {
     const token = searchParams.get("token");
     if (!token) {
       setStatus("error");
-      setError("Lien de connexion incomplet.");
+      setError(t("auth.verify.incompleteLink"));
       return;
     }
     // StrictMode monte/démonte les effets deux fois en dev : le jeton étant
@@ -29,19 +31,20 @@ export default function VerifyAuthPage() {
       .then(() => setStatus("success"))
       .catch((err) => {
         setStatus("error");
-        setError(err instanceof Error ? err.message : "Erreur inconnue.");
+        setError(err instanceof Error ? err.message : t("auth.verify.unknownError"));
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, verify]);
 
   return (
     <div className={styles.page}>
-      <h1>Connexion</h1>
+      <h1>{t("auth.verify.title")}</h1>
       {status === "verifying" && <Loading />}
       {status === "success" && (
         <div className={styles.card}>
-          <p>✅ Tu es connecté·e !</p>
+          <p>{t("auth.verify.success")}</p>
           <Link className={styles.primaryBtn} to="/ma-liste">
-            Aller à Ma liste
+            {t("auth.verify.goToMyList")}
           </Link>
         </div>
       )}
@@ -49,7 +52,7 @@ export default function VerifyAuthPage() {
         <div className={styles.card}>
           <p className={styles.error}>{error}</p>
           <Link className={styles.secondaryBtn} to="/connexion">
-            Redemander un lien
+            {t("auth.verify.requestNewLink")}
           </Link>
         </div>
       )}

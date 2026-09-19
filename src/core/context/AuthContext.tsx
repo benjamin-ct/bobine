@@ -7,7 +7,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { getRecaptchaToken } from "../lib/recaptcha.ts";
+import { useLocale } from "./LocaleContext.tsx";
 
 export type AuthStatus = "loading" | "authenticated" | "anonymous";
 
@@ -46,6 +48,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // besoin de `credentials: "include"` ni de gestion CORS.
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  const { locale } = useLocale();
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [email, setEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -94,19 +98,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Demande un lien de connexion par email. Renvoie la réponse du serveur
   // (peut contenir `devLink` en local sans service d'email configuré).
-  const requestLink = useCallback(async (emailToSend: string): Promise<RequestLinkResult> => {
-    const recaptchaToken = await getRecaptchaToken("request_link");
-    const res = await fetch("/api/auth/request-link", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: emailToSend, recaptchaToken }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data.error || "Impossible d'envoyer le lien de connexion.");
-    }
-    return data;
-  }, []);
+  const requestLink = useCallback(
+    async (emailToSend: string): Promise<RequestLinkResult> => {
+      const recaptchaToken = await getRecaptchaToken("request_link");
+      const res = await fetch("/api/auth/request-link", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: emailToSend, recaptchaToken, locale }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || t("auth.requestLinkError"));
+      }
+      return data;
+    },
+    [locale, t]
+  );
 
   // Consomme le jeton (lien cliqué) ou le code (saisi à la main — voir
   // Login, utile quand le lien s'ouvre dans le navigateur au lieu de
@@ -136,13 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const verify = useCallback(
-    (token: string) => verifyWith({ token }, "Ce lien de connexion n'est plus valide."),
-    [verifyWith]
+    (token: string) => verifyWith({ token }, t("auth.verify.expiredLink")),
+    [verifyWith, t]
   );
 
   const verifyCode = useCallback(
-    (code: string) => verifyWith({ code }, "Ce code n'est plus valide."),
-    [verifyWith]
+    (code: string) => verifyWith({ code }, t("auth.verify.expiredCode")),
+    [verifyWith, t]
   );
 
   const logout = useCallback(async () => {
@@ -156,18 +163,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Save manuel uniquement (voir AccountCard, bouton "Enregistrer") : pas de
   // synchro automatique/temps réel — décision produit explicite pour le
   // ticket #45.
-  const updateDisplayNameCallback = useCallback(async (newDisplayName: string): Promise<void> => {
-    const res = await fetch("/api/account/display-name", {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ displayName: newDisplayName }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data.error || "Impossible d'enregistrer le nom affiché.");
-    }
-    setDisplayName(data.displayName);
-  }, []);
+  const updateDisplayNameCallback = useCallback(
+    async (newDisplayName: string): Promise<void> => {
+      const res = await fetch("/api/account/display-name", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ displayName: newDisplayName }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || t("auth.updateDisplayNameError"));
+      }
+      setDisplayName(data.displayName);
+    },
+    [t]
+  );
 
   return (
     <AuthContext.Provider

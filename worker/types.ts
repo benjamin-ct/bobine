@@ -42,6 +42,7 @@ export interface SubscriptionRow {
   p256dh: string;
   auth: string;
   created_at: number;
+  locale: string;
 }
 
 export interface WatchlistItemRow {

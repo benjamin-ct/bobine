@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getCountries, getLanguages } from "../../../core/api/tmdb.ts";
 import type { Country, Language } from "../../../core/types/tmdb.ts";
 import { regionName } from "../../../core/context/RegionContext.tsx";
@@ -21,6 +22,7 @@ export default function CountryLanguageFilter({
   language,
   setLanguage,
 }: CountryLanguageFilterProps) {
+  const { t } = useTranslation();
   const { locale } = useLocale();
   const [countries, setCountries] = useState<Country[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -55,7 +57,7 @@ export default function CountryLanguageFilter({
         onChange={(e) => setCountry(e.target.value)}
         className={styles.select}
       >
-        <option value="">Tous les pays</option>
+        <option value="">{t("countryLanguageFilter.allCountries")}</option>
         {localizedCountries.map((c) => (
           <option key={c.iso_3166_1} value={c.iso_3166_1}>
             {c.displayName}
@@ -68,7 +70,7 @@ export default function CountryLanguageFilter({
         onChange={(e) => setLanguage(e.target.value)}
         className={styles.select}
       >
-        <option value="">Toutes les langues</option>
+        <option value="">{t("countryLanguageFilter.allLanguages")}</option>
         {languages.map((l) => (
           <option key={l.iso_639_1} value={l.iso_639_1}>
             {l.name || l.english_name}

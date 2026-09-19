@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useExcludedTitles } from "../../../core/context/ExcludedTitlesContext.tsx";
 import { Disclosure } from "../../../shared/components/index.ts";
@@ -21,6 +22,7 @@ const CROSS_SVG = (
 // appel réseau (voir effet ci-dessous), mis en cache localement ensuite pour
 // ne plus avoir à le refaire.
 export default function ExcludedTitlesSettings() {
+  const { t } = useTranslation();
   const { excludedTitleKeys, excludedTitleLabels, toggleExcludedTitle, cacheExcludedTitleLabel } =
     useExcludedTitles();
   const { watched, watchlist } = useLibrary();
@@ -68,17 +70,14 @@ export default function ExcludedTitlesSettings() {
 
   return (
     <Disclosure
-      summary="Titres exclus"
-      meta={`${excludedTitleKeys.length} exclu${excludedTitleKeys.length > 1 ? "s" : ""}`}
+      summary={t("excludedTitlesSettings.title")}
+      meta={t("excludedTitlesSettings.excludedCount", { count: excludedTitleKeys.length })}
       onToggle={(open) => open && setLoaded(true)}
     >
-      <p>
-        Ces titres n'apparaîtront plus dans vos suggestions. Ajoutez-en depuis le bouton « Exclure
-        ce titre » sur la fiche d'un film ou d'une série.
-      </p>
+      <p>{t("excludedTitlesSettings.description")}</p>
       <div className={styles.chips}>
         {excludedTitleKeys.length === 0 ? (
-          <span className={styles.emptyHint}>Aucun titre exclu pour l'instant.</span>
+          <span className={styles.emptyHint}>{t("excludedTitlesSettings.empty")}</span>
         ) : (
           excludedTitleKeys.map((key) => {
             const [mediaType, id] = key.split(":") as [string, string];
@@ -88,9 +87,12 @@ export default function ExcludedTitlesSettings() {
                 type="button"
                 className={styles.chipX}
                 onClick={() => toggleExcludedTitle(mediaType as "movie" | "tv", id)}
-                title="Réintégrer ce titre"
+                title={t("excludedTitlesSettings.reincludeTitle")}
               >
-                {knownTitles.get(key) || excludedTitleLabels[key] || `Titre #${id}`} {CROSS_SVG}
+                {knownTitles.get(key) ||
+                  excludedTitleLabels[key] ||
+                  t("excludedTitlesSettings.unknownTitle", { id })}{" "}
+                {CROSS_SVG}
               </button>
             );
           })

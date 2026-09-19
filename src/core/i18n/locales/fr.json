@@ -1,1 +1,576 @@
-{}
+{
+  "common": {
+    "loading": "Chargement…",
+    "errorGeneric": "Une erreur est survenue.",
+    "close": "Fermer",
+    "unknownTitle": "Titre inconnu"
+  },
+  "notFound": {
+    "eyebrow": "Erreur 404",
+    "title": "Page introuvable",
+    "lead": "Cette page n'existe pas ou plus. Vérifiez l'adresse saisie, ou revenez à l'accueil.",
+    "backToHome": "Retour à l'accueil"
+  },
+  "legalLinks": {
+    "ariaLabel": "Informations légales",
+    "privacy": "Confidentialité",
+    "terms": "CGU"
+  },
+  "footer": {
+    "tagline": "Découvre, suis, et retrouve tes films & séries.",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Confidentialité"
+  },
+  "scrollToTop": {
+    "ariaLabel": "Remonter en haut de la page",
+    "title": "Remonter en haut"
+  },
+  "profile": {
+    "eyebrow": "Réglages",
+    "title": "Profil",
+    "lead": "Votre compte et vos préférences de recommandation, réunis au même endroit.",
+    "notifications": "Notifications",
+    "notificationsHint": "Prévenu·e quand un titre « envie de voir » arrive en streaming, pour vos genres préférés et les grosses sorties.",
+    "recommendations": "Recommandations"
+  },
+  "providerBadges": {
+    "unavailable": "Non disponible en streaming en France pour le moment.",
+    "subscription": "Inclus avec abonnement",
+    "rent": "Location",
+    "buy": "Achat",
+    "justwatchLink": "Voir toutes les options sur JustWatch →"
+  },
+  "continueWatching": {
+    "episodesWatched_one": "{{count}} épisode vu",
+    "episodesWatched_other": "{{count}} épisodes vus",
+    "resume": "Reprendre →"
+  },
+  "personCard": {
+    "departmentActing": "Acteur/Actrice",
+    "departmentDirecting": "Réalisateur/Réalisatrice",
+    "departmentWriting": "Scénariste",
+    "departmentProduction": "Production"
+  },
+  "auth": {
+    "verify": {
+      "title": "Connexion",
+      "incompleteLink": "Lien de connexion incomplet.",
+      "unknownError": "Erreur inconnue.",
+      "success": "✅ Tu es connecté·e !",
+      "goToMyList": "Aller à Ma liste",
+      "requestNewLink": "Redemander un lien",
+      "expiredLink": "Ce lien de connexion n'est plus valide.",
+      "expiredCode": "Ce code n'est plus valide."
+    },
+    "updateDisplayNameError": "Impossible d'enregistrer le nom affiché.",
+    "requestLinkError": "Impossible d'envoyer le lien de connexion."
+  },
+  "loginPage": {
+    "title": "Se connecter",
+    "subtitle": "Connecte-toi pour retrouver ta liste \"envie de voir\" / \"déjà vu\" sur tous tes appareils. Pas de mot de passe : on t'envoie un lien de connexion par email.",
+    "unknownError": "Erreur inconnue.",
+    "linkSentBefore": "📬 Un lien de connexion a été envoyé à ",
+    "linkSentAfter": ".",
+    "checkInbox": "Vérifie ta boîte mail (et tes spams) — le lien est valable 15 minutes.",
+    "devModeLinkLabel": "Mode développement (pas d'email configuré) : ",
+    "codeLabel": "Ou entre le code reçu par email",
+    "codeHint": "Si Bobine est installée sur ton écran d'accueil, le lien risque de s'ouvrir dans le navigateur au lieu de l'app — le code, lui, fonctionne toujours ici.",
+    "devModeCodeLabel": "Mode développement : code {{code}}",
+    "verifying": "Vérification…",
+    "submitCode": "Valider le code",
+    "emailLabel": "Adresse email",
+    "emailPlaceholder": "toi@exemple.com",
+    "sending": "Envoi…",
+    "submitEmail": "Recevoir mon lien de connexion"
+  },
+  "trailer": {
+    "button": "Bande-annonce",
+    "iframeTitle": "Bande-annonce"
+  },
+  "ratingStars": {
+    "yourRating": "Votre note :",
+    "notRatedYet": "Pas encore noté",
+    "starAriaLabel": "{{n}}/10 — {{label}}"
+  },
+  "ratingTier": {
+    "high": "Coup de cœur",
+    "mid": "Recommandé",
+    "low": "Mitigé",
+    "star1": "À fuir",
+    "star2": "Raté",
+    "star3": "Faible",
+    "star4": "Bof",
+    "star5": "Passable",
+    "star6": "Correct",
+    "star7": "Bien",
+    "star8": "Très bien",
+    "star9": "Excellent",
+    "star10": "Chef-d'œuvre"
+  },
+  "collection": {
+    "heading": "La saga",
+    "filmsCount_one": "{{count}} film",
+    "filmsCount_other": "{{count}} films"
+  },
+  "countryLanguageFilter": {
+    "allCountries": "Tous les pays",
+    "allLanguages": "Toutes les langues"
+  },
+  "accountCard": {
+    "title": "Compte",
+    "loginHint": "Connecte-toi pour synchroniser ta liste entre appareils.",
+    "login": "Connexion",
+    "saveError": "Impossible d'enregistrer le nom affiché.",
+    "displayName": "Nom affiché",
+    "displayNamePlaceholder": "Ton nom",
+    "email": "Adresse e-mail",
+    "saving": "Enregistrement…",
+    "save": "Enregistrer",
+    "logout": "Se déconnecter",
+    "saved": "✓ Modifications enregistrées"
+  },
+  "excludedGenres": {
+    "summary": "Genres à exclure",
+    "meta_one": "{{count}} exclu",
+    "meta_other": "{{count}} exclus",
+    "description": "Ces genres ne seront jamais suggérés, où que ce soit dans Bobine.",
+    "loading": "Chargement des genres…",
+    "error": "Impossible de charger la liste des genres.",
+    "searchPlaceholder": "Rechercher un genre…"
+  },
+  "navBar": {
+    "mainNavAriaLabel": "Navigation principale",
+    "navLinks": {
+      "discover": "Découvrir",
+      "newReleases": "Nouveautés",
+      "comingSoon": "Prochainement",
+      "random": "Aléatoire",
+      "myList": "Ma liste"
+    },
+    "searching": "Recherche…",
+    "noResults": "Aucun résultat.",
+    "personRoleHint": "Acteur/Actrice, réalisateur·rice…",
+    "mediaTypeMovie": "Film",
+    "mediaTypeSeries": "Série",
+    "viewAllResults": "Voir tous les résultats pour « {{query}} » →",
+    "searchPlaceholder": "Film, série, acteur, réalisateur…",
+    "searchAriaLabel": "Rechercher",
+    "themeToggleAriaLabel": "Basculer le thème clair / sombre",
+    "themeToggleTitle": "Thème clair / sombre",
+    "localeToggleAriaLabel": "Changer la langue de l'interface",
+    "localeToggleTitle": "Langue de l'interface",
+    "profileAriaLabel": "Profil",
+    "profileTitle": "Profil",
+    "logout": "Déconnexion",
+    "login": "Connexion",
+    "openMenuAriaLabel": "Ouvrir le menu",
+    "closeMenuAriaLabel": "Fermer le menu"
+  },
+  "comingSoonPage": {
+    "windows": {
+      "next7Days": "7 prochains jours",
+      "next30Days": "30 prochains jours",
+      "next3Months": "3 prochains mois"
+    },
+    "eyebrow": "Calendrier · France",
+    "title": "Prochainement",
+    "lead": "Les sorties à venir, en salles et en streaming. Activez la cloche pour être prévenu·e le jour J.",
+    "unknownTitle": "Titre inconnu",
+    "dateTbd": "Date à confirmer",
+    "notifyTitle": "Être prévenu·e de la sortie (ajoute à Envie de voir)",
+    "notified": "Prévenu·e",
+    "notifyMe": "Me prévenir",
+    "emptyState": "Aucune sortie prévue sur cette période pour ces filtres."
+  },
+  "newReleasesPage": {
+    "windows": {
+      "last7Days": "7 derniers jours",
+      "last30Days": "30 derniers jours",
+      "last3Months": "3 derniers mois"
+    },
+    "eyebrow": "Mis à jour aujourd'hui",
+    "title": "Nouveautés",
+    "lead": "Les derniers ajouts en streaming et les sorties fraîches en salles — filtrés pour vos plateformes.",
+    "emptyState": "Aucune sortie sur cette période pour ces filtres."
+  },
+  "discoverPage": {
+    "eyebrow": "Rien que pour vous",
+    "title": "Découvrir",
+    "lead": "Une sélection qui apprend de vos goûts — ce que vous avez vu, aimé, zappé, et ce qui patiente dans votre liste.",
+    "resumeTitle": "Reprendre",
+    "resumeSubtitle": "· là où vous en êtes",
+    "suggestionsEyebrow": "Suggestions pour vous",
+    "emptyState": "Aucun résultat pour ces filtres."
+  },
+  "filterBar": {
+    "typeAriaLabel": "Type",
+    "movies": "Films",
+    "series": "Séries",
+    "filterByGenre": "Filtrer par genre",
+    "allGenres": "Tous les genres",
+    "genresCount_one": "{{count}} genre",
+    "genresCount_other": "{{count}} genres",
+    "allPlatforms": "Toutes les plateformes",
+    "myPlatforms": "🎯 Mes plateformes",
+    "myPlatformsTitle": "Filtrer sur les plateformes que tu as cochées dans ton profil",
+    "sortLabel": "Trier",
+    "sortBy": "Trier par",
+    "sortDescending": "↓ Décroissant",
+    "sortAscending": "↑ Croissant",
+    "sortToggleHint": "(cliquer pour inverser)",
+    "sortByPopularity": "Popularité",
+    "sortByRating": "Note",
+    "sortByYear": "Année"
+  },
+  "advancedFilters": {
+    "toggle": "Filtres avancés",
+    "releaseYear": "Année de sortie",
+    "min": "Min",
+    "max": "Max",
+    "ratingOutOf10": "Note (sur 10)",
+    "minVoteCount": "Nombre de votes minimum",
+    "minVoteCountPlaceholder": "Ex: 100",
+    "runtimeMinutes": "Durée (minutes)",
+    "originCountry": "Pays de production",
+    "allCountries": "Tous les pays",
+    "reset": "Réinitialiser les filtres avancés",
+    "yearRangeError": "L'année minimum est supérieure à l'année maximum.",
+    "ratingRangeError": "La note minimum est supérieure à la note maximum.",
+    "runtimeRangeError": "La durée minimum est supérieure à la durée maximum."
+  },
+  "randomPage": {
+    "eyebrow": "Vous ne savez pas quoi regarder ?",
+    "title": "La roue de la bobine",
+    "lead": "Un tirage au sort dans votre univers. Relancez jusqu'à trouver la perle du soir.",
+    "releaseYear": "Année de sortie",
+    "excludeWatched": "Exclure ce que j'ai déjà vu",
+    "rolling": "Tirage en cours…",
+    "reroll": "Relancer le tirage",
+    "draw": "Tirer un titre",
+    "emptyHint": "Aucun titre ne correspond à ces filtres.",
+    "badge": "Tirage du soir",
+    "viewSheet": "Voir la fiche",
+    "wantToWatchOn": "★ Envie de voir",
+    "wantToWatchOff": "☆ Envie de voir",
+    "watchedOn": "✔ Déjà vu",
+    "watchedOff": "○ Marquer comme vu",
+    "similar": "🔁 Similaire",
+    "whereToWatch": "Où regarder"
+  },
+  "searchPage": {
+    "resultsFor": "Résultats pour « {{query}} »",
+    "actorsAndDirectors": "Acteurs & réalisateurs",
+    "moviesAndSeries": "Films & séries",
+    "noResults": "Aucun résultat."
+  },
+  "myListPage": {
+    "eyebrow": "Votre cinémathèque",
+    "title": "Ma liste",
+    "leadBefore": "Vos titres suivis. Retrouvez vos préférences (plateformes, exclusions, notifications) dans",
+    "profileLink": "votre profil",
+    "authBannerText": "Connecte-toi pour synchroniser cette liste entre tes appareils : elle n'a pas disparu, elle reste enregistrée sur cet appareil.",
+    "login": "Connexion",
+    "tabSeen": "Déjà vu",
+    "tabWant": "Envie de voir",
+    "tabProgress": "En cours",
+    "newListTab": "+ Nouvelle liste",
+    "newListPlaceholder": "Nom de la liste…",
+    "create": "Créer",
+    "cancel": "Annuler",
+    "emptySeen": "Tu n'as encore rien marqué comme vu.",
+    "emptyProgress": "Rien en cours. Marquez des épisodes comme vus pour retrouver ici vos séries entamées."
+  },
+  "watchlistPanel": {
+    "emptyState": "Liste vide. Ajoutez des titres avec « Envie de voir ».",
+    "dragHint": "Glissez pour réordonner",
+    "sortLabel": "Trier",
+    "sortBy": "Trier par",
+    "sortManual": "Manuel",
+    "sortTitle": "A → Z",
+    "sortYear": "Année",
+    "sortRating": "Note"
+  },
+  "statsPanel": {
+    "distribution": "Répartition",
+    "watchedLabel": "vus",
+    "movies": "Films",
+    "series": "Séries",
+    "moviesCount_one": "{{count}} film",
+    "moviesCount_other": "{{count}} films",
+    "seriesCount_one": "{{count}} série",
+    "seriesCount_other": "{{count}} séries",
+    "watchTime": "Temps de visionnage",
+    "hours": "heures",
+    "daysUnit": "jours",
+    "episodesCount_one": "{{count}} épisode de série",
+    "episodesCount_other": "{{count}} épisodes de série",
+    "estimationInProgress": " (estimation en cours de complétion)",
+    "averageRating": "Note moyenne",
+    "ratedCount_one": "sur {{count}} titre noté",
+    "ratedCount_other": "sur {{count}} titres notés",
+    "watchedByYear": "Vus par année",
+    "noDataYet": "Aucune donnée pour l'instant.",
+    "topGenres": "Genres préférés",
+    "noGenreYet": "Aucun genre pour l'instant.",
+    "recentlyWatched": "Vus récemment"
+  },
+  "customListPanel": {
+    "confirmDelete": "Supprimer la liste « {{name}} » ? Les titres eux-mêmes resteront dans vos autres listes.",
+    "rename": "Renommer",
+    "cancel": "Annuler",
+    "itemsCount_one": "{{count}} titre",
+    "itemsCount_other": "{{count}} titres",
+    "addHint": "Ajoutez des titres via « Ajouter à… » sur leur fiche.",
+    "dragHint": "Glissez pour réordonner",
+    "viewModeAriaLabel": "Mode d'affichage",
+    "gridViewTitle": "Affiches",
+    "listViewTitle": "Liste",
+    "sortLabel": "Trier",
+    "sortBy": "Trier par",
+    "sortManual": "Manuel",
+    "sortTitle": "A → Z",
+    "sortYear": "Année",
+    "renameButton": "✏️ Renommer",
+    "deleteButton": "🗑️ Supprimer la liste",
+    "emptyState": "« {{name}} » est vide. Ouvrez un titre et utilisez « Ajouter à… » pour le ranger ici."
+  },
+  "favoriteProvidersSettings": {
+    "title": "Mes plateformes",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} actives",
+    "description": "Cochez les services que vous avez pour filtrer « disponible chez moi » en un clic.",
+    "loadError": "Impossible de charger la liste des plateformes.",
+    "searchPlaceholder": "Rechercher une plateforme…"
+  },
+  "excludedTitlesSettings": {
+    "title": "Titres exclus",
+    "excludedCount_one": "{{count}} exclu",
+    "excludedCount_other": "{{count}} exclus",
+    "description": "Ces titres n'apparaîtront plus dans vos suggestions. Ajoutez-en depuis le bouton « Exclure ce titre » sur la fiche d'un film ou d'une série.",
+    "empty": "Aucun titre exclu pour l'instant.",
+    "reincludeTitle": "Réintégrer ce titre",
+    "unknownTitle": "Titre #{{id}}"
+  },
+  "notificationSettings": {
+    "unsupported": "Les notifications push ne sont pas supportées par ce navigateur.",
+    "permissionDenied": "Permission refusée. Autorise les notifications dans les réglages du navigateur pour ce site.",
+    "syncFailed": "Synchronisation échouée ({{status}})",
+    "keyFetchError": "Impossible de récupérer la clé du serveur.",
+    "incompleteSubscription": "Abonnement push incomplet.",
+    "disableButton": "🔔 Notifications activées — désactiver",
+    "enabledHint": "Tu seras prévenu·e quand un titre de ta liste \"Envie de voir\" arrive en streaming, pour les nouveautés dans tes genres préférés, et pour les grosses sorties du moment.",
+    "enabling": "Activation…",
+    "enableButton": "🔕 Activer les notifications",
+    "disabledHint": "Sois prévenu·e des nouveautés même sans avoir l'app ouverte."
+  },
+  "legal": {
+    "eyebrow": "Informations légales",
+    "contactLabel": "en ouvrant une issue sur le dépôt GitHub du projet"
+  },
+  "termsPage": {
+    "title": "Conditions d'utilisation",
+    "lastUpdated": "Dernière mise à jour : {{date}}",
+    "lastUpdatedValue": "1 septembre 2026",
+    "publisher": {
+      "title": "Éditeur",
+      "textBefore": "Bobine est un projet personnel, sans structure commerciale, développé et opéré depuis la France. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
+    },
+    "service": {
+      "title": "Le service",
+      "textBefore": "Bobine permet de découvrir des films et séries, de suivre une bibliothèque personnelle (« vu », « envie de voir », listes personnalisées) et de recevoir des notifications sur les nouveautés. Les catalogues, fiches, affiches et disponibilités par plateforme de streaming proviennent de services tiers (voir notre ",
+      "privacyLink": "politique de confidentialité",
+      "textAfter": ") et sont fournis à titre indicatif : nous ne garantissons pas leur exactitude ni leur exhaustivité."
+    },
+    "account": {
+      "title": "Compte et connexion",
+      "text": "La création d'un compte se fait par email, via un lien de connexion à usage unique (aucun mot de passe n'est stocké). Vous êtes responsable de la sécurité de l'accès à votre boîte email, seul moyen d'accéder à votre compte."
+    },
+    "usage": {
+      "title": "Usage autorisé",
+      "text": "Le service est proposé gratuitement, pour un usage personnel et non commercial. Toute utilisation automatisée ou abusive (extraction massive de données, contournement des mesures de sécurité ou des limites de requêtes) est interdite."
+    },
+    "availability": {
+      "title": "Disponibilité et évolution du service",
+      "text1": "Bobine est un projet personnel en développement actif : fonctionnalités, apparence et disponibilité peuvent évoluer, y compris être interrompues, sans préavis. Aucune garantie de disponibilité continue n'est fournie (pas d'engagement de niveau de service).",
+      "text2": "Le service est gratuit à ce jour et le restera pour ses fonctionnalités actuelles ; un moyen de financement libre (dons ponctuels) pourra être proposé à l'avenir, sans que cela ne rende l'accès au service payant."
+    },
+    "liability": {
+      "title": "Responsabilité",
+      "text": "Le service est fourni « en l'état », sans garantie d'aucune sorte. Dans les limites permises par la loi française, l'éditeur ne pourra être tenu responsable des dommages résultant de l'utilisation ou de l'impossibilité d'utiliser le service."
+    },
+    "law": {
+      "title": "Droit applicable",
+      "text": "Les présentes conditions sont soumises au droit français."
+    },
+    "changes": {
+      "title": "Modification des présentes conditions",
+      "text": "Ces conditions peuvent être modifiées à mesure que le service évolue. La date de dernière mise à jour est indiquée en haut de cette page ; nous vous invitons à la consulter régulièrement."
+    }
+  },
+  "privacyPolicyPage": {
+    "title": "Politique de confidentialité",
+    "lastUpdated": "Dernière mise à jour : {{date}}",
+    "lastUpdatedValue": "13 septembre 2026",
+    "controller": {
+      "title": "Responsable du traitement",
+      "textBefore": "Bobine est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
+    },
+    "dataCollected": {
+      "title": "Données que nous collectons",
+      "account": {
+        "label": "Compte",
+        "text": " : votre adresse email (seule information demandée à l'inscription), utilisée pour la connexion par lien/code à usage unique — aucun mot de passe n'est stocké. Vous pouvez aussi renseigner un nom affiché, facultatif, visible sur votre carte de compte et synchronisé entre vos appareils."
+      },
+      "library": {
+        "label": "Bibliothèque personnelle",
+        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu."
+      },
+      "preferences": {
+        "label": "Préférences",
+        "text": " : genres exclus, plateformes de streaming favorites, région."
+      },
+      "push": {
+        "label": "Notifications push",
+        "text": " (si vous les activez) : l'identifiant technique d'abonnement de votre navigateur et les clés de chiffrement associées, utilisés uniquement pour vous envoyer les notifications de nouveautés que vous avez demandées."
+      },
+      "technical": {
+        "label": "Données techniques",
+        "text": " : votre adresse IP est traitée brièvement pour limiter les abus (anti-spam sur la connexion), sans être conservée sous une forme identifiable liée à votre compte."
+      }
+    },
+    "why": {
+      "title": "Pourquoi nous les utilisons",
+      "text": "Ces données servent uniquement à faire fonctionner le compte, la bibliothèque et les notifications que vous avez explicitement demandées. La base légale est l'exécution du service que vous nous demandez (compte, watchlist) et, pour les notifications push, votre consentement explicite (activation manuelle dans l'application, révocable à tout moment)."
+    },
+    "sharing": {
+      "title": "Avec qui ces données sont partagées",
+      "intro": "Bobine s'appuie sur les prestataires suivants pour fonctionner :",
+      "tmdb": {
+        "label": "TMDB",
+        "text": " (The Movie Database) : fournit le catalogue, les fiches et les affiches — aucune donnée personnelle ne lui est transmise, seules des requêtes de contenu."
+      },
+      "resend": {
+        "label": "Resend",
+        "text": " : envoie les emails contenant votre lien/code de connexion — reçoit votre adresse email à cette seule fin."
+      },
+      "recaptcha": {
+        "label": "Google reCAPTCHA",
+        "text": " : protège certains formulaires contre les robots, selon la politique de confidentialité de Google."
+      },
+      "cloudflare": {
+        "label": "Cloudflare",
+        "text": " : héberge l'application et la base de données (Workers, D1)."
+      },
+      "sentry": {
+        "label": "Sentry",
+        "text": " : reçoit les erreurs techniques survenant dans l'application (navigateur et serveur), dans le seul but de les diagnostiquer et de les corriger. Une erreur peut occasionnellement contenir des informations techniques (URL visitée, message d'erreur) mais aucune donnée de compte n'y est envoyée intentionnellement."
+      },
+      "analytics": {
+        "label": "Cloudflare Web Analytics",
+        "text": " : mesure d'audience anonyme (pages vues, visiteurs) — sans cookies, sans identifiant persistant, sans donnée personnelle."
+      },
+      "gravatar": {
+        "label": "Gravatar",
+        "text": " (Automattic) : affiche votre photo de profil si vous en avez configuré une associée à votre adresse email. Nous ne transmettons jamais votre email en clair à Gravatar, seulement son empreinte (hash MD5), conformément au fonctionnement de ce service."
+      },
+      "outro": "Aucune de ces données n'est vendue ni utilisée à des fins publicitaires."
+    },
+    "cookies": {
+      "title": "Cookies et outils de mesure",
+      "text": "Bobine utilise Cloudflare Web Analytics pour mesurer la fréquentation du site de façon anonyme, sans cookies ni identifiant permettant de suivre une personne d'une visite à l'autre. Sentry est utilisé pour le suivi et le diagnostic des erreurs techniques (voir ci-dessus). Aucun de ces deux outils ne sert à des fins publicitaires ou de profilage. Si un nouvel outil de mesure d'audience ou de tracking publicitaire venait à être ajouté, cette politique serait mise à jour au préalable pour le refléter."
+    },
+    "retention": {
+      "title": "Durée de conservation",
+      "textBefore": "Vos données sont conservées tant que votre compte existe. La suppression de compte à la demande n'est pas encore automatisée dans l'application : en attendant, vous pouvez demander la suppression de votre compte et de vos données ",
+      "textAfter": "."
+    },
+    "rights": {
+      "title": "Vos droits",
+      "textBefore": "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, de portabilité et d'opposition sur vos données. Vous pouvez exercer ces droits ",
+      "textAfter": ", et introduire une réclamation auprès de la CNIL si vous estimez que vos droits ne sont pas respectés."
+    },
+    "changes": {
+      "title": "Modification de cette politique",
+      "text": "Cette politique peut évoluer avec le service, notamment si de nouveaux outils (mesure d'audience, financement participatif...) sont ajoutés. La date de dernière mise à jour est indiquée en haut de cette page."
+    }
+  },
+  "mediaCard": {
+    "inTheaters": "🎬 En salles",
+    "upcomingTheatrical": "🗓️ Bientôt au cinéma",
+    "watchedBadge": "✔ Vu",
+    "movie": "Film",
+    "series": "Série",
+    "upcomingFallback": "Cinéma",
+    "unknownReleaseStatus": "❔ Diffusion pas encore annoncée",
+    "wantToWatch": "Envie de voir",
+    "wantToWatchOn": "★ Envie de voir",
+    "wantToWatchOff": "☆ Envie de voir",
+    "markAsWatched": "Marquer comme vu",
+    "watchedOn": "✔ Vu",
+    "watchedOff": "○ Vu"
+  },
+  "detailPage": {
+    "back": "← Retour",
+    "seasonsCount_one": "{{count}} saison",
+    "seasonsCount_other": "{{count}} saisons",
+    "episodesCount": "{{count}} épisodes",
+    "runtimeMinutes": "{{count}} min",
+    "perEpisodeSuffix": "/épisode",
+    "votesCount_one": "{{formattedCount}} vote",
+    "votesCount_other": "{{formattedCount}} votes",
+    "inTheatersNow": "🎬 Actuellement au cinéma (sorti le {{date}})",
+    "upcomingTheatrical": "🗓️ Sortie au cinéma prévue le {{date}}",
+    "pastTheatrical": "Sorti au cinéma le {{date}}",
+    "noOverview": "Pas de synopsis disponible.",
+    "watchedOn": "✔ Déjà vu",
+    "watchedOff": "○ Marquer comme vu",
+    "wantToWatchOn": "★ Envie de voir",
+    "wantToWatchOff": "☆ Envie de voir",
+    "addTo": "Ajouter à…",
+    "addToListHeading": "Ajouter à une liste",
+    "noListsYet": "Aucune liste pour l'instant.",
+    "createListPlaceholder": "Créer une liste…",
+    "create": "Créer",
+    "similar": "🔁 Similaire",
+    "excludeTitleHint": "Ne plus proposer ce titre dans les suggestions",
+    "excludedReinclude": "Titre exclu — réintégrer",
+    "excludeTitle": "Exclure ce titre",
+    "whereToWatch": "Où regarder",
+    "directing": "Réalisation",
+    "createdBy": "Créé par",
+    "directorRole": "Réalisateur/Réalisatrice",
+    "creatorRole": "Créateur/Créatrice",
+    "mainCast": "Casting principal",
+    "showFullCast": "Afficher tout le casting ({{count}} de plus)",
+    "ifYouLiked": "Si vous avez aimé « {{title}} »"
+  },
+  "personPage": {
+    "back": "← Retour",
+    "directorRole": "Réalisateur/Réalisatrice",
+    "personality": "Personnalité",
+    "bornOn": "Né·e le {{date}}",
+    "titles": "Titres",
+    "averageRating": "Note moyenne",
+    "favoriteGenre": "Genre fétiche",
+    "filmography": "Filmographie",
+    "titlesCount_one": "{{count}} titre",
+    "titlesCount_other": "{{count}} titres",
+    "noKnownAppearance": "Aucune apparition connue.",
+    "asDirectorWriter": "Comme réalisateur·rice/scénariste"
+  },
+  "frequentCollaborators": {
+    "title": "Souvent à l'affiche avec",
+    "searching": "Recherche des collaborateur·rices…",
+    "titlesTogether_one": "{{count}} titre ensemble",
+    "titlesTogether_other": "{{count}} titres ensemble"
+  },
+  "episodeTracker": {
+    "title": "Épisodes",
+    "watchedCount": "({{watched}}/{{total}} vus)",
+    "seasonNumber": "Saison {{number}}",
+    "uncheckAll": "Tout décocher",
+    "markAllWatched": "Tout marquer comme vu",
+    "untitled": "Sans titre",
+    "noEpisodesFound": "Aucun épisode trouvé pour cette saison."
+  }
+}

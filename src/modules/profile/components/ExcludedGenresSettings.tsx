@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getGenres } from "../../../core/api/tmdb.ts";
 import { useExcludedGenres } from "../../../core/context/ExcludedGenresContext.tsx";
 import { Disclosure } from "../../../shared/components/index.ts";
@@ -9,6 +10,7 @@ import styles from "./SettingsPanel.module.css";
 // jamais voir suggérés, pour filtrer Découvrir/Nouveautés/Prochainement/
 // Aléatoire et les recommandations d'une fiche.
 export default function ExcludedGenresSettings() {
+  const { t } = useTranslation();
   const { excludedGenreIds, toggleExcludedGenre } = useExcludedGenres();
   const [genres, setGenres] = useState<Genre[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -54,19 +56,19 @@ export default function ExcludedGenresSettings() {
 
   return (
     <Disclosure
-      summary="Genres à exclure"
-      meta={`${excludedGenreIds.length} exclu${excludedGenreIds.length > 1 ? "s" : ""}`}
+      summary={t("excludedGenres.summary")}
+      meta={t("excludedGenres.meta", { count: excludedGenreIds.length })}
       onToggle={(open) => open && setLoaded(true)}
     >
-      <p>Ces genres ne seront jamais suggérés, où que ce soit dans Bobine.</p>
-      {status === "loading" && <p>Chargement des genres…</p>}
-      {status === "error" && <p>Impossible de charger la liste des genres.</p>}
+      <p>{t("excludedGenres.description")}</p>
+      {status === "loading" && <p>{t("excludedGenres.loading")}</p>}
+      {status === "error" && <p>{t("excludedGenres.error")}</p>}
       {status === "success" && (
         <>
           <input
             type="search"
             className={styles.search}
-            placeholder="Rechercher un genre…"
+            placeholder={t("excludedGenres.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
