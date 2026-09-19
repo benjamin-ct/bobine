@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getSeasonDetails } from "../../../core/api/tmdb.ts";
+import { getSeasonDetails, dateLocaleTag } from "../../../core/api/tmdb.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import type { LibraryItemInput } from "../../../core/types/library.ts";
 import type { Episode, Season } from "../../../core/types/tmdb.ts";
 import styles from "./EpisodeTracker.module.css";
@@ -19,6 +20,7 @@ export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
   const { t } = useTranslation();
   const { getWatchedEpisodes, isEpisodeWatched, toggleEpisodeWatched, setSeasonEpisodesWatched } =
     useLibrary();
+  const { locale } = useLocale();
   const [openSeason, setOpenSeason] = useState<number | null>(null);
   const [episodesBySeason, setEpisodesBySeason] = useState<Record<number, Episode[]>>({});
   const [loadingSeason, setLoadingSeason] = useState<number | null>(null);
@@ -149,7 +151,7 @@ export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
                               </span>
                               {ep.air_date && (
                                 <span className={styles.epDate}>
-                                  {new Date(ep.air_date).toLocaleDateString("fr-FR")}
+                                  {new Date(ep.air_date).toLocaleDateString(dateLocaleTag(locale))}
                                 </span>
                               )}
                             </label>

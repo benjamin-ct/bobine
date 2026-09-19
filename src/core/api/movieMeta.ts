@@ -67,11 +67,33 @@ export function getFrenchTheatricalDateFromDetails(
   return extractFrenchTheatricalDate(details?.release_dates);
 }
 
-// Date complète lisible (ex. "12 septembre 2026"), films et séries — plus
-// précis que l'année seule affichée jusqu'ici sur les cartes/lignes de
-// liste. `null` si la date est absente ou invalide (repli sur l'année seule
-// côté appelant).
-export function formatFullDate(dateString: string | null | undefined): string | null {
+// Locale d'affichage des dates — union locale à ce module (pas d'import
+// depuis core/i18n/i18n.ts, qui a un effet de bord d'initialisation
+// react-i18next à l'import : casserait l'exécution sous Node natif de ce
+// module, voir commentaire de tête). Les valeurs correspondent à celles de
+// Locale (core/i18n/i18n.ts) ; à tenir synchronisé si une langue est ajoutée.
+export type DateLocale = "fr" | "en";
+
+const DATE_LOCALE_TAGS: Record<DateLocale, string> = {
+  fr: "fr-FR",
+  en: "en-US",
+};
+
+// Tag BCP47 (ex. "fr-FR") pour `Intl`/`toLocaleDateString` à partir de la
+// locale active de l'app — point d'entrée unique pour ne pas éparpiller ce
+// mapping dans chaque composant qui formate une date.
+export function dateLocaleTag(locale: DateLocale): string {
+  return DATE_LOCALE_TAGS[locale];
+}
+
+// Date complète lisible (ex. "12 septembre 2026" / "September 12, 2026"),
+// films et séries — plus précis que l'année seule affichée jusqu'ici sur
+// les cartes/lignes de liste. `null` si la date est absente ou invalide
+// (repli sur l'année seule côté appelant).
+export function formatFullDate(
+  dateString: string | null | undefined,
+  locale: DateLocale = "fr"
+): string | null {
   if (!dateString) {
     return null;
   }
@@ -79,7 +101,11 @@ export function formatFullDate(dateString: string | null | undefined): string | 
   if (Number.isNaN(d.getTime())) {
     return null;
   }
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return d.toLocaleDateString(dateLocaleTag(locale), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export type TheatricalStatus = "upcoming" | "in_theaters" | "past";

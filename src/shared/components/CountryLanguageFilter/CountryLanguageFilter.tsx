@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getCountries, getLanguages } from "../../../core/api/tmdb.ts";
 import type { Country, Language } from "../../../core/types/tmdb.ts";
+import { regionName } from "../../../core/context/RegionContext.tsx";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import styles from "./CountryLanguageFilter.module.css";
 
 interface CountryLanguageFilterProps {
@@ -21,6 +23,7 @@ export default function CountryLanguageFilter({
   setLanguage,
 }: CountryLanguageFilterProps) {
   const { t } = useTranslation();
+  const { locale } = useLocale();
   const [countries, setCountries] = useState<Country[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
 
@@ -37,6 +40,16 @@ export default function CountryLanguageFilter({
     };
   }, []);
 
+  // Nom localisé (locale active) plutôt que le english_name figé renvoyé par
+  // TMDB, avec repli sur ce dernier si Intl.DisplayNames est indisponible.
+  const localizedCountries = useMemo(
+    () =>
+      countries
+        .map((c) => ({ ...c, displayName: regionName(c.iso_3166_1, locale) || c.english_name }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName, locale)),
+    [countries, locale]
+  );
+
   return (
     <div className={styles.group}>
       <select
@@ -45,9 +58,9 @@ export default function CountryLanguageFilter({
         className={styles.select}
       >
         <option value="">{t("countryLanguageFilter.allCountries")}</option>
-        {countries.map((c) => (
+        {localizedCountries.map((c) => (
           <option key={c.iso_3166_1} value={c.iso_3166_1}>
-            {c.english_name}
+            {c.displayName}
           </option>
         ))}
       </select>

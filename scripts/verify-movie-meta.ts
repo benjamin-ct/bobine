@@ -13,6 +13,7 @@ import {
   estimateRuntimeMinutes,
   getFrenchTheatricalDateFromDetails,
   formatFullDate,
+  dateLocaleTag,
   theatricalStatusFromDate,
 } from "../src/core/api/movieMeta.ts";
 
@@ -142,10 +143,29 @@ check("details null -> null (pas de crash)", getFrenchTheatricalDateFromDetails(
 
 // --- formatFullDate ------------------------------------------------------
 
-check("Date valide -> format long fr-FR", formatFullDate("2026-09-12"), "12 septembre 2026");
+check(
+  "Date valide, locale par défaut -> format long fr-FR",
+  formatFullDate("2026-09-12"),
+  "12 septembre 2026"
+);
+check(
+  "Date valide, locale fr explicite -> format long fr-FR",
+  formatFullDate("2026-09-12", "fr"),
+  "12 septembre 2026"
+);
+check(
+  "Date valide, locale en -> format long en-US",
+  formatFullDate("2026-09-12", "en"),
+  "September 12, 2026"
+);
 check("Date null -> null", formatFullDate(null), null);
 check("Chaîne vide -> null", formatFullDate(""), null);
 check("Date invalide -> null", formatFullDate("pas-une-date"), null);
+
+// --- dateLocaleTag ---------------------------------------------------------
+
+check("Tag BCP47 pour fr", dateLocaleTag("fr"), "fr-FR");
+check("Tag BCP47 pour en", dateLocaleTag("en"), "en-US");
 
 // --- theatricalStatusFromDate -------------------------------------------
 

@@ -1,4 +1,5 @@
 import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import type { MediaPreview } from "../../../shared/lib/mediaPreviewCache.ts";
 import { posterAccentFromSeed } from "../../../shared/lib/posterAccent.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
@@ -27,6 +28,7 @@ export default function DetailSkeleton({ mediaType, id, preview }: DetailSkeleto
   // que posterAccentFromGenres utilise déjà en repli, pour que le cadre
   // hero ne reste pas plat/sans couleur pendant le chargement.
   const accentKey = posterAccentFromSeed(`${mediaType}:${id}`);
+  const { locale } = useLocale();
   return (
     <>
       <div className={`${pageStyles.hero} ${styles.hero} ${posterStyles[accentKey]}`}>
@@ -49,7 +51,7 @@ export default function DetailSkeleton({ mediaType, id, preview }: DetailSkeleto
                 {preview.title}{" "}
                 {preview.date && (
                   <span className={pageStyles.year}>
-                    ({formatFullDate(preview.date) || preview.date.slice(0, 4)})
+                    ({formatFullDate(preview.date, locale) || preview.date.slice(0, 4)})
                   </span>
                 )}
               </h1>

@@ -13,6 +13,7 @@ import {
 } from "../../../core/api/tmdb.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type {
@@ -52,6 +53,7 @@ function MediaCard({
   const { t } = useTranslation();
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
   const { getTheatricalStatus, region } = useRegion();
+  const { locale } = useLocale();
   const theatricalBadges: Record<string, string> = {
     in_theaters: t("mediaCard.inTheaters"),
     upcoming: t("mediaCard.upcomingTheatrical"),
@@ -202,7 +204,7 @@ function MediaCard({
       : null);
   const effectiveDate = (showFutureReleaseBadge && upcomingRelease?.date) || date;
   const displayDate =
-    formatFullDate(effectiveDate) || (effectiveDate ? effectiveDate.slice(0, 4) : "—");
+    formatFullDate(effectiveDate, locale) || (effectiveDate ? effectiveDate.slice(0, 4) : "—");
 
   const libItem = {
     id: item.id,

@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { posterUrl, getPerson, getPersonCredits, getGenres } from "../../core/api/tmdb.ts";
+import {
+  posterUrl,
+  getPerson,
+  getPersonCredits,
+  getGenres,
+  dateLocaleTag,
+} from "../../core/api/tmdb.ts";
+import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { MediaCard, Loading, ErrorMessage, EmptyState } from "../../shared/components/index.ts";
 import FrequentCollaborators from "./components/FrequentCollaborators.tsx";
 import { posterAccentFromSeed } from "../../shared/lib/posterAccent.ts";
@@ -50,6 +57,7 @@ export default function PersonPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { locale } = useLocale();
   const [person, setPerson] = useState<PersonDetails | null>(null);
   const [credits, setCredits] = useState<PersonCredits | null>(null);
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
@@ -191,7 +199,7 @@ export default function PersonPage() {
             {person.birthday && (
               <span>
                 {t("personPage.bornOn", {
-                  date: new Date(person.birthday).toLocaleDateString("fr-FR"),
+                  date: new Date(person.birthday).toLocaleDateString(dateLocaleTag(locale)),
                 })}
               </span>
             )}
