@@ -9,7 +9,7 @@ import i18n, { DEFAULT_LOCALE, SUPPORTED_LOCALES, type Locale } from "../i18n/i1
 // possibilité de override manuel persisté ensuite.
 const STORAGE_KEY = "bobine.locale";
 
-function isSupportedLocale(value: string): value is Locale {
+export function isSupportedLocale(value: string): value is Locale {
   return (SUPPORTED_LOCALES as readonly string[]).includes(value);
 }
 

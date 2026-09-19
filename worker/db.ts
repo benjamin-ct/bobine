@@ -598,6 +598,22 @@ export async function replaceFavoriteProvidersForUser(
   await db.batch(finalProviderIds.map((id) => stmt.bind(userId, id)));
 }
 
+export async function getLocaleForUser(db: D1Database, userId: number): Promise<string | null> {
+  const row = await db
+    .prepare("SELECT locale FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ locale: string | null }>();
+  return row?.locale ?? null;
+}
+
+export async function setLocaleForUser(
+  db: D1Database,
+  userId: number,
+  locale: string
+): Promise<void> {
+  await db.prepare("UPDATE users SET locale = ? WHERE id = ?").bind(locale, userId).run();
+}
+
 export async function wasAlreadyNotified(
   db: D1Database,
   subscriptionId: number,

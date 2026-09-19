@@ -11,6 +11,7 @@ import { ExcludedGenresProvider } from "./core/context/ExcludedGenresContext.tsx
 import { ExcludedTitlesProvider } from "./core/context/ExcludedTitlesContext.tsx";
 import { ThemeProvider } from "./core/context/ThemeContext.tsx";
 import { LocaleProvider } from "./core/context/LocaleContext.tsx";
+import { LocaleAccountSync } from "./core/context/LocaleAccountSync.tsx";
 import { ensureSentryInit } from "./core/logger.ts";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
 
@@ -32,15 +33,17 @@ createRoot(rootElement).render(
         <BrowserRouter>
           <RegionProvider>
             <AuthProvider>
-              <FavoriteProvidersProvider>
-                <ExcludedGenresProvider>
-                  <ExcludedTitlesProvider>
-                    <LibraryProvider>
-                      <App />
-                    </LibraryProvider>
-                  </ExcludedTitlesProvider>
-                </ExcludedGenresProvider>
-              </FavoriteProvidersProvider>
+              <LocaleAccountSync>
+                <FavoriteProvidersProvider>
+                  <ExcludedGenresProvider>
+                    <ExcludedTitlesProvider>
+                      <LibraryProvider>
+                        <App />
+                      </LibraryProvider>
+                    </ExcludedTitlesProvider>
+                  </ExcludedGenresProvider>
+                </FavoriteProvidersProvider>
+              </LocaleAccountSync>
             </AuthProvider>
           </RegionProvider>
         </BrowserRouter>
