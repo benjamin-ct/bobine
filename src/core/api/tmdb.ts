@@ -96,6 +96,16 @@ export interface DiscoverParams {
    * showProviderBadge sur MediaCard) : sans intérêt ailleurs. Sans effet en
    * dev (le Worker n'est pas dans la boucle, voir tmdbClient.ts). */
   includeProviderBadge?: boolean;
+  /** Films uniquement : demande au Worker de résoudre, pour chaque résultat,
+   * la date de sortie ciné dans `region` à partir de /release_dates
+   * (voir enrichDiscoverResultsWithRegionDate, worker/index.ts), pour que
+   * les cartes (MediaCard) affichent cette date plutôt que `release_date`
+   * (date globale TMDB, pas région-consciente — cause du bug "date figée
+   * sur la France" côté grilles). Même tradeoff que includeProviderBadge :
+   * un aller-retour serveur unique pour toute la grille plutôt qu'un appel
+   * par carte, donc réservé aux pages qui affichent cette date par défaut
+   * (Découvrir). Sans effet en dev (Worker pas dans la boucle). */
+  includeRegionReleaseDate?: boolean;
 }
 
 export function discover(
@@ -122,6 +132,7 @@ export function discover(
     runtimeMin,
     runtimeMax,
     includeProviderBadge,
+    includeRegionReleaseDate,
   }: DiscoverParams = {}
 ): Promise<PagedResponse<MediaSummary>> {
   const resolvedField: string =
@@ -168,6 +179,9 @@ export function discover(
     // providerIds et n'a donc pas toujours la bonne valeur pour ce besoin.
     include_watch_providers_badge: includeProviderBadge ? 1 : undefined,
     watch_providers_badge_region: includeProviderBadge ? region : undefined,
+    include_region_release_date: includeRegionReleaseDate && mediaType === "movie" ? 1 : undefined,
+    region_release_date_region:
+      includeRegionReleaseDate && mediaType === "movie" ? region : undefined,
   });
 }
 

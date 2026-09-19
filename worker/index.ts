@@ -59,6 +59,8 @@ import { getTheatricalIndex } from "./tmdb.ts";
 import { withSentry } from "./sentry.ts";
 import { logError } from "./logger.ts";
 import { trackEvent } from "./analytics.ts";
+import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
+import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
 
 function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
@@ -765,7 +767,12 @@ async function handleTheatricalIndex(request: Request, env: Env, ctx: ExecutionC
 // Paramètres reconnus par ce Worker mais absents de l'API TMDB : jamais
 // transmis à TMDB (voir handleTmdbProxy), seulement lus pour piloter
 // l'enrichissement des grilles ci-dessous.
-const WORKER_ONLY_PARAMS = ["include_watch_providers_badge", "watch_providers_badge_region"];
+const WORKER_ONLY_PARAMS = [
+  "include_watch_providers_badge",
+  "watch_providers_badge_region",
+  "include_region_release_date",
+  "region_release_date_region",
+];
 
 // Résout les plateformes de streaming d'un titre en réutilisant EXACTEMENT
 // la même entrée de cache d'edge que l'appel direct /api/tmdb/<type>/<id>/
@@ -832,6 +839,67 @@ async function enrichDiscoverResultsWithProviders(
   );
 }
 
+// Résout /release_dates d'un film en réutilisant la même entrée de cache
+// d'edge que l'appel direct /api/tmdb/movie/<id>/release_dates (voir
+// fetchWatchProvidersCached ci-dessus, même principe).
+async function fetchReleaseDatesCached(
+  origin: string,
+  id: number,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<ReleaseDatesResponse | null> {
+  const cache = caches.default;
+  const cacheKey = new Request(`${origin}/api/tmdb/movie/${id}/release_dates?language=fr-FR`);
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    return cached.ok ? cached.json() : null;
+  }
+  const tmdbUrl = new URL(`https://api.themoviedb.org/3/movie/${id}/release_dates`);
+  tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY!);
+  const res = await fetch(tmdbUrl.toString());
+  const body = await res.text();
+  if (!res.ok) {
+    return null;
+  }
+  ctx.waitUntil(
+    cache.put(
+      cacheKey,
+      new Response(body, {
+        status: res.status,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=3600",
+        },
+      })
+    )
+  );
+  return JSON.parse(body);
+}
+
+// Grille Découvrir (films) : `release_date` renvoyé par /discover/movie est
+// la date de sortie "primaire" globale de TMDB, pas région-consciente (voir
+// MediaCard.tsx et getTheatricalDateFromDetails, source de vérité partagée
+// avec la fiche détail) — sans ça, un visiteur en région US peut voir une
+// date différente de la vraie sortie US (ex. sortie "primaire" mexicaine).
+// Même principe qu'enrichDiscoverResultsWithProviders : un aller-retour
+// serveur par titre, en parallèle, fusionné avant renvoi au client, plutôt
+// qu'un appel /release_dates par carte depuis le navigateur.
+async function enrichDiscoverResultsWithRegionDate(
+  data: { results?: Array<{ id: number }> },
+  region: string,
+  origin: string,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<void> {
+  await Promise.all(
+    (data.results || []).map(async (item) => {
+      const releaseDates = await fetchReleaseDatesCached(origin, item.id, env, ctx);
+      (item as { region_release_date?: string | null }).region_release_date =
+        getTheatricalDateFromDetails(releaseDates ? { release_dates: releaseDates } : null, region);
+    })
+  );
+}
+
 // Proxy TMDB : la clé API TMDB n'est plus exposée côté client (elle
 // n'apparaît dans aucune requête réseau visible depuis le navigateur). Le
 // front (src/core/api/tmdbClient.ts) appelle /api/tmdb/<chemin TMDB> ; ce
@@ -885,6 +953,8 @@ async function handleTmdbProxy(
     "movie" | "tv" | undefined;
   const shouldEnrichProviders =
     discoverMediaType && url.searchParams.get("include_watch_providers_badge") === "1";
+  const shouldEnrichRegionDate =
+    discoverMediaType === "movie" && url.searchParams.get("include_region_release_date") === "1";
 
   // Ces routes sont appelées une fois PAR CARTE (badge plateforme sur
   // Nouveautés, badge prochaine sortie/diffusion sur Prochainement) :
@@ -898,10 +968,23 @@ async function handleTmdbProxy(
 
   const res = await fetch(tmdbUrl.toString());
   let body = await res.text();
-  if (res.ok && shouldEnrichProviders) {
-    const region = url.searchParams.get("watch_providers_badge_region") || "FR";
+  if (res.ok && (shouldEnrichProviders || shouldEnrichRegionDate)) {
     const data = JSON.parse(body);
-    await enrichDiscoverResultsWithProviders(data, discoverMediaType, region, url.origin, env, ctx);
+    if (shouldEnrichProviders) {
+      const region = url.searchParams.get("watch_providers_badge_region") || "FR";
+      await enrichDiscoverResultsWithProviders(
+        data,
+        discoverMediaType,
+        region,
+        url.origin,
+        env,
+        ctx
+      );
+    }
+    if (shouldEnrichRegionDate) {
+      const region = url.searchParams.get("region_release_date_region") || "FR";
+      await enrichDiscoverResultsWithRegionDate(data, region, url.origin, env, ctx);
+    }
     body = JSON.stringify(data);
   }
   const response = new Response(body, {

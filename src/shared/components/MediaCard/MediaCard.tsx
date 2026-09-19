@@ -60,7 +60,13 @@ function MediaCard({
   };
   const mediaType = item.mediaType;
   const title = item.title || item.name || t("common.unknownTitle");
-  const date = item.release_date || item.first_air_date;
+  // item.region_release_date (résolu côté Worker, voir discover() avec
+  // includeRegionReleaseDate) est la date de sortie ciné région-consciente ;
+  // item.release_date est la date "primaire" globale de TMDB, pas fiable
+  // pour la région active (voir worker/index.ts,
+  // enrichDiscoverResultsWithRegionDate). `null` (enrichi, rien trouvé pour
+  // cette région) retombe correctement sur item.release_date via `||`.
+  const date = item.region_release_date || item.release_date || item.first_air_date;
   const watched = isWatched(mediaType, item.id);
   const inWatchlist = isInWatchlist(mediaType, item.id);
 

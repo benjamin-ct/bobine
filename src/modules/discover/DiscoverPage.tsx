@@ -187,6 +187,7 @@ export default function DiscoverPage() {
       sortField,
       sortDirection,
       excludeUpcoming: true,
+      includeRegionReleaseDate: true,
       ...toDiscoverParams(advanced),
     })
       .then((data) => {
@@ -241,6 +242,7 @@ export default function DiscoverPage() {
       sortField,
       sortDirection,
       excludeUpcoming: true,
+      includeRegionReleaseDate: true,
       ...toDiscoverParams(advanced),
     })
       .then((data) => {
