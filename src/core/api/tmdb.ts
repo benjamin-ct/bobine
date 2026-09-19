@@ -21,7 +21,7 @@ export {
 } from "./movieMeta.ts";
 export type { DateLocale } from "./movieMeta.ts";
 export { posterUrl, backdropUrl, logoUrl, IMG_BASE, TmdbConfigError } from "./tmdbClient.ts";
-import { tmdbFetch, IS_DEV } from "./tmdbClient.ts";
+import { tmdbFetch, IS_DEV, currentTmdbLanguage } from "./tmdbClient.ts";
 
 import type {
   Country,
@@ -246,7 +246,10 @@ export function trending(mediaType: "all" | MediaType = "all", window: "day" | "
 // cas d'échec, l'entrée est retirée pour permettre un nouvel essai.
 const detailsCache = new Map<string, Promise<MediaDetails>>();
 export function getDetails(mediaType: MediaType, id: string | number): Promise<MediaDetails> {
-  const key = `${mediaType}:${id}`;
+  // Le titre/synopsis/genres renvoyés dépendent de la langue TMDB active : la
+  // clé de cache doit en tenir compte, sinon changer de langue en cours de
+  // session continue de servir la réponse mise en cache dans l'ancienne.
+  const key = `${mediaType}:${id}:${currentTmdbLanguage()}`;
   const cached = detailsCache.get(key);
   if (cached) {
     return cached;
@@ -272,7 +275,7 @@ export function getDetails(mediaType: MediaType, id: string | number): Promise<M
 // des crédits, ni des vidéos, ni des recommandations pour un simple libellé.
 const summaryCache = new Map<string, Promise<MediaSummary>>();
 export function getMediaSummary(mediaType: MediaType, id: string | number): Promise<MediaSummary> {
-  const key = `${mediaType}:${id}`;
+  const key = `${mediaType}:${id}:${currentTmdbLanguage()}`;
   const cached = summaryCache.get(key);
   if (cached) {
     return cached;
@@ -291,19 +294,20 @@ export function getMediaSummary(mediaType: MediaType, id: string | number): Prom
 // affiches — la liste des autres films de la franchise vient de ce second
 // appel, dédié, à la demande (pas systématique sur getDetails : la plupart
 // des titres n'appartiennent à aucune collection).
-const collectionCache = new Map<number, Promise<CollectionDetails>>();
+const collectionCache = new Map<string, Promise<CollectionDetails>>();
 export function getCollection(collectionId: number): Promise<CollectionDetails> {
-  const cached = collectionCache.get(collectionId);
+  const key = `${collectionId}:${currentTmdbLanguage()}`;
+  const cached = collectionCache.get(key);
   if (cached) {
     return cached;
   }
   const promise = tmdbFetch<CollectionDetails>(`/collection/${collectionId}`).catch(
     (err: unknown) => {
-      collectionCache.delete(collectionId);
+      collectionCache.delete(key);
       throw err;
     }
   );
-  collectionCache.set(collectionId, promise);
+  collectionCache.set(key, promise);
   return promise;
 }
 

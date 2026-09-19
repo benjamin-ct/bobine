@@ -4,6 +4,7 @@
 // endroit centralise la base URL, les headers/paramètres et le timeout
 // (voir README, "Convention de fetch API").
 import { createConcurrencyLimiter } from "./concurrencyLimiter.ts";
+import i18n from "../i18n/i18n.ts";
 
 // En production, les requêtes passent par /api/tmdb/... (proxy côté
 // Worker, voir worker/index.ts) : la clé API TMDB n'est injectée que
@@ -15,7 +16,20 @@ import { createConcurrencyLimiter } from "./concurrencyLimiter.ts";
 export const IS_DEV = import.meta.env.DEV;
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const BASE_URL = IS_DEV ? "https://api.themoviedb.org/3" : "/api/tmdb";
-const LANGUAGE = "fr-FR";
+
+// TMDB veut un tag langue-région (BCP 47), pas juste "fr"/"en" (voir Locale
+// dans core/i18n/i18n.ts). Lu depuis le singleton i18next (synchronisé avec
+// LocaleContext via i18n.changeLanguage) plutôt que reçu en paramètre : ce
+// module bas niveau est utilisé par des dizaines d'appelants dans tmdb.ts,
+// leur faire tous prendre/propager la locale serait un remaniement bien plus
+// large que ce que corrige ce ticket (titres/genres/synopsis figés en
+// français quelle que soit la langue active).
+const TMDB_LANGUAGE_BY_LOCALE: Record<string, string> = { fr: "fr-FR", en: "en-US" };
+const DEFAULT_TMDB_LANGUAGE = "fr-FR";
+
+export function currentTmdbLanguage(): string {
+  return TMDB_LANGUAGE_BY_LOCALE[i18n.language] || DEFAULT_TMDB_LANGUAGE;
+}
 
 export const IMG_BASE = "https://image.tmdb.org/t/p/";
 export const posterUrl = (path: string | null | undefined, size = "w342"): string | null =>
@@ -52,7 +66,7 @@ export async function tmdbFetch<T>(path: string, params: TmdbParams = {}): Promi
   if (IS_DEV && API_KEY) {
     url.searchParams.set("api_key", API_KEY);
   }
-  url.searchParams.set("language", LANGUAGE);
+  url.searchParams.set("language", currentTmdbLanguage());
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== "") {
       url.searchParams.set(key, String(value));
