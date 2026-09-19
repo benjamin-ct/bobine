@@ -18,6 +18,8 @@ import {
   replaceExcludedGenresForUser,
   getFavoriteProvidersForUser,
   replaceFavoriteProvidersForUser,
+  getLocaleForUser,
+  setLocaleForUser,
   updateSubscriptionLocale,
 } from "./db.ts";
 import { runDailyCheck } from "./scheduled.ts";
@@ -701,6 +703,43 @@ async function handlePutFavoriteProviders(request: Request, env: Env): Promise<R
   return json({ ok: true });
 }
 
+// Langue d'interface synchronisée par compte -------------------------------
+//
+// Même garde IDOR que les autres réglages de compte : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête. Duplique
+// volontairement la liste des langues supportées (voir SUPPORTED_LOCALES
+// côté front, src/core/i18n/i18n.ts) plutôt que de la partager entre les
+// deux bundles indépendants (front Vite / Worker).
+const SUPPORTED_LOCALES = ["fr", "en"];
+
+async function handleGetLocale(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const locale = await getLocaleForUser(env.DB, user.id);
+  return json({ locale });
+}
+
+async function handlePutLocale(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const locale = (body as { locale?: unknown })?.locale;
+  if (typeof locale !== "string" || !SUPPORTED_LOCALES.includes(locale)) {
+    return json({ error: "Langue invalide." }, 400);
+  }
+  await setLocaleForUser(env.DB, user.id, locale);
+  return json({ ok: true });
+}
+
 // Index "au cinéma"/"bientôt" (voir getTheatricalIndex, worker/tmdb.ts) pour
 // une région : mis en cache à l'edge, si bien qu'un seul visiteur par région
 // et par heure paie le parcours complet de now_playing/upcoming — les
@@ -1050,6 +1089,14 @@ async function routeRequest(
 
   if (url.pathname === "/api/favorite-providers" && request.method === "PUT") {
     return handlePutFavoriteProviders(request, env);
+  }
+
+  if (url.pathname === "/api/locale" && request.method === "GET") {
+    return handleGetLocale(request, env);
+  }
+
+  if (url.pathname === "/api/locale" && request.method === "PUT") {
+    return handlePutLocale(request, env);
   }
 
   if (url.pathname.startsWith("/api/tmdb/") && request.method === "GET") {
