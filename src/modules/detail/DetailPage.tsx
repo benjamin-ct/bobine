@@ -34,7 +34,7 @@ import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPrevie
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
-import type { MediaDetails, MediaType, RegionWatchProviders } from "../../core/types/tmdb.ts";
+import type { MediaDetails, MediaType } from "../../core/types/tmdb.ts";
 import styles from "./DetailPage.module.css";
 
 const MAIN_CAST_COUNT = 12;
@@ -44,7 +44,6 @@ export default function DetailPage() {
   const navigate = useNavigate();
   const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
   const [details, setDetails] = useState<MediaDetails | null>(null);
-  const [providers, setProviders] = useState<RegionWatchProviders | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<Error | null>(null);
   const [preview, setPreview] = useState<MediaPreview | null>(null);
@@ -83,7 +82,6 @@ export default function DetailPage() {
           return;
         }
         setDetails(d);
-        setProviders(watchProvidersFromDetails(d, region));
         setStatus("success");
       })
       .catch((err) => {
@@ -96,7 +94,14 @@ export default function DetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [mediaType, id, region]);
+    // `region` n'affecte pas la requête (getDetails renvoie déjà toutes les
+    // régions dans `watch/providers`/`release_dates`) : les valeurs dérivées
+    // de la région (providers, date ciné) sont recalculées à chaque rendu
+    // plus bas, sans redéclencher ce fetch ni l'état "loading" — sinon un
+    // changement de région (ex. détection async après le rendu initial en
+    // région par défaut) provoquait un flash complet de la fiche (skeleton +
+    // affiche qui semble ne se rafraîchir qu'au reload).
+  }, [mediaType, id]);
 
   // Saute directement aux titres similaires si on arrive via le bouton "🔁".
   useEffect(() => {
@@ -148,6 +153,7 @@ export default function DetailPage() {
 
   const title = details.title || details.name || t("common.unknownTitle");
   const date = details.release_date || details.first_air_date;
+  const providers = watchProvidersFromDetails(details, region);
   const runtime = details.runtime || details.episode_run_time?.[0];
   const watched = isWatched(mediaType, id);
   const inWatchlist = isInWatchlist(mediaType, id);
@@ -159,6 +165,12 @@ export default function DetailPage() {
 
   const theatricalDate =
     mediaType === "movie" ? getTheatricalDateFromDetails(details, region) : null;
+  // La date à côté du titre doit suivre la même source que le badge "au
+  // cinéma" juste en dessous : `details.release_date` est une date globale
+  // TMDB indépendante de la région, alors que `theatricalDate` est la sortie
+  // ciné réelle dans la région active — sans ça les deux affichaient des
+  // dates différentes pour un même film selon la région du visiteur.
+  const displayDate = theatricalDate || date;
   const theatricalStatus = theatricalStatusFromDate(theatricalDate);
   const theatricalDateFormatted = theatricalDate ? formatFullDate(theatricalDate, locale) : null;
   const theatricalMessage = theatricalStatus
@@ -247,9 +259,9 @@ export default function DetailPage() {
           <div className={styles.info}>
             <h1 className={styles.title}>
               {title}{" "}
-              {date && (
+              {displayDate && (
                 <span className={styles.year}>
-                  ({formatFullDate(date, locale) || date.slice(0, 4)})
+                  ({formatFullDate(displayDate, locale) || displayDate.slice(0, 4)})
                 </span>
               )}
             </h1>
@@ -394,7 +406,7 @@ export default function DetailPage() {
           {t("detailPage.whereToWatch")}
           {regionName ? ` · ${regionName}` : ""}
         </h2>
-        <ProviderBadges providers={providers} />
+        <ProviderBadges providers={providers} regionName={regionName} />
       </section>
 
       {mediaType === "tv" && details.seasons && details.seasons.length > 0 && (

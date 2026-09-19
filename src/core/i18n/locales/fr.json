@@ -34,7 +34,8 @@
     "recommendations": "Recommandations"
   },
   "providerBadges": {
-    "unavailable": "Non disponible en streaming en France pour le moment.",
+    "unavailable": "Non disponible en streaming en {{region}} pour le moment.",
+    "unavailableGeneric": "Non disponible en streaming pour le moment.",
     "subscription": "Inclus avec abonnement",
     "rent": "Location",
     "buy": "Achat",

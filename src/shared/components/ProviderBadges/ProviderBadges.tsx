@@ -25,13 +25,25 @@ function Row({ label, items }: { label: string; items: WatchProviderEntry[] | un
   );
 }
 
-export default function ProviderBadges({ providers }: { providers: RegionWatchProviders | null }) {
+export default function ProviderBadges({
+  providers,
+  regionName,
+}: {
+  providers: RegionWatchProviders | null;
+  regionName?: string | null;
+}) {
   const { t } = useTranslation();
   if (
     !providers ||
     (!providers.flatrate?.length && !providers.rent?.length && !providers.buy?.length)
   ) {
-    return <p className={styles.empty}>{t("providerBadges.unavailable")}</p>;
+    return (
+      <p className={styles.empty}>
+        {regionName
+          ? t("providerBadges.unavailable", { region: regionName })
+          : t("providerBadges.unavailableGeneric")}
+      </p>
+    );
   }
 
   const { flatrate, rent, buy, link } = providers;

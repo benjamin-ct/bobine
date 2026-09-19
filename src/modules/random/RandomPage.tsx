@@ -64,7 +64,7 @@ export default function RandomPage() {
   const [error, setError] = useState<Error | null>(null);
 
   const { watchedIds, isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
-  const { region } = useRegion();
+  const { region, regionName } = useRegion();
   const { locale } = useLocale();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
@@ -329,7 +329,7 @@ export default function RandomPage() {
               </Link>
             </div>
             <h3 className={styles.whereTitle}>{t("randomPage.whereToWatch")}</h3>
-            <ProviderBadges providers={providersResult} />
+            <ProviderBadges providers={providersResult} regionName={regionName} />
           </div>
         </div>
       )}

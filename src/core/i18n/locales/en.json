@@ -34,7 +34,8 @@
     "recommendations": "Recommendations"
   },
   "providerBadges": {
-    "unavailable": "Not available to stream in France right now.",
+    "unavailable": "Not available to stream in {{region}} right now.",
+    "unavailableGeneric": "Not available to stream right now.",
     "subscription": "Included with subscription",
     "rent": "Rent",
     "buy": "Buy",
