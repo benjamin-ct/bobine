@@ -56,9 +56,21 @@ export function regionName(
 // aucun service tiers). Utilisé pour adapter "Où regarder" et la liste des
 // plateformes disponibles à la région réelle de la personne, plutôt que de
 // supposer la France pour tout le monde.
-export function RegionProvider({ children }: { children: ReactNode }) {
+export function RegionProvider({
+  children,
+  initialRegion,
+}: {
+  children: ReactNode;
+  // Résolue en amont du montage (voir main.tsx) pour éviter tout rendu
+  // transitoire avec DEFAULT_REGION avant que /api/region ne réponde — sans
+  // ça, chaque page dont le fetch dépend de la région (Discover, Nouveautés,
+  // À venir, Au hasard...) démarre avec des résultats FR par défaut puis se
+  // rafraîchit intégralement une fois la vraie région connue, ce qui donne
+  // l'impression que l'appli clignote/se recharge au premier affichage.
+  initialRegion?: string;
+}) {
   const { locale } = useLocale();
-  const [region, setRegion] = useState(DEFAULT_REGION);
+  const [region, setRegion] = useState(initialRegion ?? DEFAULT_REGION);
   // Index "au cinéma"/"bientôt" (voir getTheatricalStatusIndex) consulté
   // par MediaCard pour la pastille de grille, sans appel réseau par carte.
   // Vide tant que le premier chargement n'est pas terminé.
