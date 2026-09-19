@@ -1,15 +1,16 @@
 import { memo } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { posterUrl } from "../../../core/api/tmdb.ts";
 import { posterAccentFromSeed } from "../../lib/posterAccent.ts";
 import posterStyles from "../../styles/posterAccents.module.css";
 import styles from "./PersonCard.module.css";
 
-const DEPARTMENT_LABELS: Record<string, string> = {
-  Acting: "Acteur/Actrice",
-  Directing: "Réalisateur/Réalisatrice",
-  Writing: "Scénariste",
-  Production: "Production",
+const DEPARTMENT_LABEL_KEYS: Record<string, string> = {
+  Acting: "personCard.departmentActing",
+  Directing: "personCard.departmentDirecting",
+  Writing: "personCard.departmentWriting",
+  Production: "personCard.departmentProduction",
 };
 
 function initials(name: string): string {
@@ -35,8 +36,9 @@ interface PersonCardProps {
 // `memo` : les mêmes grilles denses (casting, filmographie...) que
 // MediaCard — voir son commentaire pour le raisonnement.
 function PersonCard({ id, name, profilePath, role, knownForDepartment }: PersonCardProps) {
-  const label =
-    role || (knownForDepartment && (DEPARTMENT_LABELS[knownForDepartment] || knownForDepartment));
+  const { t } = useTranslation();
+  const departmentKey = knownForDepartment && DEPARTMENT_LABEL_KEYS[knownForDepartment];
+  const label = role || (departmentKey ? t(departmentKey) : knownForDepartment);
   const accentKey = posterAccentFromSeed(name);
 
   return (

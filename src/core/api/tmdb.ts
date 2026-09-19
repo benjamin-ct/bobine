@@ -14,12 +14,14 @@ export {
 import { DEFAULT_REGION } from "./releaseBadge.ts";
 export {
   estimateRuntimeMinutes,
-  getFrenchTheatricalDateFromDetails,
+  getTheatricalDateFromDetails,
   formatFullDate,
+  dateLocaleTag,
   theatricalStatusFromDate,
 } from "./movieMeta.ts";
+export type { DateLocale } from "./movieMeta.ts";
 export { posterUrl, backdropUrl, logoUrl, IMG_BASE, TmdbConfigError } from "./tmdbClient.ts";
-import { tmdbFetch, IS_DEV } from "./tmdbClient.ts";
+import { tmdbFetch, IS_DEV, currentTmdbLanguage } from "./tmdbClient.ts";
 
 import type {
   Country,
@@ -94,6 +96,16 @@ export interface DiscoverParams {
    * showProviderBadge sur MediaCard) : sans intérêt ailleurs. Sans effet en
    * dev (le Worker n'est pas dans la boucle, voir tmdbClient.ts). */
   includeProviderBadge?: boolean;
+  /** Films uniquement : demande au Worker de résoudre, pour chaque résultat,
+   * la date de sortie ciné dans `region` à partir de /release_dates
+   * (voir enrichDiscoverResultsWithRegionDate, worker/index.ts), pour que
+   * les cartes (MediaCard) affichent cette date plutôt que `release_date`
+   * (date globale TMDB, pas région-consciente — cause du bug "date figée
+   * sur la France" côté grilles). Même tradeoff que includeProviderBadge :
+   * un aller-retour serveur unique pour toute la grille plutôt qu'un appel
+   * par carte, donc réservé aux pages qui affichent cette date par défaut
+   * (Découvrir). Sans effet en dev (Worker pas dans la boucle). */
+  includeRegionReleaseDate?: boolean;
 }
 
 export function discover(
@@ -120,6 +132,7 @@ export function discover(
     runtimeMin,
     runtimeMax,
     includeProviderBadge,
+    includeRegionReleaseDate,
   }: DiscoverParams = {}
 ): Promise<PagedResponse<MediaSummary>> {
   const resolvedField: string =
@@ -166,22 +179,20 @@ export function discover(
     // providerIds et n'a donc pas toujours la bonne valeur pour ce besoin.
     include_watch_providers_badge: includeProviderBadge ? 1 : undefined,
     watch_providers_badge_region: includeProviderBadge ? region : undefined,
+    include_region_release_date: includeRegionReleaseDate && mediaType === "movie" ? 1 : undefined,
+    region_release_date_region:
+      includeRegionReleaseDate && mediaType === "movie" ? region : undefined,
   });
 }
 
-export const SORT_FIELDS: Array<{ value: DiscoverSortField; label: string }> = [
-  { value: "popularity", label: "Popularité" },
-  { value: "vote_average", label: "Note" },
-  { value: "year", label: "Année" },
+// `labelKey` plutôt qu'un libellé en dur (même raison que STAR_LABEL_KEYS
+// dans ratingTier.ts) : ce module ne dépend pas de React, à résoudre via
+// t() côté composant appelant (voir FilterBar).
+export const SORT_FIELDS: Array<{ value: DiscoverSortField; labelKey: string }> = [
+  { value: "popularity", labelKey: "filterBar.sortByPopularity" },
+  { value: "vote_average", labelKey: "filterBar.sortByRating" },
+  { value: "year", labelKey: "filterBar.sortByYear" },
 ];
-
-// Surcharges manuelles de noms de pays, appliquées PARTOUT où un nom de pays
-// est affiché (fiche film, bloc "Où regarder", et les <select> de filtres).
-// Le point d'entrée unique est countryName()/regionName() ; getCountries()
-// applique aussi ces surcharges aux libellés des listes déroulantes.
-export const COUNTRY_NAME_OVERRIDES: Record<string, string> = {
-  IL: "Territoires palestiniens",
-};
 
 // Liste des pays (code ISO 3166-1 + nom localisé), pour le filtre "pays de
 // production". Résultat quasi-statique côté TMDB, sans dépendance à une
@@ -192,12 +203,7 @@ export async function getCountries(): Promise<Country[]> {
     return countriesCache;
   }
   const list = await tmdbFetch<Country[]>("/configuration/countries");
-  countriesCache = list
-    .map((c) => {
-      const override = COUNTRY_NAME_OVERRIDES[c.iso_3166_1.toUpperCase()];
-      return override ? { ...c, english_name: override } : c;
-    })
-    .sort((a, b) => a.english_name.localeCompare(b.english_name));
+  countriesCache = list.slice().sort((a, b) => a.english_name.localeCompare(b.english_name));
   return countriesCache;
 }
 
@@ -254,7 +260,10 @@ export function trending(mediaType: "all" | MediaType = "all", window: "day" | "
 // cas d'échec, l'entrée est retirée pour permettre un nouvel essai.
 const detailsCache = new Map<string, Promise<MediaDetails>>();
 export function getDetails(mediaType: MediaType, id: string | number): Promise<MediaDetails> {
-  const key = `${mediaType}:${id}`;
+  // Le titre/synopsis/genres renvoyés dépendent de la langue TMDB active : la
+  // clé de cache doit en tenir compte, sinon changer de langue en cours de
+  // session continue de servir la réponse mise en cache dans l'ancienne.
+  const key = `${mediaType}:${id}:${currentTmdbLanguage()}`;
   const cached = detailsCache.get(key);
   if (cached) {
     return cached;
@@ -280,7 +289,7 @@ export function getDetails(mediaType: MediaType, id: string | number): Promise<M
 // des crédits, ni des vidéos, ni des recommandations pour un simple libellé.
 const summaryCache = new Map<string, Promise<MediaSummary>>();
 export function getMediaSummary(mediaType: MediaType, id: string | number): Promise<MediaSummary> {
-  const key = `${mediaType}:${id}`;
+  const key = `${mediaType}:${id}:${currentTmdbLanguage()}`;
   const cached = summaryCache.get(key);
   if (cached) {
     return cached;
@@ -299,19 +308,20 @@ export function getMediaSummary(mediaType: MediaType, id: string | number): Prom
 // affiches — la liste des autres films de la franchise vient de ce second
 // appel, dédié, à la demande (pas systématique sur getDetails : la plupart
 // des titres n'appartiennent à aucune collection).
-const collectionCache = new Map<number, Promise<CollectionDetails>>();
+const collectionCache = new Map<string, Promise<CollectionDetails>>();
 export function getCollection(collectionId: number): Promise<CollectionDetails> {
-  const cached = collectionCache.get(collectionId);
+  const key = `${collectionId}:${currentTmdbLanguage()}`;
+  const cached = collectionCache.get(key);
   if (cached) {
     return cached;
   }
   const promise = tmdbFetch<CollectionDetails>(`/collection/${collectionId}`).catch(
     (err: unknown) => {
-      collectionCache.delete(collectionId);
+      collectionCache.delete(key);
       throw err;
     }
   );
-  collectionCache.set(collectionId, promise);
+  collectionCache.set(key, promise);
   return promise;
 }
 

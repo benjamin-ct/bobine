@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./ScrollToTopButton.module.css";
 
 const SHOW_AFTER_PX = 400;
@@ -6,6 +7,7 @@ const SHOW_AFTER_PX = 400;
 // Petit bouton flottant qui apparaît dès qu'on a pas mal scrollé, sur
 // n'importe quelle page, pour remonter en haut d'un clic.
 export default function ScrollToTopButton() {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -26,8 +28,8 @@ export default function ScrollToTopButton() {
       type="button"
       className={styles.button}
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      aria-label="Remonter en haut de la page"
-      title="Remonter en haut"
+      aria-label={t("scrollToTop.ariaLabel")}
+      title={t("scrollToTop.title")}
     >
       ↑
     </button>

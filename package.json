@@ -18,14 +18,17 @@
     "verify:movie-meta": "node scripts/verify-movie-meta.ts",
     "verify:tmdb-concurrency-cap": "node scripts/verify-tmdb-concurrency-cap.ts",
     "verify:numeric-range-filter": "node scripts/verify-numeric-range-filter.ts",
+    "verify:global-providers": "node scripts/verify-global-providers.ts",
     "postinstall": "node scripts/generate-icons.ts",
     "prepare": "husky"
   },
   "dependencies": {
     "@sentry/cloudflare": "^10.73.0",
     "@sentry/react": "^10.73.0",
+    "i18next": "^26.4.2",
     "react": "^19.2.8",
     "react-dom": "^19.3.0",
+    "react-i18next": "^17.0.14",
     "react-router-dom": "^7.18.3",
     "web-push": "^3.6.7"
   },

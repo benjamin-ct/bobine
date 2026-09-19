@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { posterUrl } from "../../../core/api/tmdb.ts";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
@@ -16,6 +17,7 @@ interface ContinueWatchingRowProps {
  * reste volontairement légère (pas d'appel réseau par carte) et affiche le
  * nombre d'épisodes déjà vus plutôt qu'une barre de progression exacte. */
 export default function ContinueWatchingRow({ items }: ContinueWatchingRowProps) {
+  const { t } = useTranslation();
   if (items.length === 0) {
     return null;
   }
@@ -43,9 +45,9 @@ export default function ContinueWatchingRow({ items }: ContinueWatchingRowProps)
                 {item.title}
               </p>
               <p className={styles.meta}>
-                {watchedCount} épisode{watchedCount > 1 ? "s" : ""} vu{watchedCount > 1 ? "s" : ""}
+                {t("continueWatching.episodesWatched", { count: watchedCount })}
               </p>
-              <span className={styles.resume}>Reprendre →</span>
+              <span className={styles.resume}>{t("continueWatching.resume")}</span>
             </div>
           </Link>
         );

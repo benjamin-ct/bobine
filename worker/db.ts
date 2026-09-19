@@ -15,21 +15,47 @@ import type { CustomListMap, LibraryState } from "../src/core/types/library.ts";
 
 export async function upsertSubscription(
   db: D1Database,
-  { endpoint, p256dh, auth }: { endpoint: string; p256dh: string; auth: string }
+  {
+    endpoint,
+    p256dh,
+    auth,
+    locale,
+  }: { endpoint: string; p256dh: string; auth: string; locale: string }
 ): Promise<number> {
   const existing = await db
     .prepare("SELECT id FROM subscriptions WHERE endpoint = ?")
     .bind(endpoint)
     .first<{ id: number }>();
   if (existing) {
+    await db
+      .prepare("UPDATE subscriptions SET locale = ? WHERE id = ?")
+      .bind(locale, existing.id)
+      .run();
     return existing.id;
   }
 
   const result = await db
-    .prepare("INSERT INTO subscriptions (endpoint, p256dh, auth, created_at) VALUES (?, ?, ?, ?)")
-    .bind(endpoint, p256dh, auth, Date.now())
+    .prepare(
+      "INSERT INTO subscriptions (endpoint, p256dh, auth, created_at, locale) VALUES (?, ?, ?, ?, ?)"
+    )
+    .bind(endpoint, p256dh, auth, Date.now(), locale)
     .run();
   return Number(result.meta.last_row_id);
+}
+
+// Mise à jour de la langue d'un abonnement déjà actif, quand l'utilisateur
+// change la langue de l'app après avoir activé les notifications (voir
+// NotificationSettings) — sans repasser par un resubscribe complet.
+export async function updateSubscriptionLocale(
+  db: D1Database,
+  endpoint: string,
+  locale: string
+): Promise<boolean> {
+  const result = await db
+    .prepare("UPDATE subscriptions SET locale = ? WHERE endpoint = ?")
+    .bind(locale, endpoint)
+    .run();
+  return (result.meta.changes || 0) > 0;
 }
 
 export async function deleteSubscription(db: D1Database, endpoint: string): Promise<void> {
@@ -570,6 +596,22 @@ export async function replaceFavoriteProvidersForUser(
     "INSERT INTO favorite_provider_prefs (user_id, provider_id) VALUES (?, ?)"
   );
   await db.batch(finalProviderIds.map((id) => stmt.bind(userId, id)));
+}
+
+export async function getLocaleForUser(db: D1Database, userId: number): Promise<string | null> {
+  const row = await db
+    .prepare("SELECT locale FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ locale: string | null }>();
+  return row?.locale ?? null;
+}
+
+export async function setLocaleForUser(
+  db: D1Database,
+  userId: number,
+  locale: string
+): Promise<void> {
+  await db.prepare("UPDATE users SET locale = ? WHERE id = ?").bind(locale, userId).run();
 }
 
 export async function wasAlreadyNotified(

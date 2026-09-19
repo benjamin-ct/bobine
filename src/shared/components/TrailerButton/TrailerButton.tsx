@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Video } from "../../../core/types/tmdb.ts";
 import styles from "./TrailerButton.module.css";
 
 export default function TrailerButton({ videos }: { videos: Video[] | undefined }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const trailer =
@@ -32,7 +34,7 @@ export default function TrailerButton({ videos }: { videos: Video[] | undefined 
         <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
           <path d="M8 5v14l11-7z" />
         </svg>
-        Bande-annonce
+        {t("trailer.button")}
       </button>
       {open && (
         <div className={styles.overlay} onClick={() => setOpen(false)}>
@@ -41,13 +43,13 @@ export default function TrailerButton({ videos }: { videos: Video[] | undefined 
               type="button"
               className={styles.close}
               onClick={() => setOpen(false)}
-              title="Fermer"
+              title={t("common.close")}
             >
               ✕
             </button>
             <iframe
               src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1`}
-              title="Bande-annonce"
+              title={t("trailer.iframeTitle")}
               allow="autoplay; encrypted-media; picture-in-picture"
               allowFullScreen
             />

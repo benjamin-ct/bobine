@@ -1,8 +1,10 @@
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useTheme } from "../../../core/context/ThemeContext.tsx";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
 import styles from "./NavBar.module.css";
@@ -12,11 +14,11 @@ const DEBOUNCE_MS = 300;
 const MAX_LIVE_RESULTS = 8;
 
 const NAV_LINKS = [
-  { to: "/", label: "Découvrir", end: true },
-  { to: "/nouveautes", label: "Nouveautés" },
-  { to: "/prochainement", label: "Prochainement" },
-  { to: "/aleatoire", label: "Aléatoire" },
-  { to: "/ma-liste", label: "Ma liste" },
+  { to: "/", key: "discover", end: true },
+  { to: "/nouveautes", key: "newReleases" },
+  { to: "/prochainement", key: "comingSoon" },
+  { to: "/aleatoire", key: "random" },
+  { to: "/ma-liste", key: "myList" },
 ];
 
 function ReelIcon() {
@@ -93,6 +95,7 @@ function SearchResults({
   inline?: boolean;
   onViewAll: () => void;
 }) {
+  const { t } = useTranslation();
   // Alimente le cache de préview (voir mediaPreviewCache) pour que la fiche
   // puisse préafficher affiche/titre/date pendant son chargement.
   useEffect(() => {
@@ -109,9 +112,9 @@ function SearchResults({
 
   return (
     <div className={`${styles.results} ${inline ? styles.resultsInline : ""}`} role="listbox">
-      {status === "loading" && <p className={styles.hint}>Recherche…</p>}
+      {status === "loading" && <p className={styles.hint}>{t("navBar.searching")}</p>}
       {status === "success" && results.length === 0 && (
-        <p className={styles.hint}>Aucun résultat.</p>
+        <p className={styles.hint}>{t("navBar.noResults")}</p>
       )}
       {results.map((item) => {
         if (item.media_type === "person") {
@@ -134,7 +137,7 @@ function SearchResults({
               )}
               <div>
                 <p className={styles.itemTitle}>{item.name}</p>
-                <p className={styles.itemMeta}>Acteur/Actrice, réalisateur·rice…</p>
+                <p className={styles.itemMeta}>{t("navBar.personRoleHint")}</p>
               </div>
             </Link>
           );
@@ -161,7 +164,9 @@ function SearchResults({
             <div>
               <p className={styles.itemTitle}>{title}</p>
               <p className={styles.itemMeta}>
-                {item.media_type === "movie" ? "Film" : "Série"}
+                {item.media_type === "movie"
+                  ? t("navBar.mediaTypeMovie")
+                  : t("navBar.mediaTypeSeries")}
                 {date ? ` · ${date.slice(0, 4)}` : ""}
               </p>
             </div>
@@ -174,7 +179,7 @@ function SearchResults({
           className={styles.allResults}
           onClick={onViewAll}
         >
-          Voir tous les résultats pour « {query} » →
+          {t("navBar.viewAllResults", { query })}
         </Link>
       )}
     </div>
@@ -182,6 +187,7 @@ function SearchResults({
 }
 
 export default function NavBar() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchMultiResult[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -191,6 +197,8 @@ export default function NavBar() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { status: authStatus, email, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { locale, setLocale } = useLocale();
+  const toggleLocale = () => setLocale(locale === "fr" ? "en" : "fr");
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -278,7 +286,7 @@ export default function NavBar() {
           Bobine
         </Link>
 
-        <nav className={styles.tabs} aria-label="Navigation principale">
+        <nav className={styles.tabs} aria-label={t("navBar.mainNavAriaLabel")}>
           {NAV_LINKS.map((link) => (
             <NavLink
               key={link.to}
@@ -287,7 +295,7 @@ export default function NavBar() {
               onClick={onNavClick}
               className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
             >
-              {link.label}
+              {t(`navBar.navLinks.${link.key}`)}
             </NavLink>
           ))}
         </nav>
@@ -306,11 +314,11 @@ export default function NavBar() {
             </svg>
             <input
               type="search"
-              placeholder="Film, série, acteur, réalisateur…"
+              placeholder={t("navBar.searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => results.length > 0 && setOpen(true)}
-              aria-label="Rechercher"
+              aria-label={t("navBar.searchAriaLabel")}
             />
           </form>
           {open && query.trim().length >= MIN_QUERY_LENGTH && (
@@ -328,17 +336,27 @@ export default function NavBar() {
           type="button"
           className={`${styles.iconBtn} ${styles.desktopOnly}`}
           onClick={toggleTheme}
-          aria-label="Basculer le thème clair / sombre"
-          title="Thème clair / sombre"
+          aria-label={t("navBar.themeToggleAriaLabel")}
+          title={t("navBar.themeToggleTitle")}
         >
           <ThemeIcon theme={theme} />
+        </button>
+
+        <button
+          type="button"
+          className={`${styles.textBtn} ${styles.desktopOnly}`}
+          onClick={toggleLocale}
+          aria-label={t("navBar.localeToggleAriaLabel")}
+          title={t("navBar.localeToggleTitle")}
+        >
+          {locale.toUpperCase()}
         </button>
 
         <Link
           to="/profil"
           className={`${styles.iconBtn} ${styles.desktopOnly}`}
-          aria-label="Profil"
-          title="Profil"
+          aria-label={t("navBar.profileAriaLabel")}
+          title={t("navBar.profileTitle")}
         >
           <svg
             viewBox="0 0 24 24"
@@ -359,7 +377,7 @@ export default function NavBar() {
             onClick={logout}
             title={email ?? undefined}
           >
-            Déconnexion
+            {t("navBar.logout")}
           </button>
         ) : (
           <Link
@@ -367,7 +385,7 @@ export default function NavBar() {
             className={`${styles.textBtn} ${styles.desktopOnly}`}
             onClick={onNavClick}
           >
-            Connexion
+            {t("navBar.login")}
           </Link>
         )}
 
@@ -375,17 +393,27 @@ export default function NavBar() {
           type="button"
           className={`${styles.iconBtn} ${styles.mobileOnly}`}
           onClick={toggleTheme}
-          aria-label="Basculer le thème clair / sombre"
-          title="Thème clair / sombre"
+          aria-label={t("navBar.themeToggleAriaLabel")}
+          title={t("navBar.themeToggleTitle")}
         >
           <ThemeIcon theme={theme} />
         </button>
 
         <button
           type="button"
+          className={`${styles.textBtn} ${styles.mobileOnly}`}
+          onClick={toggleLocale}
+          aria-label={t("navBar.localeToggleAriaLabel")}
+          title={t("navBar.localeToggleTitle")}
+        >
+          {locale.toUpperCase()}
+        </button>
+
+        <button
+          type="button"
           className={styles.hamburger}
           onClick={() => setMenuOpen((v) => !v)}
-          aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-label={menuOpen ? t("navBar.closeMenuAriaLabel") : t("navBar.openMenuAriaLabel")}
           aria-expanded={menuOpen}
         >
           <HamburgerIcon open={menuOpen} />
@@ -407,7 +435,7 @@ export default function NavBar() {
             </svg>
             <input
               type="search"
-              placeholder="Film, série, acteur, réalisateur…"
+              placeholder={t("navBar.searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -436,19 +464,19 @@ export default function NavBar() {
                   `${styles.mobileLink} ${isActive ? styles.mobileLinkActive : ""}`
                 }
               >
-                {link.label}
+                {t(`navBar.navLinks.${link.key}`)}
               </NavLink>
             ))}
             <NavLink to="/profil" onClick={onNavClick} className={styles.mobileLink}>
-              Profil
+              {t("navBar.profileTitle")}
             </NavLink>
             <div className={styles.mobileLegal}>
               <Link to="/confidentialite" onClick={onNavClick}>
-                Confidentialité
+                {t("legalLinks.privacy")}
               </Link>
               <span aria-hidden="true">·</span>
               <Link to="/conditions-utilisation" onClick={onNavClick}>
-                CGU
+                {t("legalLinks.terms")}
               </Link>
             </div>
           </nav>
@@ -462,11 +490,11 @@ export default function NavBar() {
                   setMenuOpen(false);
                 }}
               >
-                Déconnexion
+                {t("navBar.logout")}
               </button>
             ) : (
               <Link to="/connexion" className={styles.primaryBtn} onClick={onNavClick}>
-                Connexion
+                {t("navBar.login")}
               </Link>
             )}
           </div>

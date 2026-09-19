@@ -7,12 +7,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  COUNTRY_NAME_OVERRIDES,
-  DEFAULT_REGION,
-  getTheatricalStatusIndex,
-  type TheatricalIndex,
-} from "../api/tmdb.ts";
+import { DEFAULT_REGION, getTheatricalStatusIndex, type TheatricalIndex } from "../api/tmdb.ts";
+import { DEFAULT_LOCALE, type Locale } from "../i18n/i18n.ts";
+import { useLocale } from "./LocaleContext.tsx";
 
 interface RegionContextValue {
   region: string;
@@ -22,24 +19,33 @@ interface RegionContextValue {
 
 const RegionContext = createContext<RegionContextValue | null>(null);
 
-// Nom du pays en français à partir de son code ISO 3166-1 (ex. "FR" ->
-// "France"), via l'API native du navigateur — pas d'appel réseau
-// supplémentaire, pas de liste à maintenir.
-const regionDisplayNames =
-  typeof Intl.DisplayNames === "function"
-    ? new Intl.DisplayNames(["fr"], { type: "region" })
-    : null;
+// Nom du pays dans la locale active (ex. "FR" -> "France"/"France", "US" ->
+// "États-Unis"/"United States"), via l'API native du navigateur — pas
+// d'appel réseau supplémentaire, pas de liste à maintenir. Une instance
+// Intl.DisplayNames par locale, réutilisée plutôt que recréée à chaque appel.
+const regionDisplayNamesByLocale = new Map<Locale, Intl.DisplayNames>();
 
-export function regionName(code: string | null | undefined): string | null {
+function getRegionDisplayNames(locale: Locale): Intl.DisplayNames | null {
+  if (typeof Intl.DisplayNames !== "function") {
+    return null;
+  }
+  let instance = regionDisplayNamesByLocale.get(locale);
+  if (!instance) {
+    instance = new Intl.DisplayNames([locale], { type: "region" });
+    regionDisplayNamesByLocale.set(locale, instance);
+  }
+  return instance;
+}
+
+export function regionName(
+  code: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE
+): string | null {
   if (!code) {
     return null;
   }
-  const override = COUNTRY_NAME_OVERRIDES[code.toUpperCase()];
-  if (override) {
-    return override;
-  }
   try {
-    return regionDisplayNames?.of(code) || code;
+    return getRegionDisplayNames(locale)?.of(code) || code;
   } catch {
     return code;
   }
@@ -50,8 +56,21 @@ export function regionName(code: string | null | undefined): string | null {
 // aucun service tiers). Utilisé pour adapter "Où regarder" et la liste des
 // plateformes disponibles à la région réelle de la personne, plutôt que de
 // supposer la France pour tout le monde.
-export function RegionProvider({ children }: { children: ReactNode }) {
-  const [region, setRegion] = useState(DEFAULT_REGION);
+export function RegionProvider({
+  children,
+  initialRegion,
+}: {
+  children: ReactNode;
+  // Résolue en amont du montage (voir main.tsx) pour éviter tout rendu
+  // transitoire avec DEFAULT_REGION avant que /api/region ne réponde — sans
+  // ça, chaque page dont le fetch dépend de la région (Discover, Nouveautés,
+  // À venir, Au hasard...) démarre avec des résultats FR par défaut puis se
+  // rafraîchit intégralement une fois la vraie région connue, ce qui donne
+  // l'impression que l'appli clignote/se recharge au premier affichage.
+  initialRegion?: string;
+}) {
+  const { locale } = useLocale();
+  const [region, setRegion] = useState(initialRegion ?? DEFAULT_REGION);
   // Index "au cinéma"/"bientôt" (voir getTheatricalStatusIndex) consulté
   // par MediaCard pour la pastille de grille, sans appel réseau par carte.
   // Vide tant que le premier chargement n'est pas terminé.
@@ -98,8 +117,8 @@ export function RegionProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ region, regionName: regionName(region), getTheatricalStatus }),
-    [region, getTheatricalStatus]
+    () => ({ region, regionName: regionName(region, locale), getTheatricalStatus }),
+    [region, locale, getTheatricalStatus]
   );
 
   return <RegionContext.Provider value={value}>{children}</RegionContext.Provider>;

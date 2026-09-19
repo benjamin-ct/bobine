@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "../../../core/i18n/i18n.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { logWarn } from "../../../core/logger.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
@@ -66,7 +69,8 @@ async function fullSyncSubscription(
   endpoint: string,
   keys: PushSubscriptionJSON["keys"],
   watchlist: LibraryItem[],
-  watched: LibraryItem[]
+  watched: LibraryItem[],
+  locale: string
 ): Promise<void> {
   const res = await fetch("/api/subscribe", {
     method: "POST",
@@ -76,11 +80,24 @@ async function fullSyncSubscription(
       keys,
       watchlist: watchlist.map(toWatchlistPayload),
       favoriteGenres: computeFavoriteGenres(watched),
+      locale,
     }),
   });
   if (!res.ok) {
-    throw new Error(`Synchronisation échouée (${res.status})`);
+    throw new Error(i18n.t("notificationSettings.syncFailed", { status: res.status }));
   }
+}
+
+// Langue à utiliser par le scheduler pour les notifications envoyées à cet
+// abonnement (voir worker/scheduled.ts) : resynchronisée à chaque
+// changement de langue tant que les notifications sont actives, en plus de
+// l'envoi initial fait par fullSyncSubscription.
+async function syncSubscriptionLocale(endpoint: string, locale: string): Promise<void> {
+  await fetch("/api/subscribe/locale", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ endpoint, locale }),
+  }).catch((err) => logWarn("Bobine : resynchronisation de la langue des notifs échouée.", err));
 }
 
 interface SyncedState {
@@ -142,14 +159,16 @@ async function syncSubscriptionDelta(
     }),
   });
   if (!res.ok) {
-    throw new Error(`Synchronisation échouée (${res.status})`);
+    throw new Error(i18n.t("notificationSettings.syncFailed", { status: res.status }));
   }
 
   lastSyncedRef.current = { watchlistKeys: desiredWatchlistKeys, genreKeys: desiredGenreKeys };
 }
 
 export default function NotificationSettings() {
+  const { t } = useTranslation();
   const { watchlist, watched } = useLibrary();
+  const { locale } = useLocale();
   const [endpoint, setEndpoint] = useState<string | null>(() =>
     localStorage.getItem(ENDPOINT_STORAGE_KEY)
   );
@@ -157,6 +176,7 @@ export default function NotificationSettings() {
   const [error, setError] = useState<string | null>(null);
   const isFirstSync = useRef(true);
   const lastSyncedRef = useRef<SyncedState>({ watchlistKeys: new Set(), genreKeys: new Set() });
+  const isFirstLocaleSync = useRef(true);
 
   // Resynchronise la watchlist / les genres favoris côté serveur à chaque
   // changement, tant que les notifications sont actives.
@@ -180,12 +200,22 @@ export default function NotificationSettings() {
     );
   }, [endpoint, watchlist, watched]);
 
+  // Resynchronise la langue des notifications quand l'utilisateur la change
+  // en cours de route (le premier envoi a lieu via fullSyncSubscription, à
+  // l'activation).
+  useEffect(() => {
+    if (!endpoint) {
+      return;
+    }
+    if (isFirstLocaleSync.current) {
+      isFirstLocaleSync.current = false;
+      return;
+    }
+    syncSubscriptionLocale(endpoint, locale);
+  }, [endpoint, locale]);
+
   if (!isSupported()) {
-    return (
-      <p className={styles.hint}>
-        Les notifications push ne sont pas supportées par ce navigateur.
-      </p>
-    );
+    return <p className={styles.hint}>{t("notificationSettings.unsupported")}</p>;
   }
 
   async function enable() {
@@ -194,16 +224,14 @@ export default function NotificationSettings() {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        throw new Error(
-          "Permission refusée. Autorise les notifications dans les réglages du navigateur pour ce site."
-        );
+        throw new Error(t("notificationSettings.permissionDenied"));
       }
 
       const registration = await navigator.serviceWorker.ready;
 
       const keyRes = await fetch("/api/vapid-public-key");
       if (!keyRes.ok) {
-        throw new Error("Impossible de récupérer la clé du serveur.");
+        throw new Error(t("notificationSettings.keyFetchError"));
       }
       const { publicKey } = (await keyRes.json()) as { publicKey: string };
 
@@ -218,16 +246,16 @@ export default function NotificationSettings() {
 
       const { endpoint: subEndpoint, keys } = subscription.toJSON();
       if (!subEndpoint || !keys) {
-        throw new Error("Abonnement push incomplet.");
+        throw new Error(t("notificationSettings.incompleteSubscription"));
       }
-      await fullSyncSubscription(subEndpoint, keys, watchlist, watched);
+      await fullSyncSubscription(subEndpoint, keys, watchlist, watched, locale);
       lastSyncedRef.current = keysOf(watchlist, watched);
 
       localStorage.setItem(ENDPOINT_STORAGE_KEY, subEndpoint);
       setEndpoint(subEndpoint);
       setStatus("idle");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+      setError(err instanceof Error ? err.message : t("common.errorGeneric"));
       setStatus("error");
     }
   }
@@ -250,7 +278,7 @@ export default function NotificationSettings() {
       setEndpoint(null);
       setStatus("idle");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+      setError(err instanceof Error ? err.message : t("common.errorGeneric"));
       setStatus("error");
     }
   }
@@ -265,12 +293,9 @@ export default function NotificationSettings() {
             onClick={disable}
             disabled={status === "working"}
           >
-            🔔 Notifications activées — désactiver
+            {t("notificationSettings.disableButton")}
           </button>
-          <p className={styles.hint}>
-            Tu seras prévenu·e quand un titre de ta liste "Envie de voir" arrive en streaming, pour
-            les nouveautés dans tes genres préférés, et pour les grosses sorties du moment.
-          </p>
+          <p className={styles.hint}>{t("notificationSettings.enabledHint")}</p>
         </>
       ) : (
         <>
@@ -280,11 +305,11 @@ export default function NotificationSettings() {
             onClick={enable}
             disabled={status === "working"}
           >
-            {status === "working" ? "Activation…" : "🔕 Activer les notifications"}
+            {status === "working"
+              ? t("notificationSettings.enabling")
+              : t("notificationSettings.enableButton")}
           </button>
-          <p className={styles.hint}>
-            Sois prévenu·e des nouveautés même sans avoir l'app ouverte.
-          </p>
+          <p className={styles.hint}>{t("notificationSettings.disabledHint")}</p>
         </>
       )}
       {error && <p className={styles.error}>{error}</p>}

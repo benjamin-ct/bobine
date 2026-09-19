@@ -18,5 +18,11 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["worker", "src/core/types/library.ts", "src/core/types/tmdb.ts"]
+  "include": [
+    "worker",
+    "src/core/types/library.ts",
+    "src/core/types/tmdb.ts",
+    "src/core/api/movieMeta.ts",
+    "src/core/api/releaseBadge.ts"
+  ]
 }

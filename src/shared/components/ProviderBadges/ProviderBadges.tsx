@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { logoUrl } from "../../../core/api/tmdb.ts";
 import type { RegionWatchProviders, WatchProviderEntry } from "../../../core/types/tmdb.ts";
 import styles from "./ProviderBadges.module.css";
@@ -24,24 +25,37 @@ function Row({ label, items }: { label: string; items: WatchProviderEntry[] | un
   );
 }
 
-export default function ProviderBadges({ providers }: { providers: RegionWatchProviders | null }) {
+export default function ProviderBadges({
+  providers,
+  regionName,
+}: {
+  providers: RegionWatchProviders | null;
+  regionName?: string | null;
+}) {
+  const { t } = useTranslation();
   if (
     !providers ||
     (!providers.flatrate?.length && !providers.rent?.length && !providers.buy?.length)
   ) {
-    return <p className={styles.empty}>Non disponible en streaming en France pour le moment.</p>;
+    return (
+      <p className={styles.empty}>
+        {regionName
+          ? t("providerBadges.unavailable", { region: regionName })
+          : t("providerBadges.unavailableGeneric")}
+      </p>
+    );
   }
 
   const { flatrate, rent, buy, link } = providers;
 
   return (
     <div className={styles.badges}>
-      <Row label="Inclus avec abonnement" items={flatrate} />
-      <Row label="Location" items={rent} />
-      <Row label="Achat" items={buy} />
+      <Row label={t("providerBadges.subscription")} items={flatrate} />
+      <Row label={t("providerBadges.rent")} items={rent} />
+      <Row label={t("providerBadges.buy")} items={buy} />
       {link && (
         <a href={link} target="_blank" rel="noreferrer" className={styles.link}>
-          Voir toutes les options sur JustWatch →
+          {t("providerBadges.justwatchLink")}
         </a>
       )}
     </div>

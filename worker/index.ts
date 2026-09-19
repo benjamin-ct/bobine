@@ -18,6 +18,9 @@ import {
   replaceExcludedGenresForUser,
   getFavoriteProvidersForUser,
   replaceFavoriteProvidersForUser,
+  getLocaleForUser,
+  setLocaleForUser,
+  updateSubscriptionLocale,
 } from "./db.ts";
 import { runDailyCheck } from "./scheduled.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
@@ -32,7 +35,14 @@ import {
   getUserFromRequest,
   sessionCookieHeader,
   sendMagicLinkEmail,
+  type EmailLocale,
 } from "./auth.ts";
+
+const EMAIL_LOCALES: EmailLocale[] = ["fr", "en"];
+
+function sanitizeEmailLocale(value: unknown): EmailLocale {
+  return EMAIL_LOCALES.includes(value as EmailLocale) ? (value as EmailLocale) : "fr";
+}
 import { checkRateLimit, getClientIp } from "./rate-limit.ts";
 import {
   sanitizeLibraryPayload,
@@ -49,6 +59,8 @@ import { getTheatricalIndex } from "./tmdb.ts";
 import { withSentry } from "./sentry.ts";
 import { logError } from "./logger.ts";
 import { trackEvent } from "./analytics.ts";
+import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
+import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
 
 function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
@@ -128,6 +140,14 @@ const RATE_LIMIT_RESPONSE = (): Response =>
 const MAX_WATCHLIST_ITEMS = 500;
 const MAX_GENRE_PREFS = 50;
 
+// Langue des notifications push envoyées par le scheduler pour cet
+// abonnement (voir migration 0005) — par défaut "fr" si absente/invalide.
+const SUBSCRIPTION_LOCALES = ["fr", "en"];
+
+function sanitizeSubscriptionLocale(value: unknown): string {
+  return typeof value === "string" && SUBSCRIPTION_LOCALES.includes(value) ? value : "fr";
+}
+
 async function handleSubscribe(request: Request, env: Env): Promise<Response> {
   const ip = getClientIp(request);
   if (!(await checkRateLimit(env.DB, `subscribe:ip:${ip}`, { limit: 10, windowMs: 60 * 60_000 }))) {
@@ -141,11 +161,12 @@ async function handleSubscribe(request: Request, env: Env): Promise<Response> {
     return json({ error: "JSON invalide." }, 400);
   }
 
-  const { endpoint, keys, watchlist, favoriteGenres } = body as {
+  const { endpoint, keys, watchlist, favoriteGenres, locale } = body as {
     endpoint?: unknown;
     keys?: { p256dh?: unknown; auth?: unknown };
     watchlist?: unknown;
     favoriteGenres?: unknown;
+    locale?: unknown;
   };
   if (
     typeof endpoint !== "string" ||
@@ -160,6 +181,7 @@ async function handleSubscribe(request: Request, env: Env): Promise<Response> {
     endpoint,
     p256dh: String(keys.p256dh),
     auth: String(keys.auth),
+    locale: sanitizeSubscriptionLocale(locale),
   });
 
   // Remplacement complet : correct et volontaire ici, cet appel n'a lieu
@@ -246,6 +268,38 @@ async function handleUnsubscribe(request: Request, env: Env): Promise<Response> 
     return json({ error: "endpoint manquant." }, 400);
   }
   await deleteSubscription(env.DB, body.endpoint);
+  return json({ ok: true });
+}
+
+// Changement de langue pendant que les notifications sont déjà actives (voir
+// NotificationSettings) : met à jour la locale de l'abonnement sans repasser
+// par un resubscribe complet côté navigateur.
+async function handleUpdateSubscriptionLocale(request: Request, env: Env): Promise<Response> {
+  const ip = getClientIp(request);
+  if (
+    !(await checkRateLimit(env.DB, `subscribe-locale:ip:${ip}`, { limit: 30, windowMs: 60_000 }))
+  ) {
+    return RATE_LIMIT_RESPONSE();
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  if (typeof body.endpoint !== "string") {
+    return json({ error: "endpoint manquant." }, 400);
+  }
+
+  const updated = await updateSubscriptionLocale(
+    env.DB,
+    body.endpoint,
+    sanitizeSubscriptionLocale(body.locale)
+  );
+  if (!updated) {
+    return json({ error: "Abonnement introuvable." }, 404);
+  }
   return json({ ok: true });
 }
 
@@ -339,6 +393,7 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
   if (!isValidEmail(email)) {
     return json({ error: "Adresse email invalide." }, 400);
   }
+  const locale = sanitizeEmailLocale(body?.locale);
 
   const recaptcha = await verifyRecaptcha(
     env,
@@ -366,7 +421,7 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
   const link = `${new URL(request.url).origin}/auth/verify?token=${token}`;
 
   try {
-    const { skipped } = await sendMagicLinkEmail(env, email, link, code);
+    const { skipped } = await sendMagicLinkEmail(env, email, link, code, locale);
     // Uniquement quand RESEND_API_KEY n'est pas configurée (dev local) : pas
     // de vraie boîte mail à disposition, donc on renvoie le lien et le code
     // directement pour pouvoir tester le flux. Ne se produit jamais en
@@ -650,6 +705,43 @@ async function handlePutFavoriteProviders(request: Request, env: Env): Promise<R
   return json({ ok: true });
 }
 
+// Langue d'interface synchronisée par compte -------------------------------
+//
+// Même garde IDOR que les autres réglages de compte : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête. Duplique
+// volontairement la liste des langues supportées (voir SUPPORTED_LOCALES
+// côté front, src/core/i18n/i18n.ts) plutôt que de la partager entre les
+// deux bundles indépendants (front Vite / Worker).
+const SUPPORTED_LOCALES = ["fr", "en"];
+
+async function handleGetLocale(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const locale = await getLocaleForUser(env.DB, user.id);
+  return json({ locale });
+}
+
+async function handlePutLocale(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const locale = (body as { locale?: unknown })?.locale;
+  if (typeof locale !== "string" || !SUPPORTED_LOCALES.includes(locale)) {
+    return json({ error: "Langue invalide." }, 400);
+  }
+  await setLocaleForUser(env.DB, user.id, locale);
+  return json({ ok: true });
+}
+
 // Index "au cinéma"/"bientôt" (voir getTheatricalIndex, worker/tmdb.ts) pour
 // une région : mis en cache à l'edge, si bien qu'un seul visiteur par région
 // et par heure paie le parcours complet de now_playing/upcoming — les
@@ -675,7 +767,12 @@ async function handleTheatricalIndex(request: Request, env: Env, ctx: ExecutionC
 // Paramètres reconnus par ce Worker mais absents de l'API TMDB : jamais
 // transmis à TMDB (voir handleTmdbProxy), seulement lus pour piloter
 // l'enrichissement des grilles ci-dessous.
-const WORKER_ONLY_PARAMS = ["include_watch_providers_badge", "watch_providers_badge_region"];
+const WORKER_ONLY_PARAMS = [
+  "include_watch_providers_badge",
+  "watch_providers_badge_region",
+  "include_region_release_date",
+  "region_release_date_region",
+];
 
 // Résout les plateformes de streaming d'un titre en réutilisant EXACTEMENT
 // la même entrée de cache d'edge que l'appel direct /api/tmdb/<type>/<id>/
@@ -742,6 +839,67 @@ async function enrichDiscoverResultsWithProviders(
   );
 }
 
+// Résout /release_dates d'un film en réutilisant la même entrée de cache
+// d'edge que l'appel direct /api/tmdb/movie/<id>/release_dates (voir
+// fetchWatchProvidersCached ci-dessus, même principe).
+async function fetchReleaseDatesCached(
+  origin: string,
+  id: number,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<ReleaseDatesResponse | null> {
+  const cache = caches.default;
+  const cacheKey = new Request(`${origin}/api/tmdb/movie/${id}/release_dates?language=fr-FR`);
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    return cached.ok ? cached.json() : null;
+  }
+  const tmdbUrl = new URL(`https://api.themoviedb.org/3/movie/${id}/release_dates`);
+  tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY!);
+  const res = await fetch(tmdbUrl.toString());
+  const body = await res.text();
+  if (!res.ok) {
+    return null;
+  }
+  ctx.waitUntil(
+    cache.put(
+      cacheKey,
+      new Response(body, {
+        status: res.status,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=3600",
+        },
+      })
+    )
+  );
+  return JSON.parse(body);
+}
+
+// Grille Découvrir (films) : `release_date` renvoyé par /discover/movie est
+// la date de sortie "primaire" globale de TMDB, pas région-consciente (voir
+// MediaCard.tsx et getTheatricalDateFromDetails, source de vérité partagée
+// avec la fiche détail) — sans ça, un visiteur en région US peut voir une
+// date différente de la vraie sortie US (ex. sortie "primaire" mexicaine).
+// Même principe qu'enrichDiscoverResultsWithProviders : un aller-retour
+// serveur par titre, en parallèle, fusionné avant renvoi au client, plutôt
+// qu'un appel /release_dates par carte depuis le navigateur.
+async function enrichDiscoverResultsWithRegionDate(
+  data: { results?: Array<{ id: number }> },
+  region: string,
+  origin: string,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<void> {
+  await Promise.all(
+    (data.results || []).map(async (item) => {
+      const releaseDates = await fetchReleaseDatesCached(origin, item.id, env, ctx);
+      (item as { region_release_date?: string | null }).region_release_date =
+        getTheatricalDateFromDetails(releaseDates ? { release_dates: releaseDates } : null, region);
+    })
+  );
+}
+
 // Proxy TMDB : la clé API TMDB n'est plus exposée côté client (elle
 // n'apparaît dans aucune requête réseau visible depuis le navigateur). Le
 // front (src/core/api/tmdbClient.ts) appelle /api/tmdb/<chemin TMDB> ; ce
@@ -795,6 +953,8 @@ async function handleTmdbProxy(
     "movie" | "tv" | undefined;
   const shouldEnrichProviders =
     discoverMediaType && url.searchParams.get("include_watch_providers_badge") === "1";
+  const shouldEnrichRegionDate =
+    discoverMediaType === "movie" && url.searchParams.get("include_region_release_date") === "1";
 
   // Ces routes sont appelées une fois PAR CARTE (badge plateforme sur
   // Nouveautés, badge prochaine sortie/diffusion sur Prochainement) :
@@ -808,10 +968,23 @@ async function handleTmdbProxy(
 
   const res = await fetch(tmdbUrl.toString());
   let body = await res.text();
-  if (res.ok && shouldEnrichProviders) {
-    const region = url.searchParams.get("watch_providers_badge_region") || "FR";
+  if (res.ok && (shouldEnrichProviders || shouldEnrichRegionDate)) {
     const data = JSON.parse(body);
-    await enrichDiscoverResultsWithProviders(data, discoverMediaType, region, url.origin, env, ctx);
+    if (shouldEnrichProviders) {
+      const region = url.searchParams.get("watch_providers_badge_region") || "FR";
+      await enrichDiscoverResultsWithProviders(
+        data,
+        discoverMediaType,
+        region,
+        url.origin,
+        env,
+        ctx
+      );
+    }
+    if (shouldEnrichRegionDate) {
+      const region = url.searchParams.get("region_release_date_region") || "FR";
+      await enrichDiscoverResultsWithRegionDate(data, region, url.origin, env, ctx);
+    }
     body = JSON.stringify(data);
   }
   const response = new Response(body, {
@@ -929,6 +1102,10 @@ async function routeRequest(
     return handleSubscribeSync(request, env);
   }
 
+  if (url.pathname === "/api/subscribe/locale" && request.method === "POST") {
+    return handleUpdateSubscriptionLocale(request, env);
+  }
+
   if (url.pathname === "/api/run-check" && request.method === "POST") {
     return handleManualRun(request, env);
   }
@@ -995,6 +1172,14 @@ async function routeRequest(
 
   if (url.pathname === "/api/favorite-providers" && request.method === "PUT") {
     return handlePutFavoriteProviders(request, env);
+  }
+
+  if (url.pathname === "/api/locale" && request.method === "GET") {
+    return handleGetLocale(request, env);
+  }
+
+  if (url.pathname === "/api/locale" && request.method === "PUT") {
+    return handlePutLocale(request, env);
   }
 
   if (url.pathname.startsWith("/api/tmdb/") && request.method === "GET") {

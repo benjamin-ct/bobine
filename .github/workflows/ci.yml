@@ -79,6 +79,7 @@ jobs:
           npm run verify:movie-meta
           npm run verify:tmdb-concurrency-cap
           npm run verify:numeric-range-filter
+          npm run verify:global-providers
 
       - name: Build
         run: npm run build
