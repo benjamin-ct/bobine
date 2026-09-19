@@ -6,6 +6,7 @@
 // ne pas changer les points d'import existants. Une seule source de
 // vérité, aucune copie à synchroniser.
 import type { MediaDetails, MediaType, ReleaseDatesResponse } from "../types/tmdb.ts";
+import { DEFAULT_REGION } from "./releaseBadge.ts";
 
 /** Sous-ensemble de MediaDetails réellement consommé ici — accepte aussi un
  * objet partiel/`null` (fiche pas encore chargée, ou test avec des données
@@ -44,15 +45,16 @@ export const THEATRICAL_WINDOW_DAYS = 42;
 // type — et non la date la plus ancienne tous types confondus, sinon une
 // sortie limitée antérieure masquerait la sortie nationale qu'on veut
 // privilégier.
-function extractFrenchTheatricalDate(
-  releaseDatesResponse: ReleaseDatesResponse | undefined
+function extractTheatricalDate(
+  releaseDatesResponse: ReleaseDatesResponse | undefined,
+  region: string
 ): string | null {
-  const fr = releaseDatesResponse?.results?.find((r) => r.iso_3166_1 === "FR");
-  if (!fr) {
+  const entry = releaseDatesResponse?.results?.find((r) => r.iso_3166_1 === region);
+  if (!entry) {
     return null;
   }
   const earliestOfType = (type: number) =>
-    (fr.release_dates || [])
+    (entry.release_dates || [])
       .filter((rd) => rd.type === type)
       .sort((a, b) => a.release_date.localeCompare(b.release_date))[0];
   const theatrical = earliestOfType(3) || earliestOfType(2);
@@ -60,11 +62,14 @@ function extractFrenchTheatricalDate(
 }
 
 // Pour la fiche détail : `details` vient de getDetails(), qui inclut déjà
-// release_dates (pas d'appel réseau supplémentaire).
-export function getFrenchTheatricalDateFromDetails(
-  details: Pick<MediaDetails, "release_dates"> | null | undefined
+// release_dates (pas d'appel réseau supplémentaire). `region` : région
+// détectée du visiteur (RegionContext) — repli sur DEFAULT_REGION ("FR")
+// si non fournie.
+export function getTheatricalDateFromDetails(
+  details: Pick<MediaDetails, "release_dates"> | null | undefined,
+  region: string = DEFAULT_REGION
 ): string | null {
-  return extractFrenchTheatricalDate(details?.release_dates);
+  return extractTheatricalDate(details?.release_dates, region);
 }
 
 // Locale d'affichage des dates — union locale à ce module (pas d'import
@@ -112,9 +117,10 @@ export type TheatricalStatus = "upcoming" | "in_theaters" | "past";
 
 // "upcoming" (pas encore sorti), "in_theaters" (sorti il y a moins de
 // THEATRICAL_WINDOW_DAYS), "past" (sorti plus tôt), ou null si aucune date
-// de sortie cinéma FR n'est connue pour ce titre (VOD/streaming direct,
-// film jamais distribué en salle en France...). Utilisé sur la fiche détail
-// (une seule date, déjà connue précisément via extractFrenchTheatricalDate).
+// de sortie cinéma n'est connue pour ce titre dans la région du visiteur
+// (VOD/streaming direct, film jamais distribué en salle dans ce pays...).
+// Utilisé sur la fiche détail (une seule date, déjà connue précisément via
+// extractTheatricalDate).
 export function theatricalStatusFromDate(
   dateString: string | null | undefined
 ): TheatricalStatus | null {

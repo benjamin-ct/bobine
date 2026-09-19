@@ -7,7 +7,7 @@ import {
   getDetails,
   watchProvidersFromDetails,
   estimateRuntimeMinutes,
-  getFrenchTheatricalDateFromDetails,
+  getTheatricalDateFromDetails,
   theatricalStatusFromDate,
   formatFullDate,
 } from "../../core/api/tmdb.ts";
@@ -157,7 +157,8 @@ export default function DetailPage() {
     `${mediaType}:${id}`
   );
 
-  const theatricalDate = mediaType === "movie" ? getFrenchTheatricalDateFromDetails(details) : null;
+  const theatricalDate =
+    mediaType === "movie" ? getTheatricalDateFromDetails(details, region) : null;
   const theatricalStatus = theatricalStatusFromDate(theatricalDate);
   const theatricalDateFormatted = theatricalDate ? formatFullDate(theatricalDate, locale) : null;
   const theatricalMessage = theatricalStatus

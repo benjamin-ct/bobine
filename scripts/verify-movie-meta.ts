@@ -11,7 +11,7 @@
 
 import {
   estimateRuntimeMinutes,
-  getFrenchTheatricalDateFromDetails,
+  getTheatricalDateFromDetails,
   formatFullDate,
   dateLocaleTag,
   theatricalStatusFromDate,
@@ -57,11 +57,11 @@ check(
 );
 check("Détails null -> null (pas de crash)", estimateRuntimeMinutes(null, "movie"), null);
 
-// --- getFrenchTheatricalDateFromDetails ---------------------------------
+// --- getTheatricalDateFromDetails ---------------------------------------
 
 check(
   "FR type 3 (sortie nationale) prioritaire sur type 2",
-  getFrenchTheatricalDateFromDetails({
+  getTheatricalDateFromDetails({
     release_dates: {
       results: [
         {
@@ -78,7 +78,7 @@ check(
 );
 check(
   "FR : aucun type 3, repli sur type 2 (la plus ancienne)",
-  getFrenchTheatricalDateFromDetails({
+  getTheatricalDateFromDetails({
     release_dates: {
       results: [
         {
@@ -95,7 +95,7 @@ check(
 );
 check(
   "Plusieurs type 3 -> la plus ancienne",
-  getFrenchTheatricalDateFromDetails({
+  getTheatricalDateFromDetails({
     release_dates: {
       results: [
         {
@@ -111,8 +111,8 @@ check(
   "2026-05-05"
 );
 check(
-  "Pas d'entrée FR -> null",
-  getFrenchTheatricalDateFromDetails({
+  "Pas d'entrée pour la région par défaut (FR) -> null",
+  getTheatricalDateFromDetails({
     release_dates: {
       results: [
         {
@@ -125,8 +125,29 @@ check(
   null
 );
 check(
+  "Région explicite (US) -> lit l'entrée US, pas FR",
+  getTheatricalDateFromDetails(
+    {
+      release_dates: {
+        results: [
+          {
+            iso_3166_1: "FR",
+            release_dates: [{ type: 3, release_date: "2026-02-15T00:00:00.000Z" }],
+          },
+          {
+            iso_3166_1: "US",
+            release_dates: [{ type: 3, release_date: "2026-01-01T00:00:00.000Z" }],
+          },
+        ],
+      },
+    },
+    "US"
+  ),
+  "2026-01-01"
+);
+check(
   "FR sans sortie ciné (type 3/2 absents) -> null",
-  getFrenchTheatricalDateFromDetails({
+  getTheatricalDateFromDetails({
     release_dates: {
       results: [
         {
@@ -138,8 +159,8 @@ check(
   }),
   null
 );
-check("release_dates absent -> null (pas de crash)", getFrenchTheatricalDateFromDetails({}), null);
-check("details null -> null (pas de crash)", getFrenchTheatricalDateFromDetails(null), null);
+check("release_dates absent -> null (pas de crash)", getTheatricalDateFromDetails({}), null);
+check("details null -> null (pas de crash)", getTheatricalDateFromDetails(null), null);
 
 // --- formatFullDate ------------------------------------------------------
 
