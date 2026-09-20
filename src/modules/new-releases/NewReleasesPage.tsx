@@ -44,7 +44,7 @@ function dateRangeFor(windowDays: number) {
 }
 
 export default function NewReleasesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerId, setProviderId] = useState("");
@@ -135,6 +135,10 @@ export default function NewReleasesPage() {
     return () => {
       cancelled = true;
     };
+    // i18n.language : discover() renvoie titres/synopsis dans la langue
+    // active (tmdbClient.ts) ; sans cette dépendance, changer de langue ne
+    // redéclenche pas l'appel et les résultats restent dans l'ancienne
+    // langue jusqu'au prochain changement de filtre ou remontage.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     mediaType,
@@ -147,6 +151,7 @@ export default function NewReleasesPage() {
     country,
     language,
     windowDays,
+    i18n.language,
   ]);
 
   const loadMore = useCallback(() => {
@@ -195,6 +200,7 @@ export default function NewReleasesPage() {
     country,
     language,
     windowDays,
+    i18n.language,
   ]);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
