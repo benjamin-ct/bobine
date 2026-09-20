@@ -5,6 +5,7 @@ import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useTheme } from "../../../core/context/ThemeContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
+import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
 import styles from "./NavBar.module.css";
@@ -104,7 +105,7 @@ function SearchResults({
         setMediaPreview(item.media_type, item.id, {
           title: item.title || item.name || "",
           posterPath: item.poster_path ?? null,
-          date: item.release_date || item.first_air_date,
+          date: item.region_release_date || item.release_date || item.first_air_date,
         });
       }
     }
@@ -143,7 +144,7 @@ function SearchResults({
           );
         }
         const title = item.title || item.name || "";
-        const date = item.release_date || item.first_air_date;
+        const date = item.region_release_date || item.release_date || item.first_air_date;
         const path = `/media/${item.media_type}/${item.id}`;
         return (
           <Link
@@ -198,6 +199,7 @@ export default function NavBar() {
   const { status: authStatus, email, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { locale, setLocale } = useLocale();
+  const { region } = useRegion();
   const toggleLocale = () => setLocale(locale === "fr" ? "en" : "fr");
 
   useEffect(() => {
@@ -209,7 +211,7 @@ export default function NavBar() {
     }
     setStatus("loading");
     const timeoutId = setTimeout(() => {
-      searchMulti(trimmed)
+      searchMulti(trimmed, 1, region)
         .then((data) => {
           const filtered = (data.results || [])
             .filter(
@@ -229,7 +231,7 @@ export default function NavBar() {
         });
     }, DEBOUNCE_MS);
     return () => clearTimeout(timeoutId);
-  }, [query]);
+  }, [query, region]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {

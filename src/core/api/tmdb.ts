@@ -224,8 +224,21 @@ export async function getLanguages(): Promise<Language[]> {
   return languagesCache;
 }
 
-export function searchMulti(query: string, page = 1): Promise<PagedResponse<SearchMultiResult>> {
-  return tmdbFetch("/search/multi", { query, page, include_adult: false });
+export function searchMulti(
+  query: string,
+  page = 1,
+  region: string = DEFAULT_REGION
+): Promise<PagedResponse<SearchMultiResult>> {
+  return tmdbFetch("/search/multi", {
+    query,
+    page,
+    include_adult: false,
+    // Même mécanisme que discover() : sans ça, MediaCard retombe sur
+    // item.release_date (date "primaire" globale TMDB, pas région-consciente),
+    // d'où le flash FR→région active vu en ouvrant une fiche depuis la recherche.
+    include_region_release_date: 1,
+    region_release_date_region: region,
+  });
 }
 
 // Personnes (acteurs, réalisateurs) --------------------------------------

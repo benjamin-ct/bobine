@@ -885,18 +885,27 @@ async function fetchReleaseDatesCached(
 // serveur par titre, en parallèle, fusionné avant renvoi au client, plutôt
 // qu'un appel /release_dates par carte depuis le navigateur.
 async function enrichDiscoverResultsWithRegionDate(
-  data: { results?: Array<{ id: number }> },
+  data: { results?: Array<{ id: number; media_type?: string }> },
   region: string,
   origin: string,
   env: Env,
   ctx: ExecutionContext
 ): Promise<void> {
   await Promise.all(
-    (data.results || []).map(async (item) => {
-      const releaseDates = await fetchReleaseDatesCached(origin, item.id, env, ctx);
-      (item as { region_release_date?: string | null }).region_release_date =
-        getTheatricalDateFromDetails(releaseDates ? { release_dates: releaseDates } : null, region);
-    })
+    (data.results || [])
+      // /search/multi mélange films, séries et personnes dans un seul
+      // tableau (media_type par item) ; /release_dates n'existe que pour
+      // les films, contrairement à /discover/movie ou /search/movie qui ne
+      // renvoient déjà que des films (pas de media_type par item).
+      .filter((item) => item.media_type === undefined || item.media_type === "movie")
+      .map(async (item) => {
+        const releaseDates = await fetchReleaseDatesCached(origin, item.id, env, ctx);
+        (item as { region_release_date?: string | null }).region_release_date =
+          getTheatricalDateFromDetails(
+            releaseDates ? { release_dates: releaseDates } : null,
+            region
+          );
+      })
   );
 }
 
@@ -951,10 +960,16 @@ async function handleTmdbProxy(
 
   const discoverMediaType = tmdbPath.match(/^\/discover\/(movie|tv)$/)?.[1] as
     "movie" | "tv" | undefined;
+  // /search/movie ne renvoie que des films ; /search/multi mélange films,
+  // séries et personnes (filtré par media_type dans
+  // enrichDiscoverResultsWithRegionDate ci-dessus) — mêmes chemins de
+  // recherche que ceux appelés par SearchPage/NavBar (searchMulti).
+  const isRegionDateEligibleSearch = tmdbPath === "/search/movie" || tmdbPath === "/search/multi";
   const shouldEnrichProviders =
     discoverMediaType && url.searchParams.get("include_watch_providers_badge") === "1";
   const shouldEnrichRegionDate =
-    discoverMediaType === "movie" && url.searchParams.get("include_region_release_date") === "1";
+    (discoverMediaType === "movie" || isRegionDateEligibleSearch) &&
+    url.searchParams.get("include_region_release_date") === "1";
 
   // Ces routes sont appelées une fois PAR CARTE (badge plateforme sur
   // Nouveautés, badge prochaine sortie/diffusion sur Prochainement) :

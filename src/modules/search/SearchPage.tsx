@@ -9,12 +9,14 @@ import {
   ErrorMessage,
   EmptyState,
 } from "../../shared/components/index.ts";
+import { useRegion } from "../../core/context/RegionContext.tsx";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import type { MediaItem, PersonSummary, SearchMultiResult } from "../../core/types/tmdb.ts";
 import styles from "./SearchPage.module.css";
 
 export default function SearchPage() {
   const { t } = useTranslation();
+  const { region } = useRegion();
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
   const [titles, setTitles] = useState<MediaItem[]>([]);
@@ -31,7 +33,7 @@ export default function SearchPage() {
     }
     let cancelled = false;
     setStatus("loading");
-    searchMulti(query)
+    searchMulti(query, 1, region)
       .then((data) => {
         if (cancelled) {
           return;
@@ -67,7 +69,7 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [query]);
+  }, [query, region]);
 
   const isEmpty = titles.length === 0 && people.length === 0;
 
