@@ -35,6 +35,7 @@ import {
   sendMagicLinkEmail,
 } from "./auth.ts";
 import { checkRateLimit, getClientIp } from "./rate-limit.ts";
+import { detectKnownCrawler } from "./bots.ts";
 import {
   sanitizeLibraryPayload,
   sanitizeLibrarySyncPayload,
@@ -797,6 +798,18 @@ async function handleTmdbProxy(
   if (!(await checkRateLimit(env.DB, `tmdb:ip:${ip}`, { limit: 120, windowMs: 60_000 }))) {
     return RATE_LIMIT_RESPONSE();
   }
+  // Un crawler distribué (voir ticket "Milliers de calls workers") reste
+  // sous ce plafond par IP puisqu'il tourne sur un pool d'IP différentes :
+  // cette seconde limite, partagée par famille de bot plutôt que par IP,
+  // plafonne le volume agrégé sans jamais bloquer un visiteur humain qui
+  // partagerait la même IP sortante (proxy, 4G...).
+  const crawler = detectKnownCrawler(request);
+  if (
+    crawler &&
+    !(await checkRateLimit(env.DB, `tmdb:bot:${crawler}`, { limit: 60, windowMs: 60_000 }))
+  ) {
+    return RATE_LIMIT_RESPONSE();
+  }
   if (!env.TMDB_API_KEY) {
     return json({ error: "TMDB_API_KEY non configurée côté serveur." }, 503);
   }
@@ -834,8 +847,13 @@ async function handleTmdbProxy(
 
   const discoverMediaType = tmdbPath.match(/^\/discover\/(movie|tv)$/)?.[1] as
     "movie" | "tv" | undefined;
+  // Le badge plateforme est un enrichissement purement visuel (voir
+  // enrichDiscoverResultsWithProviders), pas nécessaire au rendu SEO d'une
+  // grille (titre/synopsis/genres suffisent) : sauté pour les crawlers
+  // connus, qui sinon multiplient les appels sortants TMDB par titre affiché
+  // sans aucun bénéfice pour eux (voir ticket "Milliers de calls workers").
   const shouldEnrichProviders =
-    discoverMediaType && url.searchParams.get("include_watch_providers_badge") === "1";
+    discoverMediaType && url.searchParams.get("include_watch_providers_badge") === "1" && !crawler;
 
   // Ces routes sont appelées une fois PAR CARTE (badge plateforme sur
   // Nouveautés, badge prochaine sortie/diffusion sur Prochainement) :
