@@ -614,6 +614,22 @@ export async function setLocaleForUser(
   await db.prepare("UPDATE users SET locale = ? WHERE id = ?").bind(locale, userId).run();
 }
 
+export async function getRegionForUser(db: D1Database, userId: number): Promise<string | null> {
+  const row = await db
+    .prepare("SELECT region FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ region: string | null }>();
+  return row?.region ?? null;
+}
+
+export async function setRegionForUser(
+  db: D1Database,
+  userId: number,
+  region: string
+): Promise<void> {
+  await db.prepare("UPDATE users SET region = ? WHERE id = ?").bind(region, userId).run();
+}
+
 export async function wasAlreadyNotified(
   db: D1Database,
   subscriptionId: number,

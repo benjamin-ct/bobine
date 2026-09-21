@@ -335,6 +335,11 @@
     "deleteButton": "🗑️ Supprimer la liste",
     "emptyState": "« {{name}} » est vide. Ouvrez un titre et utilisez « Ajouter à… » pour le ranger ici."
   },
+  "regionSettings": {
+    "title": "Région",
+    "description": "Le pays utilisé pour « Où regarder », les plateformes et les dates de sortie. Un choix ici reste actif même en VPN ou en déplacement ; sans choix, votre région est détectée automatiquement.",
+    "loadError": "Impossible de charger la liste des pays."
+  },
   "favoriteProvidersSettings": {
     "title": "Mes plateformes",
     "activeCount_one": "{{count}} active",

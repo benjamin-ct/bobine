@@ -335,6 +335,11 @@
     "deleteButton": "🗑️ Delete list",
     "emptyState": "\"{{name}}\" is empty. Open a title and use \"Add to…\" to file it here."
   },
+  "regionSettings": {
+    "title": "Region",
+    "description": "The country used for \"Where to watch\", platforms and release dates. A choice here stays active even on VPN or while travelling; without one, your region is detected automatically.",
+    "loadError": "Unable to load the list of countries."
+  },
   "favoriteProvidersSettings": {
     "title": "My platforms",
     "activeCount_one": "{{count}} active",

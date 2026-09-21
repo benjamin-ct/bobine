@@ -5,6 +5,7 @@ import NotificationSettings from "./components/NotificationSettings.tsx";
 import FavoriteProvidersSettings from "./components/FavoriteProvidersSettings.tsx";
 import ExcludedGenresSettings from "./components/ExcludedGenresSettings.tsx";
 import ExcludedTitlesSettings from "./components/ExcludedTitlesSettings.tsx";
+import RegionSettings from "./components/RegionSettings.tsx";
 import styles from "./ProfilePage.module.css";
 
 // NOUVEAU (repris de la maquette HTML) : page Profil séparée de Ma liste —
@@ -36,6 +37,7 @@ export default function ProfilePage() {
       <section className={styles.section}>
         <h2>{t("profile.recommendations")}</h2>
         <div className={styles.discGrid}>
+          <RegionSettings />
           <FavoriteProvidersSettings />
           <ExcludedGenresSettings />
           <ExcludedTitlesSettings />

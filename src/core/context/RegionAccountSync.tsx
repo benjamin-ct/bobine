@@ -1,0 +1,83 @@
+import { useEffect, useRef, type ReactNode } from "react";
+import { useAuth } from "./AuthContext.tsx";
+import { isValidRegionCode, useRegion } from "./RegionContext.tsx";
+import { logWarn } from "../logger.ts";
+
+// Synchronise la région choisie manuellement avec le compte, sur le même
+// principe que LocaleAccountSync (voir ce fichier pour le détail général) :
+// composant séparé plutôt qu'intégré à RegionProvider, pour la même raison
+// (RegionProvider est un ancêtre d'AuthProvider, qui ne peut donc pas en
+// dépendre en retour sans dépendance circulaire). Valeur unique comme la
+// langue : pas de fusion, le serveur fait autorité dès qu'une valeur y est
+// enregistrée ; sinon la valeur locale actuelle (choix manuel ou repli
+// /api/region déjà résolu) est poussée comme valeur initiale du compte.
+const SYNCED_FOR_KEY = "bobine.region.syncedFor";
+
+export function RegionAccountSync({ children }: { children: ReactNode }): ReactNode {
+  const { status, email } = useAuth();
+  const { region, setRegion } = useRegion();
+  const syncingRef = useRef(false);
+  const regionRef = useRef(region);
+  regionRef.current = region;
+
+  useEffect(() => {
+    if (status !== "authenticated" || !email) {
+      return;
+    }
+    let cancelled = false;
+    syncingRef.current = true;
+
+    fetch("/api/profile/region")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("region fetch failed"))))
+      .then((remote: { region?: string | null }) => {
+        if (cancelled) {
+          return;
+        }
+        if (remote.region && isValidRegionCode(remote.region)) {
+          setRegion(remote.region);
+          localStorage.setItem(SYNCED_FOR_KEY, email);
+          return;
+        }
+        // Aucune région enregistrée côté compte pour l'instant : cet
+        // appareil pousse sa valeur actuelle (choix manuel ou géolocalisation
+        // déjà résolue) comme valeur initiale.
+        localStorage.setItem(SYNCED_FOR_KEY, email);
+        return fetch("/api/profile/region", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ region: regionRef.current }),
+        }).then(() => undefined);
+      })
+      .catch((err) => logWarn("Bobine : synchronisation de la région impossible.", err))
+      .finally(() => {
+        if (!cancelled) {
+          syncingRef.current = false;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // On ne veut relancer la synchro que quand le statut d'auth ou le
+    // compte change, pas à chaque changement de `region` (sinon boucle).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, email]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || syncingRef.current) {
+      return;
+    }
+    fetch("/api/profile/region", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ region }),
+    }).catch((err) =>
+      logWarn(
+        "Bobine : synchronisation de la région impossible, nouvelle tentative au prochain changement.",
+        err
+      )
+    );
+  }, [region, status]);
+
+  return children;
+}

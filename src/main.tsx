@@ -5,7 +5,8 @@ import "./styles/global.css";
 import App from "./App.tsx";
 import { AuthProvider } from "./core/context/AuthContext.tsx";
 import { LibraryProvider } from "./core/context/LibraryContext.tsx";
-import { RegionProvider } from "./core/context/RegionContext.tsx";
+import { RegionProvider, loadStoredRegion } from "./core/context/RegionContext.tsx";
+import { RegionAccountSync } from "./core/context/RegionAccountSync.tsx";
 import { DEFAULT_REGION } from "./core/api/releaseBadge.ts";
 import { FavoriteProvidersProvider } from "./core/context/FavoriteProvidersContext.tsx";
 import { ExcludedGenresProvider } from "./core/context/ExcludedGenresContext.tsx";
@@ -36,6 +37,13 @@ if (!rootElement) {
 // Le splash statique de index.html couvre cette attente ; le délai est
 // borné pour ne jamais bloquer indéfiniment (ex. Worker indisponible).
 async function resolveInitialRegion(): Promise<string> {
+  // Un choix manuel déjà stocké sur cet appareil (réglages du profil) fait
+  // autorité et évite tout appel réseau : /api/region ne sert que de repli
+  // tant qu'aucun choix explicite n'existe (voir RegionContext.tsx).
+  const stored = loadStoredRegion();
+  if (stored) {
+    return stored;
+  }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1500);
   try {
@@ -64,15 +72,17 @@ createRoot(rootElement).render(
           <RegionProvider initialRegion={initialRegion}>
             <AuthProvider>
               <LocaleAccountSync>
-                <FavoriteProvidersProvider>
-                  <ExcludedGenresProvider>
-                    <ExcludedTitlesProvider>
-                      <LibraryProvider>
-                        <App />
-                      </LibraryProvider>
-                    </ExcludedTitlesProvider>
-                  </ExcludedGenresProvider>
-                </FavoriteProvidersProvider>
+                <RegionAccountSync>
+                  <FavoriteProvidersProvider>
+                    <ExcludedGenresProvider>
+                      <ExcludedTitlesProvider>
+                        <LibraryProvider>
+                          <App />
+                        </LibraryProvider>
+                      </ExcludedTitlesProvider>
+                    </ExcludedGenresProvider>
+                  </FavoriteProvidersProvider>
+                </RegionAccountSync>
               </LocaleAccountSync>
             </AuthProvider>
           </RegionProvider>

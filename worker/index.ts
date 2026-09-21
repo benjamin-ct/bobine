@@ -20,6 +20,8 @@ import {
   replaceFavoriteProvidersForUser,
   getLocaleForUser,
   setLocaleForUser,
+  getRegionForUser,
+  setRegionForUser,
   updateSubscriptionLocale,
 } from "./db.ts";
 import { runDailyCheck } from "./scheduled.ts";
@@ -742,6 +744,43 @@ async function handlePutLocale(request: Request, env: Env): Promise<Response> {
   return json({ ok: true });
 }
 
+// Région choisie manuellement par compte -----------------------------------
+//
+// Même garde IDOR que /api/locale. Contrairement à SUPPORTED_LOCALES (2
+// valeurs fixes), les régions possibles sont la liste des pays TMDB
+// (~250, non dupliquée côté Worker) : on valide donc le format ISO 3166-1
+// alpha-2 (2 lettres) plutôt qu'une énumération, exactement comme
+// /api/region le renvoie déjà sans validation de liste (request.cf.country).
+const ISO_3166_1_ALPHA_2 = /^[A-Z]{2}$/;
+
+async function handleGetRegion(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const region = await getRegionForUser(env.DB, user.id);
+  return json({ region });
+}
+
+async function handlePutRegion(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const region = (body as { region?: unknown })?.region;
+  if (typeof region !== "string" || !ISO_3166_1_ALPHA_2.test(region)) {
+    return json({ error: "Région invalide." }, 400);
+  }
+  await setRegionForUser(env.DB, user.id, region);
+  return json({ ok: true });
+}
+
 // Index "au cinéma"/"bientôt" (voir getTheatricalIndex, worker/tmdb.ts) pour
 // une région : mis en cache à l'edge, si bien qu'un seul visiteur par région
 // et par heure paie le parcours complet de now_playing/upcoming — les
@@ -1195,6 +1234,14 @@ async function routeRequest(
 
   if (url.pathname === "/api/locale" && request.method === "PUT") {
     return handlePutLocale(request, env);
+  }
+
+  if (url.pathname === "/api/profile/region" && request.method === "GET") {
+    return handleGetRegion(request, env);
+  }
+
+  if (url.pathname === "/api/profile/region" && request.method === "PUT") {
+    return handlePutRegion(request, env);
   }
 
   if (url.pathname.startsWith("/api/tmdb/") && request.method === "GET") {
