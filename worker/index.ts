@@ -31,6 +31,7 @@ import {
   deleteSession,
   getUserFromRequest,
   sessionCookieHeader,
+  authHintCookieHeader,
   sendMagicLinkEmail,
 } from "./auth.ts";
 import { checkRateLimit, getClientIp } from "./rate-limit.ts";
@@ -51,18 +52,33 @@ import { logError } from "./logger.ts";
 import { trackEvent } from "./analytics.ts";
 import type { Env } from "./types.ts";
 
-function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      // Sans ça, iOS (en particulier en PWA installée sur l'écran d'accueil)
-      // peut mettre en cache une réponse d'erreur (ex: 503 avant que les
-      // secrets soient déployés) et continuer à la resservir après coup.
-      "cache-control": "no-store",
-      ...extraHeaders,
-    },
+// `extraHeaders` accepte un tableau pour une clé (typiquement "set-cookie")
+// afin de poser plusieurs cookies sur la même réponse : contrairement aux
+// autres en-têtes, deux Set-Cookie ne peuvent pas être fusionnés en une
+// seule ligne (invalide côté navigateur), d'où le passage par Headers.append
+// plutôt que par un objet plein (qui écraserait la valeur précédente).
+function json(
+  data: unknown,
+  status = 200,
+  extraHeaders: Record<string, string | string[]> = {}
+): Response {
+  const headers = new Headers({
+    "content-type": "application/json; charset=utf-8",
+    // Sans ça, iOS (en particulier en PWA installée sur l'écran d'accueil)
+    // peut mettre en cache une réponse d'erreur (ex: 503 avant que les
+    // secrets soient déployés) et continuer à la resservir après coup.
+    "cache-control": "no-store",
   });
+  for (const [key, value] of Object.entries(extraHeaders)) {
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        headers.append(key, v);
+      }
+    } else {
+      headers.set(key, value);
+    }
+  }
+  return new Response(JSON.stringify(data), { status, headers });
 }
 
 // En-têtes de durcissement HTTP, appliqués à TOUTE réponse (API et assets
@@ -114,6 +130,28 @@ function withSecurityHeaders(response: Response): Response {
     statusText: response.statusText,
     headers,
   });
+}
+
+// Réponses identiques pour tout visiteur, qui ne changent qu'au déploiement
+// (clé publique VAPID, clé de site reCAPTCHA, DSN Sentry, jeton Web
+// Analytics) : mises en cache à l'edge comme /api/theatrical-index, pour ne
+// plus payer une exécution complète du Worker à chaque appel (notamment les
+// crawlers, qui les rappellent à chaque page explorée — voir le ticket
+// Trello "Milliers de calls workers").
+async function cachedStaticJson(
+  request: Request,
+  ctx: ExecutionContext,
+  data: unknown
+): Promise<Response> {
+  const cache = caches.default;
+  const cacheKey = new Request(request.url);
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  const response = json(data, 200, { "cache-control": "public, max-age=3600" });
+  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
 }
 
 const RATE_LIMIT_RESPONSE = (): Response =>
@@ -439,7 +477,7 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
   const sessionToken = await createSession(env.DB, user.id);
 
   return json({ ok: true, email: user.email }, 200, {
-    "set-cookie": sessionCookieHeader(request, sessionToken),
+    "set-cookie": [sessionCookieHeader(request, sessionToken), authHintCookieHeader(request)],
   });
 }
 
@@ -480,7 +518,10 @@ async function handleLogout(request: Request, env: Env): Promise<Response> {
     await deleteSession(env.DB, user.sessionToken);
   }
   return json({ ok: true }, 200, {
-    "set-cookie": sessionCookieHeader(request, null, { clear: true }),
+    "set-cookie": [
+      sessionCookieHeader(request, null, { clear: true }),
+      authHintCookieHeader(request, { clear: true }),
+    ],
   });
 }
 
@@ -804,7 +845,12 @@ async function handleTmdbProxy(
   // d'une heure à l'autre : un TTL nettement plus long ici absorbe
   // beaucoup plus de trafic sur le même cache.
   const isPerTitleRoute = /\/(movie|tv)\/\d+(\/watch\/providers|\/release_dates)?$/.test(tmdbPath);
-  const maxAge = isPerTitleRoute ? 3600 : 300;
+  // Les listes de genres TMDB (~20 entrées chacune) ne changent quasiment
+  // jamais : un TTL d'une journée reste sûr et absorbe la quasi-totalité du
+  // trafic sur ces deux routes, systématiquement rappelées à chaque page
+  // par les navigateurs ET par les crawlers qui exécutent le JS du front.
+  const isGenreListRoute = /^\/genre\/(movie|tv)\/list$/.test(tmdbPath);
+  const maxAge = isPerTitleRoute ? 3600 : isGenreListRoute ? 86400 : 300;
 
   const res = await fetch(tmdbUrl.toString());
   let body = await res.text();
@@ -876,7 +922,7 @@ async function routeRequest(
     if (!env.VAPID_PUBLIC_KEY) {
       return json({ error: "VAPID_PUBLIC_KEY non configurée." }, 503);
     }
-    return json({ publicKey: env.VAPID_PUBLIC_KEY });
+    return cachedStaticJson(request, ctx, { publicKey: env.VAPID_PUBLIC_KEY });
   }
 
   // Clé "site" reCAPTCHA v3 : faite pour être publique (elle apparaît de
@@ -887,7 +933,7 @@ async function routeRequest(
   // anti-robot (le serveur, lui, saute aussi la vérification côté
   // verifyRecaptcha tant que RECAPTCHA_SECRET_KEY n'est pas configurée).
   if (url.pathname === "/api/recaptcha-site-key" && request.method === "GET") {
-    return json({ siteKey: env.RECAPTCHA_SITE_KEY || null });
+    return cachedStaticJson(request, ctx, { siteKey: env.RECAPTCHA_SITE_KEY || null });
   }
 
   // DSN Sentry pour l'init côté client (voir src/core/logger.ts) : servi
@@ -895,13 +941,13 @@ async function routeRequest(
   // même logique que /api/recaptcha-site-key ci-dessus — un DSN Sentry est
   // par nature fait pour être exposé publiquement.
   if (url.pathname === "/api/sentry-dsn" && request.method === "GET") {
-    return json({ dsn: env.SENTRY_DSN || null });
+    return cachedStaticJson(request, ctx, { dsn: env.SENTRY_DSN || null });
   }
 
   // Token du beacon Cloudflare Web Analytics (public par nature) : voir
   // CLOUDFLARE_ANALYTICS_TOKEN dans wrangler.jsonc/types.ts.
   if (url.pathname === "/api/web-analytics-token" && request.method === "GET") {
-    return json({ token: env.CLOUDFLARE_ANALYTICS_TOKEN || null });
+    return cachedStaticJson(request, ctx, { token: env.CLOUDFLARE_ANALYTICS_TOKEN || null });
   }
 
   // Healthcheck de disponibilité (voir .github/workflows/healthcheck.yml,
@@ -1006,12 +1052,20 @@ async function routeRequest(
   }
 
   // Pays du visiteur, déduit par Cloudflare au niveau du edge (aucun appel
-  // à un service tiers, aucune permission navigateur à demander) — sert à
-  // adapter "Où regarder" et le filtre plateformes à sa région réelle
-  // plutôt qu'à supposer la France pour tout le monde. `request.cf` n'est
-  // disponible que sur le vrai réseau Cloudflare ; repli sur FR sinon.
+  // à un service tiers, aucune permission navigateur à demander) — sert de
+  // repli tant qu'aucune région n'est choisie manuellement (voir
+  // RegionContext.tsx). `request.cf` n'est disponible que sur le vrai réseau
+  // Cloudflare ; repli sur FR sinon.
+  // `private` (pas `public`) : la réponse dépend de l'IP de CE visiteur
+  // précis, donc mise en cache uniquement côté navigateur (jamais à l'edge
+  // Cloudflare, qui la resservirait telle quelle à d'autres visiteurs). Une
+  // demi-heure suffit à absorber les rappels répétés d'un même client (ex.
+  // crawler qui explore plusieurs pages coup sur coup) sans retarder
+  // longtemps la prise en compte d'un vrai changement de localisation.
   if (url.pathname === "/api/region" && request.method === "GET") {
-    return json({ country: request.cf?.country || "FR" });
+    return json({ country: request.cf?.country || "FR" }, 200, {
+      "cache-control": "private, max-age=1800",
+    });
   }
 
   // `run_worker_first` (wrangler.jsonc) ne route ici que /api/*, mais on
