@@ -13,6 +13,7 @@ import {
   getTheatricalStatusIndex,
   type TheatricalIndex,
 } from "../api/tmdb.ts";
+import { isLikelyAutomatedClient } from "../botDetection.ts";
 
 interface RegionContextValue {
   region: string;
@@ -76,6 +77,17 @@ export function RegionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Purement décoratif (pastille "au cinéma"/"bientôt" sur les cartes,
+    // voir MediaCard) : jamais nécessaire au contenu/SEO d'une page, donc le
+    // seul appel de ce fichier qu'on peut se permettre de sauter pour un
+    // client détecté comme automatisé — voir botDetection.ts. C'était
+    // aussi, de loin, l'endpoint le plus appelé dans le ticket Trello
+    // "Milliers de calls workers" (/api/theatrical-index, ~450 invocations
+    // sur la période analysée), déclenché sur CHAQUE route de l'app puisque
+    // RegionProvider enveloppe toute l'application dans main.tsx.
+    if (isLikelyAutomatedClient(navigator)) {
+      return;
+    }
     let cancelled = false;
     getTheatricalStatusIndex(region)
       .then((index) => {
