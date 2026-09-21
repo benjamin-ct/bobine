@@ -25,6 +25,7 @@
     "src/core/api/releaseBadge.ts",
     "src/core/api/concurrencyLimiter.ts",
     "src/core/types/tmdb.ts",
-    "src/shared/lib/numericRangeFilter.ts"
+    "src/shared/lib/numericRangeFilter.ts",
+    "worker/bots.ts"
   ]
 }

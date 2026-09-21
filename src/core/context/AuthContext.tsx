@@ -65,6 +65,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pinnedRef = useRef(false);
 
   const refresh = useCallback(() => {
+    // Évite l'appel réseau pour tout visiteur qui n'a jamais eu de session
+    // (dont l'intégralité du trafic anonyme et des crawlers/bots — voir
+    // worker/auth.ts, AUTH_HINT_COOKIE) : sans ce cookie compagnon, une
+    // réponse 401 est de toute façon garantie.
+    if (!pinnedRef.current && !document.cookie.includes("bobine_auth=1")) {
+      setEmail(null);
+      setDisplayName(null);
+      setStatus("anonymous");
+      return Promise.resolve();
+    }
     return fetch("/api/auth/me")
       .then((res) => {
         if (!res.ok) {
