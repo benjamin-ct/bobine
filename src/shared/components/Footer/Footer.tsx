@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import styles from "./Footer.module.css";
 
 export default function Footer() {
+  const { t } = useTranslation();
   return (
     <footer className={styles.footer}>
       <div className={styles.row}>
@@ -19,10 +21,10 @@ export default function Footer() {
           </svg>
           Bobine
         </span>
-        <span className={styles.meta}>Découvre, suis, et retrouve tes films &amp; séries.</span>
+        <span className={styles.meta}>{t("footer.tagline")}</span>
         <nav className={styles.links}>
-          <Link to="/conditions-utilisation">Conditions d'utilisation</Link>
-          <Link to="/confidentialite">Confidentialité</Link>
+          <Link to="/conditions-utilisation">{t("footer.terms")}</Link>
+          <Link to="/confidentialite">{t("footer.privacy")}</Link>
         </nav>
       </div>
     </footer>

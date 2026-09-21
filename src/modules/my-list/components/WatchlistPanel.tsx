@@ -1,4 +1,5 @@
 import { useState, type DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { MediaCard, Dropdown, EmptyState } from "../../../shared/components/index.ts";
 import dropdownStyles from "../../../shared/components/Dropdown/Dropdown.module.css";
@@ -8,11 +9,11 @@ import type { LibraryItem } from "../../../core/types/library.ts";
 import styles from "./WatchlistPanel.module.css";
 
 type SortMode = "manual" | "title" | "year" | "note";
-const SORTS: Array<{ id: SortMode; label: string }> = [
-  { id: "manual", label: "Manuel" },
-  { id: "title", label: "A → Z" },
-  { id: "year", label: "Année" },
-  { id: "note", label: "Note" },
+const SORTS: Array<{ id: SortMode; labelKey: string }> = [
+  { id: "manual", labelKey: "watchlistPanel.sortManual" },
+  { id: "title", labelKey: "watchlistPanel.sortTitle" },
+  { id: "year", labelKey: "watchlistPanel.sortYear" },
+  { id: "note", labelKey: "watchlistPanel.sortRating" },
 ];
 
 function makeKey(item: LibraryItem): string {
@@ -20,13 +21,14 @@ function makeKey(item: LibraryItem): string {
 }
 
 export default function WatchlistPanel({ items }: { items: LibraryItem[] }) {
+  const { t } = useTranslation();
   const { reorderWatchlist } = useLibrary();
   const [sortMode, setSortMode] = useState<SortMode>("manual");
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ key: string; after: boolean } | null>(null);
 
   if (items.length === 0) {
-    return <EmptyState label="Liste vide. Ajoutez des titres avec « Envie de voir »." />;
+    return <EmptyState label={t("watchlistPanel.emptyState")} />;
   }
 
   const sorted =
@@ -67,13 +69,18 @@ export default function WatchlistPanel({ items }: { items: LibraryItem[] }) {
   return (
     <div>
       <div className={styles.tools}>
-        {manual && <span className={styles.dragHint}>Glissez pour réordonner</span>}
+        {manual && <span className={styles.dragHint}>{t("watchlistPanel.dragHint")}</span>}
         <span className={styles.spacer} />
         <Dropdown
-          label={<>Trier&nbsp;: {SORTS.find((s) => s.id === sortMode)?.label}</>}
+          label={
+            <>
+              {t("watchlistPanel.sortLabel")}&nbsp;:{" "}
+              {t(SORTS.find((s) => s.id === sortMode)?.labelKey ?? "")}
+            </>
+          }
           align="right"
         >
-          <div className={dropdownStyles.head}>Trier par</div>
+          <div className={dropdownStyles.head}>{t("watchlistPanel.sortBy")}</div>
           {SORTS.map((s) => (
             <button
               key={s.id}
@@ -81,7 +88,7 @@ export default function WatchlistPanel({ items }: { items: LibraryItem[] }) {
               className={`${dropdownStyles.option} ${sortMode === s.id ? dropdownStyles.optionOn : ""}`}
               onClick={() => setSortMode(s.id)}
             >
-              <span className={dropdownStyles.radio} /> {s.label}
+              <span className={dropdownStyles.radio} /> {t(s.labelKey)}
             </button>
           ))}
         </Dropdown>

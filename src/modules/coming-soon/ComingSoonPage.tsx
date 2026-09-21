@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import {
   discover,
@@ -7,8 +8,11 @@ import {
   getWatchProvidersList,
   posterUrl,
   formatFullDate,
+  dateLocaleTag,
+  type DateLocale,
 } from "../../core/api/tmdb.ts";
 import { useRegion } from "../../core/context/RegionContext.tsx";
+import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
@@ -31,9 +35,9 @@ import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import styles from "./ComingSoonPage.module.css";
 
 const WINDOWS = [
-  { value: 7, label: "7 prochains jours" },
-  { value: 30, label: "30 prochains jours" },
-  { value: 90, label: "3 prochains mois" },
+  { value: 7, key: "next7Days" },
+  { value: 30, key: "next30Days" },
+  { value: 90, key: "next3Months" },
 ];
 
 // Nombre de cartes révélées par "page" de scroll infini, et nombre de pages
@@ -76,9 +80,9 @@ function dedupe(items: MediaItem[]): MediaItem[] {
   });
 }
 
-function monthLabel(dateStr: string): string {
+function monthLabel(dateStr: string, locale: DateLocale): string {
   const d = new Date(dateStr);
-  const label = d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const label = d.toLocaleDateString(dateLocaleTag(locale), { month: "long", year: "numeric" });
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
@@ -95,8 +99,10 @@ async function fetchPages(
 }
 
 function TimelineItem({ item }: { item: MediaItem }) {
+  const { t } = useTranslation();
   const { isInWatchlist, toggleWatchlist } = useLibrary();
-  const title = item.title || item.name || "Titre inconnu";
+  const { locale } = useLocale();
+  const title = item.title || item.name || t("comingSoonPage.unknownTitle");
   const date = item.release_date || item.first_air_date;
   const notifying = isInWatchlist(item.mediaType, item.id);
   const accentKey = posterAccentFromGenres(item.genre_ids, `${item.mediaType}:${item.id}`);
@@ -107,7 +113,9 @@ function TimelineItem({ item }: { item: MediaItem }) {
         <b>{date ? new Date(date).getDate() : "—"}</b>
         <span>
           {date
-            ? new Date(date).toLocaleDateString("fr-FR", { month: "short" }).replace(".", "")
+            ? new Date(date)
+                .toLocaleDateString(dateLocaleTag(locale), { month: "short" })
+                .replace(".", "")
             : ""}
         </span>
       </div>
@@ -121,14 +129,14 @@ function TimelineItem({ item }: { item: MediaItem }) {
       <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.body}>
         <div className={styles.title}>{title}</div>
         <div className={styles.sub}>
-          {formatFullDate(date) || (date ? date.slice(0, 4) : "Date à confirmer")}
+          {formatFullDate(date, locale) || (date ? date.slice(0, 4) : t("comingSoonPage.dateTbd"))}
         </div>
       </Link>
       <button
         type="button"
         className={`${styles.bell} ${notifying ? styles.bellOn : ""}`}
         aria-pressed={notifying}
-        title="Être prévenu·e de la sortie (ajoute à Envie de voir)"
+        title={t("comingSoonPage.notifyTitle")}
         onClick={() =>
           toggleWatchlist({
             id: item.id,
@@ -150,13 +158,14 @@ function TimelineItem({ item }: { item: MediaItem }) {
           <path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8" />
           <path d="M10 21a2 2 0 0 0 4 0" />
         </svg>
-        <span>{notifying ? "Prévenu·e" : "Me prévenir"}</span>
+        <span>{notifying ? t("comingSoonPage.notified") : t("comingSoonPage.notifyMe")}</span>
       </button>
     </div>
   );
 }
 
 export default function ComingSoonPage() {
+  const { t } = useTranslation();
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerId, setProviderId] = useState("");
@@ -170,6 +179,7 @@ export default function ComingSoonPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const { region } = useRegion();
+  const { locale } = useLocale();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
   const { filterExcluded } = useExcludedTitles();
@@ -327,9 +337,9 @@ export default function ComingSoonPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        eyebrow="Calendrier · France"
-        title="Prochainement"
-        lead="Les sorties à venir, en salles et en streaming. Activez la cloche pour être prévenu·e le jour J."
+        eyebrow={t("comingSoonPage.eyebrow")}
+        title={t("comingSoonPage.title")}
+        lead={t("comingSoonPage.lead")}
       />
 
       <FilterBar
@@ -360,7 +370,7 @@ export default function ComingSoonPage() {
             active={windowDays === w.value}
             onClick={() => setWindowDays(w.value)}
           >
-            {w.label}
+            {t(`comingSoonPage.windows.${w.key}`)}
           </Chip>
         ))}
       </div>
@@ -368,7 +378,7 @@ export default function ComingSoonPage() {
       {status === "loading" && <ComingSoonSkeleton />}
       {status === "error" && <ErrorMessage error={error} />}
       {status === "success" && visibleResults.length === 0 && (
-        <EmptyState label="Aucune sortie prévue sur cette période pour ces filtres." />
+        <EmptyState label={t("comingSoonPage.emptyState")} />
       )}
 
       {status === "success" && visibleResults.length > 0 && (
@@ -376,7 +386,7 @@ export default function ComingSoonPage() {
           <div className={styles.timeline}>
             {visibleResults.map((item) => {
               const date = item.release_date || item.first_air_date;
-              const label = date ? monthLabel(date) : "Date à confirmer";
+              const label = date ? monthLabel(date, locale) : t("comingSoonPage.dateTbd");
               const showMonthHeading = label !== currentMonth;
               currentMonth = label;
               return (
@@ -389,7 +399,7 @@ export default function ComingSoonPage() {
           </div>
           {hasMore && (
             <div ref={sentinelRef} className={gridStyles.loadMore}>
-              {loadingMore && <span>Chargement…</span>}
+              {loadingMore && <span>{t("common.loading")}</span>}
             </div>
           )}
         </>

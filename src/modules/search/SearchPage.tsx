@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { searchMulti } from "../../core/api/tmdb.ts";
 import {
   MediaCard,
@@ -8,11 +9,14 @@ import {
   ErrorMessage,
   EmptyState,
 } from "../../shared/components/index.ts";
+import { useRegion } from "../../core/context/RegionContext.tsx";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import type { MediaItem, PersonSummary, SearchMultiResult } from "../../core/types/tmdb.ts";
 import styles from "./SearchPage.module.css";
 
 export default function SearchPage() {
+  const { t } = useTranslation();
+  const { region } = useRegion();
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
   const [titles, setTitles] = useState<MediaItem[]>([]);
@@ -29,7 +33,7 @@ export default function SearchPage() {
     }
     let cancelled = false;
     setStatus("loading");
-    searchMulti(query)
+    searchMulti(query, 1, region)
       .then((data) => {
         if (cancelled) {
           return;
@@ -65,20 +69,20 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [query]);
+  }, [query, region]);
 
   const isEmpty = titles.length === 0 && people.length === 0;
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Résultats pour « {query} »</h1>
+      <h1 className={styles.title}>{t("searchPage.resultsFor", { query })}</h1>
       {status === "loading" && <Loading />}
       {status === "error" && <ErrorMessage error={error} />}
-      {status === "success" && isEmpty && <EmptyState label="Aucun résultat." />}
+      {status === "success" && isEmpty && <EmptyState label={t("searchPage.noResults")} />}
 
       {status === "success" && people.length > 0 && (
         <section className={styles.section}>
-          <h3>Acteurs &amp; réalisateurs</h3>
+          <h3>{t("searchPage.actorsAndDirectors")}</h3>
           <div className={gridStyles.personGrid}>
             {people.map((person) => (
               <PersonCard
@@ -95,7 +99,7 @@ export default function SearchPage() {
 
       {status === "success" && titles.length > 0 && (
         <section>
-          {people.length > 0 && <h3>Films &amp; séries</h3>}
+          {people.length > 0 && <h3>{t("searchPage.moviesAndSeries")}</h3>}
           <div className={gridStyles.grid}>
             {titles.map((item) => (
               <MediaCard key={`${item.mediaType}:${item.id}`} item={item} />

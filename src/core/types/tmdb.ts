@@ -46,6 +46,14 @@ export interface MediaSummary {
    * distinguer "pas encore enrichi" (fallback sur l'appel par carte) de
    * "enrichi, aucune plateforme trouvée". */
   watch_providers?: RegionWatchProviders | null;
+  /** Présent uniquement quand discover() est appelé avec
+   * includeRegionReleaseDate (films uniquement) : date de sortie ciné dans
+   * la région active, déjà résolue côté Worker à partir de /release_dates
+   * (voir enrichDiscoverResultsWithRegionDate, worker/index.ts) — évite de
+   * laisser `release_date` (date globale TMDB, pas région-consciente)
+   * s'afficher telle quelle sur les cartes. `null` si aucune sortie ciné
+   * connue pour cette région (repli sur `release_date` côté MediaCard). */
+  region_release_date?: string | null;
 }
 
 /** MediaSummary enrichi côté client d'un `mediaType` non ambigu (voir

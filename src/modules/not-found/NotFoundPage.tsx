@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "../../shared/components/index.ts";
 import styles from "./NotFoundPage.module.css";
 
@@ -6,15 +7,16 @@ import styles from "./NotFoundPage.module.css";
  * (lien mort, faute de frappe, ancien favori) — évite une zone de contenu
  * vide sous le header/footer. */
 export default function NotFoundPage() {
+  const { t } = useTranslation();
   return (
     <div className={styles.page}>
       <PageHeader
-        eyebrow="Erreur 404"
-        title="Page introuvable"
-        lead="Cette page n'existe pas ou plus. Vérifiez l'adresse saisie, ou revenez à l'accueil."
+        eyebrow={t("notFound.eyebrow")}
+        title={t("notFound.title")}
+        lead={t("notFound.lead")}
       />
       <Link to="/" className={styles.homeLink}>
-        Retour à l'accueil
+        {t("notFound.backToHome")}
       </Link>
     </div>
   );

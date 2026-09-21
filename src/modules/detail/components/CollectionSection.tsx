@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getCollection } from "../../../core/api/tmdb.ts";
 import { MediaCard } from "../../../shared/components/index.ts";
 import type { CollectionDetails } from "../../../core/types/tmdb.ts";
@@ -20,6 +21,7 @@ export default function CollectionSection({
   collectionId,
   currentMovieId,
 }: CollectionSectionProps) {
+  const { t } = useTranslation();
   const [collection, setCollection] = useState<CollectionDetails | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
@@ -51,8 +53,10 @@ export default function CollectionSection({
   return (
     <section className={styles.section}>
       <h3>
-        La saga <span className={styles.name}>{collection.name}</span>{" "}
-        <span className={styles.count}>· {collection.parts.length} films</span>
+        {t("collection.heading")} <span className={styles.name}>{collection.name}</span>{" "}
+        <span className={styles.count}>
+          · {t("collection.filmsCount", { count: collection.parts.length })}
+        </span>
       </h3>
       <div className={gridStyles.grid}>
         {otherParts.map((part) => (

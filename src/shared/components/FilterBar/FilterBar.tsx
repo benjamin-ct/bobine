@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import Dropdown from "../Dropdown/Dropdown.tsx";
 import Chip from "../Chip/Chip.tsx";
 import { SORT_FIELDS, type DiscoverSortField, type SortDirection } from "../../../core/api/tmdb.ts";
@@ -49,6 +50,7 @@ export default function FilterBar({
   sortDirection,
   setSortDirection,
 }: FilterBarProps) {
+  const { t } = useTranslation();
   const hasFavorites = (favoriteProviderIds?.length ?? 0) > 0;
 
   function onProviderSelect(value: string) {
@@ -72,34 +74,37 @@ export default function FilterBar({
 
   const genreLabel =
     genreIds.length === 0
-      ? "Tous les genres"
+      ? t("filterBar.allGenres")
       : genreIds.length === 1
-        ? genres.find((g) => g.id === genreIds[0])?.name || "1 genre"
-        : `${genreIds.length} genres`;
+        ? genres.find((g) => g.id === genreIds[0])?.name || t("filterBar.genresCount", { count: 1 })
+        : t("filterBar.genresCount", { count: genreIds.length });
 
-  const sortLabel = sortField ? SORT_FIELDS.find((s) => s.value === sortField)?.label : undefined;
+  const sortLabelKey = sortField
+    ? SORT_FIELDS.find((s) => s.value === sortField)?.labelKey
+    : undefined;
+  const sortLabel = sortLabelKey ? t(sortLabelKey) : undefined;
 
   return (
     <div className={styles.bar}>
-      <div className={styles.segmented} role="tablist" aria-label="Type">
+      <div className={styles.segmented} role="tablist" aria-label={t("filterBar.typeAriaLabel")}>
         <button
           type="button"
           className={mediaType === "movie" ? styles.segActive : ""}
           onClick={() => setMediaType("movie")}
         >
-          Films
+          {t("filterBar.movies")}
         </button>
         <button
           type="button"
           className={mediaType === "tv" ? styles.segActive : ""}
           onClick={() => setMediaType("tv")}
         >
-          Séries
+          {t("filterBar.series")}
         </button>
       </div>
 
       <Dropdown label={genreLabel} active={genreIds.length > 0}>
-        <div className={dropdownStyles.head}>Filtrer par genre</div>
+        <div className={dropdownStyles.head}>{t("filterBar.filterByGenre")}</div>
         {genres.map((g) => (
           <button
             key={g.id}
@@ -121,7 +126,7 @@ export default function FilterBar({
           className={styles.select}
           disabled={useFavoriteProviders}
         >
-          <option value="">Toutes les plateformes</option>
+          <option value="">{t("filterBar.allPlatforms")}</option>
           {providers.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -134,15 +139,22 @@ export default function FilterBar({
         <Chip
           active={useFavoriteProviders}
           onClick={onToggleFavorites}
-          title="Filtrer sur les plateformes que tu as cochées dans ton profil"
+          title={t("filterBar.myPlatformsTitle")}
         >
-          🎯 Mes plateformes
+          {t("filterBar.myPlatforms")}
         </Chip>
       )}
 
       {setSortField && sortField && (
-        <Dropdown label={<>Trier&nbsp;: {sortLabel}</>} align="right">
-          <div className={dropdownStyles.head}>Trier par</div>
+        <Dropdown
+          label={
+            <>
+              {t("filterBar.sortLabel")}&nbsp;: {sortLabel}
+            </>
+          }
+          align="right"
+        >
+          <div className={dropdownStyles.head}>{t("filterBar.sortBy")}</div>
           {SORT_FIELDS.map((s) => (
             <button
               key={s.value}
@@ -152,7 +164,7 @@ export default function FilterBar({
               aria-checked={sortField === s.value}
               onClick={() => setSortField(s.value)}
             >
-              <span className={dropdownStyles.radio} /> {s.label}
+              <span className={dropdownStyles.radio} /> {t(s.labelKey)}
             </button>
           ))}
           {setSortDirection && sortDirection && (
@@ -161,7 +173,10 @@ export default function FilterBar({
               className={dropdownStyles.option}
               onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
             >
-              {sortDirection === "desc" ? "↓ Décroissant" : "↑ Croissant"} (cliquer pour inverser)
+              {sortDirection === "desc"
+                ? t("filterBar.sortDescending")
+                : t("filterBar.sortAscending")}{" "}
+              {t("filterBar.sortToggleHint")}
             </button>
           )}
         </Dropdown>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useAuth } from "../../core/context/AuthContext.tsx";
 import { PageHeader, ContinueWatchingRow, EmptyState } from "../../shared/components/index.ts";
@@ -12,6 +13,7 @@ import styles from "./MyListPage.module.css";
 type Tab = "seen" | "want" | "progress" | string; // string = id de liste personnalisée
 
 export default function MyListPage() {
+  const { t } = useTranslation();
   const { watched, watchlist, customLists, createList } = useLibrary();
   const { status: authStatus } = useAuth();
   const [tab, setTab] = useState<Tab>("seen");
@@ -33,14 +35,13 @@ export default function MyListPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        eyebrow="Votre cinémathèque"
-        title="Ma liste"
+        eyebrow={t("myListPage.eyebrow")}
+        title={t("myListPage.title")}
         lead={
           <>
-            Vos titres suivis. Retrouvez vos préférences (plateformes, exclusions, notifications)
-            dans{" "}
+            {t("myListPage.leadBefore")}{" "}
             <Link to="/profil" className={styles.profileLink}>
-              votre profil
+              {t("myListPage.profileLink")}
             </Link>
             .
           </>
@@ -49,12 +50,9 @@ export default function MyListPage() {
 
       {authStatus !== "authenticated" && (
         <div className={styles.authBanner}>
-          <p className={styles.authBannerText}>
-            Connecte-toi pour synchroniser cette liste entre tes appareils : elle n'a pas disparu,
-            elle reste enregistrée sur cet appareil.
-          </p>
+          <p className={styles.authBannerText}>{t("myListPage.authBannerText")}</p>
           <Link to="/connexion" className={styles.loginBtn}>
-            Connexion
+            {t("myListPage.login")}
           </Link>
         </div>
       )}
@@ -65,21 +63,22 @@ export default function MyListPage() {
           className={`${styles.tab} ${tab === "seen" ? styles.tabActive : ""}`}
           onClick={() => setTab("seen")}
         >
-          Déjà vu <span className={styles.count}>{watched.length}</span>
+          {t("myListPage.tabSeen")} <span className={styles.count}>{watched.length}</span>
         </button>
         <button
           type="button"
           className={`${styles.tab} ${tab === "want" ? styles.tabActive : ""}`}
           onClick={() => setTab("want")}
         >
-          Envie de voir <span className={styles.count}>{watchlist.length}</span>
+          {t("myListPage.tabWant")} <span className={styles.count}>{watchlist.length}</span>
         </button>
         <button
           type="button"
           className={`${styles.tab} ${tab === "progress" ? styles.tabActive : ""}`}
           onClick={() => setTab("progress")}
         >
-          En cours <span className={styles.count}>{continuingSeries.length}</span>
+          {t("myListPage.tabProgress")}{" "}
+          <span className={styles.count}>{continuingSeries.length}</span>
         </button>
         {customLists.map((list) => (
           <button
@@ -92,7 +91,7 @@ export default function MyListPage() {
           </button>
         ))}
         <button type="button" className={styles.newTab} onClick={() => setCreating((v) => !v)}>
-          + Nouvelle liste
+          {t("myListPage.newListTab")}
         </button>
       </div>
 
@@ -106,22 +105,22 @@ export default function MyListPage() {
         >
           <input
             type="text"
-            placeholder="Nom de la liste…"
+            placeholder={t("myListPage.newListPlaceholder")}
             maxLength={40}
             value={newListName}
             onChange={(e) => setNewListName(e.target.value)}
             autoFocus
           />
-          <button type="submit">Créer</button>
+          <button type="submit">{t("myListPage.create")}</button>
           <button type="button" onClick={() => setCreating(false)}>
-            Annuler
+            {t("myListPage.cancel")}
           </button>
         </form>
       )}
 
       {tab === "seen" &&
         (watched.length === 0 ? (
-          <EmptyState label="Tu n'as encore rien marqué comme vu." />
+          <EmptyState label={t("myListPage.emptySeen")} />
         ) : (
           <StatsPanel watched={watched} />
         ))}
@@ -130,7 +129,7 @@ export default function MyListPage() {
 
       {tab === "progress" &&
         (continuingSeries.length === 0 ? (
-          <EmptyState label="Rien en cours. Marquez des épisodes comme vus pour retrouver ici vos séries entamées." />
+          <EmptyState label={t("myListPage.emptyProgress")} />
         ) : (
           <ContinueWatchingRow items={continuingSeries} />
         ))}

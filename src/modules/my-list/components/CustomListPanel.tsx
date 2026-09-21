@@ -1,10 +1,12 @@
 import { useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { MediaCard, Dropdown, EmptyState } from "../../../shared/components/index.ts";
 import dropdownStyles from "../../../shared/components/Dropdown/Dropdown.module.css";
 import { libraryItemToMediaItem } from "../../../shared/lib/libraryItem.ts";
 import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
+import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
@@ -17,10 +19,10 @@ interface CustomListPanelProps {
 }
 
 type SortMode = "manual" | "title" | "year";
-const SORTS: Array<{ id: SortMode; label: string }> = [
-  { id: "manual", label: "Manuel" },
-  { id: "title", label: "A → Z" },
-  { id: "year", label: "Année" },
+const SORTS: Array<{ id: SortMode; labelKey: string }> = [
+  { id: "manual", labelKey: "customListPanel.sortManual" },
+  { id: "title", labelKey: "customListPanel.sortTitle" },
+  { id: "year", labelKey: "customListPanel.sortYear" },
 ];
 
 type ViewMode = "grid" | "list";
@@ -30,7 +32,9 @@ function makeKey(item: LibraryItem): string {
 }
 
 export default function CustomListPanel({ list, onDeleted }: CustomListPanelProps) {
+  const { t } = useTranslation();
   const { getListItems, deleteList, renameList, reorderList } = useLibrary();
+  const { locale } = useLocale();
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(list.name);
   const [sortMode, setSortMode] = useState<SortMode>("manual");
@@ -40,11 +44,7 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
   const items = getListItems(list.id);
 
   function handleDelete() {
-    if (
-      window.confirm(
-        `Supprimer la liste « ${list.name} » ? Les titres eux-mêmes resteront dans vos autres listes.`
-      )
-    ) {
+    if (window.confirm(t("customListPanel.confirmDelete", { name: list.name }))) {
       deleteList(list.id);
       onDeleted();
     }
@@ -107,28 +107,32 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
               maxLength={40}
               autoFocus
             />
-            <button type="submit">Renommer</button>
+            <button type="submit">{t("customListPanel.rename")}</button>
             <button type="button" onClick={() => setRenaming(false)}>
-              Annuler
+              {t("customListPanel.cancel")}
             </button>
           </form>
         ) : (
           <span className={styles.hint}>
             {items.length
-              ? `${list.name} · ${items.length} titre${items.length > 1 ? "s" : ""}`
-              : "Ajoutez des titres via « Ajouter à… » sur leur fiche."}
+              ? `${list.name} · ${t("customListPanel.itemsCount", { count: items.length })}`
+              : t("customListPanel.addHint")}
           </span>
         )}
         <span className={styles.spacer} />
         {items.length > 0 && (
           <>
-            {manual && <span className={styles.dragHint}>Glissez pour réordonner</span>}
-            <div className={styles.viewToggle} role="group" aria-label="Mode d'affichage">
+            {manual && <span className={styles.dragHint}>{t("customListPanel.dragHint")}</span>}
+            <div
+              className={styles.viewToggle}
+              role="group"
+              aria-label={t("customListPanel.viewModeAriaLabel")}
+            >
               <button
                 type="button"
                 className={`${styles.viewBtn} ${viewMode === "grid" ? styles.viewBtnOn : ""}`}
                 aria-pressed={viewMode === "grid"}
-                title="Affiches"
+                title={t("customListPanel.gridViewTitle")}
                 onClick={() => setViewMode("grid")}
               >
                 ▦
@@ -137,17 +141,22 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
                 type="button"
                 className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnOn : ""}`}
                 aria-pressed={viewMode === "list"}
-                title="Liste"
+                title={t("customListPanel.listViewTitle")}
                 onClick={() => setViewMode("list")}
               >
                 ☰
               </button>
             </div>
             <Dropdown
-              label={<>Trier&nbsp;: {SORTS.find((s) => s.id === sortMode)?.label}</>}
+              label={
+                <>
+                  {t("customListPanel.sortLabel")}&nbsp;:{" "}
+                  {t(SORTS.find((s) => s.id === sortMode)?.labelKey ?? "")}
+                </>
+              }
               align="right"
             >
-              <div className={dropdownStyles.head}>Trier par</div>
+              <div className={dropdownStyles.head}>{t("customListPanel.sortBy")}</div>
               {SORTS.map((s) => (
                 <button
                   key={s.id}
@@ -155,7 +164,7 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
                   className={`${dropdownStyles.option} ${sortMode === s.id ? dropdownStyles.optionOn : ""}`}
                   onClick={() => setSortMode(s.id)}
                 >
-                  <span className={dropdownStyles.radio} /> {s.label}
+                  <span className={dropdownStyles.radio} /> {t(s.labelKey)}
                 </button>
               ))}
             </Dropdown>
@@ -163,18 +172,16 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
         )}
         {!renaming && (
           <button type="button" className={styles.ghostBtn} onClick={() => setRenaming(true)}>
-            ✏️ Renommer
+            {t("customListPanel.renameButton")}
           </button>
         )}
         <button type="button" className={styles.ghostBtn} onClick={handleDelete}>
-          🗑️ Supprimer la liste
+          {t("customListPanel.deleteButton")}
         </button>
       </div>
 
       {items.length === 0 ? (
-        <EmptyState
-          label={`« ${list.name} » est vide. Ouvrez un titre et utilisez « Ajouter à… » pour le ranger ici.`}
-        />
+        <EmptyState label={t("customListPanel.emptyState", { name: list.name })} />
       ) : viewMode === "grid" ? (
         <div className={gridStyles.grid}>
           {sorted.map((item) => {
@@ -236,8 +243,12 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
                 <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.rowBody}>
                   <span className={styles.rowTitle}>{item.title}</span>
                   <span className={styles.rowSub}>
-                    {item.mediaType === "movie" ? "Film" : "Série"}
-                    {item.date ? ` · ${formatFullDate(item.date) || item.date.slice(0, 4)}` : ""}
+                    {item.mediaType === "movie"
+                      ? t("navBar.mediaTypeMovie")
+                      : t("navBar.mediaTypeSeries")}
+                    {item.date
+                      ? ` · ${formatFullDate(item.date, locale) || item.date.slice(0, 4)}`
+                      : ""}
                   </span>
                 </Link>
               </div>

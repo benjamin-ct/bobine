@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FocusEvent } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   discover,
   getGenres,
@@ -12,6 +13,7 @@ import {
 } from "../../core/api/tmdb.ts";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../core/context/RegionContext.tsx";
+import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
@@ -42,6 +44,7 @@ const YEAR_MIN = 1900;
 const YEAR_MAX = CURRENT_YEAR + 5;
 
 export default function RandomPage() {
+  const { t } = useTranslation();
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerId, setProviderId] = useState("");
@@ -61,13 +64,14 @@ export default function RandomPage() {
   const [error, setError] = useState<Error | null>(null);
 
   const { watchedIds, isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
-  const { region } = useRegion();
+  const { region, regionName } = useRegion();
+  const { locale } = useLocale();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
   const { filterExcluded } = useExcludedTitles();
 
   const yearRangeError = isRangeInverted(yearMin, yearMax)
-    ? "L'année minimum est supérieure à l'année maximum."
+    ? t("advancedFilters.yearRangeError")
     : null;
 
   // Plafonne la valeur saisie une fois le champ quitté (pas à chaque frappe,
@@ -183,9 +187,9 @@ export default function RandomPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        eyebrow="Vous ne savez pas quoi regarder ?"
-        title="La roue de la bobine"
-        lead="Un tirage au sort dans votre univers. Relancez jusqu'à trouver la perle du soir."
+        eyebrow={t("randomPage.eyebrow")}
+        title={t("randomPage.title")}
+        lead={t("randomPage.lead")}
       />
 
       <FilterBar
@@ -203,12 +207,12 @@ export default function RandomPage() {
       />
 
       <div className={styles.yearFilter}>
-        <label>Année de sortie</label>
+        <label>{t("randomPage.releaseYear")}</label>
         <div className={styles.range}>
           <input
             type="number"
             inputMode="numeric"
-            placeholder="Min"
+            placeholder={t("advancedFilters.min")}
             min={YEAR_MIN}
             max={YEAR_MAX}
             value={yearMin}
@@ -219,7 +223,7 @@ export default function RandomPage() {
           <input
             type="number"
             inputMode="numeric"
-            placeholder="Max"
+            placeholder={t("advancedFilters.max")}
             min={YEAR_MIN}
             max={YEAR_MAX}
             value={yearMax}
@@ -240,7 +244,7 @@ export default function RandomPage() {
           checked={excludeWatched}
           onChange={(e) => setExcludeWatched(e.target.checked)}
         />
-        Exclure ce que j'ai déjà vu
+        {t("randomPage.excludeWatched")}
       </label>
 
       <button
@@ -258,13 +262,15 @@ export default function RandomPage() {
         >
           <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" />
         </svg>
-        {status === "loading" ? "Tirage en cours…" : pick ? "Relancer le tirage" : "Tirer un titre"}
+        {status === "loading"
+          ? t("randomPage.rolling")
+          : pick
+            ? t("randomPage.reroll")
+            : t("randomPage.draw")}
       </button>
 
       {status === "error" && <ErrorMessage error={error} />}
-      {status === "empty" && (
-        <p className={styles.hint}>Aucun titre ne correspond à ces filtres.</p>
-      )}
+      {status === "empty" && <p className={styles.hint}>{t("randomPage.emptyHint")}</p>}
 
       {pick && (
         <div className={`${styles.spotlight} ${posterStyles[accentKey]}`}>
@@ -276,10 +282,10 @@ export default function RandomPage() {
             )}
           </div>
           <div>
-            <p className={styles.badge}>Tirage du soir</p>
+            <p className={styles.badge}>{t("randomPage.badge")}</p>
             <h2 className={styles.title}>{title}</h2>
             <p className={styles.meta}>
-              {date ? formatFullDate(date) || date.slice(0, 4) : "—"}
+              {date ? formatFullDate(date, locale) || date.slice(0, 4) : "—"}
               {pickDetails?.genres?.length
                 ? ` · ${pickDetails.genres.map((g) => g.name).join(", ")}`
                 : ""}
@@ -288,7 +294,7 @@ export default function RandomPage() {
             <p className={styles.overview}>{pick.overview}</p>
             <div className={styles.actions}>
               <Link to={`/media/${mediaType}/${pick.id}`} className={styles.primaryBtn}>
-                Voir la fiche
+                {t("randomPage.viewSheet")}
               </Link>
               <button
                 type="button"
@@ -300,7 +306,7 @@ export default function RandomPage() {
                   }
                 }}
               >
-                {inWatchlist ? "★ Envie de voir" : "☆ Envie de voir"}
+                {inWatchlist ? t("randomPage.wantToWatchOn") : t("randomPage.wantToWatchOff")}
               </button>
               <button
                 type="button"
@@ -312,18 +318,18 @@ export default function RandomPage() {
                   }
                 }}
               >
-                {watched ? "✔ Déjà vu" : "○ Marquer comme vu"}
+                {watched ? t("randomPage.watchedOn") : t("randomPage.watchedOff")}
               </button>
               <TrailerButton videos={pickDetails?.videos?.results} />
               <Link
                 to={`/media/${mediaType}/${pick.id}#recommendations`}
                 className={styles.secondaryBtn}
               >
-                🔁 Similaire
+                {t("randomPage.similar")}
               </Link>
             </div>
-            <h3 className={styles.whereTitle}>Où regarder</h3>
-            <ProviderBadges providers={providersResult} />
+            <h3 className={styles.whereTitle}>{t("randomPage.whereToWatch")}</h3>
+            <ProviderBadges providers={providersResult} regionName={regionName} />
           </div>
         </div>
       )}
