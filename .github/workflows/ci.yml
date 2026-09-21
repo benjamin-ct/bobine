@@ -80,6 +80,8 @@ jobs:
           npm run verify:tmdb-concurrency-cap
           npm run verify:numeric-range-filter
           npm run verify:global-providers
+          npm run verify:bot-detection
+          npm run verify:bot-detection-client
 
       - name: Build
         run: npm run build

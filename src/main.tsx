@@ -16,12 +16,22 @@ import { LocaleProvider } from "./core/context/LocaleContext.tsx";
 import { LocaleAccountSync } from "./core/context/LocaleAccountSync.tsx";
 import { ensureSentryInit } from "./core/logger.ts";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
+import { isLikelyAutomatedClient } from "./core/botDetection.ts";
 
 // Best-effort, non bloquant pour le rendu initial : voir logger.ts et
 // webAnalytics.ts (no-op tant que les secrets Cloudflare correspondants ne
 // sont pas configurés).
-ensureSentryInit();
-injectWebAnalytics();
+// Sauté pour un client détecté comme automatisé (voir botDetection.ts) :
+// ces deux appels parlent directement à des tiers (Sentry, Cloudflare Web
+// Analytics) sans jamais passer par le Worker, donc invisibles à la
+// détection de bots qui s'y trouve déjà (worker/bots.ts) — un crawler ne
+// devrait ni polluer nos dashboards d'audience, ni consommer notre quota
+// d'ingestion d'erreurs Sentry pour des erreurs qu'il déclenche lui-même.
+// N'affecte ni le rendu ni le contenu de la page.
+if (!isLikelyAutomatedClient(navigator)) {
+  ensureSentryInit();
+  injectWebAnalytics();
+}
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {

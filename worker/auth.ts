@@ -20,6 +20,13 @@ import type { Env, UserRow } from "./types.ts";
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_COOKIE = "bobine_session";
+// Cookie compagnon, lisible en JS (pas HttpOnly, aucune valeur sensible :
+// juste "1"), posé/effacé en même temps que SESSION_COOKIE — voir
+// AuthContext.tsx, qui l'utilise pour savoir s'il vaut la peine d'appeler
+// /api/auth/me. But : un visiteur anonyme (donc sans jamais avoir eu de
+// session) n'a jamais ce cookie et peut sauter cet appel réseau — ce qui
+// couvre aussi tout le trafic de crawlers/bots, qui ne se connectent jamais.
+const AUTH_HINT_COOKIE = "bobine_auth";
 // Alphabet sans caractères ambigus à l'oreille/à l'écrit (pas de 0/O, 1/I/L).
 const CODE_CHARSET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const CODE_LENGTH = 6;
@@ -182,6 +189,18 @@ export function sessionCookieHeader(
   }
   const maxAge = Math.floor(SESSION_TTL_MS / 1000);
   return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`;
+}
+
+// Même durée de vie que sessionCookieHeader, volontairement PAS HttpOnly
+// (voir AUTH_HINT_COOKIE) : les deux cookies sont toujours posés/effacés
+// ensemble, donc leur présence reste cohérente.
+export function authHintCookieHeader(request: Request, { clear = false } = {}): string {
+  const secure = new URL(request.url).protocol === "https:" ? " Secure;" : "";
+  if (clear) {
+    return `${AUTH_HINT_COOKIE}=; Path=/;${secure} SameSite=Lax; Max-Age=0`;
+  }
+  const maxAge = Math.floor(SESSION_TTL_MS / 1000);
+  return `${AUTH_HINT_COOKIE}=1; Path=/;${secure} SameSite=Lax; Max-Age=${maxAge}`;
 }
 
 // Langue du destinataire de l'email : celle active dans son navigateur au
