@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useTheme } from "../../../core/context/ThemeContext.tsx";
-import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
@@ -198,9 +197,7 @@ export default function NavBar() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { status: authStatus, email, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { locale, setLocale } = useLocale();
   const { region } = useRegion();
-  const toggleLocale = () => setLocale(locale === "fr" ? "en" : "fr");
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -344,16 +341,6 @@ export default function NavBar() {
           <ThemeIcon theme={theme} />
         </button>
 
-        <button
-          type="button"
-          className={`${styles.textBtn} ${styles.desktopOnly}`}
-          onClick={toggleLocale}
-          aria-label={t("navBar.localeToggleAriaLabel")}
-          title={t("navBar.localeToggleTitle")}
-        >
-          {locale.toUpperCase()}
-        </button>
-
         <Link
           to="/profil"
           className={`${styles.iconBtn} ${styles.desktopOnly}`}
@@ -399,16 +386,6 @@ export default function NavBar() {
           title={t("navBar.themeToggleTitle")}
         >
           <ThemeIcon theme={theme} />
-        </button>
-
-        <button
-          type="button"
-          className={`${styles.textBtn} ${styles.mobileOnly}`}
-          onClick={toggleLocale}
-          aria-label={t("navBar.localeToggleAriaLabel")}
-          title={t("navBar.localeToggleTitle")}
-        >
-          {locale.toUpperCase()}
         </button>
 
         <button

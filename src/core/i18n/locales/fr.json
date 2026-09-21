@@ -158,8 +158,6 @@
     "searchAriaLabel": "Rechercher",
     "themeToggleAriaLabel": "Basculer le thème clair / sombre",
     "themeToggleTitle": "Thème clair / sombre",
-    "localeToggleAriaLabel": "Changer la langue de l'interface",
-    "localeToggleTitle": "Langue de l'interface",
     "profileAriaLabel": "Profil",
     "profileTitle": "Profil",
     "logout": "Déconnexion",
@@ -334,6 +332,12 @@
     "renameButton": "✏️ Renommer",
     "deleteButton": "🗑️ Supprimer la liste",
     "emptyState": "« {{name}} » est vide. Ouvrez un titre et utilisez « Ajouter à… » pour le ranger ici."
+  },
+  "languageSettings": {
+    "title": "Langue",
+    "description": "La langue de l'interface, synchronisée avec votre compte.",
+    "fr": "Français",
+    "en": "English"
   },
   "regionSettings": {
     "title": "Région",

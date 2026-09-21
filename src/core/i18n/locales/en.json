@@ -158,8 +158,6 @@
     "searchAriaLabel": "Search",
     "themeToggleAriaLabel": "Toggle light / dark theme",
     "themeToggleTitle": "Light / dark theme",
-    "localeToggleAriaLabel": "Change interface language",
-    "localeToggleTitle": "Interface language",
     "profileAriaLabel": "Profile",
     "profileTitle": "Profile",
     "logout": "Log out",
@@ -334,6 +332,12 @@
     "renameButton": "✏️ Rename",
     "deleteButton": "🗑️ Delete list",
     "emptyState": "\"{{name}}\" is empty. Open a title and use \"Add to…\" to file it here."
+  },
+  "languageSettings": {
+    "title": "Language",
+    "description": "The interface language, synchronised with your account.",
+    "fr": "Français",
+    "en": "English"
   },
   "regionSettings": {
     "title": "Region",
