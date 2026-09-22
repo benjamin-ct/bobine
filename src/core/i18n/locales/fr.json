@@ -31,7 +31,10 @@
     "lead": "Votre compte et vos préférences de recommandation, réunis au même endroit.",
     "notifications": "Notifications",
     "notificationsHint": "Prévenu·e quand un titre « envie de voir » arrive en streaming, pour vos genres préférés et les grosses sorties.",
-    "recommendations": "Recommandations"
+    "recommendations": "Recommandations",
+    "tabAccount": "Compte",
+    "tabPreferences": "Préférences",
+    "tabMyList": "Ma liste"
   },
   "providerBadges": {
     "unavailable": "Non disponible en streaming en {{region}} pour le moment.",
@@ -145,8 +148,7 @@
       "discover": "Découvrir",
       "newReleases": "Nouveautés",
       "comingSoon": "Prochainement",
-      "random": "Aléatoire",
-      "myList": "Ma liste"
+      "random": "Aléatoire"
     },
     "searching": "Recherche…",
     "noResults": "Aucun résultat.",
@@ -156,8 +158,6 @@
     "viewAllResults": "Voir tous les résultats pour « {{query}} » →",
     "searchPlaceholder": "Film, série, acteur, réalisateur…",
     "searchAriaLabel": "Rechercher",
-    "themeToggleAriaLabel": "Basculer le thème clair / sombre",
-    "themeToggleTitle": "Thème clair / sombre",
     "profileAriaLabel": "Profil",
     "profileTitle": "Profil",
     "logout": "Déconnexion",
@@ -263,10 +263,6 @@
     "noResults": "Aucun résultat."
   },
   "myListPage": {
-    "eyebrow": "Votre cinémathèque",
-    "title": "Ma liste",
-    "leadBefore": "Vos titres suivis. Retrouvez vos préférences (plateformes, exclusions, notifications) dans",
-    "profileLink": "votre profil",
     "authBannerText": "Connecte-toi pour synchroniser cette liste entre tes appareils : elle n'a pas disparu, elle reste enregistrée sur cet appareil.",
     "login": "Connexion",
     "tabSeen": "Déjà vu",
@@ -343,6 +339,13 @@
     "title": "Région",
     "description": "Le pays utilisé pour « Où regarder », les plateformes et les dates de sortie. Un choix ici reste actif même en VPN ou en déplacement ; sans choix, votre région est détectée automatiquement.",
     "loadError": "Impossible de charger la liste des pays."
+  },
+  "themeSettings": {
+    "title": "Thème",
+    "description": "L'apparence de l'interface : claire, sombre, ou automatique selon l'appareil.",
+    "dark": "Sombre",
+    "light": "Clair",
+    "auto": "Auto"
   },
   "favoriteProvidersSettings": {
     "title": "Mes plateformes",

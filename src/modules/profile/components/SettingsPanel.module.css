@@ -20,6 +20,29 @@
   margin: 10px 0 0;
 }
 
+.segmented {
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 2px;
+  margin: 10px 0 0;
+}
+
+.segmented button {
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.segActive {
+  background: var(--accent);
+  color: var(--on-accent) !important;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

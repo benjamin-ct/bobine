@@ -4,6 +4,37 @@
   padding: 0 var(--gutter) 64px;
 }
 
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 24px 26px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.tab:hover {
+  color: var(--fg);
+  border-color: var(--border-2);
+}
+
+.tabActive {
+  background: var(--accent);
+  color: var(--on-accent) !important;
+  border-color: var(--accent);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
