@@ -8,10 +8,12 @@ import {
   deleteSubscriptionById,
 } from "./db.ts";
 import {
-  getFlatrateProviderIds,
-  discoverRecentByGenre,
+  getFlatrateProviderIdsCached,
+  discoverRecentByGenreCached,
   trendingToday,
+  createTmdbRunCache,
   type TmdbListItem,
+  type TmdbRunCache,
 } from "./tmdb.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
 import { logError } from "./logger.ts";
@@ -90,13 +92,19 @@ async function notify(
 async function checkWatchlistAvailability(
   env: Env,
   db: D1Database,
-  subscription: SubscriptionRow
+  subscription: SubscriptionRow,
+  tmdbCache: TmdbRunCache
 ): Promise<void> {
   const items = await getWatchlistForSubscription(db, subscription.id);
   for (const item of items) {
     let currentProviders: number[];
     try {
-      currentProviders = await getFlatrateProviderIds(env, item.media_type, item.tmdb_id);
+      currentProviders = await getFlatrateProviderIdsCached(
+        tmdbCache,
+        env,
+        item.media_type,
+        item.tmdb_id
+      );
     } catch (err) {
       logError(`Providers TMDB indisponibles pour ${item.media_type}/${item.tmdb_id} :`, err);
       continue;
@@ -133,7 +141,8 @@ async function checkWatchlistAvailability(
 async function checkFavoriteGenreReleases(
   env: Env,
   db: D1Database,
-  subscription: SubscriptionRow
+  subscription: SubscriptionRow,
+  tmdbCache: TmdbRunCache
 ): Promise<void> {
   const genres = await getGenrePreferencesForSubscription(db, subscription.id);
   const seen = new Set<string>();
@@ -147,7 +156,13 @@ async function checkFavoriteGenreReleases(
 
     let results: TmdbListItem[];
     try {
-      results = await discoverRecentByGenre(env, media_type, genre_id, GENRE_WINDOW_DAYS);
+      results = await discoverRecentByGenreCached(
+        tmdbCache,
+        env,
+        media_type,
+        genre_id,
+        GENRE_WINDOW_DAYS
+      );
     } catch (err) {
       logError(`Discover TMDB échoué pour genre ${genre_id} (${media_type}) :`, err);
       continue;
@@ -222,9 +237,10 @@ export async function runDailyCheck(env: Env): Promise<void> {
     logError("Tendances TMDB indisponibles :", err);
   }
 
+  const tmdbCache = createTmdbRunCache();
   for (const subscription of subscriptions) {
-    await checkWatchlistAvailability(env, db, subscription);
-    await checkFavoriteGenreReleases(env, db, subscription);
+    await checkWatchlistAvailability(env, db, subscription, tmdbCache);
+    await checkFavoriteGenreReleases(env, db, subscription, tmdbCache);
     await checkTrendingReleases(env, db, subscription, trending);
   }
 }
