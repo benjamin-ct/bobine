@@ -65,7 +65,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLOR[theme]);
+    // iOS Safari ignore souvent un setAttribute("content", ...) sur la meta
+    // existante (couleur de barre de statut jamais rafraîchie sans recharger
+    // la page) : on supprime l'ancien noeud et on en insère un nouveau, ce
+    // qui force le navigateur à relire la valeur.
+    document.querySelector('meta[name="theme-color"]')?.remove();
+    const meta = document.createElement("meta");
+    meta.setAttribute("name", "theme-color");
+    meta.setAttribute("content", THEME_COLOR[theme]);
+    document.head.appendChild(meta);
   }, [theme]);
 
   useEffect(() => {

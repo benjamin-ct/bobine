@@ -2,11 +2,11 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  /* mélange sur --bg (pas --surface) : à l'arrêt, ça compose exactement --bg,
-     la même valeur que la meta theme-color (ThemeContext.tsx) — sinon la
-     barre de statut (théme-color) et le header n'ont pas la même couleur. */
-  background: color-mix(in oklch, var(--bg) 90%, transparent);
-  backdrop-filter: blur(18px) saturate(1.35);
+  /* Opaque, sans mélange : un fond translucide laissait transparaître les
+     radial-gradient de couleur (accent/gold) posés en haut de <body> (voir
+     global.css), ce qui recréait une démarcation avec la barre de statut
+     (theme-color, ThemeContext.tsx) même une fois aligné sur --bg. */
+  background: var(--bg);
   border-bottom: 1px solid var(--border-2);
   box-shadow: 0 10px 30px -16px oklch(0 0 0 / 0.5);
 }
