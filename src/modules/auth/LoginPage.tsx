@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [codeError, setCodeError] = useState<string | null>(null);
 
   if (status === "authenticated") {
-    return <Navigate to="/ma-liste" replace />;
+    return <Navigate to="/profil?tab=ma-liste" replace />;
   }
 
   async function onSubmit(e: FormEvent) {

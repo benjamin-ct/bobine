@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useAuth } from "../../core/context/AuthContext.tsx";
-import { PageHeader, ContinueWatchingRow, EmptyState } from "../../shared/components/index.ts";
+import { ContinueWatchingRow, EmptyState } from "../../shared/components/index.ts";
 import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
 import StatsPanel from "./components/StatsPanel.tsx";
 import WatchlistPanel from "./components/WatchlistPanel.tsx";
@@ -12,7 +12,7 @@ import styles from "./MyListPage.module.css";
 
 type Tab = "seen" | "want" | "progress" | string; // string = id de liste personnalisée
 
-export default function MyListPage() {
+export default function MyListContent() {
   const { t } = useTranslation();
   const { watched, watchlist, customLists, createList } = useLibrary();
   const { status: authStatus } = useAuth();
@@ -33,21 +33,7 @@ export default function MyListPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <PageHeader
-        eyebrow={t("myListPage.eyebrow")}
-        title={t("myListPage.title")}
-        lead={
-          <>
-            {t("myListPage.leadBefore")}{" "}
-            <Link to="/profil" className={styles.profileLink}>
-              {t("myListPage.profileLink")}
-            </Link>
-            .
-          </>
-        }
-      />
-
+    <div>
       {authStatus !== "authenticated" && (
         <div className={styles.authBanner}>
           <p className={styles.authBannerText}>{t("myListPage.authBannerText")}</p>

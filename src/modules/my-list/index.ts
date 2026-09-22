@@ -1,1 +1,1 @@
-export { default } from "./MyListPage.tsx";
+export { default } from "./MyListContent.tsx";

@@ -43,7 +43,7 @@ export default function VerifyAuthPage() {
       {status === "success" && (
         <div className={styles.card}>
           <p>{t("auth.verify.success")}</p>
-          <Link className={styles.primaryBtn} to="/ma-liste">
+          <Link className={styles.primaryBtn} to="/profil?tab=ma-liste">
             {t("auth.verify.goToMyList")}
           </Link>
         </div>

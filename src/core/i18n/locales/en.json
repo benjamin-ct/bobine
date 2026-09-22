@@ -31,7 +31,10 @@
     "lead": "Your account and your recommendation preferences, all in one place.",
     "notifications": "Notifications",
     "notificationsHint": "Get notified when a \"want to watch\" title lands on streaming, for your favorite genres and big releases.",
-    "recommendations": "Recommendations"
+    "recommendations": "Recommendations",
+    "tabAccount": "Account",
+    "tabPreferences": "Preferences",
+    "tabMyList": "My list"
   },
   "providerBadges": {
     "unavailable": "Not available to stream in {{region}} right now.",
@@ -263,10 +266,6 @@
     "noResults": "No results."
   },
   "myListPage": {
-    "eyebrow": "Your film library",
-    "title": "My list",
-    "leadBefore": "Your followed titles. Find your preferences (platforms, exclusions, notifications) in",
-    "profileLink": "your profile",
     "authBannerText": "Sign in to sync this list across your devices: it hasn't disappeared, it stays saved on this device.",
     "login": "Sign in",
     "tabSeen": "Watched",

@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import {
   NavBar,
   ScrollToTop,
@@ -13,7 +13,6 @@ import ComingSoon from "./modules/coming-soon/index.ts";
 import Detail from "./modules/detail/index.ts";
 import Person from "./modules/person/index.ts";
 import Random from "./modules/random/index.ts";
-import MyList from "./modules/my-list/index.ts";
 import Profile from "./modules/profile/index.ts";
 import Search from "./modules/search/index.ts";
 import { LoginPage, VerifyAuthPage } from "./modules/auth/index.ts";
@@ -34,7 +33,7 @@ export default function App() {
           <Route path="/media/:mediaType/:id" element={<Detail />} />
           <Route path="/personne/:id" element={<Person />} />
           <Route path="/aleatoire" element={<Random />} />
-          <Route path="/ma-liste" element={<MyList />} />
+          <Route path="/ma-liste" element={<Navigate to="/profil?tab=ma-liste" replace />} />
           <Route path="/profil" element={<Profile />} />
           <Route path="/recherche" element={<Search />} />
           <Route path="/connexion" element={<LoginPage />} />

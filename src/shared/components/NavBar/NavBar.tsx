@@ -18,7 +18,7 @@ const NAV_LINKS = [
   { to: "/nouveautes", key: "newReleases" },
   { to: "/prochainement", key: "comingSoon" },
   { to: "/aleatoire", key: "random" },
-  { to: "/ma-liste", key: "myList" },
+  { to: "/profil?tab=ma-liste", key: "myList" },
 ];
 
 function ReelIcon() {
