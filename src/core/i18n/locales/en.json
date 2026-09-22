@@ -337,9 +337,10 @@
   },
   "themeSettings": {
     "title": "Theme",
-    "description": "The interface's appearance, light or dark.",
+    "description": "The interface's appearance: light, dark, or automatic based on your device.",
     "dark": "Dark",
-    "light": "Light"
+    "light": "Light",
+    "auto": "Auto"
   },
   "regionSettings": {
     "title": "Region",

@@ -342,9 +342,10 @@
   },
   "themeSettings": {
     "title": "Thème",
-    "description": "L'apparence de l'interface, claire ou sombre.",
+    "description": "L'apparence de l'interface : claire, sombre, ou automatique selon l'appareil.",
     "dark": "Sombre",
-    "light": "Clair"
+    "light": "Clair",
+    "auto": "Auto"
   },
   "favoriteProvidersSettings": {
     "title": "Mes plateformes",
