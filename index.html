@@ -21,6 +21,11 @@
          nécessiter de redémarrage. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Fichier externe (pas de <script> inline) : la CSP du Worker n'inclut
+         pas 'unsafe-inline' sur script-src, voir public/theme-init.js pour
+         le détail. Bloquant (pas de defer/async/module) pour s'exécuter
+         avant le premier paint du loader ci-dessous. -->
+    <script src="/theme-init.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -36,9 +41,12 @@
       /* Loader affiché avant que React (et global.css/variables.css) ne soit
          chargé : couleurs dupliquées en dur ici (pas d'accès aux custom
          properties tant que ce fichier n'est pas chargé), calées sur le
-         thème sombre par défaut de variables.css, avec repli clair si
-         l'utilisateur préfère ce thème au niveau système. Retiré par
-         main.tsx une fois React monté. */
+         thème sombre par défaut de variables.css. Le thème réel (choix
+         explicite stocké ou repli système) est résolu par theme-init.js,
+         chargé ci-dessus *avant* ce bloc, via l'attribut data-theme sur <html> —
+         seule source de vérité, plus fiable qu'une media query dupliquée ici
+         qui ignorerait un choix explicite différent du système (flash au
+         montage de React). Retiré par main.tsx une fois React monté. */
       #app-loader {
         position: fixed;
         inset: 0;
@@ -59,15 +67,13 @@
         animation: app-loader-spin 0.8s linear infinite;
       }
 
-      @media (prefers-color-scheme: light) {
-        #app-loader {
-          background-color: #fbf9f5;
-        }
+      html[data-theme="light"] #app-loader {
+        background-color: #fbf9f5;
+      }
 
-        #app-loader__spinner {
-          border-color: oklch(0.9 0.014 80);
-          border-top-color: #a53a35;
-        }
+      html[data-theme="light"] #app-loader__spinner {
+        border-color: oklch(0.9 0.014 80);
+        border-top-color: #a53a35;
       }
 
       @media (prefers-reduced-motion: reduce) {

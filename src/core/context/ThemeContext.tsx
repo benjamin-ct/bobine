@@ -109,7 +109,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       // partout sauf sur le profil" qui persistait malgré le forçage de
       // hauteur scrollable. Même pattern que useScrollRestoration.ts pour
       // les étapes intermédiaires d'un scroll multi-étapes.
-      html.style.minHeight = "calc(100% + 1px)";
+      //
+      // `min-height: calc(100% + 1px)` (round 8) n'a en réalité aucun effet
+      // fiable ici : sur l'élément racine <html>, un pourcentage de hauteur
+      // se résout par rapport au containing block initial (le viewport) pour
+      // la propriété `height`, mais ce cas particulier ne s'étend pas de la
+      // façon garantie aux pourcentages de `min-height` — WebKit peut le
+      // traiter comme non résolu et l'ignorer purement et simplement. C'est
+      // cohérent avec le fait que le round 8 n'ait rien changé sur le
+      // profil : la hauteur scrollable forcée n'a en réalité jamais été
+      // appliquée, alors que les autres pages fonctionnaient déjà avant ça
+      // simplement parce que leur contenu dépasse naturellement le viewport.
+      // Remplacé par une valeur en pixels (basée sur innerHeight), qui ne
+      // dépend d'aucune résolution de pourcentage et garantit un espace
+      // réellement scrollable.
+      html.style.minHeight = `${window.innerHeight + 1}px`;
       requestAnimationFrame(() => {
         window.scrollTo({ top: y + 1, behavior: "instant" });
         requestAnimationFrame(() => {
