@@ -11,6 +11,14 @@ export type ThemePreference = Theme | "auto";
 
 const STORAGE_KEY = "bobine.theme";
 
+// Couleurs de fond (voir --bg dans variables.css) dupliquées ici en dur :
+// on ne peut pas lire une custom property CSS pour alimenter un <meta>, et
+// ce sont les mêmes valeurs que le loader statique d'index.html.
+const THEME_COLOR: Record<Theme, string> = {
+  dark: "#130e0a",
+  light: "#fbf9f5",
+};
+
 interface ThemeContextValue {
   theme: Theme;
   preference: ThemePreference;
@@ -57,6 +65,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", THEME_COLOR[theme]);
   }, [theme]);
 
   useEffect(() => {
