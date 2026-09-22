@@ -2,8 +2,18 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: color-mix(in oklch, var(--surface) 90%, transparent);
-  backdrop-filter: blur(18px) saturate(1.35);
+  /* Opaque, sans mélange : un fond translucide laissait transparaître les
+     radial-gradient de couleur (accent/gold) posés en haut de <body> (voir
+     global.css), ce qui recréait une démarcation avec la barre de statut
+     (theme-color, ThemeContext.tsx) même une fois aligné sur --bg. */
+  background: var(--bg);
+  /* Barre de statut iOS en "black-translucent" (voir index.html) : cette
+     zone déborde sous la barre de statut, donc ce padding pousse le contenu
+     de la nav sous elle plutôt que dessous, pendant que le fond --bg
+     continue de s'étendre derrière (visible à travers la barre transparente,
+     synchronisé au thème sans redémarrage). Sans effet hors PWA installée
+     (env() vaut 0 dans un onglet de navigateur classique). */
+  padding-top: env(safe-area-inset-top);
   border-bottom: 1px solid var(--border-2);
   box-shadow: 0 10px 30px -16px oklch(0 0 0 / 0.5);
 }

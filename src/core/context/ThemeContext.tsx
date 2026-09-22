@@ -11,6 +11,14 @@ export type ThemePreference = Theme | "auto";
 
 const STORAGE_KEY = "bobine.theme";
 
+// Couleurs de fond (voir --bg dans variables.css) dupliquées ici en dur :
+// on ne peut pas lire une custom property CSS pour alimenter un <meta>, et
+// ce sont les mêmes valeurs que le loader statique d'index.html.
+const THEME_COLOR: Record<Theme, string> = {
+  dark: "#130e0a",
+  light: "#fbf9f5",
+};
+
 interface ThemeContextValue {
   theme: Theme;
   preference: ThemePreference;
@@ -57,6 +65,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
+    // iOS Safari ignore souvent un setAttribute("content", ...) sur la meta
+    // existante (couleur de barre de statut jamais rafraîchie sans recharger
+    // la page) : on supprime l'ancien noeud et on en insère un nouveau, ce
+    // qui force le navigateur à relire la valeur.
+    document.querySelector('meta[name="theme-color"]')?.remove();
+    const meta = document.createElement("meta");
+    meta.setAttribute("name", "theme-color");
+    meta.setAttribute("content", THEME_COLOR[theme]);
+    document.head.appendChild(meta);
+
+    // En PWA installée sur iOS, la zone sous la barre de statut translucide
+    // n'est repeinte qu'au scroll, jamais spontanément à un changement de
+    // CSS. Un scroll synthétique a été tenté ici (rounds 6 à 10) mais s'est
+    // révélé non fiable sur device réel ; retiré (voir carte Trello "Le
+    // haut de l'écran n'est pas de la bonne couleur") — limitation WebKit
+    // documentée (https://developer.apple.com/forums/thread/739154), pas
+    // contournable en JS sans un vrai geste de scroll utilisateur.
   }, [theme]);
 
   useEffect(() => {
