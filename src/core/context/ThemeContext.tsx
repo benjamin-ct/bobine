@@ -99,11 +99,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const html = document.documentElement;
       const y = window.scrollY;
       const previousMinHeight = html.style.minHeight;
+      // `scroll-behavior: smooth` (global.css) s'applique à window.scrollTo() :
+      // sans forcer un déplacement instantané, le micro-scroll est animé au
+      // lieu d'être immédiat. Sur une page longue le déplacement partiel
+      // avant l'annulation (rAF suivant, ~16ms plus tard) reste assez visible
+      // pour déclencher le repaint iOS, mais sur une page courte comme
+      // Profil ce court instant ne laisse quasiment aucun déplacement réel
+      // se produire avant l'annulation — d'où le symptôme "fonctionne
+      // partout sauf sur le profil" qui persistait malgré le forçage de
+      // hauteur scrollable. Même pattern que useScrollRestoration.ts pour
+      // les étapes intermédiaires d'un scroll multi-étapes.
       html.style.minHeight = "calc(100% + 1px)";
       requestAnimationFrame(() => {
-        window.scrollTo(0, y + 1);
+        window.scrollTo({ top: y + 1, behavior: "instant" });
         requestAnimationFrame(() => {
-          window.scrollTo(0, y);
+          window.scrollTo({ top: y, behavior: "instant" });
           html.style.minHeight = previousMinHeight;
         });
       });
