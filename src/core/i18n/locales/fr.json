@@ -148,8 +148,7 @@
       "discover": "Découvrir",
       "newReleases": "Nouveautés",
       "comingSoon": "Prochainement",
-      "random": "Aléatoire",
-      "myList": "Ma liste"
+      "random": "Aléatoire"
     },
     "searching": "Recherche…",
     "noResults": "Aucun résultat.",
@@ -159,8 +158,6 @@
     "viewAllResults": "Voir tous les résultats pour « {{query}} » →",
     "searchPlaceholder": "Film, série, acteur, réalisateur…",
     "searchAriaLabel": "Rechercher",
-    "themeToggleAriaLabel": "Basculer le thème clair / sombre",
-    "themeToggleTitle": "Thème clair / sombre",
     "profileAriaLabel": "Profil",
     "profileTitle": "Profil",
     "logout": "Déconnexion",
@@ -342,6 +339,12 @@
     "title": "Région",
     "description": "Le pays utilisé pour « Où regarder », les plateformes et les dates de sortie. Un choix ici reste actif même en VPN ou en déplacement ; sans choix, votre région est détectée automatiquement.",
     "loadError": "Impossible de charger la liste des pays."
+  },
+  "themeSettings": {
+    "title": "Thème",
+    "description": "L'apparence de l'interface, claire ou sombre.",
+    "dark": "Sombre",
+    "light": "Clair"
   },
   "favoriteProvidersSettings": {
     "title": "Mes plateformes",

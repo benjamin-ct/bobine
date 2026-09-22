@@ -148,8 +148,7 @@
       "discover": "Discover",
       "newReleases": "New releases",
       "comingSoon": "Coming soon",
-      "random": "Random",
-      "myList": "My list"
+      "random": "Random"
     },
     "searching": "Searching…",
     "noResults": "No results.",
@@ -159,8 +158,6 @@
     "viewAllResults": "See all results for “{{query}}” →",
     "searchPlaceholder": "Movie, series, actor, director…",
     "searchAriaLabel": "Search",
-    "themeToggleAriaLabel": "Toggle light / dark theme",
-    "themeToggleTitle": "Light / dark theme",
     "profileAriaLabel": "Profile",
     "profileTitle": "Profile",
     "logout": "Log out",
@@ -337,6 +334,12 @@
     "description": "The interface language, synchronised with your account.",
     "fr": "Français",
     "en": "English"
+  },
+  "themeSettings": {
+    "title": "Theme",
+    "description": "The interface's appearance, light or dark.",
+    "dark": "Dark",
+    "light": "Light"
   },
   "regionSettings": {
     "title": "Region",

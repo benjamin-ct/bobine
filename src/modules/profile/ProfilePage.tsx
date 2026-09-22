@@ -9,6 +9,7 @@ import ExcludedGenresSettings from "./components/ExcludedGenresSettings.tsx";
 import ExcludedTitlesSettings from "./components/ExcludedTitlesSettings.tsx";
 import RegionSettings from "./components/RegionSettings.tsx";
 import LanguageSettings from "./components/LanguageSettings.tsx";
+import ThemeSettings from "./components/ThemeSettings.tsx";
 import styles from "./ProfilePage.module.css";
 
 type Tab = "compte" | "preferences" | "ma-liste";
@@ -91,6 +92,7 @@ export default function ProfilePage() {
           <div className={styles.discGrid}>
             <LanguageSettings />
             <RegionSettings />
+            <ThemeSettings />
           </div>
         </section>
       )}

@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
-import { useTheme } from "../../../core/context/ThemeContext.tsx";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
@@ -18,7 +17,6 @@ const NAV_LINKS = [
   { to: "/nouveautes", key: "newReleases" },
   { to: "/prochainement", key: "comingSoon" },
   { to: "/aleatoire", key: "random" },
-  { to: "/profil?tab=ma-liste", key: "myList" },
 ];
 
 function ReelIcon() {
@@ -37,19 +35,6 @@ function ReelIcon() {
       <circle cx="12" cy="17.4" r="1.5" fill="currentColor" stroke="none" />
       <circle cx="6.6" cy="12" r="1.5" fill="currentColor" stroke="none" />
       <circle cx="17.4" cy="12" r="1.5" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function ThemeIcon({ theme }: { theme: "dark" | "light" }) {
-  return theme === "light" ? (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" />
-    </svg>
-  ) : (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" transform="translate(0.97 -0.97)" />
     </svg>
   );
 }
@@ -196,7 +181,6 @@ export default function NavBar() {
   const navigate = useNavigate();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { status: authStatus, email, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { region } = useRegion();
 
   useEffect(() => {
@@ -331,16 +315,6 @@ export default function NavBar() {
           )}
         </div>
 
-        <button
-          type="button"
-          className={`${styles.iconBtn} ${styles.desktopOnly}`}
-          onClick={toggleTheme}
-          aria-label={t("navBar.themeToggleAriaLabel")}
-          title={t("navBar.themeToggleTitle")}
-        >
-          <ThemeIcon theme={theme} />
-        </button>
-
         <Link
           to="/profil"
           className={`${styles.iconBtn} ${styles.desktopOnly}`}
@@ -377,16 +351,6 @@ export default function NavBar() {
             {t("navBar.login")}
           </Link>
         )}
-
-        <button
-          type="button"
-          className={`${styles.iconBtn} ${styles.mobileOnly}`}
-          onClick={toggleTheme}
-          aria-label={t("navBar.themeToggleAriaLabel")}
-          title={t("navBar.themeToggleTitle")}
-        >
-          <ThemeIcon theme={theme} />
-        </button>
 
         <button
           type="button"
