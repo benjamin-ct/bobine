@@ -51,7 +51,9 @@ function check(name: string, actual: unknown, expected: unknown): void {
 {
   const key = `test:nouvelle-fenetre:${Math.random()}`;
   const windowMs = 60_000;
-  for (let i = 0; i < 5; i++) checkRateLimitInMemory(key, { limit: 5, windowMs }, 0);
+  for (let i = 0; i < 5; i++) {
+    checkRateLimitInMemory(key, { limit: 5, windowMs }, 0);
+  }
   const refusedEncoreDansLaFenetre = checkRateLimitInMemory(key, { limit: 5, windowMs }, 1_000);
   const accepteNouvelleFenetre = checkRateLimitInMemory(key, { limit: 5, windowMs }, windowMs);
   check("refusé juste avant la fin de fenêtre", refusedEncoreDansLaFenetre, false);
@@ -61,7 +63,9 @@ function check(name: string, actual: unknown, expected: unknown): void {
 {
   const keyA = `test:cles-independantes:a:${Math.random()}`;
   const keyB = `test:cles-independantes:b:${Math.random()}`;
-  for (let i = 0; i < 5; i++) checkRateLimitInMemory(keyA, { limit: 5, windowMs: 60_000 }, 0);
+  for (let i = 0; i < 5; i++) {
+    checkRateLimitInMemory(keyA, { limit: 5, windowMs: 60_000 }, 0);
+  }
   check(
     "une clé distincte n'est pas affectée par le plafond atteint sur une autre",
     checkRateLimitInMemory(keyB, { limit: 5, windowMs: 60_000 }, 0),

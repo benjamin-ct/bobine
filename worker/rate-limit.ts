@@ -46,7 +46,9 @@ const inMemoryCounters = new Map<string, { windowStart: number; count: number }>
 // de bot). Déclenchée au-delà d'une taille de map arbitraire plutôt qu'à
 // chaque appel, pour ne pas payer ce coût sur le chemin chaud.
 function pruneExpiredCounters(now: number): void {
-  if (inMemoryCounters.size < 10_000) return;
+  if (inMemoryCounters.size < 10_000) {
+    return;
+  }
   for (const [key, entry] of inMemoryCounters) {
     if (entry.windowStart + 5 * 60_000 < now) {
       inMemoryCounters.delete(key);
