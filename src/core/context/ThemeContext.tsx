@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 // NOUVEAU (repris de la maquette HTML, le Projet A n'avait qu'un thème
 // sombre fixe avant migration) : choix clair/sombre/auto, persisté et
