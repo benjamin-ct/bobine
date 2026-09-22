@@ -9,7 +9,7 @@
 // autonome, exécutable avec `node scripts/verify-rate-limit-memory.ts`, sur
 // le même modèle que les autres scripts verify:*.
 
-import { checkRateLimitInMemory } from "../worker/rate-limit.ts";
+import { checkRateLimitInMemory } from "../worker/rate-limit-memory.ts";
 
 let passed = 0;
 let failed = 0;

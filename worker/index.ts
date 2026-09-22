@@ -46,7 +46,8 @@ const EMAIL_LOCALES: EmailLocale[] = ["fr", "en"];
 function sanitizeEmailLocale(value: unknown): EmailLocale {
   return EMAIL_LOCALES.includes(value as EmailLocale) ? (value as EmailLocale) : "fr";
 }
-import { checkRateLimit, checkRateLimitInMemory, getClientIp } from "./rate-limit.ts";
+import { checkRateLimit, getClientIp } from "./rate-limit.ts";
+import { checkRateLimitInMemory } from "./rate-limit-memory.ts";
 import { detectKnownCrawler } from "./bots.ts";
 import {
   sanitizeLibraryPayload,
