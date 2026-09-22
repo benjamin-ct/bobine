@@ -28,15 +28,22 @@ l'issue via l'API Sentry, correctif direct en PR ou création d'une carte Trello
 cas). Voir `.claude/skills/sentry-triage/SKILL.md` à la racine du repo pour le détail du
 comportement de Claude une fois déclenché.
 
+La notification Discord immédiate (`🚨 Nouvelle alerte Sentry : ...`, envoyée dès réception du
+webhook, avant même que Claude ne traite l'alerte) part sur `DISCORD_SENTRY_WEBHOOK_URL`, un
+webhook dédié au salon "erreurs-prod" — distinct de `DISCORD_WEBHOOK_URL` pour ne pas mélanger ces
+alertes avec les notifications de fin de pipeline Trello.
+
 Étapes manuelles pour l'activer (ne peuvent pas être faites depuis ce repo) :
 
 1. Renseigner dans `.env` : `SENTRY_WEBHOOK_SECRET` (valeur aléatoire, ex. `openssl rand -hex 32`),
    `SENTRY_AUTH_TOKEN` (Sentry > Settings > Auth Tokens, scope `event:read` a minima), `SENTRY_ORG_SLUG`
    et `SENTRY_PROJECT_SLUG`.
-2. Redéployer avec les nouvelles variables (`docker-compose -f docker-compose-bobine.yml up -d`
+2. Créer un webhook Discord dans le salon "erreurs-prod" (Paramètres du salon > Intégrations >
+   Webhooks > Nouveau Webhook) et renseigner son URL dans `.env` sous `DISCORD_SENTRY_WEBHOOK_URL`.
+3. Redéployer avec les nouvelles variables (`docker-compose -f docker-compose-bobine.yml up -d`
    pour recréer les deux services avec le `.env` à jour, ou `./update.sh` si seul le listener a
    changé — ici il faut aussi recréer `bobine-repo` pour lui injecter `SENTRY_AUTH_TOKEN`).
-3. Dans Sentry, sur le projet concerné : Alerts > Create Alert Rule > condition souhaitée (ex. "a
+4. Dans Sentry, sur le projet concerné : Alerts > Create Alert Rule > condition souhaitée (ex. "a
    new issue is created") > action "Send a notification via a webhook" > URL =
    `https://<host-du-listener>:29000/sentry-webhook?secret=<SENTRY_WEBHOOK_SECRET>`.
 

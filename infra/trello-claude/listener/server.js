@@ -11,6 +11,11 @@ const TRELLO_TOKEN = process.env.TRELLO_TOKEN;
 
 const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || "1543573331335315497";
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+// Webhook dédié au salon "erreurs-prod" (id 1544711290273140877), utilisé uniquement pour les
+// alertes Sentry — distinct de DISCORD_WEBHOOK_URL pour ne pas mélanger ces alertes avec les
+// notifications de fin de pipeline Trello. Retombe sur DISCORD_WEBHOOK_URL si non configuré, pour
+// ne pas perdre l'alerte pendant la mise en place du webhook dédié.
+const DISCORD_SENTRY_WEBHOOK_URL = process.env.DISCORD_SENTRY_WEBHOOK_URL || DISCORD_WEBHOOK_URL;
 
 const SENTRY_WEBHOOK_SECRET = process.env.SENTRY_WEBHOOK_SECRET;
 
@@ -88,11 +93,11 @@ async function postTrelloComment(cardId, text) {
   return res.json();
 }
 
-async function postDiscordMessage(text) {
-  if (!DISCORD_WEBHOOK_URL) {
+async function postDiscordMessage(text, webhookUrl = DISCORD_WEBHOOK_URL) {
+  if (!webhookUrl) {
     return;
   }
-  const res = await fetch(DISCORD_WEBHOOK_URL, {
+  const res = await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content: text }),
@@ -232,7 +237,10 @@ function triggerClaude(action) {
 
 function triggerClaudeForSentry(rawPayload, issueLabel) {
   runClaude(`alerte Sentry (${issueLabel})`, sentryPrompt(rawPayload), (errorMsg) =>
-    postDiscordMessage(`${errorMsg}\n(déclenché par l'alerte Sentry : ${issueLabel})`)
+    postDiscordMessage(
+      `${errorMsg}\n(déclenché par l'alerte Sentry : ${issueLabel})`,
+      DISCORD_SENTRY_WEBHOOK_URL
+    )
   );
 }
 
@@ -288,7 +296,8 @@ const server = http.createServer((req, res) => {
 
       try {
         await postDiscordMessage(
-          `🚨 Nouvelle alerte Sentry : ${issueLabel}${issueUrl ? `\n${issueUrl}` : ""}`
+          `🚨 Nouvelle alerte Sentry : ${issueLabel}${issueUrl ? `\n${issueUrl}` : ""}`,
+          DISCORD_SENTRY_WEBHOOK_URL
         );
       } catch (e) {
         console.error(`[${ts()}] [discord] echec notification alerte Sentry : ${e.message}`);
