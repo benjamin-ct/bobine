@@ -74,6 +74,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     meta.setAttribute("name", "theme-color");
     meta.setAttribute("content", THEME_COLOR[theme]);
     document.head.appendChild(meta);
+
+    // PWA installée sur iOS (barre de statut black-translucent, voir
+    // index.html) : la zone sous la barre affiche un instantané mis en cache
+    // par WebKit, qui n'est repeint qu'au scroll — jamais spontanément à un
+    // changement de CSS, d'où le besoin d'"une petite interaction" remonté
+    // sur la carte Trello. On simule ce scroll par un micro-décalage
+    // synthétique (1px puis retour), réparti sur deux frames pour que WebKit
+    // le traite comme deux évènements de scroll distincts plutôt qu'un
+    // déplacement net nul ignoré.
+    const isStandalonePwa =
+      typeof window !== "undefined" &&
+      (window.matchMedia?.("(display-mode: standalone)").matches ||
+        (navigator as unknown as { standalone?: boolean }).standalone === true);
+    if (isStandalonePwa) {
+      const y = window.scrollY;
+      requestAnimationFrame(() => {
+        window.scrollTo(0, y + 1);
+        requestAnimationFrame(() => window.scrollTo(0, y));
+      });
+    }
   }, [theme]);
 
   useEffect(() => {
