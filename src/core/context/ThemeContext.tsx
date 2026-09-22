@@ -83,15 +83,29 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // synthétique (1px puis retour), réparti sur deux frames pour que WebKit
     // le traite comme deux évènements de scroll distincts plutôt qu'un
     // déplacement net nul ignoré.
+    //
+    // Sur une page dont le contenu tient déjà dans le viewport (ex. Profil,
+    // onglet Préférences), le document n'a rien à scroller : scrollTo(0, 1)
+    // ne produit alors aucun déplacement réel, donc aucun évènement de
+    // scroll, donc aucun repaint (symptôme "ça marche partout sauf sur le
+    // profil" remonté sur la carte). On force temporairement 1px de hauteur
+    // scrollable en plus pour garantir que le micro-scroll a toujours un
+    // effet, quelle que soit la longueur du contenu de la page.
     const isStandalonePwa =
       typeof window !== "undefined" &&
       (window.matchMedia?.("(display-mode: standalone)").matches ||
         (navigator as unknown as { standalone?: boolean }).standalone === true);
     if (isStandalonePwa) {
+      const html = document.documentElement;
       const y = window.scrollY;
+      const previousMinHeight = html.style.minHeight;
+      html.style.minHeight = "calc(100% + 1px)";
       requestAnimationFrame(() => {
         window.scrollTo(0, y + 1);
-        requestAnimationFrame(() => window.scrollTo(0, y));
+        requestAnimationFrame(() => {
+          window.scrollTo(0, y);
+          html.style.minHeight = previousMinHeight;
+        });
       });
     }
   }, [theme]);
