@@ -10,6 +10,25 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
   },
+  // Logs & traces natifs Workers (dashboard Cloudflare → ce Worker → onglet
+  // Observability) : le dashboard affiche un avertissement tant que ces
+  // réglages ne sont pas mirrorés ici, sinon ils seraient écrasés au
+  // prochain déploiement (même mécanisme que "vars" ci-dessous — voir
+  // README section Observabilité pour le reste : Sentry, Analytics Engine,
+  // Web Analytics, health check).
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true
+    }
+  },
   // Non sensibles (VAPID_PUBLIC_KEY est justement faite pour être publique —
   // on la sert nous-mêmes via GET /api/vapid-public-key) : commitées ici
   // plutôt que configurées via le dashboard, pour ne pas dépendre de

@@ -140,6 +140,11 @@ Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.
 - **Usage** (recherche, activation des notifications, changements de bibliothèque) : Cloudflare **Analytics Engine**
   (binding `ANALYTICS`, voir `wrangler.jsonc` et `worker/analytics.ts`) — aucune configuration supplémentaire, actif
   dès le déploiement.
+- **Logs & traces natifs Workers** : activés via `wrangler.jsonc` (bloc `observability`, voir le schéma
+  `node_modules/wrangler/config-schema.json`) plutôt que depuis le dashboard seul — le dashboard affiche justement un
+  avertissement tant que ces réglages ne sont pas mirrorés dans le fichier commité, sinon ils seraient écrasés au
+  prochain déploiement (même mécanisme que `vars`). Consultables dans le dashboard Cloudflare, Worker `bobine` →
+  onglet **Observability**.
 - **Fréquentation** (pages vues, visiteurs) : Cloudflare **Web Analytics**. À activer une fois depuis le dashboard
   Cloudflare (**Analytics & Logs → Web Analytics → Add site**), puis reporter le token obtenu dans
   `CLOUDFLARE_ANALYTICS_TOKEN` (`wrangler.jsonc`, `vars`, pas un secret — ce token est fait pour être public). Le
