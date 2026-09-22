@@ -82,6 +82,7 @@ jobs:
           npm run verify:global-providers
           npm run verify:bot-detection
           npm run verify:bot-detection-client
+          npm run verify:rate-limit-memory
 
       - name: Build
         run: npm run build

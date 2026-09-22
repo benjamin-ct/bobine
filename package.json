@@ -21,6 +21,7 @@
     "verify:global-providers": "node scripts/verify-global-providers.ts",
     "verify:bot-detection": "node scripts/verify-bot-detection.ts",
     "verify:bot-detection-client": "node scripts/verify-bot-detection-client.ts",
+    "verify:rate-limit-memory": "node scripts/verify-rate-limit-memory.ts",
     "postinstall": "node scripts/generate-icons.ts",
     "prepare": "husky"
   },

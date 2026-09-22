@@ -47,6 +47,7 @@ function sanitizeEmailLocale(value: unknown): EmailLocale {
   return EMAIL_LOCALES.includes(value as EmailLocale) ? (value as EmailLocale) : "fr";
 }
 import { checkRateLimit, getClientIp } from "./rate-limit.ts";
+import { checkRateLimitInMemory } from "./rate-limit-memory.ts";
 import { detectKnownCrawler } from "./bots.ts";
 import {
   sanitizeLibraryPayload,
@@ -1001,7 +1002,11 @@ async function handleTmdbProxy(
   ctx: ExecutionContext
 ): Promise<Response> {
   const ip = getClientIp(request);
-  if (!(await checkRateLimit(env.DB, `tmdb:ip:${ip}`, { limit: 120, windowMs: 60_000 }))) {
+  // En mémoire (pas D1, voir rate-limit.ts) : le proxy TMDB est de très loin
+  // la route la plus sollicitée (par les humains comme par les bots), une
+  // écriture D1 par requête y a fini par épuiser le quota d'écritures du
+  // plan gratuit (ticket "Milliers de calls workers").
+  if (!checkRateLimitInMemory(`tmdb:ip:${ip}`, { limit: 120, windowMs: 60_000 })) {
     return RATE_LIMIT_RESPONSE();
   }
   // Un crawler distribué (voir ticket "Milliers de calls workers") reste
@@ -1010,10 +1015,7 @@ async function handleTmdbProxy(
   // plafonne le volume agrégé sans jamais bloquer un visiteur humain qui
   // partagerait la même IP sortante (proxy, 4G...).
   const crawler = detectKnownCrawler(request);
-  if (
-    crawler &&
-    !(await checkRateLimit(env.DB, `tmdb:bot:${crawler}`, { limit: 60, windowMs: 60_000 }))
-  ) {
+  if (crawler && !checkRateLimitInMemory(`tmdb:bot:${crawler}`, { limit: 60, windowMs: 60_000 })) {
     return RATE_LIMIT_RESPONSE();
   }
   if (!env.TMDB_API_KEY) {

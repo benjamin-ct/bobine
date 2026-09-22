@@ -23,6 +23,11 @@ export async function checkRateLimit(
   return (row?.count ?? 1) <= limit;
 }
 
+// Variante sans écriture D1 (routes à très fort volume, ex. le proxy TMDB) :
+// voir worker/rate-limit-memory.ts, importé directement là où nécessaire
+// (fichier séparé pour rester importable depuis les scripts verify:*, qui
+// n'ont pas accès aux types Workers utilisés ci-dessus).
+
 export function getClientIp(request: Request): string {
   // En-tête posé par Cloudflare lui-même sur toute requête passant par son
   // réseau — pas falsifiable par le client (contrairement à X-Forwarded-For).
