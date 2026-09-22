@@ -2,7 +2,10 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: color-mix(in oklch, var(--surface) 90%, transparent);
+  /* mélange sur --bg (pas --surface) : à l'arrêt, ça compose exactement --bg,
+     la même valeur que la meta theme-color (ThemeContext.tsx) — sinon la
+     barre de statut (théme-color) et le header n'ont pas la même couleur. */
+  background: color-mix(in oklch, var(--bg) 90%, transparent);
   backdrop-filter: blur(18px) saturate(1.35);
   border-bottom: 1px solid var(--border-2);
   box-shadow: 0 10px 30px -16px oklch(0 0 0 / 0.5);
