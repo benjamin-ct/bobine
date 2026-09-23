@@ -9,8 +9,10 @@ import {
   getMovieReleaseDates,
   getUpcomingMovieRelease,
   getUpcomingSeriesRelease,
+  getSeriesEpisodeBadge,
   formatFullDate,
 } from "../../../core/api/tmdb.ts";
+import type { SeriesEpisodeBadge } from "../../../core/api/tmdb.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
@@ -39,6 +41,11 @@ interface MediaCardProps {
    * prévue, jamais déduit de /watch/providers. Réutilise le même badge
    * (.theatrical, même position/style) que showProviderBadge. */
   showFutureReleaseBadge?: boolean;
+  /** Opt-in, séries uniquement (voir seriesEpisodeBadge.ts) : "Vient de
+   * sortir"/"Prochainement" sur un épisode, indépendant des deux badges
+   * ci-dessus (sortie ciné/plateforme, propre aux films). Même emplacement
+   * visuel (.theatrical). */
+  showEpisodeBadge?: boolean;
 }
 
 // `memo` : les grilles (Découvrir, Nouveautés, Ma liste...) affichent des
@@ -49,6 +56,7 @@ function MediaCard({
   item,
   showProviderBadge = false,
   showFutureReleaseBadge = false,
+  showEpisodeBadge = false,
 }: MediaCardProps) {
   const { t } = useTranslation();
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
@@ -97,7 +105,7 @@ function MediaCard({
   const posterRef = useRef<HTMLDivElement>(null);
   const [isNearViewport, setIsNearViewport] = useState(false);
   useEffect(() => {
-    if (!showProviderBadge && !showFutureReleaseBadge) {
+    if (!showProviderBadge && !showFutureReleaseBadge && !showEpisodeBadge) {
       return;
     }
     const el = posterRef.current;
@@ -115,7 +123,7 @@ function MediaCard({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [showProviderBadge, showFutureReleaseBadge]);
+  }, [showProviderBadge, showFutureReleaseBadge, showEpisodeBadge]);
 
   const [provider, setProvider] = useState<WatchProviderEntry | null>(null);
   // Distingue "pas encore vérifié" de "vérifié, rien trouvé".
@@ -200,6 +208,43 @@ function MediaCard({
     };
   }, [showFutureReleaseBadge, isNearViewport, mediaType, item.id, region, date]);
 
+  // Vient de sortir / Prochainement (séries) : indépendant de
+  // showFutureReleaseBadge (films uniquement), basé sur
+  // next_episode_to_air/last_episode_to_air (voir seriesEpisodeBadge.ts).
+  const [episodeBadge, setEpisodeBadge] = useState<SeriesEpisodeBadge | null>(null);
+  useEffect(() => {
+    if (!showEpisodeBadge || !isNearViewport || mediaType !== "tv") {
+      return;
+    }
+    let cancelled = false;
+    getDetails("tv", item.id)
+      .then((details) => {
+        if (!cancelled) {
+          setEpisodeBadge(getSeriesEpisodeBadge(details));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEpisodeBadge(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showEpisodeBadge, isNearViewport, mediaType, item.id]);
+
+  // Le texte affiché vient toujours de t() (kind -> clé de traduction),
+  // jamais de episodeBadge.label (français en dur, présent uniquement pour
+  // que la logique pure reste testable indépendamment de react-i18next).
+  const episodeBadgeLabel = episodeBadge
+    ? episodeBadge.kind === "just_released"
+      ? t("mediaCard.episodeJustReleased")
+      : t("mediaCard.episodeUpcoming")
+    : null;
+  const episodeBadgeDateFormatted = episodeBadge
+    ? formatFullDate(episodeBadge.date, locale) || episodeBadge.date
+    : null;
+
   // Film sans date exploitable dans release_dates : on retombe sur l'index
   // théâtral déjà chargé pour toute la grille plutôt que de laisser le
   // badge vide. Vocabulaire unifié : même ce repli affiche "Cinéma".
@@ -236,7 +281,16 @@ function MediaCard({
           <span className={styles.type}>
             {mediaType === "movie" ? t("mediaCard.movie") : t("mediaCard.series")}
           </span>
-          {showFutureReleaseBadge ? (
+          {showEpisodeBadge ? (
+            episodeBadgeLabel && (
+              <span
+                className={styles.theatrical}
+                title={`${episodeBadgeLabel} (${episodeBadgeDateFormatted})`}
+              >
+                {episodeBadgeLabel}
+              </span>
+            )
+          ) : showFutureReleaseBadge ? (
             futureReleaseLabel && (
               <span className={styles.theatrical} title={futureReleaseLabel}>
                 {futureReleaseLabel}

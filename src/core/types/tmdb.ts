@@ -118,6 +118,9 @@ export interface Season {
   season_number: number;
   name?: string;
   episode_count: number;
+  // Date de première de la saison, renseignée par TMDB dès l'annonce (avant
+  // même que next_episode_to_air ne le soit pour l'épisode 1 de la saison).
+  air_date?: string | null;
 }
 
 export interface Episode {
@@ -137,6 +140,14 @@ export interface SeasonDetails {
 export interface Network {
   id: number;
   name: string;
+}
+
+/** Sous-ensemble de next_episode_to_air/last_episode_to_air (TMDB /tv/{id},
+ * champs de base, toujours renvoyés sans append_to_response). */
+export interface EpisodeAirInfo {
+  air_date?: string | null;
+  episode_number: number;
+  season_number: number;
 }
 
 export interface CollectionSummary {
@@ -179,6 +190,11 @@ export interface MediaDetails extends MediaSummary {
   networks?: Network[];
   created_by?: CreatedBy[];
   belongs_to_collection?: CollectionSummary | null;
+  // Séries uniquement : prochain/dernier épisode diffusé connu de TMDB —
+  // `null`/absent si la série est terminée ou en pause sans épisode annoncé.
+  next_episode_to_air?: EpisodeAirInfo | null;
+  last_episode_to_air?: EpisodeAirInfo | null;
+  status?: string; // "Returning Series" | "Ended" | "Canceled" | ...
   production_countries?: ProductionCountry[];
 }
 
