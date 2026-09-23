@@ -3,11 +3,12 @@ import { getDetails, getSeasonDetails } from "../../core/api/tmdb.ts";
 import { isStrictlyFutureDate } from "../../core/api/releaseBadge.ts";
 import type { LibraryItem } from "../../core/types/library.ts";
 
-// Une série vaut la peine d'apparaître dans "Reprendre" seulement s'il lui
-// reste au moins un épisode non vu déjà diffusé : une série terminée, ou
-// dont le seul épisode restant n'est pas encore sorti (ex. 31/32 vus,
-// épisode 32 annoncé pour la semaine prochaine), n'a rien à "reprendre"
-// concrètement.
+// Une série vaut la peine d'apparaître dans "Reprendre" seulement si le
+// prochain épisode après le dernier vu (dans l'ordre chronologique
+// saison/épisode, pas juste "un épisode non vu quelque part") est déjà
+// diffusé : une série dont on a vu les 7 premiers épisodes de la saison en
+// cours mais dont l'épisode 8 n'est pas encore sorti n'a rien à "reprendre"
+// concrètement, même si d'anciennes saisons non regardées traînent encore.
 export function useResumableSeries(watchlist: LibraryItem[]): LibraryItem[] {
   const startedSeries = watchlist.filter(
     (item) => item.mediaType === "tv" && (item.watchedEpisodes?.length || 0) > 0
@@ -42,36 +43,60 @@ export function useResumableSeries(watchlist: LibraryItem[]): LibraryItem[] {
   return startedSeries.filter((item) => resumable[item.id] !== false);
 }
 
-function countWatchedInSeason(watched: Set<string>, seasonNumber: number): number {
-  let count = 0;
-  for (const key of watched) {
-    if (key.startsWith(`${seasonNumber}-`)) {
-      count += 1;
-    }
-  }
-  return count;
+// Dernier épisode vu, au sens chronologique saison/épisode (pas ordre
+// d'ajout dans watchedEpisodes) : point de départ pour déterminer "le
+// prochain épisode" à proposer dans Reprendre.
+function lastWatchedEntry(watchedEpisodes: string[]): {
+  seasonNumber: number;
+  episodeNumber: number;
+} {
+  return watchedEpisodes
+    .map((key) => {
+      const [seasonNumber, episodeNumber] = key.split("-").map(Number);
+      return { seasonNumber, episodeNumber };
+    })
+    .reduce((max, entry) =>
+      entry.seasonNumber > max.seasonNumber ||
+      (entry.seasonNumber === max.seasonNumber && entry.episodeNumber > max.episodeNumber)
+        ? entry
+        : max
+    );
 }
 
 async function hasResumableEpisode(item: LibraryItem): Promise<boolean> {
   const todayIso = new Date().toISOString().slice(0, 10);
-  const watched = new Set(item.watchedEpisodes || []);
+  const watchedEpisodes = item.watchedEpisodes || [];
+  if (watchedEpisodes.length === 0) {
+    return false;
+  }
+  const lastWatched = lastWatchedEntry(watchedEpisodes);
   try {
     const details = await getDetails("tv", item.id);
-    const incompleteSeasons = (details.seasons || []).filter(
-      (s) => s.episode_count > 0 && countWatchedInSeason(watched, s.season_number) < s.episode_count
-    );
-    for (const season of incompleteSeasons) {
-      const { episodes } = await getSeasonDetails(item.id, season.season_number);
-      const hasReleasedUnwatched = (episodes || []).some(
-        (ep) =>
-          !watched.has(`${season.season_number}-${ep.episode_number}`) &&
-          !isStrictlyFutureDate(ep.air_date, todayIso)
-      );
-      if (hasReleasedUnwatched) {
-        return true;
-      }
+    const seasons = (details.seasons || [])
+      .filter((s) => s.episode_count > 0)
+      .sort((a, b) => a.season_number - b.season_number);
+    const currentSeason = seasons.find((s) => s.season_number === lastWatched.seasonNumber);
+    if (!currentSeason) {
+      return false;
     }
-    return false;
+
+    if (lastWatched.episodeNumber < currentSeason.episode_count) {
+      const { episodes } = await getSeasonDetails(item.id, currentSeason.season_number);
+      const nextEpisode = (episodes || []).find(
+        (ep) => ep.episode_number === lastWatched.episodeNumber + 1
+      );
+      return nextEpisode ? !isStrictlyFutureDate(nextEpisode.air_date, todayIso) : false;
+    }
+
+    // Saison en cours entièrement vue : le prochain épisode est le premier
+    // de la saison suivante connue, s'il y en a une.
+    const nextSeason = seasons.find((s) => s.season_number > currentSeason.season_number);
+    if (!nextSeason) {
+      return false;
+    }
+    const { episodes } = await getSeasonDetails(item.id, nextSeason.season_number);
+    const firstEpisode = (episodes || [])[0];
+    return firstEpisode ? !isStrictlyFutureDate(firstEpisode.air_date, todayIso) : false;
   } catch {
     // TMDB indisponible : ne pas masquer la série par erreur.
     return true;
