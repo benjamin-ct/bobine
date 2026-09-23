@@ -3,7 +3,6 @@ import type { FocusEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  discover,
   getGenres,
   getWatchProvidersList,
   getDetails,
@@ -11,6 +10,7 @@ import {
   posterUrl,
   formatFullDate,
 } from "../../core/api/tmdb.ts";
+import { drawRandom as drawRandomPick } from "../../core/api/recommendations.ts";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../core/context/RegionContext.tsx";
 import { useLocale } from "../../core/context/LocaleContext.tsx";
@@ -38,7 +38,6 @@ import type {
 import type { WatchProviderOption } from "../../core/api/tmdb.ts";
 import styles from "./RandomPage.module.css";
 
-const MAX_ATTEMPTS = 6;
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_MIN = 1900;
 const YEAR_MAX = CURRENT_YEAR + 5;
@@ -68,7 +67,7 @@ export default function RandomPage() {
   const { locale } = useLocale();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
-  const { filterExcluded } = useExcludedTitles();
+  const { excludedTitleKeys } = useExcludedTitles();
 
   const yearRangeError = isRangeInverted(yearMin, yearMax)
     ? t("advancedFilters.yearRangeError")
@@ -115,40 +114,29 @@ export default function RandomPage() {
     setPick(null);
     setPickDetails(null);
     try {
-      const discoverParams = {
-        genreId: genreIds,
+      const excludeKeys = excludeWatched
+        ? [...excludedTitleKeys, ...watchedIds]
+        : excludedTitleKeys;
+      // Le tirage lui-même (découverte + sélection, pondérée par le profil de
+      // goûts pour un compte avec assez d'historique, uniforme sinon) est
+      // calculé côté Worker — voir worker/recommendations.ts,
+      // drawWeightedRandom. Le client ne fait plus l'appel TMDB /discover
+      // directement ni la boucle de tirage.
+      const result = await drawRandomPick({
+        mediaType,
+        genreIds,
         excludeGenreIds: excludedGenreIds,
         providerIds: useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined,
-        region,
         yearMin: yearMin ? Number(yearMin) : undefined,
         yearMax: yearMax ? Number(yearMax) : undefined,
-      };
-      const first = await discover(mediaType, { page: 1, ...discoverParams });
-      const totalPages = Math.min(first.total_pages || 1, 500);
-      if (totalPages === 0 || !first.results?.length) {
+        excludeKeys,
+      });
+
+      if (!result) {
         setStatus("empty");
         return;
       }
-
-      let candidate: MediaItem | null = null;
-      for (let attempt = 0; attempt < MAX_ATTEMPTS && !candidate; attempt++) {
-        const page = Math.max(1, Math.floor(Math.random() * Math.min(totalPages, 100)) + 1);
-        const data = page === 1 ? first : await discover(mediaType, { page, ...discoverParams });
-        let pool = filterExcluded(data.results, mediaType);
-        if (excludeWatched) {
-          pool = pool.filter((item) => !watchedIds.has(`${mediaType}:${item.id}`));
-        }
-        if (pool.length > 0) {
-          candidate = { ...pool[Math.floor(Math.random() * pool.length)], mediaType };
-        }
-      }
-
-      if (!candidate) {
-        candidate = {
-          ...first.results[Math.floor(Math.random() * first.results.length)],
-          mediaType,
-        };
-      }
+      const candidate: MediaItem = { ...result, mediaType };
 
       const fullDetails = await getDetails(mediaType, candidate.id);
       setPick(candidate);

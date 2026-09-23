@@ -60,6 +60,11 @@ export interface TmdbListItem {
   popularity?: number;
   release_date?: string;
   first_air_date?: string;
+  genre_ids?: number[];
+  vote_average?: number;
+  vote_count?: number;
+  overview?: string;
+  poster_path?: string | null;
 }
 
 // Mutualise les appels TMDB identiques (même item, même genre) le temps
@@ -136,6 +141,74 @@ export async function trendingToday(env: Env): Promise<TmdbListItem[]> {
   return (data.results || []).filter(
     (item) => item.media_type === "movie" || item.media_type === "tv"
   );
+}
+
+// Candidats pour le moteur de recommandation "Pour toi" (voir
+// worker/recommendations.ts) : découverte par genres/décennie favoris, et
+// "parce que tu as aimé X" via /recommendations sur les titres les mieux
+// notés de l'utilisateur. Fonctions distinctes de discoverRecentByGenre
+// ci-dessus (qui ne cible que les toutes dernières sorties, pour le cron).
+
+export interface TmdbDiscoverParams {
+  genreIds?: number[];
+  excludeGenreIds?: number[];
+  providerIds?: number[];
+  region?: string;
+  yearMin?: number;
+  yearMax?: number;
+  page?: number;
+}
+
+// Découverte générique (voir /api/random et le calcul des candidats "Pour
+// toi") : sous-ensemble volontairement réduit des paramètres gérés côté
+// client par discover() (src/core/api/tmdb.ts) — seuls ceux réellement
+// utilisés par RandomPage/les candidats de recommandation, pas de plage de
+// note/durée/langue ici.
+export async function discoverGeneric(
+  env: Env,
+  mediaType: string,
+  {
+    genreIds,
+    excludeGenreIds,
+    providerIds,
+    region = "FR",
+    yearMin,
+    yearMax,
+    page = 1,
+  }: TmdbDiscoverParams
+): Promise<{ results: TmdbListItem[]; totalPages: number }> {
+  const dateField = mediaType === "movie" ? "primary_release_date" : "first_air_date";
+  const data = await tmdbFetch<{ results?: TmdbListItem[]; total_pages?: number }>(
+    env,
+    `/discover/${mediaType}`,
+    {
+      page,
+      with_genres: genreIds?.length ? genreIds.join("|") : undefined,
+      without_genres: excludeGenreIds?.length ? excludeGenreIds.join(",") : undefined,
+      with_watch_providers: providerIds?.length ? providerIds.join("|") : undefined,
+      watch_region: providerIds?.length ? region : undefined,
+      [`${dateField}.gte`]: yearMin ? `${yearMin}-01-01` : undefined,
+      [`${dateField}.lte`]: yearMax ? `${yearMax}-12-31` : undefined,
+      sort_by: "popularity.desc",
+      "vote_count.gte": 20,
+      include_adult: "false",
+    }
+  );
+  return { results: data.results || [], totalPages: Math.min(data.total_pages || 1, 500) };
+}
+
+// "Parce que tu as aimé <titre>" (voir buildRecommendationCandidates) :
+// TMDB calcule lui-même la similarité, on ne fait que relayer + dédupliquer.
+export async function getTmdbRecommendationsFor(
+  env: Env,
+  mediaType: string,
+  tmdbId: number
+): Promise<TmdbListItem[]> {
+  const data = await tmdbFetch<{ results?: TmdbListItem[] }>(
+    env,
+    `/${mediaType}/${tmdbId}/recommendations`
+  );
+  return data.results || [];
 }
 
 const MAX_THEATRICAL_PAGES = 10; // now_playing + upcoming restent largement sous ce plafond en pratique

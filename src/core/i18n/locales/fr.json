@@ -148,7 +148,8 @@
       "discover": "Découvrir",
       "newReleases": "Nouveautés",
       "comingSoon": "Prochainement",
-      "random": "Aléatoire"
+      "random": "Aléatoire",
+      "forYou": "Pour toi"
     },
     "searching": "Recherche…",
     "noResults": "Aucun résultat.",
@@ -425,7 +426,7 @@
   "privacyPolicyPage": {
     "title": "Politique de confidentialité",
     "lastUpdated": "Dernière mise à jour : {{date}}",
-    "lastUpdatedValue": "13 septembre 2026",
+    "lastUpdatedValue": "23 septembre 2026",
     "controller": {
       "title": "Responsable du traitement",
       "textBefore": "Bobine est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
@@ -438,7 +439,7 @@
       },
       "library": {
         "label": "Bibliothèque personnelle",
-        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu."
+        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », les titres que vous signalez « pas intéressé », vos listes personnalisées et leur contenu."
       },
       "preferences": {
         "label": "Préférences",
@@ -591,5 +592,28 @@
     "markAllWatched": "Tout marquer comme vu",
     "untitled": "Sans titre",
     "noEpisodesFound": "Aucun épisode trouvé pour cette saison."
+  },
+  "forYouPage": {
+    "eyebrow": "Basé sur vos goûts",
+    "title": "Pour toi",
+    "lead": "Des suggestions calculées à partir de ce que vous avez vu, noté et mis en envie de voir.",
+    "filters": {
+      "all": "Tout",
+      "movies": "Films",
+      "series": "Séries"
+    },
+    "refresh": "Rafraîchir",
+    "coldStartNotice": "Pas encore assez de titres vus ou notés pour personnaliser vos suggestions : voici des tendances du moment. Notez quelques titres pour affiner.",
+    "emptyState": "Aucune suggestion pour le moment. Revenez après avoir vu ou noté quelques titres de plus.",
+    "notInterested": "Pas intéressé",
+    "loginPrompt": "Connecte-toi pour découvrir des recommandations personnalisées, calculées à partir de ta bibliothèque.",
+    "loginCta": "Se connecter",
+    "reason": {
+      "genre": "Parce que tu aimes le genre {{genre}}",
+      "genreFallback": "un genre que tu aimes",
+      "decade": "Parce que tu aimes les films/séries des années {{decade}}",
+      "similarTo": "Parce que tu as aimé « {{title}} »",
+      "trending": "Tendance du moment"
+    }
   }
 }

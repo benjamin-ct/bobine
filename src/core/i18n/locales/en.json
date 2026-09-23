@@ -148,7 +148,8 @@
       "discover": "Discover",
       "newReleases": "New releases",
       "comingSoon": "Coming soon",
-      "random": "Random"
+      "random": "Random",
+      "forYou": "For you"
     },
     "searching": "Searching…",
     "noResults": "No results.",
@@ -425,7 +426,7 @@
   "privacyPolicyPage": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated: {{date}}",
-    "lastUpdatedValue": "September 13, 2026",
+    "lastUpdatedValue": "September 23, 2026",
     "controller": {
       "title": "Data controller",
       "textBefore": "Bobine is a personal project, with no commercial structure, operated from France. The data processing described below is therefore governed by French law and the GDPR. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
@@ -438,7 +439,7 @@
       },
       "library": {
         "label": "Personal library",
-        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", your custom lists, and their content."
+        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", the titles you mark as \"not interested\", your custom lists, and their content."
       },
       "preferences": {
         "label": "Preferences",
@@ -591,5 +592,28 @@
     "markAllWatched": "Mark all as watched",
     "untitled": "Untitled",
     "noEpisodesFound": "No episodes found for this season."
+  },
+  "forYouPage": {
+    "eyebrow": "Based on your taste",
+    "title": "For you",
+    "lead": "Suggestions computed from what you have watched, rated, and added to your watchlist.",
+    "filters": {
+      "all": "All",
+      "movies": "Movies",
+      "series": "Series"
+    },
+    "refresh": "Refresh",
+    "coldStartNotice": "Not enough watched or rated titles yet to personalize your suggestions: here are today's trends instead. Rate a few titles to sharpen them.",
+    "emptyState": "No suggestions yet. Come back after watching or rating a few more titles.",
+    "notInterested": "Not interested",
+    "loginPrompt": "Log in to discover personalized recommendations, computed from your library.",
+    "loginCta": "Log in",
+    "reason": {
+      "genre": "Because you like {{genre}}",
+      "genreFallback": "a genre you like",
+      "decade": "Because you like movies/shows from the {{decade}}s",
+      "similarTo": "Because you liked \"{{title}}\"",
+      "trending": "Trending now"
+    }
   }
 }

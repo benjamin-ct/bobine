@@ -23,7 +23,9 @@ import {
   getRegionForUser,
   setRegionForUser,
   updateSubscriptionLocale,
+  addNotInterested,
 } from "./db.ts";
+import { getRecommendations, drawWeightedRandom } from "./recommendations.ts";
 import { runDailyCheck } from "./scheduled.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
 import {
@@ -58,6 +60,7 @@ import {
   sanitizeCustomListsPayload,
   sanitizeDisplayName,
   sanitizeIdList,
+  sanitizeNotInterestedPayload,
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
 import { getTheatricalIndex } from "./tmdb.ts";
@@ -750,6 +753,96 @@ async function handlePutFavoriteProviders(request: Request, env: Env): Promise<R
   return json({ ok: true });
 }
 
+// Recommandations personnalisées "Pour toi" --------------------------------
+//
+// Réservé aux comptes connectés : le profil de goûts est calculé à partir de
+// la bibliothèque D1 (voir worker/recommendations.ts), inexistante pour un
+// visiteur anonyme (qui n'a que du localStorage, inaccessible au Worker).
+const VALID_RECOMMENDATION_FILTERS = new Set(["movie", "tv", "all"]);
+
+async function handleGetRecommendations(request: Request, env: Env, url: URL): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  if (!checkRateLimitInMemory(`recommendations:user:${user.id}`, { limit: 20, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  const rawFilter = url.searchParams.get("type") || "all";
+  const filter = VALID_RECOMMENDATION_FILTERS.has(rawFilter)
+    ? (rawFilter as "movie" | "tv" | "all")
+    : "all";
+  try {
+    const result = await getRecommendations(env, user.id, filter);
+    return json(result);
+  } catch (err) {
+    logError("Échec du calcul des recommandations.", err);
+    return json({ error: "Recommandations indisponibles pour le moment." }, 503);
+  }
+}
+
+// Même garde IDOR que les autres écritures liées au compte : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête.
+async function handlePostNotInterested(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const payload = sanitizeNotInterestedPayload(body);
+  if (!payload) {
+    return json({ error: "Payload invalide." }, 400);
+  }
+  await addNotInterested(env.DB, user.id, payload);
+  return json({ ok: true });
+}
+
+// Tirage au hasard pondéré -------------------------------------------------
+//
+// Fonctionne aussi pour un visiteur anonyme (user = null : tirage uniforme,
+// comportement inchangé, voir drawWeightedRandom) — contrairement à
+// /api/recommendations, qui nécessite un compte.
+async function handleGetRandom(request: Request, env: Env, url: URL): Promise<Response> {
+  const ip = getClientIp(request);
+  if (!checkRateLimitInMemory(`random:ip:${ip}`, { limit: 30, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  const user = await getUserFromRequest(env.DB, request);
+  const mediaTypeParam = url.searchParams.get("type");
+  const mediaType = mediaTypeParam === "tv" ? "tv" : "movie";
+  const genreIds = sanitizeIdList(url.searchParams.getAll("genreId"));
+  const excludeGenreIds = sanitizeIdList(url.searchParams.getAll("excludeGenreId"));
+  const providerIds = sanitizeIdList(url.searchParams.getAll("providerId"));
+  const yearMinRaw = Number(url.searchParams.get("yearMin"));
+  const yearMaxRaw = Number(url.searchParams.get("yearMax"));
+  const excludeKeys = new Set(
+    sanitizeKeyList(url.searchParams.getAll("excludeKey"), 5000).map(
+      (k) => `${k.mediaType}:${k.id}`
+    )
+  );
+
+  try {
+    const pick = await drawWeightedRandom(env, user?.id ?? null, {
+      mediaType,
+      genreIds,
+      excludeGenreIds,
+      providerIds,
+      yearMin: Number.isFinite(yearMinRaw) && yearMinRaw > 0 ? yearMinRaw : undefined,
+      yearMax: Number.isFinite(yearMaxRaw) && yearMaxRaw > 0 ? yearMaxRaw : undefined,
+      excludeKeys,
+    });
+    return json({ result: pick });
+  } catch (err) {
+    logError("Échec du tirage au hasard.", err);
+    return json({ error: "Tirage indisponible pour le moment." }, 503);
+  }
+}
+
 // Langue d'interface synchronisée par compte -------------------------------
 //
 // Même garde IDOR que les autres réglages de compte : user.id vient
@@ -1292,6 +1385,18 @@ async function routeRequest(
 
   if (url.pathname === "/api/favorite-providers" && request.method === "PUT") {
     return handlePutFavoriteProviders(request, env);
+  }
+
+  if (url.pathname === "/api/recommendations" && request.method === "GET") {
+    return handleGetRecommendations(request, env, url);
+  }
+
+  if (url.pathname === "/api/not-interested" && request.method === "POST") {
+    return handlePostNotInterested(request, env);
+  }
+
+  if (url.pathname === "/api/random" && request.method === "GET") {
+    return handleGetRandom(request, env, url);
   }
 
   if (url.pathname === "/api/locale" && request.method === "GET") {

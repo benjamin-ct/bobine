@@ -31,6 +31,7 @@
     "src/shared/lib/numericRangeFilter.ts",
     "src/core/botDetection.ts",
     "worker/bots.ts",
-    "worker/rate-limit-memory.ts"
+    "worker/rate-limit-memory.ts",
+    "worker/recommendationEngine.ts"
   ]
 }
