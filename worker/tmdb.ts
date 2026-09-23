@@ -62,6 +62,52 @@ export interface TmdbListItem {
   first_air_date?: string;
 }
 
+// Mutualise les appels TMDB identiques (même item, même genre) le temps
+// d'une exécution du cron quotidien (voir worker/scheduled.ts) : plusieurs
+// abonnements partagent souvent les mêmes titres en watchlist ou les mêmes
+// genres favoris, et les interroger en série pour chacun d'eux multiplie
+// inutilement les appels et le risque de throttling TMDB sur une même
+// invocation.
+export interface TmdbRunCache {
+  providers: Map<string, Promise<number[]>>;
+  genreDiscover: Map<string, Promise<TmdbListItem[]>>;
+}
+
+export function createTmdbRunCache(): TmdbRunCache {
+  return { providers: new Map(), genreDiscover: new Map() };
+}
+
+export function getFlatrateProviderIdsCached(
+  cache: TmdbRunCache,
+  env: Env,
+  mediaType: string,
+  tmdbId: number
+): Promise<number[]> {
+  const key = `${mediaType}:${tmdbId}`;
+  let pending = cache.providers.get(key);
+  if (!pending) {
+    pending = getFlatrateProviderIds(env, mediaType, tmdbId);
+    cache.providers.set(key, pending);
+  }
+  return pending;
+}
+
+export function discoverRecentByGenreCached(
+  cache: TmdbRunCache,
+  env: Env,
+  mediaType: string,
+  genreId: number,
+  windowDays: number
+): Promise<TmdbListItem[]> {
+  const key = `${mediaType}:${genreId}:${windowDays}`;
+  let pending = cache.genreDiscover.get(key);
+  if (!pending) {
+    pending = discoverRecentByGenre(env, mediaType, genreId, windowDays);
+    cache.genreDiscover.set(key, pending);
+  }
+  return pending;
+}
+
 // Nouveautés (sorties des `windowDays` derniers jours) dans un genre donné.
 export async function discoverRecentByGenre(
   env: Env,
