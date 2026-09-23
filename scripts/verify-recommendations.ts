@@ -157,10 +157,7 @@ check(
     ],
     []
   );
-  checkTrue(
-    "Genre appris exclu détecté par isGenreExcluded",
-    isGenreExcluded(profile, [], HORROR)
-  );
+  checkTrue("Genre appris exclu détecté par isGenreExcluded", isGenreExcluded(profile, [], HORROR));
   checkTrue(
     "Genre explicitement exclu détecté par isGenreExcluded",
     isGenreExcluded(profile, [COMEDY], COMEDY)
@@ -202,7 +199,11 @@ checkTrue("Assez de votes + bonne note -> bonus positif", popularityBonus(9, 500
   // item ayant un poids strictement positif dans l'ordre du tableau.
   const items = ["low", "high"];
   const weights: Record<string, number> = { low: 0.01, high: 10 };
-  const pick = weightedPick(items, (item) => weights[item], () => 0);
+  const pick = weightedPick(
+    items,
+    (item) => weights[item],
+    () => 0
+  );
   check("rng=0 -> premier item de la roulette", pick, "low");
 }
 
@@ -210,15 +211,15 @@ checkTrue("Assez de votes + bonne note -> bonus positif", popularityBonus(9, 500
   // rng proche de 1 doit retomber sur le dernier item à poids non nul.
   const items = ["low", "high"];
   const weights: Record<string, number> = { low: 0.01, high: 10 };
-  const pick = weightedPick(items, (item) => weights[item], () => 0.999999);
+  const pick = weightedPick(
+    items,
+    (item) => weights[item],
+    () => 0.999999
+  );
   check("rng proche de 1 -> dernier item de la roulette", pick, "high");
 }
 
-check(
-  "Constante SIGNAL_WATCHED_NO_RATING > 0 (léger positif)",
-  SIGNAL_WATCHED_NO_RATING > 0,
-  true
-);
+check("Constante SIGNAL_WATCHED_NO_RATING > 0 (léger positif)", SIGNAL_WATCHED_NO_RATING > 0, true);
 check(
   "Constante SIGNAL_WATCHLIST > SIGNAL_WATCHED_NO_RATING",
   SIGNAL_WATCHLIST > SIGNAL_WATCHED_NO_RATING,

@@ -644,7 +644,9 @@ export async function getNotInterestedForUser(
   userId: number
 ): Promise<NotInterestedRow[]> {
   const { results } = await db
-    .prepare("SELECT media_type, tmdb_id, genre_ids, year FROM not_interested_items WHERE user_id = ?")
+    .prepare(
+      "SELECT media_type, tmdb_id, genre_ids, year FROM not_interested_items WHERE user_id = ?"
+    )
     .bind(userId)
     .all<NotInterestedRow>();
   return results;
@@ -653,7 +655,12 @@ export async function getNotInterestedForUser(
 export async function addNotInterested(
   db: D1Database,
   userId: number,
-  { mediaType, tmdbId, genreIds, year }: { mediaType: string; tmdbId: number; genreIds: number[]; year: number | null }
+  {
+    mediaType,
+    tmdbId,
+    genreIds,
+    year,
+  }: { mediaType: string; tmdbId: number; genreIds: number[]; year: number | null }
 ): Promise<void> {
   await db
     .prepare(

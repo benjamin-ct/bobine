@@ -115,10 +115,7 @@ export function buildTasteProfile(
 
   const learnedExcludedGenreIds: number[] = [];
   for (const [genreId, affinity] of genreScores) {
-    if (
-      affinity.negativeCount >= EXCLUSION_MIN_NEGATIVE_COUNT &&
-      affinity.positiveCount === 0
-    ) {
+    if (affinity.negativeCount >= EXCLUSION_MIN_NEGATIVE_COUNT && affinity.positiveCount === 0) {
       learnedExcludedGenreIds.push(genreId);
     }
   }
@@ -141,8 +138,7 @@ export function isGenreExcluded(
   genreId: number
 ): boolean {
   return (
-    explicitExcludedGenreIds.includes(genreId) ||
-    profile.learnedExcludedGenreIds.includes(genreId)
+    explicitExcludedGenreIds.includes(genreId) || profile.learnedExcludedGenreIds.includes(genreId)
   );
 }
 
