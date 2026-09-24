@@ -148,8 +148,7 @@
       "discover": "Discover",
       "newReleases": "New releases",
       "comingSoon": "Coming soon",
-      "random": "Random",
-      "forYou": "For you"
+      "random": "Random"
     },
     "searching": "Searching…",
     "noResults": "No results.",
@@ -202,7 +201,17 @@
     "featuredTitle": "Featured",
     "featuredSubtitle": "· upcoming releases",
     "suggestionsEyebrow": "Suggestions for you",
-    "emptyState": "No results for these filters."
+    "emptyState": "No results for these filters.",
+    "coldStartNotice": "Not enough watched or rated titles yet to personalize your suggestions: here are today's trends instead. Rate a few titles to sharpen them.",
+    "notInterested": "Not interested",
+    "suggestionsReason": {
+      "genre": "Because you like {{genre}}",
+      "genreFallback": "a genre you like",
+      "decade": "Because you like movies/shows from the {{decade}}s",
+      "similarTo": "Because you liked \"{{title}}\"",
+      "trending": "Trending now",
+      "recent": "Recent release"
+    }
   },
   "filterBar": {
     "typeAriaLabel": "Type",
@@ -592,28 +601,5 @@
     "markAllWatched": "Mark all as watched",
     "untitled": "Untitled",
     "noEpisodesFound": "No episodes found for this season."
-  },
-  "forYouPage": {
-    "eyebrow": "Based on your taste",
-    "title": "For you",
-    "lead": "Suggestions computed from what you have watched, rated, and added to your watchlist.",
-    "filters": {
-      "all": "All",
-      "movies": "Movies",
-      "series": "Series"
-    },
-    "refresh": "Refresh",
-    "coldStartNotice": "Not enough watched or rated titles yet to personalize your suggestions: here are today's trends instead. Rate a few titles to sharpen them.",
-    "emptyState": "No suggestions yet. Come back after watching or rating a few more titles.",
-    "notInterested": "Not interested",
-    "loginPrompt": "Log in to discover personalized recommendations, computed from your library.",
-    "loginCta": "Log in",
-    "reason": {
-      "genre": "Because you like {{genre}}",
-      "genreFallback": "a genre you like",
-      "decade": "Because you like movies/shows from the {{decade}}s",
-      "similarTo": "Because you liked \"{{title}}\"",
-      "trending": "Trending now"
-    }
   }
 }

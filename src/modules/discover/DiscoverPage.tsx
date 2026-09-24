@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
+import { getRecommendations, markNotInterested } from "../../core/api/recommendations.ts";
+import type { RecommendationItem, RecommendationReason } from "../../core/api/recommendations.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
 import { useFeaturedSeries } from "../../shared/hooks/useFeaturedSeries.ts";
 import { useFeaturedMovies } from "../../shared/hooks/useFeaturedMovies.ts";
 import { useRegion } from "../../core/context/RegionContext.tsx";
+import { useAuth } from "../../core/context/AuthContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
@@ -31,6 +34,14 @@ import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import styles from "./DiscoverPage.module.css";
 
 const GRID_SKELETON_COUNT = 12;
+// Mix "Suggestions pour vous" (voir DISCUSSION carte Trello) : la grille par
+// défaut (aucun filtre actif) d'un compte authentifié remplace le discover()
+// brut par le moteur de recommandation, avec quelques sorties récentes
+// (issues du même discover() par défaut, déjà filtré des titres exclus/pas
+// intéressé) intercalées pour garder de la fraîcheur. RECENT_MIX_INTERVAL :
+// une sortie récente insérée toutes les N recommandations personnalisées.
+const RECENT_MIX_COUNT = 4;
+const RECENT_MIX_INTERVAL = 5;
 
 interface FiltersSnapshot {
   mediaType: MediaType;
@@ -94,10 +105,16 @@ export default function DiscoverPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const { region } = useRegion();
+  const { status: authStatus } = useAuth();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
-  const { filterExcluded } = useExcludedTitles();
+  const { filterExcluded, toggleExcludedTitle } = useExcludedTitles();
   const { watchlist } = useLibrary();
+
+  const [recommended, setRecommended] = useState<RecommendationItem[]>([]);
+  const [recStatus, setRecStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [coldStart, setColdStart] = useState(false);
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
 
   const advancedKey = JSON.stringify(advanced);
   const advancedError = getAdvancedFiltersRangeError(advanced);
@@ -106,6 +123,20 @@ export default function DiscoverPage() {
     : providerId
       ? [providerId]
       : undefined;
+
+  // Grille par défaut (aucun filtre explicite touché) d'un compte connecté :
+  // dès qu'un filtre est choisi à la main, on repasse sur le discover()
+  // classique — la personnalisation ne cherche pas à composer avec des
+  // filtres arbitraires (genre/plateforme/tri), voir carte Trello.
+  const isDefaultFilters =
+    genreIds.length === 0 &&
+    !providerId &&
+    !useMyPlatforms &&
+    sortField === "popularity" &&
+    sortDirection === "desc" &&
+    advancedKey === JSON.stringify(EMPTY_ADVANCED_FILTERS);
+  const personalizedModeActive = authStatus === "authenticated" && isDefaultFilters;
+  const suggestionsMixed = personalizedModeActive && recStatus === "success";
 
   // "Reprendre" : séries entamées avec au moins un épisode non vu déjà
   // sorti (indépendant du filtre Films/Séries de la grille de suggestions
@@ -250,6 +281,115 @@ export default function DiscoverPage() {
     i18n.language,
   ]);
 
+  // Recommandations personnalisées ("Pour toi", voir recommendationEngine.ts
+  // côté Worker) : uniquement en mode grille par défaut d'un compte connecté
+  // (personalizedModeActive). Le discover() ci-dessus continue de tourner en
+  // parallèle dans tous les cas — ses résultats servent de pool "sorties
+  // récentes" pour le mix une fois les recommandations chargées.
+  useEffect(() => {
+    if (!personalizedModeActive) {
+      setRecStatus("idle");
+      return;
+    }
+    let cancelled = false;
+    setRecStatus("loading");
+    getRecommendations(mediaType)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        setRecommended(result.items);
+        setColdStart(result.coldStart);
+        setDismissedKeys(new Set());
+        setRecStatus("success");
+      })
+      .catch(() => {
+        // Échec du moteur de recommandation : on retombe silencieusement sur
+        // la grille discover() classique (déjà chargée en parallèle) plutôt
+        // que d'afficher une erreur pour une simple amélioration de contenu.
+        if (!cancelled) {
+          setRecStatus("error");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [personalizedModeActive, mediaType]);
+
+  // Mix personnalisé + sorties récentes non exclues (voir constantes
+  // RECENT_MIX_*) : une sortie récente intercalée toutes les
+  // RECENT_MIX_INTERVAL recommandations, jusqu'à RECENT_MIX_COUNT au total.
+  const mixedFeed = useMemo(() => {
+    if (!suggestionsMixed) {
+      return [] as Array<{
+        item: RecommendationItem | MediaItem;
+        reason: RecommendationReason;
+        recent: boolean;
+      }>;
+    }
+    const usedIds = new Set(recommended.map((item) => item.id));
+    const recentPicks = results.filter((item) => !usedIds.has(item.id)).slice(0, RECENT_MIX_COUNT);
+    const entries: Array<{
+      item: RecommendationItem | MediaItem;
+      reason: RecommendationReason;
+      recent: boolean;
+    }> = [];
+    let recentIndex = 0;
+    recommended.forEach((item, index) => {
+      entries.push({ item, reason: item.reason, recent: false });
+      if ((index + 1) % RECENT_MIX_INTERVAL === 0 && recentIndex < recentPicks.length) {
+        entries.push({ item: recentPicks[recentIndex], reason: null, recent: true });
+        recentIndex += 1;
+      }
+    });
+    while (recentIndex < recentPicks.length) {
+      entries.push({ item: recentPicks[recentIndex], reason: null, recent: true });
+      recentIndex += 1;
+    }
+    return entries.filter((entry) => !dismissedKeys.has(`${mediaType}:${entry.item.id}`));
+  }, [suggestionsMixed, recommended, results, dismissedKeys, mediaType]);
+
+  function suggestionReasonText(reason: RecommendationReason, recent: boolean): string {
+    if (recent) {
+      return t("discoverPage.suggestionsReason.recent");
+    }
+    if (!reason) {
+      return t("discoverPage.suggestionsReason.trending");
+    }
+    switch (reason.type) {
+      case "genre":
+        return t("discoverPage.suggestionsReason.genre", {
+          genre:
+            genres.find((g) => g.id === reason.genreId)?.name ||
+            t("discoverPage.suggestionsReason.genreFallback"),
+        });
+      case "decade":
+        return t("discoverPage.suggestionsReason.decade", { decade: reason.decade });
+      case "similar_to":
+        return t("discoverPage.suggestionsReason.similarTo", { title: reason.sourceTitle });
+      case "trending":
+      default:
+        return t("discoverPage.suggestionsReason.trending");
+    }
+  }
+
+  function handleNotInterested(item: RecommendationItem | MediaItem) {
+    const key = `${mediaType}:${item.id}`;
+    setDismissedKeys((prev) => new Set(prev).add(key));
+    const title = item.title || item.name || "";
+    toggleExcludedTitle(mediaType, item.id, title);
+    markNotInterested({
+      mediaType,
+      tmdbId: item.id,
+      genreIds: item.genre_ids || [],
+      year: Number((item.release_date || item.first_air_date || "").slice(0, 4)) || null,
+    }).catch(() => {
+      // Optimiste : même si l'écriture serveur échoue, le titre reste masqué
+      // localement (voir ExcludedTitlesContext) — pas grave si le signal
+      // d'affinité n'est pas pris en compte cette fois-ci.
+    });
+  }
+
   const loadMore = useCallback(() => {
     if (loadingMore || page >= totalPages || advancedError) {
       return;
@@ -389,20 +529,22 @@ export default function DiscoverPage() {
 
       <AdvancedFilters filters={advanced} setFilters={setAdvanced} />
 
-      {status === "loading" && (
+      {!suggestionsMixed && status === "loading" && (
         <div className={gridStyles.grid}>
           {Array.from({ length: GRID_SKELETON_COUNT }, (_, i) => (
             <MediaCardSkeleton key={i} />
           ))}
         </div>
       )}
-      {status === "error" && <ErrorMessage error={error} />}
-      {status === "invalid" && advancedError && <EmptyState label={t(advancedError)} />}
-      {status === "success" && results.length === 0 && (
+      {!suggestionsMixed && status === "error" && <ErrorMessage error={error} />}
+      {!suggestionsMixed && status === "invalid" && advancedError && (
+        <EmptyState label={t(advancedError)} />
+      )}
+      {!suggestionsMixed && status === "success" && results.length === 0 && (
         <EmptyState label={t("discoverPage.emptyState")} />
       )}
 
-      {status === "success" && results.length > 0 && (
+      {!suggestionsMixed && status === "success" && results.length > 0 && (
         <>
           <div className={gridStyles.grid}>
             {results.map((item) => (
@@ -415,6 +557,30 @@ export default function DiscoverPage() {
             </div>
           )}
         </>
+      )}
+
+      {suggestionsMixed && coldStart && (
+        <p className={styles.coldStartNotice}>{t("discoverPage.coldStartNotice")}</p>
+      )}
+      {suggestionsMixed && mixedFeed.length === 0 && (
+        <EmptyState label={t("discoverPage.emptyState")} />
+      )}
+      {suggestionsMixed && mixedFeed.length > 0 && (
+        <div className={gridStyles.grid}>
+          {mixedFeed.map(({ item, reason, recent }) => (
+            <div key={`${recent ? "recent" : "rec"}:${item.id}`} className={styles.suggestionCard}>
+              <MediaCard item={item} showProviderBadge />
+              <p className={styles.suggestionReason}>{suggestionReasonText(reason, recent)}</p>
+              <button
+                type="button"
+                className={styles.notInterestedBtn}
+                onClick={() => handleNotInterested(item)}
+              >
+                {t("discoverPage.notInterested")}
+              </button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
