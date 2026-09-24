@@ -133,30 +133,58 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/preview-d1.ts provision ${{ github.event.pull_request.number }}
 
-      - name: Generate branch slug for preview URL
+      - name: Generate branch slug for preview name
         id: branch-slug
         run: |
           # Le tronquage à 30 caractères doit passer APRÈS le nettoyage des
           # tirets de bord : sinon, quand la coupe tombe pile sur un tiret
           # (ex. branche "fix/affiches-manquantes-envie-de-voir" -> slug
           # "fix-affiches-manquantes-envie-"), le tiret final réapparaît
-          # après troncature et Cloudflare rejette l'alias (code 10021,
-          # "invalid alias"). D'où le second nettoyage, après la coupe.
+          # après troncature et Cloudflare rejette le nom (code 10021).
+          # D'où le second nettoyage, après la coupe. Même calcul dans le
+          # job cleanup-preview-d1 (suppression de la preview).
           SLUG=$(echo "${{ github.head_ref }}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/^-*//;s/-*$//' | cut -c1-30 | sed 's/^-*//;s/-*$//')
           echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy Worker version (preview)
-        id: deploy
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: versions upload --config wrangler.preview.generated.jsonc --preview-alias ${{ steps.branch-slug.outputs.slug }}
+      # Cloudflare Previews (`wrangler preview`) plutôt que `wrangler
+      # versions upload --preview-alias` : Cloudflare ne génère aucune URL
+      # de version pour un Worker qui implémente un Durable Object
+      # (UserSyncHub), l'ancienne URL construite à la main pointait donc
+      # dans le vide. Une Preview est un environnement à part entière, avec
+      # ses propres instances de Durable Objects (isolées de la prod et des
+      # autres previews) et ses propres URLs, renvoyées par l'API.
+      # Les secrets (TMDB_API_KEY...) ne sont pas hérités de la prod : ils
+      # viennent de la "Preview base config" du Worker (dashboard, ou
+      # `wrangler preview base-config secret put`).
+      - name: Deploy Worker preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
+        run: >-
+          npx wrangler preview
+          --config wrangler.preview.generated.jsonc
+          --name "${{ steps.branch-slug.outputs.slug }}"
+          --message "PR #${{ github.event.pull_request.number }}"
 
-      - name: Build preview URL
+      # Seule l'URL réellement renvoyée par Cloudflare est publiée : sans
+      # URL (Preview Deployments désactivés sur workers.dev...), le job
+      # échoue explicitement plutôt que d'annoncer une preview inutilisable.
+      - name: Read preview URL
         id: preview-url
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
         run: |
-          echo "url=https://${{ steps.branch-slug.outputs.slug }}-bobine.creusatbenjamin.workers.dev" >> "$GITHUB_OUTPUT"
+          URL=$(node -e '
+            const lines = require("node:fs").readFileSync(process.env.WRANGLER_OUTPUT_FILE_PATH, "utf8").split("\n");
+            const entry = lines.filter(Boolean).map((line) => JSON.parse(line)).findLast((e) => e.type === "preview");
+            console.log(entry?.preview_urls?.[0] ?? entry?.deployment_urls?.[0] ?? "");
+          ')
+          if [ -z "$URL" ]; then
+            echo "::error::Cloudflare n'a renvoyé aucune URL pour cette preview (Preview Deployments activés sur workers.dev ?)."
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Post preview URL as comment on PR
         uses: marocchino/sticky-pull-request-comment@v3
@@ -167,7 +195,7 @@ jobs:
 
             👉 ${{ steps.preview-url.outputs.url }}
 
-            <sub>This url stays stable for the duration of the PR (alias : `${{ steps.branch-slug.outputs.slug }}`)</sub>
+            <sub>This url stays stable for the duration of the PR (Cloudflare Preview : `${{ steps.branch-slug.outputs.slug }}`)</sub>
 
   cleanup-preview-d1:
     name: Cleanup D1 preview database
@@ -189,6 +217,17 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/preview-d1.ts cleanup ${{ github.event.pull_request.number }}
+      # Supprime aussi la Cloudflare Preview (et ses Durable Objects).
+      # Même calcul de nom que dans deploy-preview. Ne fait pas échouer le
+      # job si la preview n'a jamais été créée (PR fermée avant tout
+      # déploiement réussi).
+      - name: Delete Cloudflare preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          SLUG=$(echo "${{ github.head_ref }}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/^-*//;s/-*$//' | cut -c1-30 | sed 's/^-*//;s/-*$//')
+          npx wrangler preview delete --name "$SLUG" --skip-confirmation || echo "::warning::Preview '$SLUG' introuvable ou déjà supprimée."
 
   apply-d1-migrations:
     name: Apply D1 migrations (remote)

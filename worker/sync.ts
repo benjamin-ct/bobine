@@ -18,7 +18,7 @@
 // Ce flux est volontairement générique (`type` libre, voir SyncEvent) : il
 // pourra porter plus tard des notifications in-app (demandes d'amis,
 // sorties...) en appelant simplement publishToUser depuis le code concerné.
-import { DurableObject, exports as workerExports, waitUntil } from "cloudflare:workers";
+import { DurableObject, env, exports as workerExports, waitUntil } from "cloudflare:workers";
 import { logError } from "./logger.ts";
 import type { Env } from "./types.ts";
 
@@ -98,12 +98,19 @@ export class UserSyncHub extends DurableObject<Env> {
   }
 }
 
-// Un hub par compte ET par hôte : les previews PR (`<slug>-bobine...`) ont
-// leur propre base D1 (donc leurs propres ids utilisateurs) mais partagent
-// la classe Durable Object de la prod — préfixer par l'hôte évite qu'un
-// compte de preview reçoive les événements du compte de prod de même id.
+// Un hub par compte ET par hôte : défense en profondeur pour qu'un compte
+// d'un environnement ne reçoive jamais les événements du compte de même id
+// d'un autre environnement (chaque preview PR a sa propre base D1, donc ses
+// propres ids utilisateurs).
+//
+// Namespace : en prod, la classe est déclarée via "exports" (wrangler.jsonc)
+// et atteinte par `exports`. Les previews PR (Cloudflare Previews, `wrangler
+// preview`) ne publient pas "exports" : scripts/preview-d1.ts y déclare la
+// classe via "migrations" et la lie sous "previews.durable_objects"
+// (USER_SYNC_HUB), ce qui donne à chaque preview ses propres instances,
+// isolées de la prod et des autres previews.
 function hubFor(hostname: string, userId: number) {
-  const namespace = workerExports.UserSyncHub;
+  const namespace = (env as Env).USER_SYNC_HUB ?? workerExports.UserSyncHub;
   return namespace.get(namespace.idFromName(`${hostname}:${userId}`));
 }
 

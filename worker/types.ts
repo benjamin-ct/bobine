@@ -9,6 +9,10 @@ export interface Env {
   // wrangler.jsonc qu'une fois Analytics Engine activé côté compte
   // Cloudflare (voir commentaire associé) — absent jusque-là.
   ANALYTICS?: AnalyticsEngineDataset;
+  // Synchro temps réel (voir worker/sync.ts, hubFor) : binding déclaré
+  // uniquement dans la config des previews PR (scripts/preview-d1.ts) ; en
+  // prod, le hub est atteint via `exports` (cloudflare:workers).
+  USER_SYNC_HUB?: DurableObjectNamespace<import("./sync.ts").UserSyncHub>;
 
   // Secrets (dashboard Cloudflare, jamais commités).
   TMDB_API_KEY?: string;
