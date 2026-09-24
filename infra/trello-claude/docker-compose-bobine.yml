@@ -16,6 +16,7 @@ services:
       - DISCORD_SENTRY_WEBHOOK_URL=${DISCORD_SENTRY_WEBHOOK_URL}
       - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID}
       - SENTRY_WEBHOOK_SECRET=${SENTRY_WEBHOOK_SECRET}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-opus-5-5}
     restart: unless-stopped
 
   bobine-repo:
@@ -41,6 +42,7 @@ services:
       - SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
       - SENTRY_ORG_SLUG=${SENTRY_ORG_SLUG}
       - SENTRY_PROJECT_SLUG=${SENTRY_PROJECT_SLUG}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-opus-5-5}
     restart: unless-stopped
 
 volumes:

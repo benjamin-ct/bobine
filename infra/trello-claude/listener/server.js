@@ -8,6 +8,7 @@ const REPO_PATH = process.env.REPO_PATH || "/workspace";
 const LOCK_FILE = "/tmp/claude-trello.lock";
 const TRELLO_API_KEY = process.env.TRELLO_API_KEY;
 const TRELLO_TOKEN = process.env.TRELLO_TOKEN;
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 
 const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || "1543573331335315497";
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
@@ -116,7 +117,7 @@ function runClaude(label, prompt, onError) {
   console.log(`[${ts()}] Declenchement pour ${label}`);
 
   const cmd = `docker exec --user claudeuser ${DOCKER_CONTAINER} bash -lc ${JSON.stringify(
-    `cd ${REPO_PATH} && git fetch origin && claude -p ${JSON.stringify(prompt)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' 'Bash(curl *)' Read Write`
+    `cd ${REPO_PATH} && git fetch origin && claude --model ${CLAUDE_MODEL} -p ${JSON.stringify(prompt)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' 'Bash(curl *)' Read Write`
   )}`;
 
   const child = exec(cmd, { maxBuffer: 1024 * 1024 * 50 }, async (err, stdout, stderr) => {
