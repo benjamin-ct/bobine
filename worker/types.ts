@@ -74,3 +74,15 @@ export interface UserRow {
   display_name: string | null;
   created_at: number;
 }
+
+// Typage de `exports` (module cloudflare:workers) / `ctx.exports` : déclare
+// quels exports du module principal sont des Durable Objects (voir "exports"
+// dans wrangler.jsonc et worker/sync.ts, UserSyncHub).
+declare global {
+  namespace Cloudflare {
+    interface GlobalProps {
+      mainModule: typeof import("./index.ts");
+      durableNamespaces: "UserSyncHub";
+    }
+  }
+}

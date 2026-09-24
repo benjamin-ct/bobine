@@ -57,6 +57,17 @@
       "database_id": "b22c3b3e-0364-4c46-9c01-1bfb61368a45"
     }
   ],
+  // Synchro temps réel multi-appareils (voir worker/sync.ts) : un Durable
+  // Object UserSyncHub par compte. Déclaré via "exports" (provisionné au
+  // déploiement) plutôt que "migrations" + binding "durable_objects" : les
+  // previews PR sont publiées par `wrangler versions upload`, jamais
+  // déployées, et un binding vers une classe pas encore provisionnée y serait
+  // refusé — le code y accède donc via `exports` (cloudflare:workers).
+  // Stockage "sqlite" : seule variante de Durable Objects disponible sur le
+  // plan gratuit Workers.
+  "exports": {
+    "UserSyncHub": { "type": "durable-object", "storage": "sqlite" }
+  },
   // Événements d'usage custom (recherche, activation notifs, watchlist...) —
   // voir worker/analytics.ts. Binding VOLONTAIREMENT absent tant qu'Analytics
   // Engine n'est pas activé côté compte Cloudflare (dashboard → Workers &

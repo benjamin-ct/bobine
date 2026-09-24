@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { useAuth } from "./AuthContext.tsx";
 import { isSupportedLocale, useLocale } from "./LocaleContext.tsx";
 import { logWarn } from "../logger.ts";
+import { syncClientHeaders, useLiveSyncRevision } from "../sync/liveSync.ts";
 
 // Synchronise la langue avec le compte, sur le même principe que
 // FavoriteProvidersContext (voir ce fichier pour le détail du principe
@@ -19,6 +20,11 @@ export function LocaleAccountSync({ children }: { children: ReactNode }): ReactN
   const { status, email } = useAuth();
   const { locale, setLocale } = useLocale();
   const syncingRef = useRef(false);
+  // Synchro temps réel (voir core/sync/liveSync.ts) : rejoue le pull
+  // ci-dessous quand un autre appareil du compte change ce réglage.
+  // `lastSyncedRef` évite de renvoyer en écho la valeur qu'on vient de recevoir.
+  const syncRevision = useLiveSyncRevision("locale");
+  const lastSyncedRef = useRef<string | null>(null);
   const localeRef = useRef(locale);
   localeRef.current = locale;
 
@@ -36,6 +42,7 @@ export function LocaleAccountSync({ children }: { children: ReactNode }): ReactN
           return;
         }
         if (remote.locale && isSupportedLocale(remote.locale)) {
+          lastSyncedRef.current = remote.locale;
           setLocale(remote.locale);
           localStorage.setItem(SYNCED_FOR_KEY, email);
           return;
@@ -45,7 +52,7 @@ export function LocaleAccountSync({ children }: { children: ReactNode }): ReactN
         localStorage.setItem(SYNCED_FOR_KEY, email);
         return fetch("/api/locale", {
           method: "PUT",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...syncClientHeaders() },
           body: JSON.stringify({ locale: localeRef.current }),
         }).then(() => undefined);
       })
@@ -62,22 +69,28 @@ export function LocaleAccountSync({ children }: { children: ReactNode }): ReactN
     // On ne veut relancer la synchro que quand le statut d'auth ou le
     // compte change, pas à chaque changement de `locale` (sinon boucle).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, email]);
+  }, [status, email, syncRevision]);
 
   useEffect(() => {
-    if (status !== "authenticated" || syncingRef.current) {
+    if (status !== "authenticated" || syncingRef.current || locale === lastSyncedRef.current) {
       return;
     }
     fetch("/api/locale", {
       method: "PUT",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...syncClientHeaders() },
       body: JSON.stringify({ locale }),
-    }).catch((err) =>
-      logWarn(
-        "Bobine : synchronisation de la langue impossible, nouvelle tentative au prochain changement.",
-        err
-      )
-    );
+    })
+      .then((res) => {
+        if (res.ok) {
+          lastSyncedRef.current = locale;
+        }
+      })
+      .catch((err) =>
+        logWarn(
+          "Bobine : synchronisation de la langue impossible, nouvelle tentative au prochain changement.",
+          err
+        )
+      );
   }, [locale, status]);
 
   return children;
