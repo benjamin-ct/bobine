@@ -153,9 +153,11 @@ jobs:
       # dans le vide. Une Preview est un environnement à part entière, avec
       # ses propres instances de Durable Objects (isolées de la prod et des
       # autres previews) et ses propres URLs, renvoyées par l'API.
-      # Les secrets (TMDB_API_KEY...) ne sont pas hérités de la prod : ils
-      # viennent de la "Preview base config" du Worker (dashboard, ou
-      # `wrangler preview base-config secret put`).
+      # Ni les secrets (TMDB_API_KEY...) ni les variables (VAPID_PUBLIC_KEY,
+      # RECAPTCHA_SITE_KEY...) ne sont hérités de la prod : tous viennent de
+      # la "Preview base config" du Worker (dashboard, ou `wrangler preview
+      # base-config`), avec ses propres clés d'API — voir
+      # scripts/preview-d1.ts, writePreviewConfig.
       - name: Deploy Worker preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
