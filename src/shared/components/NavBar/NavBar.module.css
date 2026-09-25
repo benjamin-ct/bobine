@@ -7,12 +7,10 @@
      global.css), ce qui recréait une démarcation avec la barre de statut
      (theme-color, ThemeContext.tsx) même une fois aligné sur --bg. */
   background: var(--bg);
-  /* Barre de statut iOS en "black-translucent" (voir index.html) : cette
-     zone déborde sous la barre de statut, donc ce padding pousse le contenu
-     de la nav sous elle plutôt que dessous, pendant que le fond --bg
-     continue de s'étendre derrière (visible à travers la barre transparente,
-     synchronisé au thème sans redémarrage). Sans effet hors PWA installée
-     (env() vaut 0 dans un onglet de navigateur classique). */
+  /* Garde-fou si la page est un jour dessinée sous la barre de statut
+     (viewport-fit=cover sans barre opaque) : pousse le contenu de la nav
+     sous l'encoche. Vaut 0 aujourd'hui, la PWA iOS ayant une barre de statut
+     opaque (voir index.html). */
   padding-top: env(safe-area-inset-top);
   border-bottom: 1px solid var(--border-2);
   /* Ombre courte et nette : l'ancien halo (30px de flou) formait une bande
