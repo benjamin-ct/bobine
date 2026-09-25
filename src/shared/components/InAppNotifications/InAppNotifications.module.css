@@ -30,7 +30,12 @@
      des affiches, surtout en thème sombre. */
   background: var(--surface-2);
   color: var(--fg);
-  box-shadow: var(--shadow-lift);
+  /* Ombre resserrée plutôt que --shadow-lift : son halo de 48px débordait
+     sur le header et la barre de statut et donnait un effet flou en haut de
+     l'écran sur mobile. */
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.12),
+    0 6px 14px -6px oklch(0 0 0 / 0.3);
   animation: in 0.2s ease;
 }
 
