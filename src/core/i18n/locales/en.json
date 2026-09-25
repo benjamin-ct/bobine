@@ -489,6 +489,10 @@
       "technical": {
         "label": "Technical data",
         "text": ": your IP address is processed briefly to limit abuse (anti-spam on sign-in), without being kept in a form identifiable to your account."
+      },
+      "sharedLists": {
+        "label": "Shared lists",
+        "text": " (if you choose to share a custom list): its name, its content, your ratings for the titles in it and your display name become visible read-only to anyone who has the link — never your email address. You can stop sharing at any time from the list, which permanently invalidates the link."
       }
     },
     "why": {
@@ -656,5 +660,27 @@
     "loadError": "Couldn't load this profile.",
     "notFoundTitle": "Profile not found",
     "notFoundLead": "This link doesn't exist or is no longer active: its owner may have turned off profile sharing."
+  },
+  "listShare": {
+    "share": "Share",
+    "shareAgain": "Share link",
+    "unshare": "Stop sharing",
+    "copied": "✓ Link copied",
+    "copyPrompt": "Copy this link to share the list:",
+    "unshared": "✓ Sharing stopped, the old link no longer works",
+    "notSyncedYet": "The list is still syncing, try again in a few seconds.",
+    "error": "Couldn't share the list.",
+    "confirmUnshare": "Stop sharing \"{{name}}\"? The current link will stop working."
+  },
+  "sharedList": {
+    "eyebrow": "Shared list",
+    "lead_one": "By {{owner}} · {{count}} title",
+    "lead_other": "By {{owner}} · {{count}} titles",
+    "anonymousOwner": "a film lover",
+    "rating": "★ {{rating}}/10",
+    "empty": "This list is empty for now.",
+    "loadError": "Couldn't load this list.",
+    "notFoundTitle": "List not found",
+    "notFoundLead": "This link doesn't exist or is no longer active: the list may have been deleted, or its owner stopped sharing it."
   }
 }

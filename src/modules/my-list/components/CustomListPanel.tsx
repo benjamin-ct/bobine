@@ -11,6 +11,7 @@ import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
 import type { CustomList, LibraryItem } from "../../../core/types/library.ts";
+import ListShareControls from "./ListShareControls.tsx";
 import styles from "./CustomListPanel.module.css";
 
 interface CustomListPanelProps {
@@ -170,6 +171,7 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
             </Dropdown>
           </>
         )}
+        <ListShareControls listId={list.id} listName={list.name} />
         {!renaming && (
           <button type="button" className={styles.ghostBtn} onClick={() => setRenaming(true)}>
             {t("customListPanel.renameButton")}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useAuth } from "../../core/context/AuthContext.tsx";
@@ -11,12 +11,37 @@ import CustomListPanel from "./components/CustomListPanel.tsx";
 import styles from "./MyListPage.module.css";
 
 type Tab = "seen" | "want" | "progress" | string; // string = id de liste personnalisée
+const FIXED_TABS: Tab[] = ["seen", "want", "progress"];
 
 export default function MyListContent() {
   const { t } = useTranslation();
   const { watched, watchlist, customLists, createList } = useLibrary();
   const { status: authStatus } = useAuth();
-  const [tab, setTab] = useState<Tab>("seen");
+  // Chaque liste perso a sa propre URL (/profil?tab=ma-liste&liste=<id>) :
+  // c'est aussi là qu'est renvoyé le propriétaire qui ouvre le lien public de
+  // sa propre liste (voir SharedListPage). Les onglets fixes gardent un état
+  // local, sans paramètre.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [localTab, setLocalTab] = useState<Tab>("seen");
+  const requestedList = searchParams.get("liste");
+  const tab: Tab =
+    requestedList && customLists.some((l) => l.id === requestedList) ? requestedList : localTab;
+
+  function setTab(next: Tab) {
+    setLocalTab(next);
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (!FIXED_TABS.includes(next)) {
+          params.set("liste", next);
+        } else {
+          params.delete("liste");
+        }
+        return params;
+      },
+      { replace: true }
+    );
+  }
   const [creating, setCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
 
