@@ -12,6 +12,11 @@ import type { Env, SubscriptionRow } from "./types.ts";
 
 export class ExpiredSubscriptionError extends Error {}
 
+// Réponse de FCM quand la clé VAPID de la requête n'est pas celle utilisée à
+// la création de l'abonnement : « the VAPID credentials in the authorization
+// header do not correspond to the credentials used to create the subscriptions ».
+const VAPID_MISMATCH_PATTERN = /VAPID credentials.*do not correspond/i;
+
 let vapidConfigured = false;
 
 function ensureVapid(env: Env): void {
@@ -60,6 +65,14 @@ export async function sendPush(
     throw new ExpiredSubscriptionError(`Abonnement invalide (${res.status})`);
   }
   if (!res.ok) {
-    throw new Error(`Échec de l'envoi push (${res.status}) : ${await res.text().catch(() => "")}`);
+    const text = await res.text().catch(() => "");
+    // Abonnement créé avec une autre paire VAPID (rotation des clés) : il ne
+    // pourra plus jamais être utilisé, on le traite comme expiré. On ne matche
+    // que ce message précis — un 403 peut avoir d'autres causes (JWT expiré,
+    // quota...) qui ne justifient pas de supprimer l'abonnement.
+    if (res.status === 403 && VAPID_MISMATCH_PATTERN.test(text)) {
+      throw new ExpiredSubscriptionError(`Abonnement créé avec une ancienne clé VAPID (403)`);
+    }
+    throw new Error(`Échec de l'envoi push (${res.status}) : ${text}`);
   }
 }
