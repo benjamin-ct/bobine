@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../../../core/i18n/i18n.ts";
+import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { logWarn } from "../../../core/logger.ts";
+import { PUSH_ENDPOINT_STORAGE_KEY as ENDPOINT_STORAGE_KEY } from "../../../core/sync/pushAccountLink.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
 import styles from "./NotificationSettings.module.css";
 
-const ENDPOINT_STORAGE_KEY = "bobine.push.endpoint";
 const TOP_GENRES_FOR_NOTIFICATIONS = 8;
 
 interface FavoriteGenre {
@@ -100,6 +101,76 @@ async function syncSubscriptionLocale(endpoint: string, locale: string): Promise
   }).catch((err) => logWarn("Bobine : resynchronisation de la langue des notifs échouée.", err));
 }
 
+// Clé publique VAPID actuelle du serveur. Elle peut changer (rotation des
+// clés) : les abonnements créés avec l'ancienne deviennent alors inutilisables.
+async function fetchVapidPublicKey(): Promise<Uint8Array> {
+  const keyRes = await fetch("/api/vapid-public-key");
+  if (!keyRes.ok) {
+    throw new Error(i18n.t("notificationSettings.keyFetchError"));
+  }
+  const { publicKey } = (await keyRes.json()) as { publicKey: string };
+  return urlBase64ToUint8Array(publicKey);
+}
+
+async function subscribeWithKey(
+  registration: ServiceWorkerRegistration,
+  publicKey: Uint8Array
+): Promise<PushSubscription> {
+  return registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    // Cast nécessaire : le typage DOM de `applicationServerKey` attend un
+    // `Uint8Array<ArrayBuffer>` précisément, alors que `Uint8Array.from()`
+    // infère `Uint8Array<ArrayBufferLike>` (générique élargi depuis
+    // TypeScript 5.7) — la valeur réelle est bien un ArrayBuffer classique.
+    applicationServerKey: publicKey as BufferSource,
+  });
+}
+
+function sameKey(current: ArrayBuffer, expected: Uint8Array): boolean {
+  const bytes = new Uint8Array(current);
+  return bytes.length === expected.length && bytes.every((b, i) => b === expected[i]);
+}
+
+async function unregisterEndpoint(endpoint: string): Promise<void> {
+  await fetch("/api/unsubscribe", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ endpoint }),
+  }).catch(() => {});
+}
+
+// Si l'abonnement du navigateur a été créé avec une ancienne clé VAPID, le
+// service push refuse tous les envois (403). On le remplace sans rien
+// demander à l'utilisateur (la permission reste accordée) et on
+// ré-enregistre le nouvel abonnement côté serveur. Renvoie le nouvel
+// endpoint, ou null si rien n'a changé.
+async function resyncIfVapidKeyRotated(
+  watchlist: LibraryItem[],
+  watched: LibraryItem[],
+  locale: string
+): Promise<string | null> {
+  const registration = await navigator.serviceWorker.ready;
+  const current = await registration.pushManager.getSubscription();
+  const currentKey = current?.options.applicationServerKey;
+  if (!current || !currentKey) {
+    return null;
+  }
+  const publicKey = await fetchVapidPublicKey();
+  if (sameKey(currentKey, publicKey)) {
+    return null;
+  }
+
+  await unregisterEndpoint(current.endpoint);
+  await current.unsubscribe();
+  const subscription = await subscribeWithKey(registration, publicKey);
+  const { endpoint, keys } = subscription.toJSON();
+  if (!endpoint || !keys) {
+    throw new Error(i18n.t("notificationSettings.incompleteSubscription"));
+  }
+  await fullSyncSubscription(endpoint, keys, watchlist, watched, locale);
+  return endpoint;
+}
+
 interface SyncedState {
   watchlistKeys: Set<string>;
   genreKeys: Set<string>;
@@ -165,10 +236,91 @@ async function syncSubscriptionDelta(
   lastSyncedRef.current = { watchlistKeys: desiredWatchlistKeys, genreKeys: desiredGenreKeys };
 }
 
+const TEST_NOTIFICATION_DELAY_S = 15;
+
+// Même domaine de prod que worker/sentry.ts : les boutons de test ne servent
+// qu'à valider le choix de canal sur les previews PR et en dev local, et
+// n'ont rien à faire sous les yeux des utilisateurs (l'endpoint est aussi
+// refusé côté Worker en prod).
+const PRODUCTION_HOSTNAME = "bobine.creusatbenjamin.workers.dev";
+const SHOW_TEST_NOTIFICATION = window.location.hostname !== PRODUCTION_HOSTNAME;
+
+// Envoie une notification de test au compte via notifyUser (voir
+// worker/index.ts, /api/notifications/test), pour vérifier le choix de canal
+// sans attendre une vraie sortie : in-app si un appareil a l'app ouverte,
+// sinon Web Push (d'où l'envoi différé, le temps de fermer l'app).
+function TestNotification() {
+  const { t } = useTranslation();
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function send(delaySeconds: number) {
+    setSending(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/notifications/test", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ delaySeconds }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setMessage(data?.error || t("notificationSettings.testFailed", { status: res.status }));
+        return;
+      }
+      const data = (await res.json()) as {
+        channel?: "in-app" | "push";
+        scheduledInSeconds?: number;
+      };
+      if (data.scheduledInSeconds) {
+        setMessage(t("notificationSettings.testScheduled", { seconds: data.scheduledInSeconds }));
+      } else {
+        setMessage(
+          t(
+            data.channel === "in-app"
+              ? "notificationSettings.testSentInApp"
+              : "notificationSettings.testSentPush"
+          )
+        );
+      }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : t("common.errorGeneric"));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className={styles.test}>
+      <p className={styles.testTitle}>{t("notificationSettings.testTitle")}</p>
+      <div className={styles.testActions}>
+        <button type="button" className={styles.btn} onClick={() => send(0)} disabled={sending}>
+          {sending ? t("notificationSettings.testSending") : t("notificationSettings.testNow")}
+        </button>
+        <button
+          type="button"
+          className={styles.btn}
+          onClick={() => send(TEST_NOTIFICATION_DELAY_S)}
+          disabled={sending}
+        >
+          {t("notificationSettings.testDelayed")}
+        </button>
+      </div>
+      <p className={styles.hint}>{t("notificationSettings.testHint")}</p>
+      {message && (
+        <p className={styles.hint} role="status">
+          {message}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function NotificationSettings() {
   const { t } = useTranslation();
   const { watchlist, watched } = useLibrary();
   const { locale } = useLocale();
+  const { status: authStatus } = useAuth();
   const [endpoint, setEndpoint] = useState<string | null>(() =>
     localStorage.getItem(ENDPOINT_STORAGE_KEY)
   );
@@ -177,6 +329,27 @@ export default function NotificationSettings() {
   const isFirstSync = useRef(true);
   const lastSyncedRef = useRef<SyncedState>({ watchlistKeys: new Set(), genreKeys: new Set() });
   const isFirstLocaleSync = useRef(true);
+
+  // Au chargement : remplace un abonnement devenu inutilisable après une
+  // rotation des clés VAPID. Volontairement exécuté une seule fois, avec la
+  // bibliothèque connue à cet instant ; les changements ultérieurs passent
+  // par la resynchro delta ci-dessous.
+  useEffect(() => {
+    if (!endpoint || !isSupported() || Notification.permission !== "granted") {
+      return;
+    }
+    resyncIfVapidKeyRotated(watchlist, watched, locale)
+      .then((newEndpoint) => {
+        if (!newEndpoint) {
+          return;
+        }
+        lastSyncedRef.current = keysOf(watchlist, watched);
+        localStorage.setItem(ENDPOINT_STORAGE_KEY, newEndpoint);
+        setEndpoint(newEndpoint);
+      })
+      .catch((err) => logWarn("Bobine : resynchro de l'abonnement push échouée.", err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Resynchronise la watchlist / les genres favoris côté serveur à chaque
   // changement, tant que les notifications sont actives.
@@ -229,20 +402,8 @@ export default function NotificationSettings() {
 
       const registration = await navigator.serviceWorker.ready;
 
-      const keyRes = await fetch("/api/vapid-public-key");
-      if (!keyRes.ok) {
-        throw new Error(t("notificationSettings.keyFetchError"));
-      }
-      const { publicKey } = (await keyRes.json()) as { publicKey: string };
-
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        // Cast nécessaire : le typage DOM de `applicationServerKey` attend un
-        // `Uint8Array<ArrayBuffer>` précisément, alors que `Uint8Array.from()`
-        // infère `Uint8Array<ArrayBufferLike>` (générique élargi depuis
-        // TypeScript 5.7) — la valeur réelle est bien un ArrayBuffer classique.
-        applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
-      });
+      const publicKey = await fetchVapidPublicKey();
+      const subscription = await subscribeWithKey(registration, publicKey);
 
       const { endpoint: subEndpoint, keys } = subscription.toJSON();
       if (!subEndpoint || !keys) {
@@ -267,11 +428,7 @@ export default function NotificationSettings() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await fetch("/api/unsubscribe", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
-        }).catch(() => {});
+        await unregisterEndpoint(subscription.endpoint);
         await subscription.unsubscribe();
       }
       localStorage.removeItem(ENDPOINT_STORAGE_KEY);
@@ -296,6 +453,7 @@ export default function NotificationSettings() {
             {t("notificationSettings.disableButton")}
           </button>
           <p className={styles.hint}>{t("notificationSettings.enabledHint")}</p>
+          {SHOW_TEST_NOTIFICATION && authStatus === "authenticated" && <TestNotification />}
         </>
       ) : (
         <>

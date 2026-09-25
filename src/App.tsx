@@ -6,6 +6,8 @@ import {
   RecaptchaBadge,
   Footer,
   LegalLinks,
+  InAppNotifications,
+  PullToRefresh,
 } from "./shared/components/index.ts";
 import Discover from "./modules/discover/index.ts";
 import NewReleases from "./modules/new-releases/index.ts";
@@ -46,6 +48,8 @@ export default function App() {
       <Footer />
       <LegalLinks />
       <ScrollToTopButton />
+      <InAppNotifications />
+      <PullToRefresh />
     </>
   );
 }

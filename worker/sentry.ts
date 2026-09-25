@@ -10,7 +10,7 @@ import type { Env } from "./types.ts";
 // `<slug>-bobine.creusatbenjamin.workers.dev` (voir .github/workflows/ci.yml,
 // job deploy-preview) — tout le reste (dev local compris) est traité comme
 // non-prod.
-const PRODUCTION_HOSTNAME = "bobine.creusatbenjamin.workers.dev";
+export const PRODUCTION_HOSTNAME = "bobine.creusatbenjamin.workers.dev";
 
 // `wrangler versions upload --preview-alias` ne supprime jamais l'alias de
 // preview à la fermeture d'une PR (aucun endpoint Cloudflare pour ça — voir

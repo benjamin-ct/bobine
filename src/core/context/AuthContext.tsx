@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { getRecaptchaToken } from "../lib/recaptcha.ts";
 import { useLocale } from "./LocaleContext.tsx";
 import { syncClientHeaders, useLiveSyncConnection, useLiveSyncEvent } from "../sync/liveSync.ts";
+import { usePushAccountLink } from "../sync/pushAccountLink.ts";
 
 export type AuthStatus = "loading" | "authenticated" | "anonymous";
 
@@ -114,6 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useLiveSyncEvent("display-name", () => {
     refresh();
   });
+  // Notifications : rattache/détache l'abonnement push de l'appareil au
+  // compte à chaque connexion/déconnexion (voir core/sync/pushAccountLink.ts).
+  usePushAccountLink(status);
 
   // Demande un lien de connexion par email. Renvoie la réponse du serveur
   // (peut contenir `devLink` en local sans service d'email configuré).

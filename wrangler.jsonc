@@ -35,7 +35,7 @@
   // "keep_vars" et disparaître à chaque déploiement (voir TMDB_API_KEY et
   // VAPID_PRIVATE_KEY, elles, en Secret dans le dashboard, qui survivent).
   "vars": {
-    "VAPID_PUBLIC_KEY": "BJg-Rpv7wg8t4mSnGRG47SIhNovB4TEeB__fia4oyGe9opQ0lDT6z_aFWLBRZ3y1EMdbT8XE05uItXdsxiBufvY",
+    "VAPID_PUBLIC_KEY": "BDqiaLNi0uMdi-hi74JI8hALtzeks3ZiuTIBomUVGm9mtg8CeQEUeXUUr-X6J7NJFvF8li7ovMBQE3Hu1_sa3D8",
     "VAPID_SUBJECT": "mailto:creusatbenjamin@gmail.com",
     // Token du beacon Cloudflare Web Analytics (public par nature). Renseigné
     // depuis le dashboard Cloudflare (Analytics & Logs → Web Analytics →
