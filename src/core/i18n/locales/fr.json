@@ -488,6 +488,10 @@
       "technical": {
         "label": "Données techniques",
         "text": " : votre adresse IP est traitée brièvement pour limiter les abus (anti-spam sur la connexion), sans être conservée sous une forme identifiable liée à votre compte."
+      },
+      "sharedLists": {
+        "label": "Listes partagées",
+        "text": " (si vous choisissez de partager une liste personnalisée) : son nom, son contenu, vos notes sur les titres qu'elle contient et votre nom affiché deviennent visibles en lecture seule par toute personne disposant du lien — jamais votre adresse email. Vous pouvez arrêter ce partage à tout moment depuis la liste, ce qui rend le lien définitivement invalide."
       }
     },
     "why": {
@@ -628,5 +632,27 @@
     "markAllWatched": "Tout marquer comme vu",
     "untitled": "Sans titre",
     "noEpisodesFound": "Aucun épisode trouvé pour cette saison."
+  },
+  "listShare": {
+    "share": "Partager",
+    "shareAgain": "Partager le lien",
+    "unshare": "Ne plus partager",
+    "copied": "✓ Lien copié",
+    "copyPrompt": "Copie ce lien pour partager la liste :",
+    "unshared": "✓ Partage arrêté, l'ancien lien ne fonctionne plus",
+    "notSyncedYet": "Liste en cours de synchronisation, réessaie dans quelques secondes.",
+    "error": "Impossible de partager la liste.",
+    "confirmUnshare": "Arrêter le partage de « {{name}} » ? Le lien actuel ne fonctionnera plus."
+  },
+  "sharedList": {
+    "eyebrow": "Liste partagée",
+    "lead_one": "Par {{owner}} · {{count}} titre",
+    "lead_other": "Par {{owner}} · {{count}} titres",
+    "anonymousOwner": "un·e cinéphile",
+    "rating": "★ {{rating}}/10",
+    "empty": "Cette liste est vide pour l'instant.",
+    "loadError": "Impossible de charger cette liste.",
+    "notFoundTitle": "Liste introuvable",
+    "notFoundLead": "Ce lien n'existe pas ou n'est plus actif : la liste a peut-être été supprimée, ou son propriétaire a arrêté de la partager."
   }
 }
