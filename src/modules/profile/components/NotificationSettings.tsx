@@ -238,6 +238,13 @@ async function syncSubscriptionDelta(
 
 const TEST_NOTIFICATION_DELAY_S = 15;
 
+// Même domaine de prod que worker/sentry.ts : les boutons de test ne servent
+// qu'à valider le choix de canal sur les previews PR et en dev local, et
+// n'ont rien à faire sous les yeux des utilisateurs (l'endpoint est aussi
+// refusé côté Worker en prod).
+const PRODUCTION_HOSTNAME = "bobine.creusatbenjamin.workers.dev";
+const SHOW_TEST_NOTIFICATION = window.location.hostname !== PRODUCTION_HOSTNAME;
+
 // Envoie une notification de test au compte via notifyUser (voir
 // worker/index.ts, /api/notifications/test), pour vérifier le choix de canal
 // sans attendre une vraie sortie : in-app si un appareil a l'app ouverte,
@@ -446,7 +453,7 @@ export default function NotificationSettings() {
             {t("notificationSettings.disableButton")}
           </button>
           <p className={styles.hint}>{t("notificationSettings.enabledHint")}</p>
-          {authStatus === "authenticated" && <TestNotification />}
+          {SHOW_TEST_NOTIFICATION && authStatus === "authenticated" && <TestNotification />}
         </>
       ) : (
         <>
