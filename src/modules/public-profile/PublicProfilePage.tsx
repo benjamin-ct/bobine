@@ -159,20 +159,25 @@ export default function PublicProfilePage() {
       .map(([id, count]) => ({ id, name: genreMap[id], count }));
   }, [watched, genreMap]);
 
-  // Top : les titres vus les mieux notés. À égalité de note (ex. 15 titres
-  // à 8/10), les plus récemment vus passent devant.
-  const top = useMemo(
-    () =>
-      (watched ?? [])
-        .filter((item) => item.rating != null)
-        .sort(
-          (a, b) =>
-            (b.rating ?? 0) - (a.rating ?? 0) ||
-            (b.updatedAt || b.addedAt || 0) - (a.updatedAt || a.addedAt || 0)
-        )
-        .slice(0, TOP_COUNT),
-    [watched]
-  );
+  const topPicks = state.status === "success" ? state.profile.topPicks : null;
+
+  // Top : celui choisi à la main par le propriétaire (façon « films
+  // favoris » de Letterboxd, voir TopPicksEditor), sinon les titres vus les
+  // mieux notés — à égalité de note, les plus récemment vus passent devant.
+  const top = useMemo(() => {
+    if (topPicks?.length) {
+      const byKey = new Map((watched ?? []).map((item) => [`${item.mediaType}:${item.id}`, item]));
+      return topPicks.flatMap((key) => byKey.get(key) ?? []).slice(0, TOP_COUNT);
+    }
+    return (watched ?? [])
+      .filter((item) => item.rating != null)
+      .sort(
+        (a, b) =>
+          (b.rating ?? 0) - (a.rating ?? 0) ||
+          (b.updatedAt || b.addedAt || 0) - (a.updatedAt || a.addedAt || 0)
+      )
+      .slice(0, TOP_COUNT);
+  }, [watched, topPicks]);
 
   useEffect(() => {
     let cancelled = false;

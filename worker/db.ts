@@ -331,6 +331,39 @@ export async function setShareSlug(
   await db.prepare("UPDATE users SET share_slug = ? WHERE id = ?").bind(shareSlug, userId).run();
 }
 
+// Top 5 choisi à la main pour le profil partagé (migration 0011), ordre
+// d'affichage conservé. Tableau vide = pas de choix (calcul automatique).
+export const TOP_PICKS_MAX = 5;
+
+function parseTopPicks(raw: string | null): string[] {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((k): k is string => typeof k === "string").slice(0, TOP_PICKS_MAX)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getTopPicks(db: D1Database, userId: number): Promise<string[]> {
+  const row = await db
+    .prepare("SELECT top_picks FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ top_picks: string | null }>();
+  return parseTopPicks(row?.top_picks ?? null);
+}
+
+export async function setTopPicks(db: D1Database, userId: number, keys: string[]): Promise<void> {
+  await db
+    .prepare("UPDATE users SET top_picks = ? WHERE id = ?")
+    .bind(keys.length ? JSON.stringify(keys) : null, userId)
+    .run();
+}
+
 // Le détail des épisodes vus n'est pas exposé : la page publique n'affiche
 // que les titres, affiches et notes.
 function toPublicItem({ watchedEpisodes: _watchedEpisodes, ...item }: LibraryItem): LibraryItem {
@@ -349,9 +382,9 @@ export async function getPublicProfileBySlug(
   shareSlug: string
 ): Promise<PublicProfile | null> {
   const user = await db
-    .prepare("SELECT id, display_name FROM users WHERE share_slug = ?")
+    .prepare("SELECT id, display_name, top_picks FROM users WHERE share_slug = ?")
     .bind(shareSlug)
-    .first<{ id: number; display_name: string | null }>();
+    .first<{ id: number; display_name: string | null; top_picks: string | null }>();
   if (!user) {
     return null;
   }
@@ -368,6 +401,9 @@ export async function getPublicProfileBySlug(
   });
   return {
     displayName: user.display_name,
+    // Un titre retiré des « vus » depuis sort du Top sans qu'il faille
+    // réécrire la colonne.
+    topPicks: parseTopPicks(user.top_picks).filter((key) => library.watched[key]),
     watched: Object.values(library.watched).map(toPublicItem).sort(byMostRecent),
     watchlist: Object.values(library.watchlist).map(toPublicItem).sort(byMostRecent),
     customLists: Object.values(customLists)

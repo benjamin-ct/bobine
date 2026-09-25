@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
+import TopPicksEditor from "./TopPicksEditor.tsx";
 import styles from "./ProfileShareCard.module.css";
 
 // Partage du profil en lecture seule : opt-in explicite, le lien n'existe
@@ -102,6 +103,8 @@ export default function ProfileShareCard() {
         {copied && <span className={styles.okHint}>{t("profileShare.copied")}</span>}
         {error && <span className={styles.errorHint}>{error}</span>}
       </div>
+
+      {shareUrl && <TopPicksEditor />}
     </div>
   );
 }

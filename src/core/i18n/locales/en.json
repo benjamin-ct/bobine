@@ -649,6 +649,20 @@
     "shareTitle": "My Bobine profile",
     "error": "Couldn't update profile sharing."
   },
+  "topPicks": {
+    "title": "My Top 5",
+    "hintEmpty": "Pick up to 5 titles you've watched, in your own order, like favorite films on Letterboxd. Until you pick any, your profile shows your highest-rated watched titles.",
+    "hint": "These titles appear in this order at the top of your shared profile.",
+    "searchLabel": "Add a watched title to your Top 5",
+    "searchPlaceholder": "Search your watched titles ({{count}} spot(s) left)",
+    "noResult": "No watched title matches.",
+    "noWatched": "Mark titles as watched to build your Top 5.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove from Top 5",
+    "loadError": "Couldn't load your Top 5.",
+    "saveError": "Couldn't save your Top 5."
+  },
   "publicProfile": {
     "eyebrow": "Shared profile",
     "anonymousName": "A film lover",

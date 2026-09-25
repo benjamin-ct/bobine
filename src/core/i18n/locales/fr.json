@@ -649,6 +649,20 @@
     "shareTitle": "Mon profil Bobine",
     "error": "Impossible de modifier le partage du profil."
   },
+  "topPicks": {
+    "title": "Mon Top 5",
+    "hintEmpty": "Choisis toi-même jusqu'à 5 titres parmi ceux que tu as vus, dans l'ordre de ton choix, comme les films favoris sur Letterboxd. Tant que tu n'en choisis aucun, ton profil affiche tes titres vus les mieux notés.",
+    "hint": "Ces titres s'affichent dans cet ordre en tête de ton profil partagé.",
+    "searchLabel": "Ajouter un titre vu au Top 5",
+    "searchPlaceholder": "Chercher parmi tes titres vus ({{count}} place(s) restante(s))",
+    "noResult": "Aucun titre vu ne correspond.",
+    "noWatched": "Marque des titres comme vus pour pouvoir composer ton Top 5.",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "remove": "Retirer du Top 5",
+    "loadError": "Impossible de charger ton Top 5.",
+    "saveError": "Impossible d'enregistrer ton Top 5."
+  },
   "publicProfile": {
     "eyebrow": "Profil partagé",
     "anonymousName": "Un·e cinéphile",

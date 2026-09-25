@@ -56,6 +56,9 @@ export type CustomListMap = Record<string, CustomList>;
  * récent au plus ancien, sans le détail des épisodes vus. */
 export interface PublicProfile {
   displayName: string | null;
+  /** Top 5 choisi à la main (clés "mediaType:id" présentes dans `watched`,
+   * dans l'ordre) ; vide = calcul automatique à partir des notes. */
+  topPicks: string[];
   watched: LibraryItem[];
   watchlist: LibraryItem[];
   customLists: CustomList[];

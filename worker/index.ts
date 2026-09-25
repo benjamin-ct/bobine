@@ -21,6 +21,9 @@ import {
   setShareSlug,
   getPublicProfileBySlug,
   getSharedProfileEmail,
+  getTopPicks,
+  setTopPicks,
+  TOP_PICKS_MAX,
   getExcludedGenresForUser,
   replaceExcludedGenresForUser,
   getFavoriteProvidersForUser,
@@ -730,6 +733,40 @@ async function handleUpdateProfileShare(request: Request, env: Env): Promise<Res
     await setShareSlug(env.DB, user.id, shareSlug);
   }
   return json({ ok: true, shareSlug });
+}
+
+// Top 5 du profil partagé choisi à la main, façon « films favoris » de
+// Letterboxd. Seuls des titres « vus » du compte sont acceptés ; l'ordre du
+// tableau est l'ordre d'affichage.
+async function handleGetTopPicks(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  return json({ topPicks: await getTopPicks(env.DB, user.id) });
+}
+
+async function handlePutTopPicks(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  if (!Array.isArray(body?.topPicks) || body.topPicks.length > TOP_PICKS_MAX) {
+    return json({ error: 'Paramètre "topPicks" invalide.' }, 400);
+  }
+  const keys = [
+    ...new Set(sanitizeKeyList(body.topPicks, TOP_PICKS_MAX).map((k) => `${k.mediaType}:${k.id}`)),
+  ];
+  const library = await getLibraryForUser(env.DB, user.id);
+  const topPicks = keys.filter((key) => library.watched[key]);
+  await setTopPicks(env.DB, user.id, topPicks);
+  return json({ ok: true, topPicks });
 }
 
 // Accessible sans compte (c'est tout l'intérêt d'un lien de partage), mais
@@ -1561,6 +1598,12 @@ async function routeRequest(
 
   if (url.pathname === "/api/account/share" && request.method === "PUT") {
     return handleUpdateProfileShare(request, env);
+  }
+  if (url.pathname === "/api/account/top-picks" && request.method === "GET") {
+    return handleGetTopPicks(request, env);
+  }
+  if (url.pathname === "/api/account/top-picks" && request.method === "PUT") {
+    return handlePutTopPicks(request, env);
   }
   const avatarMatch = url.pathname.match(/^\/api\/public-profile\/([^/]+)\/avatar$/);
   if (avatarMatch && request.method === "GET") {
