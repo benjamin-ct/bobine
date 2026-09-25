@@ -21,6 +21,11 @@
     "terms": "Conditions d'utilisation",
     "privacy": "Confidentialité"
   },
+  "pullToRefresh": {
+    "pull": "Tirer pour recharger",
+    "release": "Relâcher pour recharger",
+    "reloading": "Rechargement…"
+  },
   "scrollToTop": {
     "ariaLabel": "Remonter en haut de la page",
     "title": "Remonter en haut"
