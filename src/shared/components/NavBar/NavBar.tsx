@@ -315,23 +315,27 @@ export default function NavBar() {
           )}
         </div>
 
-        <Link
-          to="/profil"
-          className={`${styles.iconBtn} ${styles.desktopOnly}`}
-          aria-label={t("navBar.profileAriaLabel")}
-          title={t("navBar.profileTitle")}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.8}
-            aria-hidden="true"
+        {/* Profil réservé aux membres connectés (voir ProfilePage) : aucun lien
+            pour un visiteur anonyme, ni pendant la vérification de session. */}
+        {authStatus === "authenticated" && (
+          <Link
+            to="/profil"
+            className={`${styles.iconBtn} ${styles.desktopOnly}`}
+            aria-label={t("navBar.profileAriaLabel")}
+            title={t("navBar.profileTitle")}
           >
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 21a8 8 0 0 1 16 0" />
-          </svg>
-        </Link>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+          </Link>
+        )}
 
         {authStatus === "authenticated" ? (
           <button
@@ -410,9 +414,11 @@ export default function NavBar() {
                 {t(`navBar.navLinks.${link.key}`)}
               </NavLink>
             ))}
-            <NavLink to="/profil" onClick={onNavClick} className={styles.mobileLink}>
-              {t("navBar.profileTitle")}
-            </NavLink>
+            {authStatus === "authenticated" && (
+              <NavLink to="/profil" onClick={onNavClick} className={styles.mobileLink}>
+                {t("navBar.profileTitle")}
+              </NavLink>
+            )}
             <div className={styles.mobileLegal}>
               <Link to="/confidentialite" onClick={onNavClick}>
                 {t("legalLinks.privacy")}

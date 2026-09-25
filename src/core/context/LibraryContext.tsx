@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext.tsx";
+import { useMembersOnly } from "./MembersOnlyContext.tsx";
 import { getDetails } from "../api/tmdb.ts";
 import { logError, logWarn } from "../logger.ts";
 import { syncClientHeaders, useLiveSyncEvent } from "../sync/liveSync.ts";
@@ -254,6 +255,7 @@ function mergeCustomLists(local: CustomListMap, remote: CustomListMap): CustomLi
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { status: authStatus, email } = useAuth();
+  const { requireMember } = useMembersOnly();
   const [state, setState] = useState<LibraryState>(loadInitialState);
   // Évite d'écraser le localStorage dès le premier rendu : on ne persiste
   // qu'à partir du moment où l'état change réellement suite à une action de
@@ -1129,61 +1131,70 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     });
   }, [state.watchlist, watchlistOrder]);
 
-  const value = useMemo<LibraryContextValue>(
-    () => ({
+  const value = useMemo<LibraryContextValue>(() => {
+    // Toute action utilisateur qui écrit dans la bibliothèque est réservée
+    // aux membres connectés : pour un visiteur anonyme, elle ouvre la modale
+    // de connexion au lieu de s'exécuter (voir MembersOnlyContext). Gardé ici
+    // plutôt qu'à chaque bouton pour ne jamais oublier un point d'entrée.
+    // setRuntime/setDirectors restent libres : ce sont des compléments de
+    // métadonnées déclenchés automatiquement, pas des actions de l'utilisateur.
+    function gated<A extends unknown[], R>(fn: (...args: A) => R, blocked: R) {
+      return (...args: A): R => (requireMember() ? fn(...args) : blocked);
+    }
+    return {
       watched: Object.values(state.watched).sort((a, b) => b.addedAt - a.addedAt),
       watchlist: orderedWatchlist,
       watchedIds: new Set(Object.keys(state.watched)),
-      toggleWatched,
-      toggleWatchlist,
+      toggleWatched: gated(toggleWatched, undefined),
+      toggleWatchlist: gated(toggleWatchlist, undefined),
       isWatched,
       isInWatchlist,
       getRating,
-      rateWatched,
+      rateWatched: gated(rateWatched, undefined),
       setRuntime,
       setDirectors,
       getWatchedEpisodes,
       isEpisodeWatched,
-      toggleEpisodeWatched,
-      setSeasonEpisodesWatched,
-      reorderWatchlist,
+      toggleEpisodeWatched: gated(toggleEpisodeWatched, undefined),
+      setSeasonEpisodesWatched: gated(setSeasonEpisodesWatched, undefined),
+      reorderWatchlist: gated(reorderWatchlist, undefined),
       customLists: customListsArray,
-      createList,
-      renameList,
-      deleteList,
-      addToList,
-      removeFromList,
+      createList: gated(createList, null),
+      renameList: gated(renameList, undefined),
+      deleteList: gated(deleteList, undefined),
+      addToList: gated(addToList, undefined),
+      removeFromList: gated(removeFromList, undefined),
       isInList,
       getListItems,
-      reorderList,
-    }),
-    [
-      state,
-      orderedWatchlist,
-      toggleWatched,
-      toggleWatchlist,
-      isWatched,
-      isInWatchlist,
-      getRating,
-      rateWatched,
-      setRuntime,
-      setDirectors,
-      getWatchedEpisodes,
-      isEpisodeWatched,
-      toggleEpisodeWatched,
-      setSeasonEpisodesWatched,
-      reorderWatchlist,
-      customListsArray,
-      createList,
-      renameList,
-      deleteList,
-      addToList,
-      removeFromList,
-      isInList,
-      getListItems,
-      reorderList,
-    ]
-  );
+      reorderList: gated(reorderList, undefined),
+    };
+  }, [
+    requireMember,
+    state,
+    orderedWatchlist,
+    toggleWatched,
+    toggleWatchlist,
+    isWatched,
+    isInWatchlist,
+    getRating,
+    rateWatched,
+    setRuntime,
+    setDirectors,
+    getWatchedEpisodes,
+    isEpisodeWatched,
+    toggleEpisodeWatched,
+    setSeasonEpisodesWatched,
+    reorderWatchlist,
+    customListsArray,
+    createList,
+    renameList,
+    deleteList,
+    addToList,
+    removeFromList,
+    isInList,
+    getListItems,
+    reorderList,
+  ]);
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
 }
