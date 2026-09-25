@@ -74,6 +74,7 @@ import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
 import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
 import { openSyncSocket, publishToUser } from "./sync.ts";
+import { randomShareSlug, SHARE_SLUG_PATTERN } from "./share-slug.ts";
 
 // Classe Durable Object de la synchro temps réel : doit être exportée par le
 // module principal (voir "exports" dans wrangler.jsonc).
@@ -702,15 +703,6 @@ async function handleUpdateDisplayName(request: Request, env: Env): Promise<Resp
 // que de ressusciter l'ancien, pour qu'un lien révoqué le reste. Même garde
 // IDOR que les autres endpoints authentifiés : user.id vient uniquement du
 // cookie de session.
-function randomShareSlug(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
-
-const SHARE_SLUG_PATTERN = /^[A-Za-z0-9_-]{16}$/;
-
 async function handleUpdateProfileShare(request: Request, env: Env): Promise<Response> {
   const user = await getUserFromRequest(env.DB, request);
   if (!user) {
