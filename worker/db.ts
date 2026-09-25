@@ -15,6 +15,7 @@ import type {
   CustomListMap,
   LibraryItem,
   LibraryState,
+  PublicProfile,
   PublicList,
 } from "../src/core/types/library.ts";
 
@@ -318,6 +319,54 @@ export async function updateDisplayName(
     .prepare("UPDATE users SET display_name = ? WHERE id = ?")
     .bind(displayName || null, userId)
     .run();
+}
+
+// Partage public du profil (migration 0009) : `null` rend le profil privé et
+// invalide l'ancien lien.
+export async function setShareSlug(
+  db: D1Database,
+  userId: number,
+  shareSlug: string | null
+): Promise<void> {
+  await db.prepare("UPDATE users SET share_slug = ? WHERE id = ?").bind(shareSlug, userId).run();
+}
+
+// Le détail des épisodes vus n'est pas exposé : la page publique n'affiche
+// que les titres, affiches et notes.
+function toPublicItem({ watchedEpisodes: _watchedEpisodes, ...item }: LibraryItem): LibraryItem {
+  return item;
+}
+
+function byMostRecent(a: LibraryItem, b: LibraryItem): number {
+  return (b.updatedAt || b.addedAt || 0) - (a.updatedAt || a.addedAt || 0);
+}
+
+// Profil partagé en lecture seule. Le compte n'est résolu QUE par le slug
+// aléatoire (jamais par un id ou un nom affiché) : un profil privé
+// (share_slug NULL) est donc introuvable par construction.
+export async function getPublicProfileBySlug(
+  db: D1Database,
+  shareSlug: string
+): Promise<PublicProfile | null> {
+  const user = await db
+    .prepare("SELECT id, display_name FROM users WHERE share_slug = ?")
+    .bind(shareSlug)
+    .first<{ id: number; display_name: string | null }>();
+  if (!user) {
+    return null;
+  }
+  const [library, customLists] = await Promise.all([
+    getLibraryForUser(db, user.id),
+    getCustomListsForUser(db, user.id),
+  ]);
+  return {
+    displayName: user.display_name,
+    watched: Object.values(library.watched).map(toPublicItem).sort(byMostRecent),
+    watchlist: Object.values(library.watchlist).map(toPublicItem).sort(byMostRecent),
+    customLists: Object.values(customLists)
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((list) => ({ ...list, items: list.items.map(toPublicItem) })),
+  };
 }
 
 // Bibliothèque "vu / envie de voir" synchronisée par compte. -------------

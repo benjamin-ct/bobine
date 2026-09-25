@@ -16,6 +16,7 @@ import Detail from "./modules/detail/index.ts";
 import Person from "./modules/person/index.ts";
 import Random from "./modules/random/index.ts";
 import Profile from "./modules/profile/index.ts";
+import PublicProfile from "./modules/public-profile/index.ts";
 import Search from "./modules/search/index.ts";
 import SharedList from "./modules/shared-list/index.ts";
 import { LoginPage, VerifyAuthPage, MembersOnlyDialog } from "./modules/auth/index.ts";
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/aleatoire" element={<Random />} />
           <Route path="/ma-liste" element={<Navigate to="/profil?tab=ma-liste" replace />} />
           <Route path="/profil" element={<Profile />} />
+          <Route path="/u/:slug" element={<PublicProfile />} />
           <Route path="/recherche" element={<Search />} />
           <Route path="/liste/:slug" element={<SharedList />} />
           <Route path="/connexion" element={<LoginPage />} />

@@ -35,6 +35,9 @@ export interface AuthUser {
   id: number;
   email: string;
   displayName: string | null;
+  /** Slug du lien de partage public du profil, `null` tant que le profil est
+   * privé (voir migrations/0009_profile_share.sql). */
+  shareSlug: string | null;
   sessionToken: string;
 }
 
@@ -112,22 +115,31 @@ export async function consumeMagicLinkByCode(
   return row.email;
 }
 
+// Renvoie aussi le nom affiché et le lien de partage : le client les applique
+// dès la connexion (voir verifyWith dans AuthContext), sans quoi un compte qui
+// se reconnecte apparaît sans nom et avec un profil "privé" alors qu'il est
+// toujours partagé.
 export async function findOrCreateUser(
   db: D1Database,
   email: string
-): Promise<{ id: number; email: string }> {
+): Promise<{ id: number; email: string; displayName: string | null; shareSlug: string | null }> {
   const existing = await db
-    .prepare("SELECT id, email FROM users WHERE email = ?")
+    .prepare("SELECT id, email, display_name, share_slug FROM users WHERE email = ?")
     .bind(email)
-    .first<UserRow>();
+    .first<Pick<UserRow, "id" | "email" | "display_name" | "share_slug">>();
   if (existing) {
-    return existing;
+    return {
+      id: existing.id,
+      email: existing.email,
+      displayName: existing.display_name,
+      shareSlug: existing.share_slug,
+    };
   }
   const result = await db
     .prepare("INSERT INTO users (email, created_at) VALUES (?, ?)")
     .bind(email, Date.now())
     .run();
-  return { id: Number(result.meta.last_row_id), email };
+  return { id: Number(result.meta.last_row_id), email, displayName: null, shareSlug: null };
 }
 
 export async function createSession(db: D1Database, userId: number): Promise<string> {
@@ -164,16 +176,28 @@ export async function getUserFromRequest(
   }
   const row = await db
     .prepare(
-      `SELECT users.id, users.email, users.display_name, sessions.expires_at
+      `SELECT users.id, users.email, users.display_name, users.share_slug, sessions.expires_at
        FROM sessions JOIN users ON users.id = sessions.user_id
        WHERE sessions.token = ?`
     )
     .bind(token)
-    .first<{ id: number; email: string; display_name: string | null; expires_at: number }>();
+    .first<{
+      id: number;
+      email: string;
+      display_name: string | null;
+      share_slug: string | null;
+      expires_at: number;
+    }>();
   if (!row || row.expires_at < Date.now()) {
     return null;
   }
-  return { id: row.id, email: row.email, displayName: row.display_name, sessionToken: token };
+  return {
+    id: row.id,
+    email: row.email,
+    displayName: row.display_name,
+    shareSlug: row.share_slug,
+    sessionToken: token,
+  };
 }
 
 // `Secure` casse les cookies en local http (wrangler dev sans --local-protocol

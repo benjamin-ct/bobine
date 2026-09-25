@@ -72,7 +72,8 @@
       "expiredCode": "Ce code n'est plus valide."
     },
     "updateDisplayNameError": "Impossible d'enregistrer le nom affiché.",
-    "requestLinkError": "Impossible d'envoyer le lien de connexion."
+    "requestLinkError": "Impossible d'envoyer le lien de connexion.",
+    "updateShareError": "Impossible de modifier le partage du profil."
   },
   "loginPage": {
     "title": "Se connecter",
@@ -475,7 +476,7 @@
       },
       "library": {
         "label": "Bibliothèque personnelle",
-        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu."
+        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu. Si vous activez le partage de votre profil (facultatif, désactivé par défaut), ces éléments ainsi que vos notes et votre nom affiché deviennent visibles en lecture seule par toute personne disposant du lien de partage — jamais votre adresse email. Vous pouvez désactiver ce partage à tout moment, ce qui rend le lien définitivement invalide."
       },
       "preferences": {
         "label": "Préférences",
@@ -632,6 +633,33 @@
     "markAllWatched": "Tout marquer comme vu",
     "untitled": "Sans titre",
     "noEpisodesFound": "Aucun épisode trouvé pour cette saison."
+  },
+  "profileShare": {
+    "title": "Partager mon profil",
+    "hintOff": "Ton profil est privé. Active le partage pour obtenir un lien que tu pourras envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, tes titres vus, ton envie de voir, tes listes et tes notes (jamais ton adresse e-mail).",
+    "hintOn": "Ton profil est visible en lecture seule par toute personne qui a ce lien. Désactiver le partage rend le lien définitivement invalide.",
+    "linkLabel": "Lien de partage du profil",
+    "share": "Partager le lien",
+    "preview": "Voir mon profil public",
+    "enable": "Activer le partage",
+    "disable": "Désactiver le partage",
+    "copied": "✓ Lien copié",
+    "copyError": "Impossible de copier le lien.",
+    "shareTitle": "Mon profil Bobine",
+    "error": "Impossible de modifier le partage du profil."
+  },
+  "publicProfile": {
+    "eyebrow": "Profil partagé",
+    "anonymousName": "Un·e cinéphile",
+    "lead": "{{watched}} titre(s) vu(s) · {{watchlist}} en envie de voir · {{lists}} liste(s)",
+    "recent": "Vus récemment",
+    "rating": "★ {{rating}}/10",
+    "emptySeen": "Aucun titre vu pour l'instant.",
+    "emptyWant": "Aucun titre en envie de voir.",
+    "emptyList": "Cette liste est vide.",
+    "loadError": "Impossible de charger ce profil.",
+    "notFoundTitle": "Profil introuvable",
+    "notFoundLead": "Ce lien n'existe pas ou n'est plus actif : son propriétaire a peut-être désactivé le partage de son profil."
   },
   "listShare": {
     "share": "Partager",

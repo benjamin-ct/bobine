@@ -4,6 +4,7 @@ import { PageHeader, Loading } from "../../shared/components/index.ts";
 import { useAuth } from "../../core/context/AuthContext.tsx";
 import MyListContent from "../my-list/index.ts";
 import AccountCard from "./components/AccountCard.tsx";
+import ProfileShareCard from "./components/ProfileShareCard.tsx";
 import NotificationSettings from "./components/NotificationSettings.tsx";
 import FavoriteProvidersSettings from "./components/FavoriteProvidersSettings.tsx";
 import ExcludedGenresSettings from "./components/ExcludedGenresSettings.tsx";
@@ -86,6 +87,9 @@ export default function ProfilePage() {
                 <p className={styles.hint}>{t("profile.notificationsHint")}</p>
                 <NotificationSettings />
               </div>
+            </div>
+            <div className={styles.span12}>
+              <ProfileShareCard />
             </div>
           </div>
 

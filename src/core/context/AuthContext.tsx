@@ -34,6 +34,9 @@ interface AuthContextValue {
   // users.display_name), chargé avec le reste de la session via
   // /api/auth/me. `null` tant qu'aucune valeur n'a jamais été enregistrée.
   displayName: string | null;
+  // Slug du lien de partage public du profil (/u/<slug>), `null` tant que
+  // le profil est privé — voir ProfileShareCard.
+  shareSlug: string | null;
   requestLink: (email: string) => Promise<RequestLinkResult>;
   verify: (token: string) => Promise<VerifyResult>;
   verifyCode: (code: string) => Promise<VerifyResult>;
@@ -41,6 +44,9 @@ interface AuthContextValue {
   // Enregistre le nom affiché côté serveur (save manuel, pas de synchro
   // automatique — voir AccountCard) et met à jour l'état local à l'identique.
   updateDisplayName: (displayName: string) => Promise<void>;
+  // Active/désactive le partage public du profil ; désactiver invalide
+  // définitivement le lien existant.
+  setProfileShared: (enabled: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -56,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [email, setEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [shareSlug, setShareSlug] = useState<string | null>(null);
 
   // `verify()` (consommation du jeton sur /auth/verify) et `refresh()` (la
   // vérification passive "suis-je déjà connecté" au montage) peuvent
@@ -79,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!pinnedRef.current && !document.cookie.includes("bobine_auth=1")) {
       setEmail(null);
       setDisplayName(null);
+      setShareSlug(null);
       setStatus("anonymous");
       return Promise.resolve();
     }
@@ -87,11 +95,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           throw new Error("not authenticated");
         }
-        return res.json() as Promise<{ email: string; displayName: string | null }>;
+        return res.json() as Promise<{
+          email: string;
+          displayName: string | null;
+          shareSlug: string | null;
+        }>;
       })
       .then((data) => {
         setEmail(data.email);
         setDisplayName(data.displayName ?? null);
+        setShareSlug(data.shareSlug ?? null);
         setStatus("authenticated");
         pinnedRef.current = true;
       })
@@ -101,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setEmail(null);
         setDisplayName(null);
+        setShareSlug(null);
         setStatus("anonymous");
       });
   }, []);
@@ -160,6 +174,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       pinnedRef.current = true;
       setEmail(data.email);
+      setDisplayName(data.displayName ?? null);
+      setShareSlug(data.shareSlug ?? null);
       setStatus("authenticated");
       return data;
     },
@@ -207,17 +223,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [t]
   );
 
+  const setProfileShared = useCallback(
+    async (enabled: boolean): Promise<void> => {
+      const res = await fetch("/api/account/share", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || t("auth.updateShareError"));
+      }
+      setShareSlug(data.shareSlug ?? null);
+    },
+    [t]
+  );
+
   return (
     <AuthContext.Provider
       value={{
         status,
         email,
         displayName,
+        shareSlug,
         requestLink,
         verify,
         verifyCode,
         logout,
         updateDisplayName: updateDisplayNameCallback,
+        setProfileShared,
       }}
     >
       {children}

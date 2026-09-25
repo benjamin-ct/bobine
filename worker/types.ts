@@ -79,6 +79,7 @@ export interface UserRow {
   id: number;
   email: string;
   display_name: string | null;
+  share_slug: string | null;
   created_at: number;
 }
 
