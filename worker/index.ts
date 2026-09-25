@@ -70,6 +70,11 @@ import { trackEvent } from "./analytics.ts";
 import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
 import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
+import { openSyncSocket, publishToUser } from "./sync.ts";
+
+// Classe Durable Object de la synchro temps réel : doit être exportée par le
+// module principal (voir "exports" dans wrangler.jsonc).
+export { UserSyncHub } from "./sync.ts";
 
 // `extraHeaders` accepte un tableau pour une clé (typiquement "set-cookie")
 // afin de poser plusieurs cookies sur la même réponse : contrairement aux
@@ -117,6 +122,9 @@ function json(
 // XHR vers `cloudflareinsights.com` (sans le sous-domaine `static.`), d'où
 // les deux domaines en connect-src. `*.ingest.de.sentry.io` reçoit les
 // rapports d'erreur du SDK Sentry client (src/core/logger.ts, région EU).
+// `wss://*.creusatbenjamin.workers.dev` : WebSocket de synchro temps réel
+// (worker/sync.ts) — explicite car Safari ne couvre pas wss: par 'self' ;
+// le joker couvre la prod comme les previews `<slug>-bobine.…`.
 // ⚠️ Cette CSP est DUPLIQUÉE dans public/_headers (voir plus bas dans ce
 // fichier, "posés nativement via public/_headers") : toute modification ici
 // doit être répercutée là-bas, sinon les assets statiques (dont `/`) restent
@@ -127,7 +135,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     "script-src 'self' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https://image.tmdb.org https://i.ytimg.com data:",
-    "connect-src 'self' https://www.google.com https://image.tmdb.org https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.ingest.de.sentry.io",
+    "connect-src 'self' https://www.google.com https://image.tmdb.org https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.ingest.de.sentry.io wss://*.creusatbenjamin.workers.dev",
     "frame-src https://www.youtube.com https://www.google.com",
     "worker-src 'self'",
     "frame-ancestors 'none'",
@@ -571,6 +579,7 @@ async function handleUpdateDisplayName(request: Request, env: Env): Promise<Resp
     return json({ error: "Nom affiché invalide." }, 400);
   }
   await updateDisplayName(env.DB, user.id, displayName);
+  publishToUser(request, user.id, { type: "display-name" });
   return json({ ok: true, displayName });
 }
 
@@ -629,6 +638,9 @@ async function handlePutLibrary(request: Request, env: Env): Promise<Response> {
   // est correct et rare. Chaque toggle/notation/case cochée régulier passe
   // désormais par handleLibrarySync ci-dessous (delta uniquement).
   await replaceLibraryForUser(env.DB, user.id, sanitizeLibraryPayload(body));
+  // Remplacement complet (fusion initiale d'un nouvel appareil) : pas de
+  // delta à transmettre, les autres appareils rechargent la bibliothèque.
+  publishToUser(request, user.id, { type: "library" });
   return json({ ok: true });
 }
 
@@ -657,6 +669,9 @@ async function handleLibrarySync(request: Request, env: Env): Promise<Response> 
   if (upserts.length > 0) {
     trackEvent(env, "library_change");
   }
+  // Delta transmis tel quel : les autres appareils l'appliquent directement
+  // à leur état local, sans aucun aller-retour serveur.
+  publishToUser(request, user.id, { type: "library", payload: { upserts, deletes } });
   return json({ ok: true });
 }
 
@@ -690,6 +705,7 @@ async function handlePutCustomLists(request: Request, env: Env): Promise<Respons
     return json({ error: "JSON invalide." }, 400);
   }
   await replaceCustomListsForUser(env.DB, user.id, sanitizeCustomListsPayload(body));
+  publishToUser(request, user.id, { type: "custom-lists" });
   return json({ ok: true });
 }
 
@@ -720,6 +736,7 @@ async function handlePutExcludedGenres(request: Request, env: Env): Promise<Resp
   const genreIds = sanitizeIdList((body as { genreIds?: unknown })?.genreIds);
   const merge = (body as { merge?: unknown })?.merge === true;
   await replaceExcludedGenresForUser(env.DB, user.id, genreIds, merge);
+  publishToUser(request, user.id, { type: "excluded-genres" });
   return json({ ok: true });
 }
 
@@ -750,6 +767,7 @@ async function handlePutFavoriteProviders(request: Request, env: Env): Promise<R
   const providerIds = sanitizeIdList((body as { providerIds?: unknown })?.providerIds);
   const merge = (body as { merge?: unknown })?.merge === true;
   await replaceFavoriteProvidersForUser(env.DB, user.id, providerIds, merge);
+  publishToUser(request, user.id, { type: "favorite-providers" });
   return json({ ok: true });
 }
 
@@ -877,6 +895,7 @@ async function handlePutLocale(request: Request, env: Env): Promise<Response> {
     return json({ error: "Langue invalide." }, 400);
   }
   await setLocaleForUser(env.DB, user.id, locale);
+  publishToUser(request, user.id, { type: "locale" });
   return json({ ok: true });
 }
 
@@ -914,6 +933,7 @@ async function handlePutRegion(request: Request, env: Env): Promise<Response> {
     return json({ error: "Région invalide." }, 400);
   }
   await setRegionForUser(env.DB, user.id, region);
+  publishToUser(request, user.id, { type: "region" });
   return json({ ok: true });
 }
 
@@ -1242,6 +1262,15 @@ export default withSentry({
     // donc posés nativement via public/_headers plutôt qu'ici.
     if (!url.pathname.startsWith("/api/")) {
       return env.ASSETS.fetch(request);
+    }
+    // Poignée de main WebSocket de la synchro temps réel : la réponse 101
+    // ne doit pas passer par withSecurityHeaders (voir openSyncSocket).
+    if (url.pathname === "/api/sync/socket" && request.method === "GET") {
+      const user = await getUserFromRequest(env.DB, request);
+      if (!user) {
+        return withSecurityHeaders(json({ error: "Non connecté." }, 401));
+      }
+      return openSyncSocket(request, user.id);
     }
     const response = await routeRequest(request, env, url, ctx);
     return withSecurityHeaders(response);

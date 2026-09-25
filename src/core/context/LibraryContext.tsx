@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext.tsx";
 import { getDetails } from "../api/tmdb.ts";
 import { logError, logWarn } from "../logger.ts";
+import { syncClientHeaders, useLiveSyncEvent } from "../sync/liveSync.ts";
 import type {
   CustomList,
   CustomListMap,
@@ -43,6 +44,18 @@ const CUSTOM_LISTS_SYNCED_FOR_KEY = "bobine.customLists.syncedFor";
 // pas vocation à être synchronisé entre appareils au même titre que le
 // contenu de la liste elle-même.
 const WATCHLIST_ORDER_STORAGE_KEY = "bobine.watchlistOrder.v1";
+
+// Delta diffusé par le serveur après un /api/library/sync d'un autre appareil
+// (voir worker/sync.ts, publishToUser dans handleLibrarySync).
+interface RemoteLibraryDelta {
+  upserts: Array<{
+    mediaType: MediaType;
+    tmdbId: number;
+    status: "watched" | "watchlist";
+    item: LibraryItem;
+  }>;
+  deletes: Array<{ mediaType: MediaType; id: number }>;
+}
 
 type PendingOp =
   | {
@@ -423,7 +436,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(SYNCED_FOR_KEY, email);
         return fetch("/api/library", {
           method: "PUT",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...syncClientHeaders() },
           body: JSON.stringify(merged),
         });
       })
@@ -471,7 +484,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       }
       fetch("/api/library/sync", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...syncClientHeaders() },
         body: JSON.stringify({ upserts, deletes }),
       })
         .then((res) => {
@@ -533,7 +546,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(CUSTOM_LISTS_SYNCED_FOR_KEY, email);
         return fetch("/api/custom-lists", {
           method: "PUT",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...syncClientHeaders() },
           body: JSON.stringify(merged),
         });
       })
@@ -573,7 +586,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const timeoutId = setTimeout(() => {
       fetch("/api/custom-lists", {
         method: "PUT",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...syncClientHeaders() },
         body: serialized,
       })
         .then(() => {
@@ -588,6 +601,101 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }, SYNC_DEBOUNCE_MS);
     return () => clearTimeout(timeoutId);
   }, [customLists, authStatus]);
+
+  // Synchro temps réel (voir core/sync/liveSync.ts) ---------------------
+  //
+  // Bibliothèque : le serveur diffuse le delta exact reçu d'un autre
+  // appareil (/api/library/sync), appliqué ici directement à l'état local —
+  // aucun aller-retour serveur. Sans delta (fusion initiale d'un nouvel
+  // appareil, ou resynchronisation après une coupure), on recharge la seule
+  // bibliothèque. Dans les deux cas, une clé modifiée localement et pas encore
+  // envoyée (pendingOpsRef) garde sa valeur locale : elle partira au prochain
+  // envoi et sera à son tour diffusée aux autres appareils.
+  const applyRemoteLibrary = useCallback((remote: LibraryState) => {
+    setState((prev) => {
+      const next: LibraryState = {
+        watched: { ...(remote.watched || {}) },
+        watchlist: { ...(remote.watchlist || {}) },
+      };
+      for (const key of pendingOpsRef.current.keys()) {
+        delete next.watched[key];
+        delete next.watchlist[key];
+        if (prev.watched[key]) {
+          next.watched[key] = prev.watched[key];
+        }
+        if (prev.watchlist[key]) {
+          next.watchlist[key] = prev.watchlist[key];
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  useLiveSyncEvent("library", (event) => {
+    // Tant que la fusion initiale de cet appareil n'a pas eu lieu, le pull
+    // d'authentification ci-dessus s'en charge déjà.
+    if (!email || localStorage.getItem(SYNCED_FOR_KEY) !== email || syncingRef.current) {
+      return;
+    }
+    const delta = event?.payload as RemoteLibraryDelta | undefined;
+    if (delta && Array.isArray(delta.upserts) && Array.isArray(delta.deletes)) {
+      setState((prev) => {
+        const next: LibraryState = {
+          watched: { ...prev.watched },
+          watchlist: { ...prev.watchlist },
+        };
+        for (const d of delta.deletes) {
+          const key = makeKey(d.mediaType, d.id);
+          if (!pendingOpsRef.current.has(key)) {
+            delete next.watched[key];
+            delete next.watchlist[key];
+          }
+        }
+        for (const u of delta.upserts) {
+          const key = makeKey(u.mediaType, u.tmdbId);
+          if (pendingOpsRef.current.has(key)) {
+            continue;
+          }
+          // Un titre n'a qu'un statut à la fois côté serveur (voir
+          // library_items) : "vu" le retire de "envie de voir" et inversement.
+          delete next.watched[key];
+          delete next.watchlist[key];
+          next[u.status][key] = u.item;
+        }
+        return next;
+      });
+      return;
+    }
+    fetch("/api/library")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("refresh failed"))))
+      .then((remote: LibraryState) => applyRemoteLibrary(remote))
+      .catch((err) => logWarn("Bobine : actualisation de la bibliothèque impossible.", err));
+  });
+
+  // Listes perso : pas de delta (remplacement complet côté serveur), on
+  // recharge uniquement les listes — sauf changement local pas encore
+  // envoyé, qui partira au prochain push et fera foi (dernier écrit gagne,
+  // comme avant la synchro temps réel).
+  const customListsRef = useRef(customLists);
+  customListsRef.current = customLists;
+  useLiveSyncEvent("custom-lists", () => {
+    if (
+      !customListsSyncSettledRef.current ||
+      JSON.stringify(customListsRef.current) !== lastSyncedCustomListsJsonRef.current
+    ) {
+      return;
+    }
+    fetch("/api/custom-lists")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("refresh failed"))))
+      .then((remote: CustomListMap) => {
+        if (JSON.stringify(customListsRef.current) !== lastSyncedCustomListsJsonRef.current) {
+          return; // modifié localement pendant la requête : le local l'emporte
+        }
+        lastSyncedCustomListsJsonRef.current = JSON.stringify(remote || {});
+        setCustomLists(remote || {});
+      })
+      .catch((err) => logWarn("Bobine : actualisation des listes personnalisées impossible.", err));
+  });
 
   const toggleWatched = useCallback((item: LibraryItemInput) => {
     const key = makeKey(item.mediaType, item.id);

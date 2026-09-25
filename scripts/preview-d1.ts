@@ -10,13 +10,14 @@
 // demandé sur le ticket.
 //
 // `provision` génère un fichier de config wrangler dérivé de wrangler.jsonc
-// (mêmes bindings/assets/vars, seul le binding D1 "DB" pointe vers la base de
-// preview) : c'est ce fichier que le workflow passe ensuite à
-// `wrangler versions upload --config` pour déployer la preview branchée sur
-// sa propre base.
+// (mêmes assets, binding D1 "DB" pointant vers la base de preview,
+// Durable Objects propres à la preview — voir writePreviewConfig) : c'est ce
+// fichier que le workflow passe ensuite à `wrangler preview --config` pour
+// déployer la preview branchée sur sa propre base.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import { experimental_readRawConfig } from "wrangler";
 
 const WRANGLER_BIN = "node_modules/.bin/wrangler";
 const SOURCE_CONFIG_PATH = "wrangler.jsonc";
@@ -26,6 +27,25 @@ const PREVIEW_DATABASE_PREFIX = "bobine-preview-pr-";
 const MAX_PREVIEW_DATABASES = 9; // 10 max du plan gratuit, moins la base de prod
 const POLL_INTERVAL_SECONDS = 30;
 const MAX_WAIT_MINUTES = 15;
+// Nom du binding (voir worker/types.ts, Env) sous lequel chaque classe
+// Durable Object est exposée dans les previews.
+const PREVIEW_DURABLE_OBJECT_BINDINGS: Record<string, string> = {
+  UserSyncHub: "USER_SYNC_HUB",
+};
+
+// Sous-ensemble de wrangler.jsonc lu par writePreviewConfig (le type
+// renvoyé par experimental_readRawConfig n'est pas résolu par tsc ici).
+interface D1Binding {
+  binding: string;
+  database_name: string;
+  database_id: string;
+}
+interface SourceConfig {
+  vars?: Record<string, unknown>;
+  d1_databases?: D1Binding[];
+  exports?: Record<string, { type: string }>;
+  [key: string]: unknown;
+}
 
 interface D1Database {
   uuid: string;
@@ -58,21 +78,58 @@ function createDatabase(dbName: string): string {
 }
 
 function writePreviewConfig(dbName: string, uuid: string): void {
-  const original = readFileSync(SOURCE_CONFIG_PATH, "utf8");
-  const withDatabaseName = original.replace(
-    `"database_name": "${PROD_DATABASE_NAME}"`,
-    `"database_name": "${dbName}"`
+  const rawConfig = experimental_readRawConfig({ config: SOURCE_CONFIG_PATH })
+    .rawConfig as SourceConfig;
+  const prodDatabase = rawConfig.d1_databases?.find(
+    (db) => db.database_name === PROD_DATABASE_NAME
   );
-  if (withDatabaseName === original) {
+  if (!prodDatabase) {
     throw new Error(
       `Binding D1 de prod ('${PROD_DATABASE_NAME}') introuvable dans ${SOURCE_CONFIG_PATH}.`
     );
   }
-  const updated = withDatabaseName.replace(
-    /"database_id":\s*"[0-9a-f-]+"/i,
-    `"database_id": "${uuid}"`
-  );
-  writeFileSync(PREVIEW_CONFIG_PATH, updated);
+  const previewDatabase = { ...prodDatabase, database_name: dbName, database_id: uuid };
+
+  // Cloudflare Previews (`wrangler preview`) ne publie ni "exports" ni les
+  // bindings de premier niveau : seuls "migrations" et le bloc "previews"
+  // (bindings propres aux previews) sont envoyés. Les Durable Objects
+  // déclarés via "exports" en prod sont donc redéclarés ici par une
+  // migration (stockage SQLite, seul disponible sur le plan gratuit) et
+  // liés sous "previews.durable_objects" : chaque preview possède alors ses
+  // propres instances, isolées de la prod et des autres previews (voir
+  // worker/sync.ts, hubFor). "exports" et "migrations" s'excluant
+  // mutuellement, "exports" est retiré de la config générée.
+  //
+  // Variables ("vars") : volontairement PAS reprises de wrangler.jsonc. Les
+  // previews tirent toutes leurs variables ET leurs secrets de la "Preview
+  // base config" du Worker (dashboard Cloudflare, ou `wrangler preview
+  // base-config`), qui a ses propres clés d'API : y recopier les vars de
+  // prod (clé VAPID publique, clé reCAPTCHA de site, token Web Analytics)
+  // les écraserait par celles de la prod, incohérentes avec les secrets de
+  // preview (ex. clé VAPID publique de prod + clé privée de preview = push
+  // cassé) et mêlant le trafic des previews aux statistiques de prod.
+  const { exports: workerExports, vars: _prodVars, ...rest } = rawConfig;
+  const durableObjectClasses = Object.entries(workerExports ?? {})
+    .filter(([, entry]) => entry.type === "durable-object")
+    .map(([className]) => className);
+  const previewConfig = {
+    ...rest,
+    d1_databases: [previewDatabase],
+    migrations:
+      durableObjectClasses.length > 0
+        ? [{ tag: "preview-v1", new_sqlite_classes: durableObjectClasses }]
+        : [],
+    previews: {
+      d1_databases: [previewDatabase],
+      durable_objects: {
+        bindings: durableObjectClasses.map((className) => ({
+          name: PREVIEW_DURABLE_OBJECT_BINDINGS[className] ?? className,
+          class_name: className,
+        })),
+      },
+    },
+  };
+  writeFileSync(PREVIEW_CONFIG_PATH, JSON.stringify(previewConfig, null, 2) + "\n");
 }
 
 function provision(prNumber: string): void {

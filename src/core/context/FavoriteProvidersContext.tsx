@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "./AuthContext.tsx";
 import { logError, logWarn } from "../logger.ts";
+import { syncClientHeaders, useLiveSyncRevision } from "../sync/liveSync.ts";
 
 // Plateformes de streaming que la personne a réellement (Netflix, Disney+...),
 // cochées une fois pour filtrer Découvrir/Nouveautés/Aléatoire en un clic
@@ -54,6 +55,15 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
   // (plus bas) ne renvoie pas aussitôt au serveur les données qu'on vient
   // de recevoir.
   const syncingRef = useRef(false);
+  // Synchro temps réel (voir core/sync/liveSync.ts) : incrémenté quand un
+  // autre appareil du compte modifie ce réglage, pour rejouer le pull
+  // ci-dessous. `lastSyncedJsonRef` = dernière valeur connue comme identique
+  // côté serveur : évite de renvoyer en écho ce qu'on vient d'en recevoir,
+  // et d'écraser par un pull un changement local pas encore envoyé.
+  const syncRevision = useLiveSyncRevision("favorite-providers");
+  const lastSyncedJsonRef = useRef<string | null>(null);
+  const currentIdsRef = useRef(favoriteProviderIds);
+  currentIdsRef.current = favoriteProviderIds;
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -79,6 +89,17 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
     if (authStatus !== "authenticated" || !email) {
       return;
     }
+    if (
+      syncRevision > 0 &&
+      lastSyncedJsonRef.current !== null &&
+      JSON.stringify(currentIdsRef.current) !== lastSyncedJsonRef.current
+    ) {
+      // Changement local en attente d'envoi : il partira au prochain push
+      // (et sera à son tour diffusé aux autres appareils). Un pull
+      // précédent annulé en vol ne doit pas laisser ce push bloqué.
+      syncingRef.current = false;
+      return;
+    }
     let cancelled = false;
     syncingRef.current = true;
 
@@ -91,6 +112,7 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
         const remoteIds = remote.providerIds || [];
         const alreadySyncedFor = localStorage.getItem(SYNCED_FOR_KEY);
         if (alreadySyncedFor === email) {
+          lastSyncedJsonRef.current = JSON.stringify(remoteIds);
           setFavoriteProviderIds(remoteIds);
           return null;
         }
@@ -103,7 +125,7 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
         // remplacer à l'aveugle (voir replaceFavoriteProvidersForUser).
         return fetch("/api/favorite-providers", {
           method: "PUT",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...syncClientHeaders() },
           body: JSON.stringify({ providerIds: merged, merge: true }),
         });
       })
@@ -123,7 +145,7 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
     // compte change, pas à chaque changement de `favoriteProviderIds`
     // (sinon boucle).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authStatus, email]);
+  }, [authStatus, email, syncRevision]);
 
   // Envoie l'état complet au serveur à chaque changement, avec anti-rebond
   // (même principe que LibraryContext) — pas de synchronisation
@@ -133,17 +155,27 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
     if (authStatus !== "authenticated" || syncingRef.current) {
       return;
     }
+    const serialized = JSON.stringify(favoriteProviderIds);
+    if (serialized === lastSyncedJsonRef.current) {
+      return;
+    }
     const timeoutId = setTimeout(() => {
       fetch("/api/favorite-providers", {
         method: "PUT",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...syncClientHeaders() },
         body: JSON.stringify({ providerIds: favoriteProviderIds }),
-      }).catch((err) =>
-        logWarn(
-          "Bobine : synchronisation des plateformes favorites impossible, nouvelle tentative au prochain changement.",
-          err
-        )
-      );
+      })
+        .then((res) => {
+          if (res.ok) {
+            lastSyncedJsonRef.current = serialized;
+          }
+        })
+        .catch((err) =>
+          logWarn(
+            "Bobine : synchronisation des plateformes favorites impossible, nouvelle tentative au prochain changement.",
+            err
+          )
+        );
     }, SYNC_DEBOUNCE_MS);
     return () => clearTimeout(timeoutId);
   }, [favoriteProviderIds, authStatus]);

@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { useAuth } from "./AuthContext.tsx";
 import { isValidRegionCode, useRegion } from "./RegionContext.tsx";
 import { logWarn } from "../logger.ts";
+import { syncClientHeaders, useLiveSyncRevision } from "../sync/liveSync.ts";
 
 // Synchronise la région choisie manuellement avec le compte, sur le même
 // principe que LocaleAccountSync (voir ce fichier pour le détail général) :
@@ -17,6 +18,11 @@ export function RegionAccountSync({ children }: { children: ReactNode }): ReactN
   const { status, email } = useAuth();
   const { region, setRegion } = useRegion();
   const syncingRef = useRef(false);
+  // Synchro temps réel (voir core/sync/liveSync.ts) : rejoue le pull
+  // ci-dessous quand un autre appareil du compte change ce réglage.
+  // `lastSyncedRef` évite de renvoyer en écho la valeur qu'on vient de recevoir.
+  const syncRevision = useLiveSyncRevision("region");
+  const lastSyncedRef = useRef<string | null>(null);
   const regionRef = useRef(region);
   regionRef.current = region;
 
@@ -34,6 +40,7 @@ export function RegionAccountSync({ children }: { children: ReactNode }): ReactN
           return;
         }
         if (remote.region && isValidRegionCode(remote.region)) {
+          lastSyncedRef.current = remote.region;
           setRegion(remote.region);
           localStorage.setItem(SYNCED_FOR_KEY, email);
           return;
@@ -44,7 +51,7 @@ export function RegionAccountSync({ children }: { children: ReactNode }): ReactN
         localStorage.setItem(SYNCED_FOR_KEY, email);
         return fetch("/api/profile/region", {
           method: "PUT",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...syncClientHeaders() },
           body: JSON.stringify({ region: regionRef.current }),
         }).then(() => undefined);
       })
@@ -61,22 +68,28 @@ export function RegionAccountSync({ children }: { children: ReactNode }): ReactN
     // On ne veut relancer la synchro que quand le statut d'auth ou le
     // compte change, pas à chaque changement de `region` (sinon boucle).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, email]);
+  }, [status, email, syncRevision]);
 
   useEffect(() => {
-    if (status !== "authenticated" || syncingRef.current) {
+    if (status !== "authenticated" || syncingRef.current || region === lastSyncedRef.current) {
       return;
     }
     fetch("/api/profile/region", {
       method: "PUT",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...syncClientHeaders() },
       body: JSON.stringify({ region }),
-    }).catch((err) =>
-      logWarn(
-        "Bobine : synchronisation de la région impossible, nouvelle tentative au prochain changement.",
-        err
-      )
-    );
+    })
+      .then((res) => {
+        if (res.ok) {
+          lastSyncedRef.current = region;
+        }
+      })
+      .catch((err) =>
+        logWarn(
+          "Bobine : synchronisation de la région impossible, nouvelle tentative au prochain changement.",
+          err
+        )
+      );
   }, [region, status]);
 
   return children;
