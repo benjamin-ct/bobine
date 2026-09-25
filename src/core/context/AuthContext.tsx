@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { getRecaptchaToken } from "../lib/recaptcha.ts";
 import { useLocale } from "./LocaleContext.tsx";
+import { syncClientHeaders, useLiveSyncConnection, useLiveSyncEvent } from "../sync/liveSync.ts";
 
 export type AuthStatus = "loading" | "authenticated" | "anonymous";
 
@@ -106,6 +107,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
+  // Synchro temps réel entre appareils du compte (voir core/sync/liveSync.ts) :
+  // ouverte ici, une seule fois pour toute l'app. Le nom affiché modifié
+  // depuis un autre appareil est rechargé via /api/auth/me.
+  useLiveSyncConnection(status === "authenticated");
+  useLiveSyncEvent("display-name", () => {
+    refresh();
+  });
+
   // Demande un lien de connexion par email. Renvoie la réponse du serveur
   // (peut contenir `devLink` en local sans service d'email configuré).
   const requestLink = useCallback(
@@ -177,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (newDisplayName: string): Promise<void> => {
       const res = await fetch("/api/account/display-name", {
         method: "PATCH",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...syncClientHeaders() },
         body: JSON.stringify({ displayName: newDisplayName }),
       });
       const data = await res.json().catch(() => ({}));
