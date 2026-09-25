@@ -13,6 +13,14 @@ import type {
 import type { GenrePreferenceRow, SubscriptionRow, WatchlistItemRow } from "./types.ts";
 import type { CustomListMap, LibraryState } from "../src/core/types/library.ts";
 
+// Compte connecté sur l'appareil au moment de l'abonnement (ou de son
+// rattachement, voir linkSubscriptionToAccount) — null pour un visiteur
+// anonyme. Voir migration 0008.
+export interface SubscriptionAccount {
+  userId: number;
+  syncHost: string;
+}
+
 export async function upsertSubscription(
   db: D1Database,
   {
@@ -20,7 +28,14 @@ export async function upsertSubscription(
     p256dh,
     auth,
     locale,
-  }: { endpoint: string; p256dh: string; auth: string; locale: string }
+    account,
+  }: {
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+    locale: string;
+    account: SubscriptionAccount | null;
+  }
 ): Promise<number> {
   const existing = await db
     .prepare("SELECT id FROM subscriptions WHERE endpoint = ?")
@@ -28,17 +43,25 @@ export async function upsertSubscription(
     .first<{ id: number }>();
   if (existing) {
     await db
-      .prepare("UPDATE subscriptions SET locale = ? WHERE id = ?")
-      .bind(locale, existing.id)
+      .prepare("UPDATE subscriptions SET locale = ?, user_id = ?, sync_host = ? WHERE id = ?")
+      .bind(locale, account?.userId ?? null, account?.syncHost ?? null, existing.id)
       .run();
     return existing.id;
   }
 
   const result = await db
     .prepare(
-      "INSERT INTO subscriptions (endpoint, p256dh, auth, created_at, locale) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO subscriptions (endpoint, p256dh, auth, created_at, locale, user_id, sync_host) VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
-    .bind(endpoint, p256dh, auth, Date.now(), locale)
+    .bind(
+      endpoint,
+      p256dh,
+      auth,
+      Date.now(),
+      locale,
+      account?.userId ?? null,
+      account?.syncHost ?? null
+    )
     .run();
   return Number(result.meta.last_row_id);
 }
@@ -54,6 +77,21 @@ export async function updateSubscriptionLocale(
   const result = await db
     .prepare("UPDATE subscriptions SET locale = ? WHERE endpoint = ?")
     .bind(locale, endpoint)
+    .run();
+  return (result.meta.changes || 0) > 0;
+}
+
+// Rattache l'abonnement de cet appareil au compte qui y est connecté, ou
+// l'en détache (account null) après une déconnexion : un appareil déconnecté
+// ne doit plus recevoir les notifications du compte.
+export async function linkSubscriptionToAccount(
+  db: D1Database,
+  endpoint: string,
+  account: SubscriptionAccount | null
+): Promise<boolean> {
+  const result = await db
+    .prepare("UPDATE subscriptions SET user_id = ?, sync_host = ? WHERE endpoint = ?")
+    .bind(account?.userId ?? null, account?.syncHost ?? null, endpoint)
     .run();
   return (result.meta.changes || 0) > 0;
 }
@@ -658,5 +696,38 @@ export async function markNotified(
       "INSERT OR IGNORE INTO notified_releases (subscription_id, media_type, tmdb_id, reason, notified_at) VALUES (?, ?, ?, ?, ?)"
     )
     .bind(subscriptionId, mediaType, tmdbId, reason, Date.now())
+    .run();
+}
+
+// Équivalents de wasAlreadyNotified/markNotified au niveau du compte (voir
+// migration 0008) : utilisés pour les abonnements rattachés à un compte.
+export async function wasUserAlreadyNotified(
+  db: D1Database,
+  userId: number,
+  mediaType: string,
+  tmdbId: number,
+  reason: string
+): Promise<boolean> {
+  const row = await db
+    .prepare(
+      "SELECT 1 FROM user_notified_releases WHERE user_id = ? AND media_type = ? AND tmdb_id = ? AND reason = ?"
+    )
+    .bind(userId, mediaType, tmdbId, reason)
+    .first();
+  return Boolean(row);
+}
+
+export async function markUserNotified(
+  db: D1Database,
+  userId: number,
+  mediaType: string,
+  tmdbId: number,
+  reason: string
+): Promise<void> {
+  await db
+    .prepare(
+      "INSERT OR IGNORE INTO user_notified_releases (user_id, media_type, tmdb_id, reason, notified_at) VALUES (?, ?, ?, ?, ?)"
+    )
+    .bind(userId, mediaType, tmdbId, reason, Date.now())
     .run();
 }

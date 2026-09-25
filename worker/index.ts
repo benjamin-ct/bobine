@@ -23,6 +23,8 @@ import {
   getRegionForUser,
   setRegionForUser,
   updateSubscriptionLocale,
+  linkSubscriptionToAccount,
+  type SubscriptionAccount,
 } from "./db.ts";
 import { runDailyCheck } from "./scheduled.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
@@ -198,6 +200,18 @@ function sanitizeSubscriptionLocale(value: unknown): string {
   return typeof value === "string" && SUBSCRIPTION_LOCALES.includes(value) ? value : "fr";
 }
 
+// Compte connecté sur l'appareil qui s'abonne (voir migration 0008 et
+// worker/notify.ts) : permet au scheduler de livrer ses notifications
+// in-app via le hub du compte. `user.id` vient uniquement du cookie de
+// session (même garde IDOR que les endpoints authentifiés plus bas).
+async function subscriptionAccountOf(
+  request: Request,
+  env: Env
+): Promise<SubscriptionAccount | null> {
+  const user = await getUserFromRequest(env.DB, request);
+  return user ? { userId: user.id, syncHost: new URL(request.url).hostname } : null;
+}
+
 async function handleSubscribe(request: Request, env: Env): Promise<Response> {
   const ip = getClientIp(request);
   if (!(await checkRateLimit(env.DB, `subscribe:ip:${ip}`, { limit: 10, windowMs: 60 * 60_000 }))) {
@@ -232,6 +246,7 @@ async function handleSubscribe(request: Request, env: Env): Promise<Response> {
     p256dh: String(keys.p256dh),
     auth: String(keys.auth),
     locale: sanitizeSubscriptionLocale(locale),
+    account: await subscriptionAccountOf(request, env),
   });
 
   // Remplacement complet : correct et volontaire ici, cet appel n'a lieu
@@ -319,6 +334,39 @@ async function handleUnsubscribe(request: Request, env: Env): Promise<Response> 
   }
   await deleteSubscription(env.DB, body.endpoint);
   return json({ ok: true });
+}
+
+// Connexion/déconnexion sur un appareil dont les notifications sont déjà
+// actives (voir usePushAccountLink côté client) : rattache l'abonnement au
+// compte désormais connecté, ou l'en détache — un appareil déconnecté ne
+// reçoit plus les notifications du compte. Comme les autres endpoints
+// /api/subscribe*, la connaissance de l'endpoint (URL secrète propre à
+// l'appareil) fait office d'autorisation ; le compte, lui, ne peut être que
+// celui de la session.
+async function handleLinkSubscriptionAccount(request: Request, env: Env): Promise<Response> {
+  const ip = getClientIp(request);
+  if (
+    !(await checkRateLimit(env.DB, `subscribe-account:ip:${ip}`, { limit: 30, windowMs: 60_000 }))
+  ) {
+    return RATE_LIMIT_RESPONSE();
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  if (typeof body.endpoint !== "string") {
+    return json({ error: "endpoint manquant." }, 400);
+  }
+
+  const account = await subscriptionAccountOf(request, env);
+  const updated = await linkSubscriptionToAccount(env.DB, body.endpoint, account);
+  if (!updated) {
+    return json({ error: "Abonnement introuvable." }, 404);
+  }
+  return json({ ok: true, linked: account !== null });
 }
 
 // Changement de langue pendant que les notifications sont déjà actives (voir
@@ -1253,6 +1301,10 @@ async function routeRequest(
 
   if (url.pathname === "/api/subscribe/locale" && request.method === "POST") {
     return handleUpdateSubscriptionLocale(request, env);
+  }
+
+  if (url.pathname === "/api/subscribe/account" && request.method === "POST") {
+    return handleLinkSubscriptionAccount(request, env);
   }
 
   if (url.pathname === "/api/run-check" && request.method === "POST") {

@@ -4,11 +4,11 @@ import i18n from "../../../core/i18n/i18n.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { logWarn } from "../../../core/logger.ts";
+import { PUSH_ENDPOINT_STORAGE_KEY as ENDPOINT_STORAGE_KEY } from "../../../core/sync/pushAccountLink.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
 import styles from "./NotificationSettings.module.css";
 
-const ENDPOINT_STORAGE_KEY = "bobine.push.endpoint";
 const TOP_GENRES_FOR_NOTIFICATIONS = 8;
 
 interface FavoriteGenre {

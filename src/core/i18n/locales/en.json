@@ -378,6 +378,21 @@
     "enableButton": "🔕 Enable notifications",
     "disabledHint": "Get notified about new releases even without the app open."
   },
+  "inAppNotifications": {
+    "dismiss": "Dismiss notification",
+    "watchlistAvailable": {
+      "title": "New availability 🎬",
+      "body": "\"{{title}}\" is now available to stream."
+    },
+    "favoriteGenreRelease": {
+      "title": "New in your favorite genres 🍿",
+      "body": "\"{{title}}\" was just released."
+    },
+    "trendingRelease": {
+      "title": "Trending right now 🔥",
+      "body": "\"{{title}}\" is getting a lot of buzz."
+    }
+  },
   "legal": {
     "eyebrow": "Legal information",
     "contactLabel": "by opening an issue on the project's GitHub repository"
@@ -425,7 +440,7 @@
   "privacyPolicyPage": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated: {{date}}",
-    "lastUpdatedValue": "September 13, 2026",
+    "lastUpdatedValue": "September 25, 2026",
     "controller": {
       "title": "Data controller",
       "textBefore": "Bobine is a personal project, with no commercial structure, operated from France. The data processing described below is therefore governed by French law and the GDPR. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
@@ -446,7 +461,7 @@
       },
       "push": {
         "label": "Push notifications",
-        "text": " (if you enable them): your browser's technical subscription identifier and the associated encryption keys, used solely to send you the new-release notifications you requested."
+        "text": " (if you enable them): your browser's technical subscription identifier and the associated encryption keys, used solely to send you the new-release notifications you requested. If you are signed in to your account on this device, this subscription is linked to your account so these notifications can be delivered directly in the app on your signed-in devices; it is unlinked as soon as you sign out on this device."
       },
       "technical": {
         "label": "Technical data",

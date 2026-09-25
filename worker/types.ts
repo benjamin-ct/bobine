@@ -47,6 +47,9 @@ export interface SubscriptionRow {
   auth: string;
   created_at: number;
   locale: string;
+  // Compte rattaché (migration 0008) — null pour un visiteur anonyme.
+  user_id: number | null;
+  sync_host: string | null;
 }
 
 export interface WatchlistItemRow {

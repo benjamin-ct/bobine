@@ -18,11 +18,23 @@ export type SyncResource =
   | "favorite-providers"
   | "locale"
   | "region"
-  | "display-name";
+  | "display-name"
+  // Notification in-app (payload : InAppNotification) — voir
+  // worker/notify.ts et shared/components/InAppNotifications.
+  | "notification";
 
 export interface SyncEvent {
   type: SyncResource;
   payload?: unknown;
+}
+
+// Doit rester aligné avec NotificationKind/AppNotification (worker/notify.ts).
+export type NotificationKind = "watchlistAvailable" | "favoriteGenreRelease" | "trendingRelease";
+
+export interface InAppNotification {
+  kind: NotificationKind;
+  mediaTitle: string;
+  url: string;
 }
 
 // Identifiant de cet onglet, envoyé sur chaque écriture (voir

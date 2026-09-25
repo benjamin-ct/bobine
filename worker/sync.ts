@@ -16,8 +16,9 @@
 // "pong") est lui aussi servi sans réveil, via setWebSocketAutoResponse.
 //
 // Ce flux est volontairement générique (`type` libre, voir SyncEvent) : il
-// pourra porter plus tard des notifications in-app (demandes d'amis,
-// sorties...) en appelant simplement publishToUser depuis le code concerné.
+// porte aussi les notifications in-app (type "notification", voir
+// worker/notify.ts, notifyUser), qui passent par ce hub quand un appareil du
+// compte est connecté et retombent sur le Web Push sinon.
 import { DurableObject, env, exports as workerExports, waitUntil } from "cloudflare:workers";
 import { logError } from "./logger.ts";
 import type { Env } from "./types.ts";
@@ -36,7 +37,9 @@ export type SyncResource =
   | "favorite-providers"
   | "locale"
   | "region"
-  | "display-name";
+  | "display-name"
+  // Notification in-app (sorties...) — voir worker/notify.ts.
+  | "notification";
 
 export interface SyncEvent {
   type: SyncResource;
@@ -70,20 +73,25 @@ export class UserSyncHub extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  // Appelé en RPC par publishToUser : diffuse à tous les appareils du compte
-  // sauf celui à l'origine du changement.
-  async publish(event: SyncEvent, sourceClientId: string | null): Promise<void> {
+  // Appelé en RPC par publishToUser / deliverToUser : diffuse à tous les
+  // appareils du compte sauf celui à l'origine du changement, et renvoie le
+  // nombre d'appareils effectivement atteints (0 = aucun connecté, ce qui
+  // fait retomber notifyUser sur le Web Push).
+  async publish(event: SyncEvent, sourceClientId: string | null): Promise<number> {
     const message = JSON.stringify(event);
+    let delivered = 0;
     for (const ws of this.ctx.getWebSockets()) {
       if (sourceClientId && this.ctx.getTags(ws).includes(sourceClientId)) {
         continue;
       }
       try {
         ws.send(message);
+        delivered += 1;
       } catch {
         // Socket déjà fermée côté client : le runtime la retire de lui-même.
       }
     }
+    return delivered;
   }
 
   async webSocketMessage(): Promise<void> {
@@ -159,4 +167,21 @@ export function publishToUser(request: Request, userId: number, event: SyncEvent
       }
     })()
   );
+}
+
+// Livraison hors requête (cron, voir worker/notify.ts) : l'hôte vient de
+// l'abonnement rattaché au compte (subscriptions.sync_host), et l'appelant
+// attend le résultat pour savoir s'il doit retomber sur le Web Push. Ne lève
+// jamais : un hub indisponible compte comme "aucun appareil connecté".
+export async function deliverToUser(
+  hostname: string,
+  userId: number,
+  event: SyncEvent
+): Promise<number> {
+  try {
+    return await hubFor(hostname, userId).publish(event, null);
+  } catch (err) {
+    logError(`Synchro temps réel : livraison "${event.type}" impossible.`, err);
+    return 0;
+  }
 }

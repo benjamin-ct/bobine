@@ -378,6 +378,21 @@
     "enableButton": "🔕 Activer les notifications",
     "disabledHint": "Sois prévenu·e des nouveautés même sans avoir l'app ouverte."
   },
+  "inAppNotifications": {
+    "dismiss": "Fermer la notification",
+    "watchlistAvailable": {
+      "title": "Nouvelle dispo 🎬",
+      "body": "« {{title}} » est maintenant disponible en streaming."
+    },
+    "favoriteGenreRelease": {
+      "title": "Nouveauté dans tes genres préférés 🍿",
+      "body": "« {{title}} » vient de sortir."
+    },
+    "trendingRelease": {
+      "title": "Ça sort en ce moment 🔥",
+      "body": "« {{title}} » fait parler de lui."
+    }
+  },
   "legal": {
     "eyebrow": "Informations légales",
     "contactLabel": "en ouvrant une issue sur le dépôt GitHub du projet"
@@ -425,7 +440,7 @@
   "privacyPolicyPage": {
     "title": "Politique de confidentialité",
     "lastUpdated": "Dernière mise à jour : {{date}}",
-    "lastUpdatedValue": "13 septembre 2026",
+    "lastUpdatedValue": "25 septembre 2026",
     "controller": {
       "title": "Responsable du traitement",
       "textBefore": "Bobine est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
@@ -446,7 +461,7 @@
       },
       "push": {
         "label": "Notifications push",
-        "text": " (si vous les activez) : l'identifiant technique d'abonnement de votre navigateur et les clés de chiffrement associées, utilisés uniquement pour vous envoyer les notifications de nouveautés que vous avez demandées."
+        "text": " (si vous les activez) : l'identifiant technique d'abonnement de votre navigateur et les clés de chiffrement associées, utilisés uniquement pour vous envoyer les notifications de nouveautés que vous avez demandées. Si vous êtes connecté à votre compte sur cet appareil, cet abonnement est rattaché à votre compte, afin de vous livrer ces notifications directement dans l'application sur vos appareils connectés ; il en est détaché dès que vous vous déconnectez de cet appareil."
       },
       "technical": {
         "label": "Données techniques",

@@ -5,7 +5,8 @@ import {
   updateKnownProviders,
   wasAlreadyNotified,
   markNotified,
-  deleteSubscriptionById,
+  wasUserAlreadyNotified,
+  markUserNotified,
 } from "./db.ts";
 import {
   getFlatrateProviderIdsCached,
@@ -15,7 +16,7 @@ import {
   type TmdbListItem,
   type TmdbRunCache,
 } from "./tmdb.ts";
-import { sendPush, ExpiredSubscriptionError } from "./push.ts";
+import { notifyUser, type NotificationRecipient } from "./notify.ts";
 import { logError } from "./logger.ts";
 import type { Env, SubscriptionRow } from "./types.ts";
 
@@ -24,116 +25,103 @@ const TRENDING_WINDOW_DAYS = 2;
 const TRENDING_MIN_POPULARITY = 40; // filtre les tendances "confidentielles"
 const TRENDING_MAX_PER_RUN = 3; // évite une avalanche de notifs le même jour
 
-// Langue des notifications : celle enregistrée sur l'abonnement (voir
-// migration 0005), pas de contexte de requête disponible ici puisque ces
-// envois sont déclenchés par le cron, pas par une action de l'utilisateur.
-type PushLocale = "fr" | "en";
-
-function pushLocaleOf(subscription: SubscriptionRow): PushLocale {
-  return subscription.locale === "en" ? "en" : "fr";
-}
-
-const PUSH_CONTENT: Record<
-  PushLocale,
-  {
-    watchlistAvailable: (title: string) => { title: string; body: string };
-    favoriteGenreRelease: (title: string) => { title: string; body: string };
-    trendingRelease: (title: string) => { title: string; body: string };
-  }
-> = {
-  fr: {
-    watchlistAvailable: (title) => ({
-      title: "Bobine : nouvelle dispo 🎬",
-      body: `« ${title} » est maintenant disponible en streaming.`,
-    }),
-    favoriteGenreRelease: (title) => ({
-      title: "Bobine : nouveauté dans tes genres préférés 🍿",
-      body: `« ${title} » vient de sortir.`,
-    }),
-    trendingRelease: (title) => ({
-      title: "Bobine : ça sort en ce moment 🔥",
-      body: `« ${title} » fait parler de lui.`,
-    }),
-  },
-  en: {
-    watchlistAvailable: (title) => ({
-      title: "Bobine: new availability 🎬",
-      body: `"${title}" is now available to stream.`,
-    }),
-    favoriteGenreRelease: (title) => ({
-      title: "Bobine: new in your favorite genres 🍿",
-      body: `"${title}" was just released.`,
-    }),
-    trendingRelease: (title) => ({
-      title: "Bobine: trending right now 🔥",
-      body: `"${title}" is getting a lot of buzz.`,
-    }),
-  },
-};
-
-async function notify(
-  env: Env,
+// Déduplication des sorties déjà notifiées : au niveau du compte pour un
+// destinataire rattaché (un compte à plusieurs appareils abonnés ne doit pas
+// recevoir N fois la même notification in-app), au niveau de l'abonnement
+// sinon. L'historique par abonnement reste consulté pour un compte : un
+// appareil tout juste rattaché ne renotifie pas ce qu'il a déjà reçu.
+async function wasRecipientNotified(
   db: D1Database,
-  subscription: SubscriptionRow,
-  payload: { title: string; body: string; url: string }
-): Promise<void> {
-  try {
-    await sendPush(subscription, payload, env);
-  } catch (err) {
-    if (err instanceof ExpiredSubscriptionError) {
-      await deleteSubscriptionById(db, subscription.id);
-    } else {
-      logError(`Push échoué pour l'abonnement ${subscription.id} :`, err);
+  recipient: NotificationRecipient,
+  mediaType: string,
+  tmdbId: number,
+  reason: string
+): Promise<boolean> {
+  if (
+    recipient.userId !== null &&
+    (await wasUserAlreadyNotified(db, recipient.userId, mediaType, tmdbId, reason))
+  ) {
+    return true;
+  }
+  for (const subscription of recipient.subscriptions) {
+    if (await wasAlreadyNotified(db, subscription.id, mediaType, tmdbId, reason)) {
+      return true;
     }
   }
+  return false;
 }
 
-// 1. Titres de la watchlist qui viennent d'apparaître en streaming.
+async function markRecipientNotified(
+  db: D1Database,
+  recipient: NotificationRecipient,
+  mediaType: string,
+  tmdbId: number,
+  reason: string
+): Promise<void> {
+  if (recipient.userId !== null) {
+    await markUserNotified(db, recipient.userId, mediaType, tmdbId, reason);
+    return;
+  }
+  for (const subscription of recipient.subscriptions) {
+    await markNotified(db, subscription.id, mediaType, tmdbId, reason);
+  }
+}
+
+// 1. Titres de la watchlist qui viennent d'apparaître en streaming. La
+// watchlist et la référence des plateformes connues restent propres à chaque
+// abonnement ; seule la notification est dédupliquée pour le destinataire
+// (un même titre peut être dans la watchlist de plusieurs appareils).
 async function checkWatchlistAvailability(
   env: Env,
   db: D1Database,
-  subscription: SubscriptionRow,
+  recipient: NotificationRecipient,
   tmdbCache: TmdbRunCache
 ): Promise<void> {
-  const items = await getWatchlistForSubscription(db, subscription.id);
-  for (const item of items) {
-    let currentProviders: number[];
-    try {
-      currentProviders = await getFlatrateProviderIdsCached(
-        tmdbCache,
-        env,
+  const notifiedThisRun = new Set<string>();
+  for (const subscription of recipient.subscriptions) {
+    const items = await getWatchlistForSubscription(db, subscription.id);
+    for (const item of items) {
+      let currentProviders: number[];
+      try {
+        currentProviders = await getFlatrateProviderIdsCached(
+          tmdbCache,
+          env,
+          item.media_type,
+          item.tmdb_id
+        );
+      } catch (err) {
+        logError(`Providers TMDB indisponibles pour ${item.media_type}/${item.tmdb_id} :`, err);
+        continue;
+      }
+
+      const knownProviders: number[] | null = item.known_providers
+        ? JSON.parse(item.known_providers)
+        : null;
+      const newlyAvailable =
+        knownProviders !== null && currentProviders.some((id) => !knownProviders.includes(id));
+      const key = `${item.media_type}:${item.tmdb_id}`;
+
+      if (newlyAvailable && !notifiedThisRun.has(key)) {
+        notifiedThisRun.add(key);
+        await notifyUser(env, recipient, {
+          kind: "watchlistAvailable",
+          mediaTitle: item.title,
+          url: `/media/${item.media_type}/${item.tmdb_id}`,
+        });
+      }
+
+      // Sert de référence pour la prochaine vérification. La première fois
+      // (knownProviders === null), on se contente d'enregistrer sans notifier,
+      // sinon tout ce qui était déjà là au moment de l'ajout déclencherait une
+      // notification.
+      await updateKnownProviders(
+        db,
+        subscription.id,
         item.media_type,
-        item.tmdb_id
+        item.tmdb_id,
+        currentProviders
       );
-    } catch (err) {
-      logError(`Providers TMDB indisponibles pour ${item.media_type}/${item.tmdb_id} :`, err);
-      continue;
     }
-
-    const knownProviders: number[] | null = item.known_providers
-      ? JSON.parse(item.known_providers)
-      : null;
-    const newlyAvailable =
-      knownProviders !== null && currentProviders.some((id) => !knownProviders.includes(id));
-
-    if (newlyAvailable) {
-      await notify(env, db, subscription, {
-        ...PUSH_CONTENT[pushLocaleOf(subscription)].watchlistAvailable(item.title),
-        url: `/media/${item.media_type}/${item.tmdb_id}`,
-      });
-    }
-
-    // Sert de référence pour la prochaine vérification. La première fois
-    // (knownProviders === null), on se contente d'enregistrer sans notifier,
-    // sinon tout ce qui était déjà là au moment de l'ajout déclencherait une
-    // notification.
-    await updateKnownProviders(
-      db,
-      subscription.id,
-      item.media_type,
-      item.tmdb_id,
-      currentProviders
-    );
   }
 }
 
@@ -141,44 +129,45 @@ async function checkWatchlistAvailability(
 async function checkFavoriteGenreReleases(
   env: Env,
   db: D1Database,
-  subscription: SubscriptionRow,
+  recipient: NotificationRecipient,
   tmdbCache: TmdbRunCache
 ): Promise<void> {
-  const genres = await getGenrePreferencesForSubscription(db, subscription.id);
   const seen = new Set<string>();
 
-  for (const { media_type, genre_id } of genres) {
-    const key = `${media_type}:${genre_id}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-
-    let results: TmdbListItem[];
-    try {
-      results = await discoverRecentByGenreCached(
-        tmdbCache,
-        env,
-        media_type,
-        genre_id,
-        GENRE_WINDOW_DAYS
-      );
-    } catch (err) {
-      logError(`Discover TMDB échoué pour genre ${genre_id} (${media_type}) :`, err);
-      continue;
-    }
-
-    for (const item of results.slice(0, 5)) {
-      if (await wasAlreadyNotified(db, subscription.id, media_type, item.id, "genre")) {
+  for (const subscription of recipient.subscriptions) {
+    const genres = await getGenrePreferencesForSubscription(db, subscription.id);
+    for (const { media_type, genre_id } of genres) {
+      const key = `${media_type}:${genre_id}`;
+      if (seen.has(key)) {
         continue;
       }
-      await notify(env, db, subscription, {
-        ...PUSH_CONTENT[pushLocaleOf(subscription)].favoriteGenreRelease(
-          item.title || item.name || ""
-        ),
-        url: `/media/${media_type}/${item.id}`,
-      });
-      await markNotified(db, subscription.id, media_type, item.id, "genre");
+      seen.add(key);
+
+      let results: TmdbListItem[];
+      try {
+        results = await discoverRecentByGenreCached(
+          tmdbCache,
+          env,
+          media_type,
+          genre_id,
+          GENRE_WINDOW_DAYS
+        );
+      } catch (err) {
+        logError(`Discover TMDB échoué pour genre ${genre_id} (${media_type}) :`, err);
+        continue;
+      }
+
+      for (const item of results.slice(0, 5)) {
+        if (await wasRecipientNotified(db, recipient, media_type, item.id, "genre")) {
+          continue;
+        }
+        await notifyUser(env, recipient, {
+          kind: "favoriteGenreRelease",
+          mediaTitle: item.title || item.name || "",
+          url: `/media/${media_type}/${item.id}`,
+        });
+        await markRecipientNotified(db, recipient, media_type, item.id, "genre");
+      }
     }
   }
 }
@@ -187,7 +176,7 @@ async function checkFavoriteGenreReleases(
 async function checkTrendingReleases(
   env: Env,
   db: D1Database,
-  subscription: SubscriptionRow,
+  recipient: NotificationRecipient,
   trending: TmdbListItem[]
 ): Promise<void> {
   let sentThisRun = 0;
@@ -199,15 +188,16 @@ async function checkTrendingReleases(
     if (!mediaType) {
       continue;
     }
-    if (await wasAlreadyNotified(db, subscription.id, mediaType, item.id, "trending")) {
+    if (await wasRecipientNotified(db, recipient, mediaType, item.id, "trending")) {
       continue;
     }
 
-    await notify(env, db, subscription, {
-      ...PUSH_CONTENT[pushLocaleOf(subscription)].trendingRelease(item.title || item.name || ""),
+    await notifyUser(env, recipient, {
+      kind: "trendingRelease",
+      mediaTitle: item.title || item.name || "",
       url: `/media/${mediaType}/${item.id}`,
     });
-    await markNotified(db, subscription.id, mediaType, item.id, "trending");
+    await markRecipientNotified(db, recipient, mediaType, item.id, "trending");
     sentThisRun += 1;
   }
 }
@@ -219,6 +209,27 @@ function isRecentRelease(item: TmdbListItem): boolean {
   }
   const ageDays = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24);
   return ageDays >= 0 && ageDays <= TRENDING_WINDOW_DAYS;
+}
+
+// Regroupe les abonnements rattachés à un même compte en un seul
+// destinataire ; chaque abonnement anonyme reste un destinataire à part.
+export function groupRecipients(subscriptions: SubscriptionRow[]): NotificationRecipient[] {
+  const byUser = new Map<number, NotificationRecipient>();
+  const recipients: NotificationRecipient[] = [];
+  for (const subscription of subscriptions) {
+    if (subscription.user_id === null) {
+      recipients.push({ userId: null, subscriptions: [subscription] });
+      continue;
+    }
+    let recipient = byUser.get(subscription.user_id);
+    if (!recipient) {
+      recipient = { userId: subscription.user_id, subscriptions: [] };
+      byUser.set(subscription.user_id, recipient);
+      recipients.push(recipient);
+    }
+    recipient.subscriptions.push(subscription);
+  }
+  return recipients;
 }
 
 export async function runDailyCheck(env: Env): Promise<void> {
@@ -238,9 +249,9 @@ export async function runDailyCheck(env: Env): Promise<void> {
   }
 
   const tmdbCache = createTmdbRunCache();
-  for (const subscription of subscriptions) {
-    await checkWatchlistAvailability(env, db, subscription, tmdbCache);
-    await checkFavoriteGenreReleases(env, db, subscription, tmdbCache);
-    await checkTrendingReleases(env, db, subscription, trending);
+  for (const recipient of groupRecipients(subscriptions)) {
+    await checkWatchlistAvailability(env, db, recipient, tmdbCache);
+    await checkFavoriteGenreReleases(env, db, recipient, tmdbCache);
+    await checkTrendingReleases(env, db, recipient, trending);
   }
 }
