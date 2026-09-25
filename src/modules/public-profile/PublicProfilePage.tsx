@@ -333,7 +333,6 @@ export default function PublicProfilePage() {
                   ))}
                 </Dropdown>
               )}
-              <span className={styles.spacer} />
               <Dropdown
                 label={
                   <>
@@ -341,7 +340,6 @@ export default function PublicProfilePage() {
                     {t(SORTS.find((s) => s.id === sortMode)?.labelKey ?? "")}
                   </>
                 }
-                align="right"
               >
                 <div className={dropdownStyles.head}>{t("publicProfile.sortBy")}</div>
                 {SORTS.map((s) => (
