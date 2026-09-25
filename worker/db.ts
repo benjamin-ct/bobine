@@ -359,14 +359,35 @@ export async function getPublicProfileBySlug(
     getLibraryForUser(db, user.id),
     getCustomListsForUser(db, user.id),
   ]);
+  // Les items des listes perso sont des copies figées au moment de l'ajout :
+  // on y reporte la note portée par l'item « vu », comme sur une liste
+  // partagée seule (getPublicListBySlug).
+  const withRating = (item: LibraryItem): LibraryItem => ({
+    ...item,
+    rating: library.watched[`${item.mediaType}:${item.id}`]?.rating ?? null,
+  });
   return {
     displayName: user.display_name,
     watched: Object.values(library.watched).map(toPublicItem).sort(byMostRecent),
     watchlist: Object.values(library.watchlist).map(toPublicItem).sort(byMostRecent),
     customLists: Object.values(customLists)
       .sort((a, b) => a.createdAt - b.createdAt)
-      .map((list) => ({ ...list, items: list.items.map(toPublicItem) })),
+      .map((list) => ({ ...list, items: list.items.map(toPublicItem).map(withRating) })),
   };
+}
+
+// Email du compte derrière un profil partagé, uniquement pour résoudre sa
+// photo Gravatar côté serveur (voir handleGetPublicProfileAvatar) : il ne
+// quitte jamais le worker, pas même sous forme de hash.
+export async function getSharedProfileEmail(
+  db: D1Database,
+  shareSlug: string
+): Promise<string | null> {
+  const row = await db
+    .prepare("SELECT email FROM users WHERE share_slug = ?")
+    .bind(shareSlug)
+    .first<{ email: string }>();
+  return row?.email ?? null;
 }
 
 // Bibliothèque "vu / envie de voir" synchronisée par compte. -------------

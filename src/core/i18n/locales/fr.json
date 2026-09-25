@@ -476,7 +476,7 @@
       },
       "library": {
         "label": "Bibliothèque personnelle",
-        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu. Si vous activez le partage de votre profil (facultatif, désactivé par défaut), ces éléments ainsi que vos notes et votre nom affiché deviennent visibles en lecture seule par toute personne disposant du lien de partage — jamais votre adresse email. Vous pouvez désactiver ce partage à tout moment, ce qui rend le lien définitivement invalide."
+        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu. Si vous activez le partage de votre profil (facultatif, désactivé par défaut), ces éléments ainsi que vos notes, votre nom affiché et votre photo de profil Gravatar (si vous en avez une) deviennent visibles en lecture seule par toute personne disposant du lien de partage — jamais votre adresse email. Vous pouvez désactiver ce partage à tout moment, ce qui rend le lien définitivement invalide."
       },
       "preferences": {
         "label": "Préférences",
@@ -636,7 +636,7 @@
   },
   "profileShare": {
     "title": "Partager mon profil",
-    "hintOff": "Ton profil est privé. Active le partage pour obtenir un lien que tu pourras envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, tes titres vus, ton envie de voir, tes listes et tes notes (jamais ton adresse e-mail).",
+    "hintOff": "Ton profil est privé. Active le partage pour obtenir un lien que tu pourras envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, tes titres vus, ton envie de voir, tes listes, tes notes et ta photo de profil (jamais ton adresse e-mail).",
     "hintOn": "Ton profil est visible en lecture seule par toute personne qui a ce lien. Désactiver le partage rend le lien définitivement invalide.",
     "linkLabel": "Lien de partage du profil",
     "share": "Partager le lien",
@@ -653,6 +653,15 @@
     "anonymousName": "Un·e cinéphile",
     "lead": "{{watched}} titre(s) vu(s) · {{watchlist}} en envie de voir · {{lists}} liste(s)",
     "recent": "Vus récemment",
+    "top": "Top {{count}}",
+    "sortLabel": "Trier",
+    "sortBy": "Trier par",
+    "sortRecent": "Date de visionnage",
+    "sortRating": "Note",
+    "sortTitle": "A → Z",
+    "sortYear": "Année de sortie",
+    "genreLabel": "Genre",
+    "genreAll": "Tous les genres",
     "rating": "★ {{rating}}/10",
     "emptySeen": "Aucun titre vu pour l'instant.",
     "emptyWant": "Aucun titre en envie de voir.",

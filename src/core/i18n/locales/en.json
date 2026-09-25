@@ -476,7 +476,7 @@
       },
       "library": {
         "label": "Personal library",
-        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", your custom lists, and their content. If you turn on profile sharing (optional, off by default), these items along with your ratings and display name become visible read-only to anyone who has the share link — never your email address. You can turn sharing off at any time, which permanently invalidates the link."
+        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", your custom lists, and their content. If you turn on profile sharing (optional, off by default), these items along with your ratings, display name and Gravatar profile picture (if you have one) become visible read-only to anyone who has the share link — never your email address. You can turn sharing off at any time, which permanently invalidates the link."
       },
       "preferences": {
         "label": "Preferences",
@@ -636,7 +636,7 @@
   },
   "profileShare": {
     "title": "Share my profile",
-    "hintOff": "Your profile is private. Turn on sharing to get a link you can send: anyone with it will be able to see, without changing anything, what you've watched, your watchlist, your lists and your ratings (never your email address).",
+    "hintOff": "Your profile is private. Turn on sharing to get a link you can send: anyone with it will be able to see, without changing anything, what you've watched, your watchlist, your lists, your ratings and your profile picture (never your email address).",
     "hintOn": "Your profile is visible read-only to anyone with this link. Turning sharing off permanently invalidates the link.",
     "linkLabel": "Profile share link",
     "share": "Share link",
@@ -653,6 +653,15 @@
     "anonymousName": "A film lover",
     "lead": "{{watched}} watched · {{watchlist}} on the watchlist · {{lists}} list(s)",
     "recent": "Recently watched",
+    "top": "Top {{count}}",
+    "sortLabel": "Sort",
+    "sortBy": "Sort by",
+    "sortRecent": "Date watched",
+    "sortRating": "Rating",
+    "sortTitle": "A → Z",
+    "sortYear": "Release year",
+    "genreLabel": "Genre",
+    "genreAll": "All genres",
     "rating": "★ {{rating}}/10",
     "emptySeen": "Nothing watched yet.",
     "emptyWant": "Nothing on the watchlist.",

@@ -20,6 +20,7 @@ import {
   updateDisplayName,
   setShareSlug,
   getPublicProfileBySlug,
+  getSharedProfileEmail,
   getExcludedGenresForUser,
   replaceExcludedGenresForUser,
   getFavoriteProvidersForUser,
@@ -743,6 +744,40 @@ async function handleGetPublicProfile(request: Request, env: Env, slug: string):
     return json({ error: "Profil introuvable ou privé." }, 404);
   }
   return json(profile);
+}
+
+// Photo de profil d'un profil partagé : Gravatar est résolu ici plutôt que
+// dans le navigateur, car l'URL Gravatar contient le MD5 de l'email — un
+// hash qui se retrouve facilement par dictionnaire et révélerait l'adresse
+// que la page publique promet de ne jamais exposer. 404 si le profil est
+// privé ou si le compte n'a pas de Gravatar (la page affiche alors ses
+// initiales).
+async function handleGetPublicProfileAvatar(
+  request: Request,
+  env: Env,
+  slug: string
+): Promise<Response> {
+  const ip = getClientIp(request);
+  if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  const email = SHARE_SLUG_PATTERN.test(slug) ? await getSharedProfileEmail(env.DB, slug) : null;
+  if (!email) {
+    return json({ error: "Profil introuvable ou privé." }, 404);
+  }
+  const digest = await crypto.subtle.digest(
+    "MD5",
+    new TextEncoder().encode(email.trim().toLowerCase())
+  );
+  const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const upstream = await fetch(`https://www.gravatar.com/avatar/${hash}?s=192&d=404`);
+  const contentType = upstream.headers.get("content-type") || "";
+  if (!upstream.ok || !contentType.startsWith("image/")) {
+    return new Response(null, { status: 404, headers: { "cache-control": "public, max-age=600" } });
+  }
+  return new Response(upstream.body, {
+    headers: { "content-type": contentType, "cache-control": "public, max-age=3600" },
+  });
 }
 
 async function handleLogout(request: Request, env: Env): Promise<Response> {
@@ -1526,6 +1561,10 @@ async function routeRequest(
 
   if (url.pathname === "/api/account/share" && request.method === "PUT") {
     return handleUpdateProfileShare(request, env);
+  }
+  const avatarMatch = url.pathname.match(/^\/api\/public-profile\/([^/]+)\/avatar$/);
+  if (avatarMatch && request.method === "GET") {
+    return handleGetPublicProfileAvatar(request, env, avatarMatch[1]);
   }
   if (url.pathname.startsWith("/api/public-profile/") && request.method === "GET") {
     return handleGetPublicProfile(request, env, url.pathname.slice("/api/public-profile/".length));
