@@ -159,6 +159,16 @@ export default function DiscoverPage() {
     advancedKey === JSON.stringify(EMPTY_ADVANCED_FILTERS);
   const personalizedModeActive = authStatus === "authenticated" && isDefaultFilters;
   const suggestionsMixed = personalizedModeActive && recStatus === "success";
+  // Tant qu'on ne sait pas encore si la grille sera personnalisée (session en
+  // cours de vérification, ou recommandations en cours de chargement), on
+  // garde le squelette : sinon la grille discover() classique, souvent
+  // chargée plus vite, s'affiche un instant avant d'être remplacée
+  // (clignotement signalé en review).
+  const suggestionsPending =
+    isDefaultFilters &&
+    (authStatus === "loading" ||
+      (authStatus === "authenticated" && recStatus !== "success" && recStatus !== "error"));
+  const showClassicGrid = !suggestionsMixed && !suggestionsPending;
 
   // "Reprendre" : séries entamées avec au moins un épisode non vu déjà
   // sorti (indépendant du filtre Films/Séries de la grille de suggestions
@@ -585,22 +595,22 @@ export default function DiscoverPage() {
 
       <AdvancedFilters filters={advanced} setFilters={setAdvanced} />
 
-      {!suggestionsMixed && status === "loading" && (
+      {(suggestionsPending || (showClassicGrid && status === "loading")) && (
         <div className={gridStyles.grid}>
           {Array.from({ length: GRID_SKELETON_COUNT }, (_, i) => (
             <MediaCardSkeleton key={i} />
           ))}
         </div>
       )}
-      {!suggestionsMixed && status === "error" && <ErrorMessage error={error} />}
-      {!suggestionsMixed && status === "invalid" && advancedError && (
+      {showClassicGrid && status === "error" && <ErrorMessage error={error} />}
+      {showClassicGrid && status === "invalid" && advancedError && (
         <EmptyState label={t(advancedError)} />
       )}
-      {!suggestionsMixed && status === "success" && results.length === 0 && (
+      {showClassicGrid && status === "success" && results.length === 0 && (
         <EmptyState label={t("discoverPage.emptyState")} />
       )}
 
-      {!suggestionsMixed && status === "success" && results.length > 0 && (
+      {showClassicGrid && status === "success" && results.length > 0 && (
         <>
           <div className={gridStyles.grid}>
             {results.map((item) => (
