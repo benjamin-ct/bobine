@@ -5,6 +5,7 @@ import "./styles/global.css";
 import App from "./App.tsx";
 import { AuthProvider } from "./core/context/AuthContext.tsx";
 import { LibraryProvider } from "./core/context/LibraryContext.tsx";
+import { MembersOnlyProvider } from "./core/context/MembersOnlyContext.tsx";
 import { RegionProvider, loadStoredRegion } from "./core/context/RegionContext.tsx";
 import { RegionAccountSync } from "./core/context/RegionAccountSync.tsx";
 import { DEFAULT_REGION } from "./core/api/releaseBadge.ts";
@@ -91,9 +92,11 @@ createRoot(rootElement).render(
                   <FavoriteProvidersProvider>
                     <ExcludedGenresProvider>
                       <ExcludedTitlesProvider>
-                        <LibraryProvider>
-                          <App />
-                        </LibraryProvider>
+                        <MembersOnlyProvider>
+                          <LibraryProvider>
+                            <App />
+                          </LibraryProvider>
+                        </MembersOnlyProvider>
                       </ExcludedTitlesProvider>
                     </ExcludedGenresProvider>
                   </FavoriteProvidersProvider>

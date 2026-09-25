@@ -92,6 +92,10 @@
     "sending": "Envoi…",
     "submitEmail": "Recevoir mon lien de connexion"
   },
+  "membersOnly": {
+    "title": "Action réservée aux membres connectés",
+    "text": "Connecte-toi pour enregistrer tes films et séries vus, ta liste d'envies, tes notes et tes listes perso. Pas de mot de passe : on t'envoie un lien de connexion par email."
+  },
   "trailer": {
     "button": "Bande-annonce",
     "iframeTitle": "Bande-annonce"
