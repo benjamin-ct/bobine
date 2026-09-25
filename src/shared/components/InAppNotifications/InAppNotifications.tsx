@@ -6,7 +6,7 @@ import styles from "./InAppNotifications.module.css";
 
 const AUTO_DISMISS_MS = 10_000;
 const MAX_VISIBLE = 3;
-const KINDS = ["watchlistAvailable", "favoriteGenreRelease", "trendingRelease"];
+const KINDS = ["watchlistAvailable", "favoriteGenreRelease", "trendingRelease", "test"];
 
 interface Toast extends InAppNotification {
   id: number;

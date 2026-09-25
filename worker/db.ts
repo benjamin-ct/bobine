@@ -253,6 +253,17 @@ export async function getAllSubscriptions(db: D1Database): Promise<SubscriptionR
   return results;
 }
 
+export async function getSubscriptionsForUser(
+  db: D1Database,
+  userId: number
+): Promise<SubscriptionRow[]> {
+  const { results } = await db
+    .prepare("SELECT * FROM subscriptions WHERE user_id = ?")
+    .bind(userId)
+    .all<SubscriptionRow>();
+  return results;
+}
+
 export async function getWatchlistForSubscription(
   db: D1Database,
   subscriptionId: number

@@ -376,7 +376,16 @@
     "enabledHint": "You'll be notified when a title from your \"Want to watch\" list becomes available to stream, for new releases in your favorite genres, and for major current releases.",
     "enabling": "Enabling…",
     "enableButton": "🔕 Enable notifications",
-    "disabledHint": "Get notified about new releases even without the app open."
+    "disabledHint": "Get notified about new releases even without the app open.",
+    "testTitle": "Test notifications",
+    "testNow": "Send now",
+    "testDelayed": "Send in 15 s",
+    "testHint": "\"Now\": the app is open, so the notification shows up as an in-app toast. \"In 15 s\": close the app (or lock your phone) on all your devices, and it arrives as a push notification.",
+    "testSending": "Sending…",
+    "testSentInApp": "Sent in-app: a device on your account has the app open.",
+    "testSentPush": "Sent via push: no device on your account has the app open.",
+    "testScheduled": "Sending in {{seconds}} s: close the app now.",
+    "testFailed": "Could not send ({{status}})."
   },
   "inAppNotifications": {
     "dismiss": "Dismiss notification",
@@ -391,6 +400,10 @@
     "trendingRelease": {
       "title": "Trending right now 🔥",
       "body": "\"{{title}}\" is getting a lot of buzz."
+    },
+    "test": {
+      "title": "Test notification 🔔",
+      "body": "Received in-app: a device on your account has the app open."
     }
   },
   "legal": {

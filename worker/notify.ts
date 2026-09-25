@@ -18,7 +18,9 @@ import { logError } from "./logger.ts";
 import type { Env, SubscriptionRow } from "./types.ts";
 
 // Doit rester aligné avec NotificationKind (src/core/sync/liveSync.ts).
-export type NotificationKind = "watchlistAvailable" | "favoriteGenreRelease" | "trendingRelease";
+// "test" : envoyée à la demande depuis les réglages (POST /api/notifications/test).
+export type NotificationKind =
+  "watchlistAvailable" | "favoriteGenreRelease" | "trendingRelease" | "test";
 
 export interface AppNotification {
   kind: NotificationKind;
@@ -57,6 +59,10 @@ const PUSH_CONTENT: Record<
       title: "Bobine : ça sort en ce moment 🔥",
       body: `« ${title} » fait parler de lui.`,
     }),
+    test: () => ({
+      title: "Bobine : notification de test 🔔",
+      body: "Reçue en Web Push : aucun appareil de ton compte n'avait l'app ouverte.",
+    }),
   },
   en: {
     watchlistAvailable: (title) => ({
@@ -70,6 +76,10 @@ const PUSH_CONTENT: Record<
     trendingRelease: (title) => ({
       title: "Bobine: trending right now 🔥",
       body: `"${title}" is getting a lot of buzz.`,
+    }),
+    test: () => ({
+      title: "Bobine: test notification 🔔",
+      body: "Received via Web Push: no device on your account had the app open.",
     }),
   },
 };

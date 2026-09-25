@@ -24,8 +24,10 @@ import {
   setRegionForUser,
   updateSubscriptionLocale,
   linkSubscriptionToAccount,
+  getSubscriptionsForUser,
   type SubscriptionAccount,
 } from "./db.ts";
+import { notifyUser } from "./notify.ts";
 import { runDailyCheck } from "./scheduled.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
 import {
@@ -399,6 +401,63 @@ async function handleUpdateSubscriptionLocale(request: Request, env: Env): Promi
     return json({ error: "Abonnement introuvable." }, 404);
   }
   return json({ ok: true });
+}
+
+// Notification de test pour le compte connecté, envoyée depuis les réglages
+// via notifyUser : même choix de canal que le cron (in-app si un appareil du
+// compte a l'app ouverte, sinon Web Push), pour le vérifier sans attendre
+// une vraie sortie. `delaySeconds` laisse le temps de fermer l'app pour
+// tester le repli Web Push (waitUntil garde le Worker en vie jusqu'à 30 s
+// après la réponse). Limité au compte de la session, donc sans clé de
+// debug, mais rate-limité.
+const TEST_NOTIFICATION_MAX_DELAY_S = 20;
+
+async function handleTestAccountNotification(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  if (
+    !(await checkRateLimit(env.DB, `test-notification:user:${user.id}`, {
+      limit: 10,
+      windowMs: 10 * 60_000,
+    }))
+  ) {
+    return RATE_LIMIT_RESPONSE();
+  }
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = await request.json();
+  } catch {
+    // Corps absent : envoi immédiat.
+  }
+  const delaySeconds =
+    typeof body.delaySeconds === "number" && Number.isFinite(body.delaySeconds)
+      ? Math.min(Math.max(Math.round(body.delaySeconds), 0), TEST_NOTIFICATION_MAX_DELAY_S)
+      : 0;
+
+  const subscriptions = await getSubscriptionsForUser(env.DB, user.id);
+  if (subscriptions.length === 0) {
+    return json({ error: "Aucun appareil de ton compte n'a activé les notifications." }, 404);
+  }
+
+  const send = () =>
+    notifyUser(
+      env,
+      { userId: user.id, subscriptions },
+      { kind: "test", mediaTitle: "", url: "/profil" }
+    );
+
+  if (delaySeconds > 0) {
+    ctx.waitUntil(new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000)).then(send));
+    return json({ ok: true, scheduledInSeconds: delaySeconds });
+  }
+  return json({ ok: true, channel: await send() });
 }
 
 // Déclenchement manuel de la vérification quotidienne, pour diagnostiquer
@@ -1305,6 +1364,10 @@ async function routeRequest(
 
   if (url.pathname === "/api/subscribe/account" && request.method === "POST") {
     return handleLinkSubscriptionAccount(request, env);
+  }
+
+  if (url.pathname === "/api/notifications/test" && request.method === "POST") {
+    return handleTestAccountNotification(request, env, ctx);
   }
 
   if (url.pathname === "/api/run-check" && request.method === "POST") {
