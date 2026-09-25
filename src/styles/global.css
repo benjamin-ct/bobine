@@ -22,6 +22,20 @@ body {
   overflow-x: hidden;
 }
 
+/* `clip` plutôt que `hidden` quand il est supporté : `hidden` sur html ET
+   body fait de <body> un conteneur de défilement qui ne défile jamais, et le
+   header sticky (NavBar.module.css) s'y accroche au lieu du viewport — il
+   part donc avec la page. En PWA installée iOS (barre de statut
+   "black-translucent", voir index.html), le contenu passait alors sous la
+   barre de statut, où iOS le floute : bande floue en haut de toute l'appli.
+   `clip` coupe pareil le débordement sans créer de conteneur de défilement. */
+@supports (overflow-x: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
 body {
   background-color: var(--bg);
   color: var(--fg);
