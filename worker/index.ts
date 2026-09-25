@@ -658,9 +658,11 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
   const user = await findOrCreateUser(env.DB, email);
   const sessionToken = await createSession(env.DB, user.id);
 
-  return json({ ok: true, email: user.email }, 200, {
-    "set-cookie": [sessionCookieHeader(request, sessionToken), authHintCookieHeader(request)],
-  });
+  return json(
+    { ok: true, email: user.email, displayName: user.displayName, shareSlug: user.shareSlug },
+    200,
+    { "set-cookie": [sessionCookieHeader(request, sessionToken), authHintCookieHeader(request)] }
+  );
 }
 
 async function handleMe(request: Request, env: Env): Promise<Response> {

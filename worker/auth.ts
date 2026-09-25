@@ -115,22 +115,31 @@ export async function consumeMagicLinkByCode(
   return row.email;
 }
 
+// Renvoie aussi le nom affiché et le lien de partage : le client les applique
+// dès la connexion (voir verifyWith dans AuthContext), sans quoi un compte qui
+// se reconnecte apparaît sans nom et avec un profil "privé" alors qu'il est
+// toujours partagé.
 export async function findOrCreateUser(
   db: D1Database,
   email: string
-): Promise<{ id: number; email: string }> {
+): Promise<{ id: number; email: string; displayName: string | null; shareSlug: string | null }> {
   const existing = await db
-    .prepare("SELECT id, email FROM users WHERE email = ?")
+    .prepare("SELECT id, email, display_name, share_slug FROM users WHERE email = ?")
     .bind(email)
-    .first<UserRow>();
+    .first<Pick<UserRow, "id" | "email" | "display_name" | "share_slug">>();
   if (existing) {
-    return existing;
+    return {
+      id: existing.id,
+      email: existing.email,
+      displayName: existing.display_name,
+      shareSlug: existing.share_slug,
+    };
   }
   const result = await db
     .prepare("INSERT INTO users (email, created_at) VALUES (?, ?)")
     .bind(email, Date.now())
     .run();
-  return { id: Number(result.meta.last_row_id), email };
+  return { id: Number(result.meta.last_row_id), email, displayName: null, shareSlug: null };
 }
 
 export async function createSession(db: D1Database, userId: number): Promise<string> {

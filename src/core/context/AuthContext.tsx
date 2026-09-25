@@ -174,6 +174,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       pinnedRef.current = true;
       setEmail(data.email);
+      setDisplayName(data.displayName ?? null);
+      setShareSlug(data.shareSlug ?? null);
       setStatus("authenticated");
       return data;
     },
