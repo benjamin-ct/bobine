@@ -33,3 +33,6 @@ export { default as ContinueWatchingRow } from "./ContinueWatchingRow/ContinueWa
 export { default as FeaturedMediaRow } from "./FeaturedMediaRow/FeaturedMediaRow.tsx";
 export type { FeaturedMediaEntry } from "./FeaturedMediaRow/FeaturedMediaRow.tsx";
 export { default as Disclosure } from "./Disclosure/Disclosure.tsx";
+export { default as FollowButton } from "./FollowButton/FollowButton.tsx";
+export { default as FollowStats } from "./FollowStats/FollowStats.tsx";
+export { default as ProfileList } from "./ProfileList/ProfileList.tsx";

@@ -1,6 +1,7 @@
 // Petites fonctions d'accès à D1. Pas d'ORM : le schéma est simple (voir
 // migrations/) et les requêtes préparées suffisent largement.
 import { decodeHtmlEntities } from "./validate.ts";
+import { getFollowCounts, isFollowing } from "./follows.ts";
 import type {
   CleanCustomListMap,
   CleanGenrePref,
@@ -343,10 +344,12 @@ function byMostRecent(a: LibraryItem, b: LibraryItem): number {
 
 // Profil partagé en lecture seule. Le compte n'est résolu QUE par le slug
 // aléatoire (jamais par un id ou un nom affiché) : un profil privé
-// (share_slug NULL) est donc introuvable par construction.
+// (share_slug NULL) est donc introuvable par construction. `viewerId` :
+// compte connecté qui consulte la page (bouton Suivre/Suivi), null sinon.
 export async function getPublicProfileBySlug(
   db: D1Database,
-  shareSlug: string
+  shareSlug: string,
+  viewerId: number | null
 ): Promise<PublicProfile | null> {
   const user = await db
     .prepare("SELECT id, display_name FROM users WHERE share_slug = ?")
@@ -355,9 +358,11 @@ export async function getPublicProfileBySlug(
   if (!user) {
     return null;
   }
-  const [library, customLists] = await Promise.all([
+  const [library, customLists, counts, viewerFollows] = await Promise.all([
     getLibraryForUser(db, user.id),
     getCustomListsForUser(db, user.id),
+    getFollowCounts(db, user.id),
+    viewerId !== null && viewerId !== user.id ? isFollowing(db, viewerId, user.id) : false,
   ]);
   return {
     displayName: user.display_name,
@@ -366,6 +371,9 @@ export async function getPublicProfileBySlug(
     customLists: Object.values(customLists)
       .sort((a, b) => a.createdAt - b.createdAt)
       .map((list) => ({ ...list, items: list.items.map(toPublicItem) })),
+    ...counts,
+    viewerFollows,
+    isSelf: viewerId === user.id,
   };
 }
 

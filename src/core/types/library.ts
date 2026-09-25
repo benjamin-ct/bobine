@@ -59,6 +59,12 @@ export interface PublicProfile {
   watched: LibraryItem[];
   watchlist: LibraryItem[];
   customLists: CustomList[];
+  /** Compteurs d'abonnés / d'abonnements (voir core/types/social.ts). */
+  followers: number;
+  following: number;
+  /** Relation avec le visiteur, s'il est connecté (sinon `false`). */
+  viewerFollows: boolean;
+  isSelf: boolean;
 }
 
 /** Liste perso partagée en lecture seule (GET /api/public-list/:slug) : jamais

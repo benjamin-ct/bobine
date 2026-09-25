@@ -39,7 +39,8 @@
     "recommendations": "Recommandations",
     "tabAccount": "Compte",
     "tabPreferences": "Préférences",
-    "tabMyList": "Ma liste"
+    "tabMyList": "Ma liste",
+    "tabCommunity": "Communauté"
   },
   "providerBadges": {
     "unavailable": "Non disponible en streaming en {{region}} pour le moment.",
@@ -414,7 +415,12 @@
     "test": {
       "title": "Notification de test 🔔",
       "body": "Reçue dans l'app : un appareil de ton compte a l'app ouverte."
-    }
+    },
+    "newFollower": {
+      "title": "Nouvel abonné 👋",
+      "body": "{{title}} a commencé à te suivre."
+    },
+    "newFollowerFallback": "Quelqu'un"
   },
   "legal": {
     "eyebrow": "Informations légales",
@@ -493,6 +499,10 @@
       "sharedLists": {
         "label": "Listes partagées",
         "text": " (si vous choisissez de partager une liste personnalisée) : son nom, son contenu, vos notes sur les titres qu'elle contient et votre nom affiché deviennent visibles en lecture seule par toute personne disposant du lien — jamais votre adresse email. Vous pouvez arrêter ce partage à tout moment depuis la liste, ce qui rend le lien définitivement invalide."
+      },
+      "follows": {
+        "label": "Abonnements",
+        "text": " : quand vous suivez un profil, nous enregistrons ce lien d'abonnement et sa date. Il sert à afficher les compteurs et listes d'abonnés/abonnements, votre fil d'activité et à prévenir la personne suivie. Si votre profil est partagé, votre nom affiché et le lien vers votre profil apparaissent dans ces listes ; sinon, vous y figurez uniquement comme « profil privé ». Un profil partagé peut aussi être trouvé par son nom affiché dans la recherche de profils des membres connectés. Vous pouvez ne plus suivre un profil à tout moment."
       }
     },
     "why": {
@@ -636,8 +646,8 @@
   },
   "profileShare": {
     "title": "Partager mon profil",
-    "hintOff": "Ton profil est privé. Active le partage pour obtenir un lien que tu pourras envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, tes titres vus, ton envie de voir, tes listes et tes notes (jamais ton adresse e-mail).",
-    "hintOn": "Ton profil est visible en lecture seule par toute personne qui a ce lien. Désactiver le partage rend le lien définitivement invalide.",
+    "hintOff": "Ton profil est privé. Active le partage pour obtenir un lien que tu pourras envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, tes titres vus, ton envie de voir, tes listes et tes notes (jamais ton adresse e-mail). Un profil partagé peut aussi être trouvé par ton nom affiché et suivi par les autres membres.",
+    "hintOn": "Ton profil est visible en lecture seule par toute personne qui a ce lien, et les membres connectés peuvent le trouver par ton nom affiché et le suivre. Désactiver le partage rend le lien définitivement invalide.",
     "linkLabel": "Lien de partage du profil",
     "share": "Partager le lien",
     "preview": "Voir mon profil public",
@@ -682,5 +692,34 @@
     "loadError": "Impossible de charger cette liste.",
     "notFoundTitle": "Liste introuvable",
     "notFoundLead": "Ce lien n'existe pas ou n'est plus actif : la liste a peut-être été supprimée, ou son propriétaire a arrêté de la partager."
+  },
+  "follow": {
+    "follow": "Suivre",
+    "following": "Suivi",
+    "unfollow": "Ne plus suivre ?",
+    "error": "Impossible de modifier l'abonnement.",
+    "followersCount_one": "{{count}} abonné",
+    "followersCount_other": "{{count}} abonnés",
+    "followingCount_one": "{{count}} abonnement",
+    "followingCount_other": "{{count}} abonnements",
+    "followersTitle": "Abonnés",
+    "followingTitle": "Abonnements",
+    "noFollowers": "Personne ne suit encore ce profil.",
+    "noFollowing": "Aucun abonnement pour l'instant.",
+    "privateProfile": "Profil privé",
+    "you": "(toi)",
+    "ownProfile": "C'est ton profil public."
+  },
+  "community": {
+    "myNetwork": "Mes abonnés et abonnements",
+    "privateHint": "Ton profil est privé : tu peux suivre d'autres membres, mais personne ne peut te trouver ni te suivre tant que tu n'as pas activé le partage de ton profil (onglet Compte).",
+    "searchLabel": "Trouver des profils",
+    "searchPlaceholder": "Rechercher par nom affiché…",
+    "noResults": "Aucun profil partagé ne correspond.",
+    "feedTitle": "Fil d'activité",
+    "feedEmpty": "Rien pour l'instant : suis des profils pour voir ici ce qu'ils regardent.",
+    "feedWatched": "a vu",
+    "feedRated": "a noté {{rating}}/10",
+    "feedWantToSee": "veut voir"
   }
 }

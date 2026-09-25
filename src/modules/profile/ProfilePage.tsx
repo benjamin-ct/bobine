@@ -5,6 +5,7 @@ import { useAuth } from "../../core/context/AuthContext.tsx";
 import MyListContent from "../my-list/index.ts";
 import AccountCard from "./components/AccountCard.tsx";
 import ProfileShareCard from "./components/ProfileShareCard.tsx";
+import CommunityPanel from "./components/CommunityPanel.tsx";
 import NotificationSettings from "./components/NotificationSettings.tsx";
 import FavoriteProvidersSettings from "./components/FavoriteProvidersSettings.tsx";
 import ExcludedGenresSettings from "./components/ExcludedGenresSettings.tsx";
@@ -14,8 +15,8 @@ import LanguageSettings from "./components/LanguageSettings.tsx";
 import ThemeSettings from "./components/ThemeSettings.tsx";
 import styles from "./ProfilePage.module.css";
 
-type Tab = "compte" | "preferences" | "ma-liste";
-const TABS: Tab[] = ["compte", "preferences", "ma-liste"];
+type Tab = "compte" | "preferences" | "ma-liste" | "communaute";
+const TABS: Tab[] = ["compte", "preferences", "ma-liste", "communaute"];
 
 // NOUVEAU (repris de la maquette HTML) : page Profil séparée de Ma liste —
 // le Projet A regroupait avant migration les réglages (notifications,
@@ -73,6 +74,13 @@ export default function ProfilePage() {
         >
           {t("profile.tabMyList")}
         </button>
+        <button
+          type="button"
+          className={`${styles.tab} ${tab === "communaute" ? styles.tabActive : ""}`}
+          onClick={() => selectTab("communaute")}
+        >
+          {t("profile.tabCommunity")}
+        </button>
       </div>
 
       {tab === "compte" && (
@@ -112,6 +120,12 @@ export default function ProfilePage() {
             <RegionSettings />
             <ThemeSettings />
           </div>
+        </section>
+      )}
+
+      {tab === "communaute" && (
+        <section className={styles.section}>
+          <CommunityPanel />
         </section>
       )}
 

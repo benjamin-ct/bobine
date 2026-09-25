@@ -19,8 +19,11 @@ import type { Env, SubscriptionRow } from "./types.ts";
 
 // Doit rester aligné avec NotificationKind (src/core/sync/liveSync.ts).
 // "test" : envoyée à la demande depuis les réglages (POST /api/notifications/test).
+// "newFollower" : quelqu'un vient de suivre le profil — `mediaTitle` porte
+// alors le nom affiché de l'abonné (vide s'il n'en a pas ou si son profil
+// est privé).
 export type NotificationKind =
-  "watchlistAvailable" | "favoriteGenreRelease" | "trendingRelease" | "test";
+  "watchlistAvailable" | "favoriteGenreRelease" | "trendingRelease" | "test" | "newFollower";
 
 export interface AppNotification {
   kind: NotificationKind;
@@ -32,6 +35,10 @@ export interface AppNotification {
 export interface NotificationRecipient {
   userId: number | null;
   subscriptions: SubscriptionRow[];
+  // Hôte de la requête à l'origine de la notification (ex. un abonnement à
+  // un profil) : permet de livrer in-app même à un compte qui n'a jamais
+  // activé les notifications push sur un de ses appareils.
+  syncHost?: string;
 }
 
 export type NotificationChannel = "in-app" | "push";
@@ -63,6 +70,10 @@ const PUSH_CONTENT: Record<
       title: "Bobine : notification de test 🔔",
       body: "Reçue en Web Push : aucun appareil de ton compte n'avait l'app ouverte.",
     }),
+    newFollower: (name) => ({
+      title: "Bobine : nouvel abonné 👋",
+      body: `${name || "Quelqu'un"} a commencé à te suivre.`,
+    }),
   },
   en: {
     watchlistAvailable: (title) => ({
@@ -81,18 +92,25 @@ const PUSH_CONTENT: Record<
       title: "Bobine: test notification 🔔",
       body: "Received via Web Push: no device on your account had the app open.",
     }),
+    newFollower: (name) => ({
+      title: "Bobine: new follower 👋",
+      body: `${name || "Someone"} started following you.`,
+    }),
   },
 };
 
 async function deliverInApp(
   userId: number,
   subscriptions: SubscriptionRow[],
-  notification: AppNotification
+  notification: AppNotification,
+  syncHost: string | undefined
 ): Promise<boolean> {
   // Un hub par (hôte, compte) : on vise chaque hôte depuis lequel un
   // appareil du compte s'est abonné (en pratique, un seul).
   const hosts = new Set(
-    subscriptions.map((s) => s.sync_host).filter((host): host is string => Boolean(host))
+    [...subscriptions.map((s) => s.sync_host), syncHost].filter((host): host is string =>
+      Boolean(host)
+    )
   );
   let delivered = 0;
   for (const host of hosts) {
@@ -134,7 +152,12 @@ export async function notifyUser(
 ): Promise<NotificationChannel> {
   if (
     recipient.userId !== null &&
-    (await deliverInApp(recipient.userId, recipient.subscriptions, notification))
+    (await deliverInApp(
+      recipient.userId,
+      recipient.subscriptions,
+      notification,
+      recipient.syncHost
+    ))
   ) {
     return "in-app";
   }
