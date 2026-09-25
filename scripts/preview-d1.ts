@@ -10,7 +10,7 @@
 // demandé sur le ticket.
 //
 // `provision` génère un fichier de config wrangler dérivé de wrangler.jsonc
-// (mêmes assets/vars, binding D1 "DB" pointant vers la base de preview,
+// (mêmes assets, binding D1 "DB" pointant vers la base de preview,
 // Durable Objects propres à la preview — voir writePreviewConfig) : c'est ce
 // fichier que le workflow passe ensuite à `wrangler preview --config` pour
 // déployer la preview branchée sur sa propre base.
@@ -99,7 +99,16 @@ function writePreviewConfig(dbName: string, uuid: string): void {
   // propres instances, isolées de la prod et des autres previews (voir
   // worker/sync.ts, hubFor). "exports" et "migrations" s'excluant
   // mutuellement, "exports" est retiré de la config générée.
-  const { exports: workerExports, ...rest } = rawConfig;
+  //
+  // Variables ("vars") : volontairement PAS reprises de wrangler.jsonc. Les
+  // previews tirent toutes leurs variables ET leurs secrets de la "Preview
+  // base config" du Worker (dashboard Cloudflare, ou `wrangler preview
+  // base-config`), qui a ses propres clés d'API : y recopier les vars de
+  // prod (clé VAPID publique, clé reCAPTCHA de site, token Web Analytics)
+  // les écraserait par celles de la prod, incohérentes avec les secrets de
+  // preview (ex. clé VAPID publique de prod + clé privée de preview = push
+  // cassé) et mêlant le trafic des previews aux statistiques de prod.
+  const { exports: workerExports, vars: _prodVars, ...rest } = rawConfig;
   const durableObjectClasses = Object.entries(workerExports ?? {})
     .filter(([, entry]) => entry.type === "durable-object")
     .map(([className]) => className);
@@ -111,7 +120,6 @@ function writePreviewConfig(dbName: string, uuid: string): void {
         ? [{ tag: "preview-v1", new_sqlite_classes: durableObjectClasses }]
         : [],
     previews: {
-      vars: rawConfig.vars ?? {},
       d1_databases: [previewDatabase],
       durable_objects: {
         bindings: durableObjectClasses.map((className) => ({
