@@ -17,6 +17,9 @@ export class ExpiredSubscriptionError extends Error {}
 // header do not correspond to the credentials used to create the subscriptions ».
 const VAPID_MISMATCH_PATTERN = /VAPID credentials.*do not correspond/i;
 
+// Équivalent côté Apple (web.push.apple.com) : 400 {"reason":"VapidPkHashMismatch"}.
+const APPLE_VAPID_MISMATCH_PATTERN = /"reason"\s*:\s*"VapidPkHashMismatch"/;
+
 let vapidConfigured = false;
 
 function ensureVapid(env: Env): void {
@@ -70,8 +73,13 @@ export async function sendPush(
     // pourra plus jamais être utilisé, on le traite comme expiré. On ne matche
     // que ce message précis — un 403 peut avoir d'autres causes (JWT expiré,
     // quota...) qui ne justifient pas de supprimer l'abonnement.
-    if (res.status === 403 && VAPID_MISMATCH_PATTERN.test(text)) {
-      throw new ExpiredSubscriptionError(`Abonnement créé avec une ancienne clé VAPID (403)`);
+    if (
+      (res.status === 403 && VAPID_MISMATCH_PATTERN.test(text)) ||
+      (res.status === 400 && APPLE_VAPID_MISMATCH_PATTERN.test(text))
+    ) {
+      throw new ExpiredSubscriptionError(
+        `Abonnement créé avec une ancienne clé VAPID (${res.status})`
+      );
     }
     throw new Error(`Échec de l'envoi push (${res.status}) : ${text}`);
   }
