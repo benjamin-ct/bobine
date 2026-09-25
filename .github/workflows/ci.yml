@@ -85,6 +85,7 @@ jobs:
           npm run verify:bot-detection
           npm run verify:bot-detection-client
           npm run verify:rate-limit-memory
+          npm run verify:recommendations
 
       - name: Build
         run: npm run build

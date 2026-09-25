@@ -210,7 +210,17 @@
     "featuredTitle": "Featured",
     "featuredSubtitle": "· upcoming releases",
     "suggestionsEyebrow": "Suggestions for you",
-    "emptyState": "No results for these filters."
+    "emptyState": "No results for these filters.",
+    "coldStartNotice": "Not enough watched or rated titles yet to personalize your suggestions: here are today's trends instead. Rate a few titles to sharpen them.",
+    "notInterested": "Not interested",
+    "suggestionsReason": {
+      "genre": "Because you like {{genre}}",
+      "genreFallback": "a genre you like",
+      "decade": "Because you like movies/shows from the {{decade}}s",
+      "similarTo": "Because you liked \"{{title}}\"",
+      "trending": "Trending now",
+      "recent": "Recent release"
+    }
   },
   "filterBar": {
     "typeAriaLabel": "Type",
@@ -475,7 +485,7 @@
       },
       "library": {
         "label": "Personal library",
-        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", your custom lists, and their content."
+        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", the titles you mark as \"not interested\", your custom lists, and their content."
       },
       "preferences": {
         "label": "Preferences",

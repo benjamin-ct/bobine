@@ -679,6 +679,48 @@ export async function setRegionForUser(
   await db.prepare("UPDATE users SET region = ? WHERE id = ?").bind(region, userId).run();
 }
 
+// "Pas intéressé" (recommandations "Pour toi") -----------------------------
+
+export interface NotInterestedRow {
+  media_type: string;
+  tmdb_id: number;
+  genre_ids: string;
+  year: number | null;
+}
+
+export async function getNotInterestedForUser(
+  db: D1Database,
+  userId: number
+): Promise<NotInterestedRow[]> {
+  const { results } = await db
+    .prepare(
+      "SELECT media_type, tmdb_id, genre_ids, year FROM not_interested_items WHERE user_id = ?"
+    )
+    .bind(userId)
+    .all<NotInterestedRow>();
+  return results;
+}
+
+export async function addNotInterested(
+  db: D1Database,
+  userId: number,
+  {
+    mediaType,
+    tmdbId,
+    genreIds,
+    year,
+  }: { mediaType: string; tmdbId: number; genreIds: number[]; year: number | null }
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO not_interested_items (user_id, media_type, tmdb_id, genre_ids, year, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id, media_type, tmdb_id) DO NOTHING`
+    )
+    .bind(userId, mediaType, tmdbId, JSON.stringify(genreIds), year, Date.now())
+    .run();
+}
+
 export async function wasAlreadyNotified(
   db: D1Database,
   subscriptionId: number,

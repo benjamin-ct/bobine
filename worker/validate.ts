@@ -492,3 +492,40 @@ export function sanitizeKeyList(rawKeys: unknown, maxItems: number): CleanKey[] 
     })
     .filter((k): k is CleanKey => k !== null);
 }
+
+// POST /api/not-interested : signal négatif "Pas intéressé" sur un titre
+// (voir carte Trello "Recommandations personnalisées « Pour toi »").
+// `genreIds`/`year` viennent du candidat déjà affiché côté client (pas
+// besoin d'un appel TMDB pour les revalider ici, ce ne sont que des
+// signaux d'affinité, pas des données affichées).
+export interface CleanNotInterestedPayload {
+  mediaType: MediaTypeStr;
+  tmdbId: number;
+  genreIds: number[];
+  year: number | null;
+}
+
+const MAX_YEAR = 3000;
+
+export function sanitizeNotInterestedPayload(body: unknown): CleanNotInterestedPayload | null {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
+  const raw = body as {
+    mediaType?: unknown;
+    tmdbId?: unknown;
+    genreIds?: unknown;
+    year?: unknown;
+  };
+  if (typeof raw.mediaType !== "string" || !VALID_MEDIA_TYPES.has(raw.mediaType)) {
+    return null;
+  }
+  const tmdbId = cleanNumber(raw.tmdbId);
+  if (tmdbId === null || tmdbId <= 0) {
+    return null;
+  }
+  const genreIds = sanitizeIdList(raw.genreIds);
+  const yearNum = cleanNumber(raw.year);
+  const year = yearNum !== null && yearNum > 0 && yearNum <= MAX_YEAR ? yearNum : null;
+  return { mediaType: raw.mediaType as MediaTypeStr, tmdbId, genreIds, year };
+}

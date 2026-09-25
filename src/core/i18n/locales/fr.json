@@ -210,7 +210,17 @@
     "featuredTitle": "Mise en avant",
     "featuredSubtitle": "· sorties à venir",
     "suggestionsEyebrow": "Suggestions pour vous",
-    "emptyState": "Aucun résultat pour ces filtres."
+    "emptyState": "Aucun résultat pour ces filtres.",
+    "coldStartNotice": "Pas encore assez de titres vus ou notés pour personnaliser vos suggestions : voici des tendances du moment. Notez quelques titres pour affiner.",
+    "notInterested": "Pas intéressé",
+    "suggestionsReason": {
+      "genre": "Parce que tu aimes le genre {{genre}}",
+      "genreFallback": "un genre que tu aimes",
+      "decade": "Parce que tu aimes les films/séries des années {{decade}}",
+      "similarTo": "Parce que tu as aimé « {{title}} »",
+      "trending": "Tendance du moment",
+      "recent": "Sortie récente"
+    }
   },
   "filterBar": {
     "typeAriaLabel": "Type",
@@ -475,7 +485,7 @@
       },
       "library": {
         "label": "Bibliothèque personnelle",
-        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu."
+        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », les titres que vous signalez « pas intéressé », vos listes personnalisées et leur contenu."
       },
       "preferences": {
         "label": "Préférences",
