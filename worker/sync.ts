@@ -16,8 +16,9 @@
 // "pong") est lui aussi servi sans réveil, via setWebSocketAutoResponse.
 //
 // Ce flux est volontairement générique (`type` libre, voir SyncEvent) : il
-// pourra porter plus tard des notifications in-app (demandes d'amis,
-// sorties...) en appelant simplement publishToUser depuis le code concerné.
+// porte aussi les notifications in-app (type "notification", voir
+// worker/notify.ts, notifyUser), qui passent par ce hub quand un appareil du
+// compte a l'app au premier plan et retombent sur le Web Push sinon.
 import { DurableObject, env, exports as workerExports, waitUntil } from "cloudflare:workers";
 import { logError } from "./logger.ts";
 import type { Env } from "./types.ts";
@@ -36,7 +37,9 @@ export type SyncResource =
   | "favorite-providers"
   | "locale"
   | "region"
-  | "display-name";
+  | "display-name"
+  // Notification in-app (sorties...) — voir worker/notify.ts.
+  | "notification";
 
 export interface SyncEvent {
   type: SyncResource;
@@ -47,6 +50,25 @@ export interface SyncEvent {
 }
 
 const CLIENT_ID_PATTERN = /^[A-Za-z0-9-]{8,64}$/;
+
+// Messages envoyés par le client à chaque changement de visibilité (voir
+// src/core/sync/liveSync.ts). Une PWA mise en arrière-plan ou un téléphone
+// verrouillé garde souvent sa WebSocket ouverte côté serveur alors que la
+// page est gelée : sans cet état, une notification lui serait "livrée"
+// in-app sans jamais s'afficher, et le Web Push ne partirait pas.
+export const FOREGROUND_MESSAGE = "foreground";
+export const BACKGROUND_MESSAGE = "background";
+
+interface SocketAttachment {
+  foreground: boolean;
+}
+
+function isForeground(ws: WebSocket): boolean {
+  const attachment = ws.deserializeAttachment() as SocketAttachment | null;
+  // Socket sans état connu (client antérieur à ce mécanisme) : considérée
+  // au premier plan, comme avant.
+  return attachment?.foreground !== false;
+}
 // Bornes défensives : un compte n'a normalement qu'une poignée d'appareils.
 const MAX_SOCKETS_PER_USER = 20;
 
@@ -67,28 +89,49 @@ export class UserSyncHub extends DurableObject<Env> {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server, CLIENT_ID_PATTERN.test(clientId) ? [clientId] : []);
+    server.serializeAttachment({
+      foreground: new URL(request.url).searchParams.get("visible") !== "0",
+    } satisfies SocketAttachment);
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  // Appelé en RPC par publishToUser : diffuse à tous les appareils du compte
-  // sauf celui à l'origine du changement.
-  async publish(event: SyncEvent, sourceClientId: string | null): Promise<void> {
+  // Appelé en RPC par publishToUser / deliverToUser : diffuse à tous les
+  // appareils du compte sauf celui à l'origine du changement, et renvoie le
+  // nombre d'appareils effectivement atteints. `foregroundOnly` (notifications)
+  // ignore les appareils dont l'app est en arrière-plan : 0 = aucun appareil
+  // avec l'app ouverte, ce qui fait retomber notifyUser sur le Web Push.
+  async publish(
+    event: SyncEvent,
+    sourceClientId: string | null,
+    foregroundOnly = false
+  ): Promise<number> {
     const message = JSON.stringify(event);
+    let delivered = 0;
     for (const ws of this.ctx.getWebSockets()) {
       if (sourceClientId && this.ctx.getTags(ws).includes(sourceClientId)) {
         continue;
       }
+      if (foregroundOnly && !isForeground(ws)) {
+        continue;
+      }
       try {
         ws.send(message);
+        delivered += 1;
       } catch {
         // Socket déjà fermée côté client : le runtime la retire de lui-même.
       }
     }
+    return delivered;
   }
 
-  async webSocketMessage(): Promise<void> {
-    // Rien à traiter : le client n'envoie que des "ping", déjà servis par
-    // l'auto-réponse (voir constructeur) sans réveiller le hub.
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    // Les "ping" sont servis par l'auto-réponse (voir constructeur) sans
+    // réveiller le hub ; seuls les changements de visibilité arrivent ici.
+    if (message === FOREGROUND_MESSAGE || message === BACKGROUND_MESSAGE) {
+      ws.serializeAttachment({
+        foreground: message === FOREGROUND_MESSAGE,
+      } satisfies SocketAttachment);
+    }
   }
 
   async webSocketClose(ws: WebSocket, code: number): Promise<void> {
@@ -159,4 +202,22 @@ export function publishToUser(request: Request, userId: number, event: SyncEvent
       }
     })()
   );
+}
+
+// Livraison d'une notification (cron, voir worker/notify.ts) : l'hôte vient
+// de l'abonnement rattaché au compte (subscriptions.sync_host), et l'appelant
+// attend le résultat pour savoir s'il doit retomber sur le Web Push. Seuls
+// les appareils avec l'app au premier plan comptent. Ne lève jamais : un hub
+// indisponible compte comme "aucun appareil connecté".
+export async function deliverToUser(
+  hostname: string,
+  userId: number,
+  event: SyncEvent
+): Promise<number> {
+  try {
+    return await hubFor(hostname, userId).publish(event, null, true);
+  } catch (err) {
+    logError(`Synchro temps réel : livraison "${event.type}" impossible.`, err);
+    return 0;
+  }
 }

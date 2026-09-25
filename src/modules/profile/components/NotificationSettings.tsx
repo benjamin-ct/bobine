@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../../../core/i18n/i18n.ts";
+import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { logWarn } from "../../../core/logger.ts";
+import { PUSH_ENDPOINT_STORAGE_KEY as ENDPOINT_STORAGE_KEY } from "../../../core/sync/pushAccountLink.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
 import styles from "./NotificationSettings.module.css";
 
-const ENDPOINT_STORAGE_KEY = "bobine.push.endpoint";
 const TOP_GENRES_FOR_NOTIFICATIONS = 8;
 
 interface FavoriteGenre {
@@ -235,10 +236,84 @@ async function syncSubscriptionDelta(
   lastSyncedRef.current = { watchlistKeys: desiredWatchlistKeys, genreKeys: desiredGenreKeys };
 }
 
+const TEST_NOTIFICATION_DELAY_S = 15;
+
+// Envoie une notification de test au compte via notifyUser (voir
+// worker/index.ts, /api/notifications/test), pour vérifier le choix de canal
+// sans attendre une vraie sortie : in-app si un appareil a l'app ouverte,
+// sinon Web Push (d'où l'envoi différé, le temps de fermer l'app).
+function TestNotification() {
+  const { t } = useTranslation();
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function send(delaySeconds: number) {
+    setSending(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/notifications/test", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ delaySeconds }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setMessage(data?.error || t("notificationSettings.testFailed", { status: res.status }));
+        return;
+      }
+      const data = (await res.json()) as {
+        channel?: "in-app" | "push";
+        scheduledInSeconds?: number;
+      };
+      if (data.scheduledInSeconds) {
+        setMessage(t("notificationSettings.testScheduled", { seconds: data.scheduledInSeconds }));
+      } else {
+        setMessage(
+          t(
+            data.channel === "in-app"
+              ? "notificationSettings.testSentInApp"
+              : "notificationSettings.testSentPush"
+          )
+        );
+      }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : t("common.errorGeneric"));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className={styles.test}>
+      <p className={styles.testTitle}>{t("notificationSettings.testTitle")}</p>
+      <div className={styles.testActions}>
+        <button type="button" className={styles.btn} onClick={() => send(0)} disabled={sending}>
+          {sending ? t("notificationSettings.testSending") : t("notificationSettings.testNow")}
+        </button>
+        <button
+          type="button"
+          className={styles.btn}
+          onClick={() => send(TEST_NOTIFICATION_DELAY_S)}
+          disabled={sending}
+        >
+          {t("notificationSettings.testDelayed")}
+        </button>
+      </div>
+      <p className={styles.hint}>{t("notificationSettings.testHint")}</p>
+      {message && (
+        <p className={styles.hint} role="status">
+          {message}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function NotificationSettings() {
   const { t } = useTranslation();
   const { watchlist, watched } = useLibrary();
   const { locale } = useLocale();
+  const { status: authStatus } = useAuth();
   const [endpoint, setEndpoint] = useState<string | null>(() =>
     localStorage.getItem(ENDPOINT_STORAGE_KEY)
   );
@@ -371,6 +446,7 @@ export default function NotificationSettings() {
             {t("notificationSettings.disableButton")}
           </button>
           <p className={styles.hint}>{t("notificationSettings.enabledHint")}</p>
+          {authStatus === "authenticated" && <TestNotification />}
         </>
       ) : (
         <>

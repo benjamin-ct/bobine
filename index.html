@@ -11,16 +11,17 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#130e0a" />
-    <!-- theme-color (ci-dessus) ne pilote que l'onglet Safari / Chrome — en
-         PWA installée sur iOS (display: standalone, voir manifest), la barre
-         de statut ignore theme-color et n'est repeinte qu'au relancement de
-         l'appli. "black-translucent" la rend transparente : c'est alors le
-         fond réel de la page (voir NavBar.module.css, padding-top sur
-         env(safe-area-inset-top)) qui apparaît dessous, donc synchronisé au
-         thème en direct comme n'importe quel autre élément CSS, sans jamais
-         nécessiter de redémarrage. -->
+    <!-- Pas de apple-mobile-web-app-status-bar-style="black-translucent" :
+         avec viewport-fit=cover, il faisait dessiner la page sous la barre de
+         statut de la PWA installée iOS, et depuis iOS 26 le système recouvre
+         cette zone d'un flou Liquid Glass (scroll edge effect) qui déborde
+         d'environ 40pt sur le header — bande floue en haut de toute l'appli,
+         sans aucun moyen CSS de la désactiver. Sans cette meta, la page démarre
+         sous une barre de statut opaque, peinte avec theme-color (résolu avant
+         le premier paint par theme-init.js) ; env(safe-area-inset-top) y vaut
+         0. Limite : un changement de thème en cours de session ne repeint la
+         barre de statut qu'au relancement de l'appli installée. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- Fichier externe (pas de <script> inline) : la CSP du Worker n'inclut
          pas 'unsafe-inline' sur script-src, voir public/theme-init.js pour
          le détail. Bloquant (pas de defer/async/module) pour s'exécuter

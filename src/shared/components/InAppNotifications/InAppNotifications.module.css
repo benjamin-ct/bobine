@@ -1,0 +1,129 @@
+.stack {
+  position: fixed;
+  /* Barre de statut iOS en "black-translucent" (voir index.html) : sans ce
+     décalage, le toast passe sous l'heure/la batterie en PWA installée. */
+  top: calc(env(safe-area-inset-top) + 16px);
+  right: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  /* Au-dessus de la nav sticky (40) et du menu mobile (70) : en dessous, le
+     toast était à moitié recouvert par la nav opaque et devenait illisible
+     sur mobile. Reste sous la modale de bande-annonce (100). */
+  z-index: 80;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: min(360px, 100%);
+  padding: 12px 8px 12px 16px;
+  border: 1px solid var(--border-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  /* --surface-2 plutôt que --surface : se détache nettement du fond --bg et
+     des affiches, surtout en thème sombre. */
+  background: var(--surface-2);
+  color: var(--fg);
+  /* Ombre resserrée plutôt que --shadow-lift : son halo de 48px débordait
+     sur le header et la barre de statut et donnait un effet flou en haut de
+     l'écran sur mobile. */
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.12),
+    0 6px 14px -6px oklch(0 0 0 / 0.3);
+  animation: in 0.2s ease;
+}
+
+.link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.link:hover .title {
+  color: var(--accent-ink);
+}
+
+.title {
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.body {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+.close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -6px 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.close:hover {
+  opacity: 1;
+}
+
+@media (max-width: 720px) {
+  .stack {
+    top: calc(env(safe-area-inset-top) + 8px);
+    right: 8px;
+    left: 8px;
+    align-items: stretch;
+  }
+
+  .toast {
+    width: 100%;
+    padding: 14px 8px 14px 16px;
+    border-radius: 14px;
+  }
+
+  .title {
+    font-size: 1rem;
+  }
+
+  .body {
+    font-size: 0.95rem;
+  }
+
+  /* Cible tactile confortable (~44 px) pour fermer au doigt. */
+  .close {
+    width: 44px;
+    height: 44px;
+    margin: -12px 0;
+  }
+}
+
+@keyframes in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

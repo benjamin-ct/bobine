@@ -376,7 +376,35 @@
     "enabledHint": "Tu seras prévenu·e quand un titre de ta liste \"Envie de voir\" arrive en streaming, pour les nouveautés dans tes genres préférés, et pour les grosses sorties du moment.",
     "enabling": "Activation…",
     "enableButton": "🔕 Activer les notifications",
-    "disabledHint": "Sois prévenu·e des nouveautés même sans avoir l'app ouverte."
+    "disabledHint": "Sois prévenu·e des nouveautés même sans avoir l'app ouverte.",
+    "testTitle": "Tester les notifications",
+    "testNow": "Envoyer maintenant",
+    "testDelayed": "Envoyer dans 15 s",
+    "testHint": "« Maintenant » : l'app est ouverte, la notification arrive en toast dans l'app. « Dans 15 s » : ferme l'app (ou verrouille le téléphone) sur tous tes appareils, elle arrive en notification push.",
+    "testSending": "Envoi…",
+    "testSentInApp": "Envoyée dans l'app : un appareil de ton compte a l'app ouverte.",
+    "testSentPush": "Envoyée en push : aucun appareil de ton compte n'a l'app ouverte.",
+    "testScheduled": "Envoi dans {{seconds}} s : ferme l'app maintenant.",
+    "testFailed": "Envoi impossible ({{status}})."
+  },
+  "inAppNotifications": {
+    "dismiss": "Fermer la notification",
+    "watchlistAvailable": {
+      "title": "Nouvelle dispo 🎬",
+      "body": "« {{title}} » est maintenant disponible en streaming."
+    },
+    "favoriteGenreRelease": {
+      "title": "Nouveauté dans tes genres préférés 🍿",
+      "body": "« {{title}} » vient de sortir."
+    },
+    "trendingRelease": {
+      "title": "Ça sort en ce moment 🔥",
+      "body": "« {{title}} » fait parler de lui."
+    },
+    "test": {
+      "title": "Notification de test 🔔",
+      "body": "Reçue dans l'app : un appareil de ton compte a l'app ouverte."
+    }
   },
   "legal": {
     "eyebrow": "Informations légales",
@@ -425,7 +453,7 @@
   "privacyPolicyPage": {
     "title": "Politique de confidentialité",
     "lastUpdated": "Dernière mise à jour : {{date}}",
-    "lastUpdatedValue": "13 septembre 2026",
+    "lastUpdatedValue": "25 septembre 2026",
     "controller": {
       "title": "Responsable du traitement",
       "textBefore": "Bobine est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
@@ -446,7 +474,7 @@
       },
       "push": {
         "label": "Notifications push",
-        "text": " (si vous les activez) : l'identifiant technique d'abonnement de votre navigateur et les clés de chiffrement associées, utilisés uniquement pour vous envoyer les notifications de nouveautés que vous avez demandées."
+        "text": " (si vous les activez) : l'identifiant technique d'abonnement de votre navigateur et les clés de chiffrement associées, utilisés uniquement pour vous envoyer les notifications de nouveautés que vous avez demandées. Si vous êtes connecté à votre compte sur cet appareil, cet abonnement est rattaché à votre compte, afin de vous livrer ces notifications directement dans l'application sur vos appareils connectés ; il en est détaché dès que vous vous déconnectez de cet appareil."
       },
       "technical": {
         "label": "Données techniques",

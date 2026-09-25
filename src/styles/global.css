@@ -22,6 +22,18 @@ body {
   overflow-x: hidden;
 }
 
+/* `clip` plutôt que `hidden` quand il est supporté : `hidden` sur html ET
+   body fait de <body> un conteneur de défilement qui ne défile jamais, et le
+   header sticky (NavBar.module.css) s'y accroche au lieu du viewport — il
+   part donc avec la page.
+   `clip` coupe pareil le débordement sans créer de conteneur de défilement. */
+@supports (overflow-x: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
 body {
   background-color: var(--bg);
   color: var(--fg);

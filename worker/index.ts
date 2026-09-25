@@ -23,7 +23,11 @@ import {
   getRegionForUser,
   setRegionForUser,
   updateSubscriptionLocale,
+  linkSubscriptionToAccount,
+  getSubscriptionsForUser,
+  type SubscriptionAccount,
 } from "./db.ts";
+import { notifyUser } from "./notify.ts";
 import { runDailyCheck } from "./scheduled.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
 import {
@@ -198,6 +202,18 @@ function sanitizeSubscriptionLocale(value: unknown): string {
   return typeof value === "string" && SUBSCRIPTION_LOCALES.includes(value) ? value : "fr";
 }
 
+// Compte connecté sur l'appareil qui s'abonne (voir migration 0008 et
+// worker/notify.ts) : permet au scheduler de livrer ses notifications
+// in-app via le hub du compte. `user.id` vient uniquement du cookie de
+// session (même garde IDOR que les endpoints authentifiés plus bas).
+async function subscriptionAccountOf(
+  request: Request,
+  env: Env
+): Promise<SubscriptionAccount | null> {
+  const user = await getUserFromRequest(env.DB, request);
+  return user ? { userId: user.id, syncHost: new URL(request.url).hostname } : null;
+}
+
 async function handleSubscribe(request: Request, env: Env): Promise<Response> {
   const ip = getClientIp(request);
   if (!(await checkRateLimit(env.DB, `subscribe:ip:${ip}`, { limit: 10, windowMs: 60 * 60_000 }))) {
@@ -232,6 +248,7 @@ async function handleSubscribe(request: Request, env: Env): Promise<Response> {
     p256dh: String(keys.p256dh),
     auth: String(keys.auth),
     locale: sanitizeSubscriptionLocale(locale),
+    account: await subscriptionAccountOf(request, env),
   });
 
   // Remplacement complet : correct et volontaire ici, cet appel n'a lieu
@@ -321,6 +338,39 @@ async function handleUnsubscribe(request: Request, env: Env): Promise<Response> 
   return json({ ok: true });
 }
 
+// Connexion/déconnexion sur un appareil dont les notifications sont déjà
+// actives (voir usePushAccountLink côté client) : rattache l'abonnement au
+// compte désormais connecté, ou l'en détache — un appareil déconnecté ne
+// reçoit plus les notifications du compte. Comme les autres endpoints
+// /api/subscribe*, la connaissance de l'endpoint (URL secrète propre à
+// l'appareil) fait office d'autorisation ; le compte, lui, ne peut être que
+// celui de la session.
+async function handleLinkSubscriptionAccount(request: Request, env: Env): Promise<Response> {
+  const ip = getClientIp(request);
+  if (
+    !(await checkRateLimit(env.DB, `subscribe-account:ip:${ip}`, { limit: 30, windowMs: 60_000 }))
+  ) {
+    return RATE_LIMIT_RESPONSE();
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  if (typeof body.endpoint !== "string") {
+    return json({ error: "endpoint manquant." }, 400);
+  }
+
+  const account = await subscriptionAccountOf(request, env);
+  const updated = await linkSubscriptionToAccount(env.DB, body.endpoint, account);
+  if (!updated) {
+    return json({ error: "Abonnement introuvable." }, 404);
+  }
+  return json({ ok: true, linked: account !== null });
+}
+
 // Changement de langue pendant que les notifications sont déjà actives (voir
 // NotificationSettings) : met à jour la locale de l'abonnement sans repasser
 // par un resubscribe complet côté navigateur.
@@ -351,6 +401,63 @@ async function handleUpdateSubscriptionLocale(request: Request, env: Env): Promi
     return json({ error: "Abonnement introuvable." }, 404);
   }
   return json({ ok: true });
+}
+
+// Notification de test pour le compte connecté, envoyée depuis les réglages
+// via notifyUser : même choix de canal que le cron (in-app si un appareil du
+// compte a l'app ouverte, sinon Web Push), pour le vérifier sans attendre
+// une vraie sortie. `delaySeconds` laisse le temps de fermer l'app pour
+// tester le repli Web Push (waitUntil garde le Worker en vie jusqu'à 30 s
+// après la réponse). Limité au compte de la session, donc sans clé de
+// debug, mais rate-limité.
+const TEST_NOTIFICATION_MAX_DELAY_S = 20;
+
+async function handleTestAccountNotification(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  if (
+    !(await checkRateLimit(env.DB, `test-notification:user:${user.id}`, {
+      limit: 10,
+      windowMs: 10 * 60_000,
+    }))
+  ) {
+    return RATE_LIMIT_RESPONSE();
+  }
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = await request.json();
+  } catch {
+    // Corps absent : envoi immédiat.
+  }
+  const delaySeconds =
+    typeof body.delaySeconds === "number" && Number.isFinite(body.delaySeconds)
+      ? Math.min(Math.max(Math.round(body.delaySeconds), 0), TEST_NOTIFICATION_MAX_DELAY_S)
+      : 0;
+
+  const subscriptions = await getSubscriptionsForUser(env.DB, user.id);
+  if (subscriptions.length === 0) {
+    return json({ error: "Aucun appareil de ton compte n'a activé les notifications." }, 404);
+  }
+
+  const send = () =>
+    notifyUser(
+      env,
+      { userId: user.id, subscriptions },
+      { kind: "test", mediaTitle: "", url: "/profil" }
+    );
+
+  if (delaySeconds > 0) {
+    ctx.waitUntil(new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000)).then(send));
+    return json({ ok: true, scheduledInSeconds: delaySeconds });
+  }
+  return json({ ok: true, channel: await send() });
 }
 
 // Déclenchement manuel de la vérification quotidienne, pour diagnostiquer
@@ -1253,6 +1360,14 @@ async function routeRequest(
 
   if (url.pathname === "/api/subscribe/locale" && request.method === "POST") {
     return handleUpdateSubscriptionLocale(request, env);
+  }
+
+  if (url.pathname === "/api/subscribe/account" && request.method === "POST") {
+    return handleLinkSubscriptionAccount(request, env);
+  }
+
+  if (url.pathname === "/api/notifications/test" && request.method === "POST") {
+    return handleTestAccountNotification(request, env, ctx);
   }
 
   if (url.pathname === "/api/run-check" && request.method === "POST") {
