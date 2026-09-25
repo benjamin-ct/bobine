@@ -21,7 +21,7 @@ import {
 import {
   discoverGeneric,
   getTmdbRecommendationsFor,
-  trendingToday,
+  trendingPage,
   type TmdbListItem,
 } from "./tmdb.ts";
 import {
@@ -61,14 +61,19 @@ export interface RecommendationItem {
 export interface RecommendationResult {
   coldStart: boolean;
   items: RecommendationItem[];
+  // Au moins une source TMDB a encore des pages : le client peut demander
+  // la page suivante (scroll infini de "Suggestions pour vous").
+  hasMore: boolean;
 }
 
 const MAX_TOP_GENRES = 5;
 const MAX_TOP_DECADES = 3;
 const MAX_SOURCE_TITLES = 3;
 const MIN_SOURCE_RATING = 7;
-const TARGET_COUNT = 24;
 const MAX_DIVERSITY_STREAK = 2;
+// Plafond de pagination : au-delà, les candidats TMDB deviennent trop peu
+// pertinents et chaque page coûte plusieurs appels TMDB.
+export const MAX_RECOMMENDATION_PAGE = 10;
 
 function parseYear(date: string | undefined): number | null {
   if (!date) {
@@ -171,6 +176,11 @@ function topKeysByScore(
     .map(([key]) => key);
 }
 
+interface PagedItems {
+  items: RecommendationItem[];
+  hasMore: boolean;
+}
+
 // Plateformes de streaming : PAS résolues ici. <MediaCard showProviderBadge>
 // le fait déjà, à la demande, quand la carte entre dans le viewport (voir
 // MediaCard.tsx) — dupliquer l'appel /watch/providers côté Worker pour
@@ -204,37 +214,39 @@ function mediaTypesFor(filter: RecommendationMediaFilter): Array<"movie" | "tv">
 async function buildColdStartRecommendations(
   env: Env,
   ctx: UserSignalContext,
-  filter: RecommendationMediaFilter
-): Promise<RecommendationItem[]> {
-  const trending = await trendingToday(env);
+  filter: RecommendationMediaFilter,
+  page: number
+): Promise<PagedItems> {
   const excludedSet = new Set(ctx.excludedGenreIds);
-  const wanted = new Set(mediaTypesFor(filter));
   const items: RecommendationItem[] = [];
-  for (const raw of trending) {
-    const mediaType = (raw.media_type === "tv" ? "tv" : "movie") as "movie" | "tv";
-    if (!wanted.has(mediaType)) {
-      continue;
-    }
-    if (ctx.seenKeys.has(itemKey(mediaType, raw.id))) {
-      continue;
-    }
-    if ((raw.genre_ids || []).some((g) => excludedSet.has(g))) {
-      continue;
-    }
-    items.push(toRecommendationItem(raw, mediaType, { type: "trending" }));
-    if (items.length >= TARGET_COUNT) {
-      break;
-    }
-  }
-  return items;
+  let hasMore = false;
+  await Promise.all(
+    mediaTypesFor(filter).map(async (mediaType) => {
+      const trending = await trendingPage(env, mediaType, page);
+      if (page < trending.totalPages) {
+        hasMore = true;
+      }
+      for (const raw of trending.results) {
+        if (ctx.seenKeys.has(itemKey(mediaType, raw.id))) {
+          continue;
+        }
+        if ((raw.genre_ids || []).some((g) => excludedSet.has(g))) {
+          continue;
+        }
+        items.push(toRecommendationItem(raw, mediaType, { type: "trending" }));
+      }
+    })
+  );
+  return { items, hasMore };
 }
 
 async function buildWarmCandidates(
   env: Env,
   ctx: UserSignalContext,
   profile: TasteProfile,
-  filter: RecommendationMediaFilter
-): Promise<RecommendationItem[]> {
+  filter: RecommendationMediaFilter,
+  page: number
+): Promise<PagedItems> {
   const isExcluded = (genreId: number) => isGenreExcluded(profile, ctx.excludedGenreIds, genreId);
   const topGenres = topKeysByScore(profile.genreScores, isExcluded, MAX_TOP_GENRES);
   const topDecades = topKeysByScore(profile.decadeScores, () => false, MAX_TOP_DECADES);
@@ -251,6 +263,7 @@ async function buildWarmCandidates(
   >();
 
   const mediaTypes = mediaTypesFor(filter);
+  let hasMore = false;
 
   await Promise.all(
     mediaTypes.map(async (mediaType) => {
@@ -258,13 +271,17 @@ async function buildWarmCandidates(
         return;
       }
       try {
-        const { results } = await discoverGeneric(env, mediaType, {
+        const { results, totalPages } = await discoverGeneric(env, mediaType, {
           genreIds: topGenres,
           excludeGenreIds,
           providerIds: ctx.favoriteProviderIds,
           yearMin,
           yearMax,
+          page,
         });
+        if (page < totalPages) {
+          hasMore = true;
+        }
         for (const raw of results) {
           candidatesByKey.set(itemKey(mediaType, raw.id), { raw, mediaType });
         }
@@ -279,7 +296,15 @@ async function buildWarmCandidates(
   await Promise.all(
     sourcesForFilter.slice(0, MAX_SOURCE_TITLES).map(async (source) => {
       try {
-        const results = await getTmdbRecommendationsFor(env, source.mediaType, source.id);
+        const { results, totalPages } = await getTmdbRecommendationsFor(
+          env,
+          source.mediaType,
+          source.id,
+          page
+        );
+        if (page < totalPages) {
+          hasMore = true;
+        }
         for (const raw of results) {
           const mediaType = (raw.media_type === "tv" ? "tv" : source.mediaType) as "movie" | "tv";
           const key = itemKey(mediaType, raw.id);
@@ -334,23 +359,24 @@ async function buildWarmCandidates(
     scored.map((s) => ({ item: s.item, primaryGenreId: s.primaryGenreId })),
     MAX_DIVERSITY_STREAK
   );
-  return diversified.slice(0, TARGET_COUNT);
+  return { items: diversified, hasMore };
 }
 
 export async function getRecommendations(
   env: Env,
   userId: number,
-  filter: RecommendationMediaFilter = "all"
+  filter: RecommendationMediaFilter = "all",
+  page = 1
 ): Promise<RecommendationResult> {
   const ctx = await loadUserSignalContext(env, userId);
   const profile = buildTasteProfile(ctx.signalItems, ctx.excludedGenreIds);
   const coldStart = isColdStart(profile);
 
-  const items = coldStart
-    ? await buildColdStartRecommendations(env, ctx, filter)
-    : await buildWarmCandidates(env, ctx, profile, filter);
+  const { items, hasMore } = coldStart
+    ? await buildColdStartRecommendations(env, ctx, filter, page)
+    : await buildWarmCandidates(env, ctx, profile, filter, page);
 
-  return { coldStart, items };
+  return { coldStart, items, hasMore: hasMore && page < MAX_RECOMMENDATION_PAGE };
 }
 
 // Tirage au hasard pondéré (voir /api/random, RandomPage.tsx) : même profil

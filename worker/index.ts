@@ -25,7 +25,11 @@ import {
   updateSubscriptionLocale,
   addNotInterested,
 } from "./db.ts";
-import { getRecommendations, drawWeightedRandom } from "./recommendations.ts";
+import {
+  getRecommendations,
+  drawWeightedRandom,
+  MAX_RECOMMENDATION_PAGE,
+} from "./recommendations.ts";
 import { runDailyCheck } from "./scheduled.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
 import {
@@ -783,15 +787,20 @@ async function handleGetRecommendations(request: Request, env: Env, url: URL): P
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  if (!checkRateLimitInMemory(`recommendations:user:${user.id}`, { limit: 20, windowMs: 60_000 })) {
+  // 40/min : le scroll infini de "Suggestions pour vous" enchaîne jusqu'à
+  // MAX_RECOMMENDATION_PAGE requêtes par type, en plus des rechargements.
+  if (!checkRateLimitInMemory(`recommendations:user:${user.id}`, { limit: 40, windowMs: 60_000 })) {
     return RATE_LIMIT_RESPONSE();
   }
   const rawFilter = url.searchParams.get("type") || "all";
   const filter = VALID_RECOMMENDATION_FILTERS.has(rawFilter)
     ? (rawFilter as "movie" | "tv" | "all")
     : "all";
+  const rawPage = Number(url.searchParams.get("page"));
+  const page =
+    Number.isInteger(rawPage) && rawPage >= 1 ? Math.min(rawPage, MAX_RECOMMENDATION_PAGE) : 1;
   try {
-    const result = await getRecommendations(env, user.id, filter);
+    const result = await getRecommendations(env, user.id, filter, page);
     return json(result);
   } catch (err) {
     logError("Échec du calcul des recommandations.", err);

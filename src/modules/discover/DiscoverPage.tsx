@@ -40,8 +40,23 @@ const GRID_SKELETON_COUNT = 12;
 // (issues du même discover() par défaut, déjà filtré des titres exclus/pas
 // intéressé) intercalées pour garder de la fraîcheur. RECENT_MIX_INTERVAL :
 // une sortie récente insérée toutes les N recommandations personnalisées.
-const RECENT_MIX_COUNT = 4;
+// Les recommandations sont paginées côté Worker (scroll infini, voir
+// loadMoreRecommendations) : pas de plafond fixe sur le nombre affiché.
 const RECENT_MIX_INTERVAL = 5;
+
+// Deux pages du Worker peuvent renvoyer le même titre (sources TMDB
+// distinctes) : on garde la première occurrence.
+function dedupeById(items: RecommendationItem[]): RecommendationItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = `${item.mediaType}:${item.id}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
 
 interface FiltersSnapshot {
   mediaType: MediaType;
@@ -114,6 +129,13 @@ export default function DiscoverPage() {
   const [recommended, setRecommended] = useState<RecommendationItem[]>([]);
   const [recStatus, setRecStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [coldStart, setColdStart] = useState(false);
+  const [recPage, setRecPage] = useState(1);
+  const [recHasMore, setRecHasMore] = useState(false);
+  const [recLoadingMore, setRecLoadingMore] = useState(false);
+  // Incrémenté à chaque rechargement complet (changement de type, etc.) :
+  // une page suivante arrivée après coup est ignorée au lieu de se mélanger
+  // aux nouveaux résultats.
+  const recGenerationRef = useRef(0);
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
 
   const advancedKey = JSON.stringify(advanced);
@@ -292,14 +314,17 @@ export default function DiscoverPage() {
       return;
     }
     let cancelled = false;
+    recGenerationRef.current += 1;
     setRecStatus("loading");
     getRecommendations(mediaType)
       .then((result) => {
         if (cancelled) {
           return;
         }
-        setRecommended(result.items);
+        setRecommended(dedupeById(result.items));
         setColdStart(result.coldStart);
+        setRecPage(1);
+        setRecHasMore(result.hasMore);
         setDismissedKeys(new Set());
         setRecStatus("success");
       })
@@ -316,6 +341,31 @@ export default function DiscoverPage() {
     };
   }, [personalizedModeActive, mediaType]);
 
+  const loadMoreRecommendations = useCallback(() => {
+    if (recLoadingMore || !recHasMore) {
+      return;
+    }
+    const nextPage = recPage + 1;
+    const generation = recGenerationRef.current;
+    setRecLoadingMore(true);
+    getRecommendations(mediaType, nextPage)
+      .then((result) => {
+        if (generation !== recGenerationRef.current) {
+          return;
+        }
+        setRecommended((prev) => dedupeById([...prev, ...result.items]));
+        setRecPage(nextPage);
+        setRecHasMore(result.hasMore);
+      })
+      .catch(() => {
+        // Page suivante indisponible : on garde ce qui est déjà affiché.
+        if (generation === recGenerationRef.current) {
+          setRecHasMore(false);
+        }
+      })
+      .finally(() => setRecLoadingMore(false));
+  }, [recLoadingMore, recHasMore, recPage, mediaType]);
+
   // Mix personnalisé + sorties récentes non exclues (voir constantes
   // RECENT_MIX_*) : une sortie récente intercalée toutes les
   // RECENT_MIX_INTERVAL recommandations, jusqu'à RECENT_MIX_COUNT au total.
@@ -328,7 +378,7 @@ export default function DiscoverPage() {
       }>;
     }
     const usedIds = new Set(recommended.map((item) => item.id));
-    const recentPicks = results.filter((item) => !usedIds.has(item.id)).slice(0, RECENT_MIX_COUNT);
+    const recentPicks = results.filter((item) => !usedIds.has(item.id));
     const entries: Array<{
       item: RecommendationItem | MediaItem;
       reason: RecommendationReason;
@@ -342,12 +392,14 @@ export default function DiscoverPage() {
         recentIndex += 1;
       }
     });
-    while (recentIndex < recentPicks.length) {
+    // Plus aucune recommandation à venir : on complète avec les sorties
+    // récentes restantes plutôt que de laisser une grille courte.
+    while (!recHasMore && recentIndex < recentPicks.length) {
       entries.push({ item: recentPicks[recentIndex], reason: null, recent: true });
       recentIndex += 1;
     }
     return entries.filter((entry) => !dismissedKeys.has(`${mediaType}:${entry.item.id}`));
-  }, [suggestionsMixed, recommended, results, dismissedKeys, mediaType]);
+  }, [suggestionsMixed, recommended, results, dismissedKeys, mediaType, recHasMore]);
 
   function suggestionReasonText(reason: RecommendationReason, recent: boolean): string {
     if (recent) {
@@ -445,7 +497,7 @@ export default function DiscoverPage() {
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (status !== "success") {
+    if (status !== "success" && !suggestionsMixed) {
       return;
     }
     const el = sentinelRef.current;
@@ -455,14 +507,18 @@ export default function DiscoverPage() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          loadMore();
+          if (suggestionsMixed) {
+            loadMoreRecommendations();
+          } else {
+            loadMore();
+          }
         }
       },
       { rootMargin: "600px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [status, loadMore]);
+  }, [status, loadMore, suggestionsMixed, loadMoreRecommendations, mixedFeed.length]);
 
   useScrollRestoration(status === "success", results.length);
 
@@ -580,6 +636,11 @@ export default function DiscoverPage() {
               </button>
             </div>
           ))}
+        </div>
+      )}
+      {suggestionsMixed && mixedFeed.length > 0 && recHasMore && (
+        <div ref={sentinelRef} className={gridStyles.loadMore}>
+          {recLoadingMore && <span>{t("common.loading")}</span>}
         </div>
       )}
     </div>

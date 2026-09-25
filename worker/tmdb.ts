@@ -143,6 +143,25 @@ export async function trendingToday(env: Env): Promise<TmdbListItem[]> {
   );
 }
 
+// Tendances paginées pour le cold start "Pour toi" (voir
+// worker/recommendations.ts) : `mediaType` ciblé plutôt que /trending/all,
+// sinon un filtre Films ou Séries jette environ la moitié de chaque page.
+export async function trendingPage(
+  env: Env,
+  mediaType: "movie" | "tv",
+  page: number
+): Promise<{ results: TmdbListItem[]; totalPages: number }> {
+  const data = await tmdbFetch<{ results?: TmdbListItem[]; total_pages?: number }>(
+    env,
+    `/trending/${mediaType}/day`,
+    { page }
+  );
+  return {
+    results: (data.results || []).map((item) => ({ ...item, media_type: mediaType })),
+    totalPages: Math.min(data.total_pages || 1, 500),
+  };
+}
+
 // Candidats pour le moteur de recommandation "Pour toi" (voir
 // worker/recommendations.ts) : découverte par genres/décennie favoris, et
 // "parce que tu as aimé X" via /recommendations sur les titres les mieux
@@ -202,13 +221,15 @@ export async function discoverGeneric(
 export async function getTmdbRecommendationsFor(
   env: Env,
   mediaType: string,
-  tmdbId: number
-): Promise<TmdbListItem[]> {
-  const data = await tmdbFetch<{ results?: TmdbListItem[] }>(
+  tmdbId: number,
+  page = 1
+): Promise<{ results: TmdbListItem[]; totalPages: number }> {
+  const data = await tmdbFetch<{ results?: TmdbListItem[]; total_pages?: number }>(
     env,
-    `/${mediaType}/${tmdbId}/recommendations`
+    `/${mediaType}/${tmdbId}/recommendations`,
+    { page }
   );
-  return data.results || [];
+  return { results: data.results || [], totalPages: data.total_pages || 1 };
 }
 
 const MAX_THEATRICAL_PAGES = 10; // now_playing + upcoming restent largement sous ce plafond en pratique

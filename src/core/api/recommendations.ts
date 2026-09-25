@@ -19,14 +19,16 @@ export interface RecommendationItem extends MediaSummary {
 export interface RecommendationResult {
   coldStart: boolean;
   items: RecommendationItem[];
+  hasMore: boolean;
 }
 
 export type RecommendationFilter = "movie" | "tv" | "all";
 
 export async function getRecommendations(
-  filter: RecommendationFilter = "all"
+  filter: RecommendationFilter = "all",
+  page = 1
 ): Promise<RecommendationResult> {
-  const res = await fetch(`/api/recommendations?type=${filter}`);
+  const res = await fetch(`/api/recommendations?type=${filter}&page=${page}`);
   if (res.status === 401) {
     throw new Error("not_authenticated");
   }
