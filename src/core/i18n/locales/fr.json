@@ -557,6 +557,7 @@
     "watchedBadge": "✔ Vu",
     "movie": "Film",
     "series": "Série",
+    "rank": "N° {{rank}}",
     "upcomingFallback": "Cinéma",
     "episodeJustReleased": "🆕 Vient de sortir",
     "episodeUpcoming": "📅 Prochainement",

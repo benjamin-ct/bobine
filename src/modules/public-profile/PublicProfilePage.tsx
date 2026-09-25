@@ -12,6 +12,7 @@ import {
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
 import { getGenres } from "../../core/api/tmdb.ts";
 import { libraryItemToMediaItem } from "../../shared/lib/libraryItem.ts";
+import { ratingTier } from "../../shared/lib/ratingTier.ts";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import type { LibraryItem, PublicProfile } from "../../core/types/library.ts";
 import styles from "./PublicProfilePage.module.css";
@@ -92,15 +93,14 @@ function ItemGrid({ items, ranked = false }: { items: LibraryItem[]; ranked?: bo
     <div className={gridStyles.grid}>
       {items.map((item, index) => (
         <div key={`${item.mediaType}:${item.id}`}>
-          <MediaCard item={libraryItemToMediaItem(item)} />
-          {(ranked || item.rating != null) && (
+          <MediaCard item={libraryItemToMediaItem(item)} rank={ranked ? index + 1 : undefined} />
+          {item.rating != null && (
             <p className={styles.meta}>
-              {ranked && <span className={styles.rank}>#{index + 1}</span>}
-              {item.rating != null && (
-                <span className={styles.rating}>
-                  {t("publicProfile.rating", { rating: item.rating })}
-                </span>
-              )}
+              <span
+                className={`${styles.rating} ${styles[`rating-${ratingTier(item.rating).cls}`]}`}
+              >
+                {t("publicProfile.rating", { rating: item.rating })}
+              </span>
             </p>
           )}
         </div>
@@ -159,12 +159,17 @@ export default function PublicProfilePage() {
       .map(([id, count]) => ({ id, name: genreMap[id], count }));
   }, [watched, genreMap]);
 
-  // Top : les titres vus les mieux notés, le plus récent d'abord à égalité.
+  // Top : les titres vus les mieux notés. À égalité de note (ex. 15 titres
+  // à 8/10), les plus récemment vus passent devant.
   const top = useMemo(
     () =>
       (watched ?? [])
         .filter((item) => item.rating != null)
-        .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+        .sort(
+          (a, b) =>
+            (b.rating ?? 0) - (a.rating ?? 0) ||
+            (b.updatedAt || b.addedAt || 0) - (a.updatedAt || a.addedAt || 0)
+        )
         .slice(0, TOP_COUNT),
     [watched]
   );

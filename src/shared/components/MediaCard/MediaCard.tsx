@@ -46,6 +46,10 @@ interface MediaCardProps {
    * ci-dessus (sortie ciné/plateforme, propre aux films). Même emplacement
    * visuel (.theatrical). */
   showEpisodeBadge?: boolean;
+  /** Opt-in, seul le Top 5 du profil partagé l'utilise : rang affiché en
+   * médaillon en haut à gauche de l'affiche (le badge Film/Série se décale
+   * à sa droite). */
+  rank?: number;
 }
 
 // `memo` : les grilles (Découvrir, Nouveautés, Ma liste...) affichent des
@@ -57,6 +61,7 @@ function MediaCard({
   showProviderBadge = false,
   showFutureReleaseBadge = false,
   showEpisodeBadge = false,
+  rank,
 }: MediaCardProps) {
   const { t } = useTranslation();
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
@@ -278,6 +283,14 @@ function MediaCard({
             <div className={`${styles.noPoster} ${posterStyles[accentKey]}`}>{title}</div>
           )}
           {watched && <span className={styles.badgeWatched}>{t("mediaCard.watchedBadge")}</span>}
+          {rank != null && (
+            <span
+              className={`${styles.rank} ${rank <= 3 ? styles[`rank${rank}`] : ""}`}
+              aria-label={t("mediaCard.rank", { rank })}
+            >
+              {rank}
+            </span>
+          )}
           <span className={styles.type}>
             {mediaType === "movie" ? t("mediaCard.movie") : t("mediaCard.series")}
           </span>
