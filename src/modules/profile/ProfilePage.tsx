@@ -1,6 +1,7 @@
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { PageHeader } from "../../shared/components/index.ts";
+import { PageHeader, Loading } from "../../shared/components/index.ts";
+import { useAuth } from "../../core/context/AuthContext.tsx";
 import MyListContent from "../my-list/index.ts";
 import AccountCard from "./components/AccountCard.tsx";
 import NotificationSettings from "./components/NotificationSettings.tsx";
@@ -20,12 +21,25 @@ const TABS: Tab[] = ["compte", "preferences", "ma-liste"];
 // plateformes favorites, genres exclus) directement dans MyList.jsx.
 export default function ProfilePage() {
   const { t } = useTranslation();
+  const { status } = useAuth();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
   const tab: Tab = TABS.includes(requestedTab as Tab) ? (requestedTab as Tab) : "compte";
 
   function selectTab(next: Tab) {
     setSearchParams(next === "compte" ? {} : { tab: next });
+  }
+
+  // Page réservée aux membres connectés : un visiteur anonyme est envoyé sur
+  // /connexion, qui le ramène sur l'onglet demandé une fois connecté.
+  if (status === "loading") {
+    return <Loading />;
+  }
+  if (status === "anonymous") {
+    return (
+      <Navigate to="/connexion" replace state={{ from: location.pathname + location.search }} />
+    );
   }
 
   return (
