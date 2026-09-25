@@ -17,6 +17,7 @@ import { LocaleAccountSync } from "./core/context/LocaleAccountSync.tsx";
 import { ensureSentryInit } from "./core/logger.ts";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
 import { isLikelyAutomatedClient } from "./core/botDetection.ts";
+import { setupPwaAutoUpdate } from "./core/pwaUpdate.ts";
 
 // Best-effort, non bloquant pour le rendu initial : voir logger.ts et
 // webAnalytics.ts (no-op tant que les secrets Cloudflare correspondants ne
@@ -32,6 +33,10 @@ if (!isLikelyAutomatedClient(navigator)) {
   ensureSentryInit();
   injectWebAnalytics();
 }
+
+// Recharge l'app installée quand une nouvelle version est déployée, au lieu
+// de garder l'ancien bundle jusqu'à une relance complète (voir pwaUpdate.ts).
+setupPwaAutoUpdate();
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
