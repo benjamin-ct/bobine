@@ -14,6 +14,7 @@ export { default as ScrollToTop } from "./ScrollToTop/ScrollToTop.tsx";
 export { default as RecaptchaBadge } from "./RecaptchaBadge/RecaptchaBadge.tsx";
 export { default as InAppNotifications } from "./InAppNotifications/InAppNotifications.tsx";
 export { default as ScrollToTopButton } from "./ScrollToTopButton/ScrollToTopButton.tsx";
+export { default as PullToRefresh } from "./PullToRefresh/PullToRefresh.tsx";
 export { default as Chip } from "./Chip/Chip.tsx";
 export { default as Dropdown } from "./Dropdown/Dropdown.tsx";
 export { default as NavBar } from "./NavBar/NavBar.tsx";

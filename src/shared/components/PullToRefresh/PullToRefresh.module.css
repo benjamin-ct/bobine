@@ -1,0 +1,40 @@
+/* Part de juste au-dessus du bord haut (sous l'encoche en mode installé) et
+   descend avec le doigt via le transform posé en ligne. */
+.indicator {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) - 44px);
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.icon {
+  display: inline-block;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.icon[data-ready="true"] {
+  color: var(--accent-ink);
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

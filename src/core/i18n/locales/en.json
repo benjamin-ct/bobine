@@ -21,6 +21,11 @@
     "terms": "Terms of use",
     "privacy": "Privacy"
   },
+  "pullToRefresh": {
+    "pull": "Pull to reload",
+    "release": "Release to reload",
+    "reloading": "Reloading…"
+  },
   "scrollToTop": {
     "ariaLabel": "Scroll back to top",
     "title": "Back to top"
