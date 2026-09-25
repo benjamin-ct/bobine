@@ -14,6 +14,8 @@ import {
   getCustomListsForUser,
   replaceCustomListsForUser,
   updateDisplayName,
+  setShareSlug,
+  getPublicProfileBySlug,
   getExcludedGenresForUser,
   replaceExcludedGenresForUser,
   getFavoriteProvidersForUser,
@@ -665,7 +667,7 @@ async function handleMe(request: Request, env: Env): Promise<Response> {
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  return json({ email: user.email, displayName: user.displayName });
+  return json({ email: user.email, displayName: user.displayName, shareSlug: user.shareSlug });
 }
 
 // Nom affiché (ticket #45) : mis à jour uniquement sur un save manuel côté
@@ -690,6 +692,59 @@ async function handleUpdateDisplayName(request: Request, env: Env): Promise<Resp
   await updateDisplayName(env.DB, user.id, displayName);
   publishToUser(request, user.id, { type: "display-name" });
   return json({ ok: true, displayName });
+}
+
+// Partage public du profil (lecture seule) -------------------------------
+//
+// Opt-in explicite : activer génère un slug aléatoire (96 bits, non
+// devinable) qui devient l'URL publique /u/<slug> ; désactiver le remet à
+// NULL, ce qui invalide l'ancien lien. Réactiver en génère un nouveau plutôt
+// que de ressusciter l'ancien, pour qu'un lien révoqué le reste. Même garde
+// IDOR que les autres endpoints authentifiés : user.id vient uniquement du
+// cookie de session.
+function randomShareSlug(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+const SHARE_SLUG_PATTERN = /^[A-Za-z0-9_-]{16}$/;
+
+async function handleUpdateProfileShare(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  if (typeof body?.enabled !== "boolean") {
+    return json({ error: 'Paramètre "enabled" invalide.' }, 400);
+  }
+  // Déjà actif : on garde le lien existant (déjà potentiellement envoyé).
+  const shareSlug = body.enabled ? (user.shareSlug ?? randomShareSlug()) : null;
+  if (shareSlug !== user.shareSlug) {
+    await setShareSlug(env.DB, user.id, shareSlug);
+  }
+  return json({ ok: true, shareSlug });
+}
+
+// Accessible sans compte (c'est tout l'intérêt d'un lien de partage), mais
+// plafonné par IP pour qu'on ne puisse pas balayer l'espace des slugs.
+async function handleGetPublicProfile(request: Request, env: Env, slug: string): Promise<Response> {
+  const ip = getClientIp(request);
+  if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  const profile = SHARE_SLUG_PATTERN.test(slug) ? await getPublicProfileBySlug(env.DB, slug) : null;
+  if (!profile) {
+    return json({ error: "Profil introuvable ou privé." }, 404);
+  }
+  return json(profile);
 }
 
 async function handleLogout(request: Request, env: Env): Promise<Response> {
@@ -1407,6 +1462,12 @@ async function routeRequest(
     return handleUpdateDisplayName(request, env);
   }
 
+  if (url.pathname === "/api/account/share" && request.method === "PUT") {
+    return handleUpdateProfileShare(request, env);
+  }
+  if (url.pathname.startsWith("/api/public-profile/") && request.method === "GET") {
+    return handleGetPublicProfile(request, env, url.pathname.slice("/api/public-profile/".length));
+  }
   if (url.pathname === "/api/library" && request.method === "GET") {
     return handleGetLibrary(request, env);
   }

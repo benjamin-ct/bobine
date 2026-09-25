@@ -45,6 +45,10 @@
   grid-column: span 6;
 }
 
+.span12 {
+  grid-column: span 12;
+}
+
 @media (max-width: 860px) {
   .span6 {
     grid-column: span 12;

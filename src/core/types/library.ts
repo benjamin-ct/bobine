@@ -49,3 +49,14 @@ export interface CustomList {
 }
 
 export type CustomListMap = Record<string, CustomList>;
+
+/** Profil partagé en lecture seule (GET /api/public-profile/:slug) : jamais
+ * d'email ni d'identifiant de compte, uniquement ce que le propriétaire a
+ * choisi de rendre visible en activant le partage. Items triés du plus
+ * récent au plus ancien, sans le détail des épisodes vus. */
+export interface PublicProfile {
+  displayName: string | null;
+  watched: LibraryItem[];
+  watchlist: LibraryItem[];
+  customLists: CustomList[];
+}
