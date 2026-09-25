@@ -17,7 +17,7 @@ import Person from "./modules/person/index.ts";
 import Random from "./modules/random/index.ts";
 import Profile from "./modules/profile/index.ts";
 import Search from "./modules/search/index.ts";
-import { LoginPage, VerifyAuthPage } from "./modules/auth/index.ts";
+import { LoginPage, VerifyAuthPage, MembersOnlyDialog } from "./modules/auth/index.ts";
 import { TermsPage, PrivacyPolicyPage } from "./modules/legal/index.ts";
 import NotFound from "./modules/not-found/index.ts";
 
@@ -50,6 +50,7 @@ export default function App() {
       <ScrollToTopButton />
       <InAppNotifications />
       <PullToRefresh />
+      <MembersOnlyDialog />
     </>
   );
 }

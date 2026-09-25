@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { getRecaptchaToken } from "../lib/recaptcha.ts";
+import { clearAccountDataFromDevice } from "../lib/accountStorage.ts";
 import { useLocale } from "./LocaleContext.tsx";
 import { syncClientHeaders, useLiveSyncConnection, useLiveSyncEvent } from "../sync/liveSync.ts";
 import { usePushAccountLink } from "../sync/pushAccountLink.ts";
@@ -178,9 +179,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     pinnedRef.current = false;
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-    setEmail(null);
-    setDisplayName(null);
-    setStatus("anonymous");
+    // Plus rien du compte ne doit rester dans le navigateur : on efface les
+    // données stockées puis on recharge l'app sur l'accueil, ce qui vide
+    // aussi l'état gardé en mémoire par les contextes (bibliothèque,
+    // listes, réglages) — sans quoi leurs effets de persistance le
+    // réécriraient dans localStorage au prochain changement.
+    clearAccountDataFromDevice();
+    window.location.replace("/");
   }, []);
 
   // Save manuel uniquement (voir AccountCard, bouton "Enregistrer") : pas de

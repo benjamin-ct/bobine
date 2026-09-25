@@ -29,6 +29,7 @@ import { regionName as countryDisplayName, useRegion } from "../../core/context/
 import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
+import { useMembersOnly } from "../../core/context/MembersOnlyContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import { ratingTier } from "../../shared/lib/ratingTier.ts";
 import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPreviewCache.ts";
@@ -67,6 +68,7 @@ export default function DetailPage() {
   const { locale } = useLocale();
   const { excludedGenreIds } = useExcludedGenres();
   const { isExcludedTitle, toggleExcludedTitle } = useExcludedTitles();
+  const { requireMember } = useMembersOnly();
   const recommendationsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -390,7 +392,10 @@ export default function DetailPage() {
               <button
                 type="button"
                 className={`${styles.ghostBtn} ${excluded ? styles.ghostBtnOn : ""}`}
+                // Écrit dans le compte comme les actions de la bibliothèque :
+                // réservé aux membres connectés (voir MembersOnlyContext).
                 onClick={() =>
+                  requireMember() &&
                   toggleExcludedTitle(
                     mediaType,
                     id,

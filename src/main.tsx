@@ -5,6 +5,7 @@ import "./styles/global.css";
 import App from "./App.tsx";
 import { AuthProvider } from "./core/context/AuthContext.tsx";
 import { LibraryProvider } from "./core/context/LibraryContext.tsx";
+import { MembersOnlyProvider } from "./core/context/MembersOnlyContext.tsx";
 import { RegionProvider, loadStoredRegion } from "./core/context/RegionContext.tsx";
 import { RegionAccountSync } from "./core/context/RegionAccountSync.tsx";
 import { DEFAULT_REGION } from "./core/api/releaseBadge.ts";
@@ -18,6 +19,7 @@ import { ensureSentryInit } from "./core/logger.ts";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
 import { isLikelyAutomatedClient } from "./core/botDetection.ts";
 import { setupPwaAutoUpdate } from "./core/pwaUpdate.ts";
+import { clearAccountDataFromDevice, hasAccountDataOnDevice } from "./core/lib/accountStorage.ts";
 
 // Best-effort, non bloquant pour le rendu initial : voir logger.ts et
 // webAnalytics.ts (no-op tant que les secrets Cloudflare correspondants ne
@@ -37,6 +39,15 @@ if (!isLikelyAutomatedClient(navigator)) {
 // Recharge l'app installée quand une nouvelle version est déployée, au lieu
 // de garder l'ancien bundle jusqu'à une relance complète (voir pwaUpdate.ts).
 setupPwaAutoUpdate();
+
+// Session perdue sans passer par le bouton de déconnexion (expirée, cookies
+// effacés) : le cookie compagnon bobine_auth a la même durée de vie que la
+// session (voir worker/auth.ts), son absence suffit donc à savoir qu'on
+// n'est plus connecté. Effacé avant le premier rendu, pour que les contextes
+// ne rechargent pas en mémoire les données du compte précédent.
+if (!document.cookie.includes("bobine_auth=1") && hasAccountDataOnDevice()) {
+  clearAccountDataFromDevice();
+}
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -91,9 +102,11 @@ createRoot(rootElement).render(
                   <FavoriteProvidersProvider>
                     <ExcludedGenresProvider>
                       <ExcludedTitlesProvider>
-                        <LibraryProvider>
-                          <App />
-                        </LibraryProvider>
+                        <MembersOnlyProvider>
+                          <LibraryProvider>
+                            <App />
+                          </LibraryProvider>
+                        </MembersOnlyProvider>
                       </ExcludedTitlesProvider>
                     </ExcludedGenresProvider>
                   </FavoriteProvidersProvider>

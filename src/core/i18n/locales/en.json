@@ -92,6 +92,10 @@
     "sending": "Sending…",
     "submitEmail": "Get my sign-in link"
   },
+  "membersOnly": {
+    "title": "Members-only action",
+    "text": "Sign in to save the movies and shows you've watched, your watchlist, your ratings and your custom lists. No password needed: we'll email you a sign-in link."
+  },
   "trailer": {
     "button": "Trailer",
     "iframeTitle": "Trailer"
