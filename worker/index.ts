@@ -65,7 +65,7 @@ import {
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
 import { getTheatricalIndex } from "./tmdb.ts";
-import { withSentry } from "./sentry.ts";
+import { PRODUCTION_HOSTNAME, withSentry } from "./sentry.ts";
 import { logError } from "./logger.ts";
 import { trackEvent } from "./analytics.ts";
 import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
@@ -417,6 +417,11 @@ async function handleTestAccountNotification(
   env: Env,
   ctx: ExecutionContext
 ): Promise<Response> {
+  // Outil de validation réservé aux previews PR et au dev local : l'UI le
+  // masque en prod, on le ferme aussi ici pour qu'il ne soit pas appelable.
+  if (new URL(request.url).hostname === PRODUCTION_HOSTNAME) {
+    return json({ error: "Introuvable." }, 404);
+  }
   const user = await getUserFromRequest(env.DB, request);
   if (!user) {
     return json({ error: "Non connecté." }, 401);
