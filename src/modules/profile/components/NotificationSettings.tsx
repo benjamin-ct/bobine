@@ -101,6 +101,76 @@ async function syncSubscriptionLocale(endpoint: string, locale: string): Promise
   }).catch((err) => logWarn("Bobine : resynchronisation de la langue des notifs échouée.", err));
 }
 
+// Clé publique VAPID actuelle du serveur. Elle peut changer (rotation des
+// clés) : les abonnements créés avec l'ancienne deviennent alors inutilisables.
+async function fetchVapidPublicKey(): Promise<Uint8Array> {
+  const keyRes = await fetch("/api/vapid-public-key");
+  if (!keyRes.ok) {
+    throw new Error(i18n.t("notificationSettings.keyFetchError"));
+  }
+  const { publicKey } = (await keyRes.json()) as { publicKey: string };
+  return urlBase64ToUint8Array(publicKey);
+}
+
+async function subscribeWithKey(
+  registration: ServiceWorkerRegistration,
+  publicKey: Uint8Array
+): Promise<PushSubscription> {
+  return registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    // Cast nécessaire : le typage DOM de `applicationServerKey` attend un
+    // `Uint8Array<ArrayBuffer>` précisément, alors que `Uint8Array.from()`
+    // infère `Uint8Array<ArrayBufferLike>` (générique élargi depuis
+    // TypeScript 5.7) — la valeur réelle est bien un ArrayBuffer classique.
+    applicationServerKey: publicKey as BufferSource,
+  });
+}
+
+function sameKey(current: ArrayBuffer, expected: Uint8Array): boolean {
+  const bytes = new Uint8Array(current);
+  return bytes.length === expected.length && bytes.every((b, i) => b === expected[i]);
+}
+
+async function unregisterEndpoint(endpoint: string): Promise<void> {
+  await fetch("/api/unsubscribe", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ endpoint }),
+  }).catch(() => {});
+}
+
+// Si l'abonnement du navigateur a été créé avec une ancienne clé VAPID, le
+// service push refuse tous les envois (403). On le remplace sans rien
+// demander à l'utilisateur (la permission reste accordée) et on
+// ré-enregistre le nouvel abonnement côté serveur. Renvoie le nouvel
+// endpoint, ou null si rien n'a changé.
+async function resyncIfVapidKeyRotated(
+  watchlist: LibraryItem[],
+  watched: LibraryItem[],
+  locale: string
+): Promise<string | null> {
+  const registration = await navigator.serviceWorker.ready;
+  const current = await registration.pushManager.getSubscription();
+  const currentKey = current?.options.applicationServerKey;
+  if (!current || !currentKey) {
+    return null;
+  }
+  const publicKey = await fetchVapidPublicKey();
+  if (sameKey(currentKey, publicKey)) {
+    return null;
+  }
+
+  await unregisterEndpoint(current.endpoint);
+  await current.unsubscribe();
+  const subscription = await subscribeWithKey(registration, publicKey);
+  const { endpoint, keys } = subscription.toJSON();
+  if (!endpoint || !keys) {
+    throw new Error(i18n.t("notificationSettings.incompleteSubscription"));
+  }
+  await fullSyncSubscription(endpoint, keys, watchlist, watched, locale);
+  return endpoint;
+}
+
 interface SyncedState {
   watchlistKeys: Set<string>;
   genreKeys: Set<string>;
@@ -253,6 +323,27 @@ export default function NotificationSettings() {
   const lastSyncedRef = useRef<SyncedState>({ watchlistKeys: new Set(), genreKeys: new Set() });
   const isFirstLocaleSync = useRef(true);
 
+  // Au chargement : remplace un abonnement devenu inutilisable après une
+  // rotation des clés VAPID. Volontairement exécuté une seule fois, avec la
+  // bibliothèque connue à cet instant ; les changements ultérieurs passent
+  // par la resynchro delta ci-dessous.
+  useEffect(() => {
+    if (!endpoint || !isSupported() || Notification.permission !== "granted") {
+      return;
+    }
+    resyncIfVapidKeyRotated(watchlist, watched, locale)
+      .then((newEndpoint) => {
+        if (!newEndpoint) {
+          return;
+        }
+        lastSyncedRef.current = keysOf(watchlist, watched);
+        localStorage.setItem(ENDPOINT_STORAGE_KEY, newEndpoint);
+        setEndpoint(newEndpoint);
+      })
+      .catch((err) => logWarn("Bobine : resynchro de l'abonnement push échouée.", err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Resynchronise la watchlist / les genres favoris côté serveur à chaque
   // changement, tant que les notifications sont actives.
   useEffect(() => {
@@ -304,20 +395,8 @@ export default function NotificationSettings() {
 
       const registration = await navigator.serviceWorker.ready;
 
-      const keyRes = await fetch("/api/vapid-public-key");
-      if (!keyRes.ok) {
-        throw new Error(t("notificationSettings.keyFetchError"));
-      }
-      const { publicKey } = (await keyRes.json()) as { publicKey: string };
-
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        // Cast nécessaire : le typage DOM de `applicationServerKey` attend un
-        // `Uint8Array<ArrayBuffer>` précisément, alors que `Uint8Array.from()`
-        // infère `Uint8Array<ArrayBufferLike>` (générique élargi depuis
-        // TypeScript 5.7) — la valeur réelle est bien un ArrayBuffer classique.
-        applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
-      });
+      const publicKey = await fetchVapidPublicKey();
+      const subscription = await subscribeWithKey(registration, publicKey);
 
       const { endpoint: subEndpoint, keys } = subscription.toJSON();
       if (!subEndpoint || !keys) {
@@ -342,11 +421,7 @@ export default function NotificationSettings() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await fetch("/api/unsubscribe", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
-        }).catch(() => {});
+        await unregisterEndpoint(subscription.endpoint);
         await subscription.unsubscribe();
       }
       localStorage.removeItem(ENDPOINT_STORAGE_KEY);
