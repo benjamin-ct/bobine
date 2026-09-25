@@ -49,3 +49,15 @@ export interface CustomList {
 }
 
 export type CustomListMap = Record<string, CustomList>;
+
+/** Liste perso partagée en lecture seule (GET /api/public-list/:slug) : jamais
+ * d'email ni d'identifiant de compte. `rating` de chaque item = note donnée
+ * par le propriétaire de la liste (s'il a marqué le titre comme vu).
+ * `ownListId` n'est renseigné que si le visiteur EST le propriétaire, pour le
+ * renvoyer vers sa vue éditable. */
+export interface PublicList {
+  name: string;
+  ownerName: string | null;
+  items: LibraryItem[];
+  ownListId?: string;
+}

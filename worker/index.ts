@@ -13,6 +13,10 @@ import {
   applyLibraryChanges,
   getCustomListsForUser,
   replaceCustomListsForUser,
+  getListSharesForUser,
+  shareListForUser,
+  unshareListForUser,
+  getPublicListBySlug,
   updateDisplayName,
   getExcludedGenresForUser,
   replaceExcludedGenresForUser,
@@ -72,6 +76,7 @@ import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
 import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
 import { openSyncSocket, publishToUser } from "./sync.ts";
+import { randomShareSlug, SHARE_SLUG_PATTERN } from "./share-slug.ts";
 
 // Classe Durable Object de la synchro temps réel : doit être exportée par le
 // module principal (voir "exports" dans wrangler.jsonc).
@@ -818,6 +823,70 @@ async function handlePutCustomLists(request: Request, env: Env): Promise<Respons
   return json({ ok: true });
 }
 
+// Partage des listes perso en lecture seule --------------------------------
+//
+// Un lien par liste, créé à la demande (bouton « Partager ») : slug
+// aléatoire de 96 bits, non devinable. Même garde IDOR que les autres
+// endpoints authentifiés : user.id vient uniquement du cookie de session,
+// et une liste n'est partageable que si elle appartient à ce compte.
+async function handleGetListShares(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  return json(await getListSharesForUser(env.DB, user.id));
+}
+
+async function handlePutListShare(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const listId = body?.listId;
+  if (typeof listId !== "string" || !listId || listId.length > 100) {
+    return json({ error: "Liste invalide." }, 400);
+  }
+  if (typeof body.enabled !== "boolean") {
+    return json({ error: 'Paramètre "enabled" invalide.' }, 400);
+  }
+  if (!body.enabled) {
+    await unshareListForUser(env.DB, user.id, listId);
+    return json({ ok: true, slug: null });
+  }
+  const slug = await shareListForUser(env.DB, user.id, listId, randomShareSlug());
+  if (!slug) {
+    // Liste pas encore synchronisée (anti-rebond côté client) ou supprimée.
+    return json({ error: "Liste introuvable." }, 404);
+  }
+  return json({ ok: true, slug });
+}
+
+// Accessible sans compte (c'est tout l'intérêt d'un lien de partage), mais
+// plafonné par IP pour qu'on ne puisse pas balayer l'espace des slugs. La
+// session est lue seulement pour reconnaître le propriétaire (renvoyé vers
+// sa vue éditable côté client).
+async function handleGetPublicList(request: Request, env: Env, slug: string): Promise<Response> {
+  const ip = getClientIp(request);
+  if (!checkRateLimitInMemory(`public-list:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  if (!SHARE_SLUG_PATTERN.test(slug)) {
+    return json({ error: "Liste introuvable ou plus partagée." }, 404);
+  }
+  const viewer = await getUserFromRequest(env.DB, request);
+  const list = await getPublicListBySlug(env.DB, slug, viewer?.id ?? null);
+  if (!list) {
+    return json({ error: "Liste introuvable ou plus partagée." }, 404);
+  }
+  return json(list);
+}
+
 // Genres exclus synchronisés ----------------------------------------------
 //
 // Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
@@ -1427,6 +1496,15 @@ async function routeRequest(
     return handlePutCustomLists(request, env);
   }
 
+  if (url.pathname === "/api/list-shares" && request.method === "GET") {
+    return handleGetListShares(request, env);
+  }
+  if (url.pathname === "/api/list-shares" && request.method === "PUT") {
+    return handlePutListShare(request, env);
+  }
+  if (url.pathname.startsWith("/api/public-list/") && request.method === "GET") {
+    return handleGetPublicList(request, env, url.pathname.slice("/api/public-list/".length));
+  }
   if (url.pathname === "/api/excluded-genres" && request.method === "GET") {
     return handleGetExcludedGenres(request, env);
   }

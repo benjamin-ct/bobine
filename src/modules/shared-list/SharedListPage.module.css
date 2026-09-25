@@ -1,0 +1,27 @@
+.page {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: 0 var(--gutter) 64px;
+}
+
+.rating {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-ink);
+}
+
+.homeLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.homeLink:hover {
+  border-color: var(--border-2);
+}

@@ -11,7 +11,12 @@ import type {
   SyncUpsert,
 } from "./validate.ts";
 import type { GenrePreferenceRow, SubscriptionRow, WatchlistItemRow } from "./types.ts";
-import type { CustomListMap, LibraryState } from "../src/core/types/library.ts";
+import type {
+  CustomListMap,
+  LibraryItem,
+  LibraryState,
+  PublicList,
+} from "../src/core/types/library.ts";
 
 // Compte connecté sur l'appareil au moment de l'abonnement (ou de son
 // rattachement, voir linkSubscriptionToAccount) — null pour un visiteur
@@ -573,6 +578,114 @@ export async function replaceCustomListsForUser(
     });
   }
   await db.batch(statements);
+}
+
+// Partage des listes perso en lecture seule (migration 0010). -------------
+
+// { listId: slug } pour toutes les listes partagées du compte.
+export async function getListSharesForUser(
+  db: D1Database,
+  userId: number
+): Promise<Record<string, string>> {
+  const { results } = await db
+    .prepare("SELECT list_id, slug FROM list_shares WHERE user_id = ?")
+    .bind(userId)
+    .all<{ list_id: string; slug: string }>();
+  return Object.fromEntries(results.map((row) => [row.list_id, row.slug]));
+}
+
+// Idempotent : si la liste est déjà partagée, renvoie le slug existant (le
+// lien a déjà pu être envoyé) plutôt que d'en créer un nouveau. Renvoie
+// null si la liste n'existe pas (encore) côté serveur pour ce compte.
+export async function shareListForUser(
+  db: D1Database,
+  userId: number,
+  listId: string,
+  newSlug: string
+): Promise<string | null> {
+  const list = await db
+    .prepare("SELECT 1 FROM custom_lists WHERE user_id = ? AND id = ?")
+    .bind(userId, listId)
+    .first();
+  if (!list) {
+    return null;
+  }
+  await db
+    .prepare(
+      "INSERT INTO list_shares (slug, user_id, list_id, created_at) VALUES (?, ?, ?, ?) ON CONFLICT (user_id, list_id) DO NOTHING"
+    )
+    .bind(newSlug, userId, listId, Date.now())
+    .run();
+  const row = await db
+    .prepare("SELECT slug FROM list_shares WHERE user_id = ? AND list_id = ?")
+    .bind(userId, listId)
+    .first<{ slug: string }>();
+  return row?.slug ?? null;
+}
+
+export async function unshareListForUser(
+  db: D1Database,
+  userId: number,
+  listId: string
+): Promise<void> {
+  await db
+    .prepare("DELETE FROM list_shares WHERE user_id = ? AND list_id = ?")
+    .bind(userId, listId)
+    .run();
+}
+
+// Liste partagée, résolue UNIQUEMENT par son slug aléatoire. Chaque item
+// porte la note que le propriétaire a donnée au titre (bibliothèque "vu"),
+// pas celle éventuellement figée dans la liste au moment de l'ajout. Le
+// détail des épisodes vus n'est jamais exposé.
+export async function getPublicListBySlug(
+  db: D1Database,
+  slug: string,
+  viewerUserId: number | null
+): Promise<PublicList | null> {
+  const share = await db
+    .prepare(
+      `SELECT list_shares.user_id, list_shares.list_id, custom_lists.name, users.display_name
+       FROM list_shares
+       JOIN custom_lists ON custom_lists.user_id = list_shares.user_id AND custom_lists.id = list_shares.list_id
+       JOIN users ON users.id = list_shares.user_id
+       WHERE list_shares.slug = ?`
+    )
+    .bind(slug)
+    .first<{ user_id: number; list_id: string; name: string; display_name: string | null }>();
+  if (!share) {
+    return null;
+  }
+  const [{ results: itemRows }, { results: ratingRows }] = await Promise.all([
+    db
+      .prepare(
+        "SELECT data FROM custom_list_items WHERE user_id = ? AND list_id = ? ORDER BY position"
+      )
+      .bind(share.user_id, share.list_id)
+      .all<{ data: string }>(),
+    db
+      .prepare(
+        "SELECT media_type, tmdb_id, json_extract(data, '$.rating') AS rating FROM library_items WHERE user_id = ? AND status = 'watched' AND json_extract(data, '$.rating') IS NOT NULL"
+      )
+      .bind(share.user_id)
+      .all<{ media_type: string; tmdb_id: number; rating: number }>(),
+  ]);
+  const ratings = new Map(
+    ratingRows.map((row) => [`${row.media_type}:${row.tmdb_id}`, row.rating])
+  );
+  const items = itemRows.map((row) => {
+    const { watchedEpisodes: _watchedEpisodes, ...item } = JSON.parse(row.data) as LibraryItem;
+    if (typeof item.title === "string") {
+      item.title = decodeHtmlEntities(item.title);
+    }
+    return { ...item, rating: ratings.get(`${item.mediaType}:${item.id}`) ?? null };
+  });
+  return {
+    name: share.name,
+    ownerName: share.display_name,
+    items,
+    ...(viewerUserId === share.user_id ? { ownListId: share.list_id } : {}),
+  };
 }
 
 // Genres exclus / plateformes favorites synchronisés par compte. ---------

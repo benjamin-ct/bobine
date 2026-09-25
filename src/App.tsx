@@ -17,6 +17,7 @@ import Person from "./modules/person/index.ts";
 import Random from "./modules/random/index.ts";
 import Profile from "./modules/profile/index.ts";
 import Search from "./modules/search/index.ts";
+import SharedList from "./modules/shared-list/index.ts";
 import { LoginPage, VerifyAuthPage, MembersOnlyDialog } from "./modules/auth/index.ts";
 import { TermsPage, PrivacyPolicyPage } from "./modules/legal/index.ts";
 import NotFound from "./modules/not-found/index.ts";
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/ma-liste" element={<Navigate to="/profil?tab=ma-liste" replace />} />
           <Route path="/profil" element={<Profile />} />
           <Route path="/recherche" element={<Search />} />
+          <Route path="/liste/:slug" element={<SharedList />} />
           <Route path="/connexion" element={<LoginPage />} />
           <Route path="/auth/verify" element={<VerifyAuthPage />} />
           <Route path="/conditions-utilisation" element={<TermsPage />} />

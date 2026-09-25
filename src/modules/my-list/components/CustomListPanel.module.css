@@ -161,3 +161,13 @@
 .rowDropAfter {
   box-shadow: 0 3px 0 var(--accent);
 }
+
+.okHint {
+  color: var(--ok-ink);
+  font-size: 13px;
+}
+
+.errorHint {
+  color: var(--accent-ink);
+  font-size: 13px;
+}
