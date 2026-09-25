@@ -107,7 +107,7 @@ export function useLiveSyncConnection(enabled: boolean): void {
       }
       const protocol = location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(
-        `${protocol}//${location.host}/api/sync/socket?client=${encodeURIComponent(CLIENT_ID)}`
+        `${protocol}//${location.host}/api/sync/socket?client=${encodeURIComponent(CLIENT_ID)}&visible=1`
       );
       socket = ws;
       ws.onopen = () => {
@@ -118,6 +118,10 @@ export function useLiveSyncConnection(enabled: boolean): void {
           emit(null);
         }
         hasConnectedOnce = true;
+        // Page masquée pendant l'ouverture : le hub la croit au premier plan.
+        if (document.visibilityState === "hidden") {
+          ws.send("background");
+        }
         pingTimer = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send("ping");
@@ -147,14 +151,25 @@ export function useLiveSyncConnection(enabled: boolean): void {
     };
 
     // Pas de fermeture volontaire en arrière-plan (un hub en hibernation ne
-    // coûte rien) ; en revanche le système coupe souvent la connexion d'une
-    // PWA mise en veille : on la rouvre dès le retour au premier plan, sans
-    // attendre la fin du délai de reconnexion.
+    // coûte rien), mais on signale au hub que l'app n'est plus affichée :
+    // une notification partira alors en Web Push plutôt qu'en in-app sur une
+    // page gelée (voir worker/sync.ts, FOREGROUND_MESSAGE). Le système coupe
+    // aussi souvent la connexion d'une PWA mise en veille : on la rouvre dès
+    // le retour au premier plan, sans attendre la fin du délai de reconnexion.
+    const reportVisibility = (visible: boolean) => {
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(visible ? "foreground" : "background");
+      }
+    };
+    const onPageHide = () => reportVisibility(false);
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
+        reportVisibility(false);
         return;
       }
-      if (!socket) {
+      if (socket) {
+        reportVisibility(true);
+      } else {
         clearTimeout(reconnectTimer);
         reconnectTimer = undefined;
         attempts = 0;
@@ -164,9 +179,11 @@ export function useLiveSyncConnection(enabled: boolean): void {
 
     connect();
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
     return () => {
       stopped = true;
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
       clearTimeout(reconnectTimer);
       clearInterval(pingTimer);
       socket?.close(1000, "logout");

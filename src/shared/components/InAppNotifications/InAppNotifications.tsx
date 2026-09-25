@@ -27,10 +27,11 @@ function isInAppNotification(value: unknown): value is InAppNotification {
 }
 
 // Notifications in-app livrées par le hub temps réel du compte (voir
-// worker/notify.ts) quand un appareil est connecté — à la place du Web Push.
-// Si l'onglet est en arrière-plan au moment de la réception, on affiche en
-// plus une notification système via le service worker (si la permission a
-// été accordée), pour ne pas la rater.
+// worker/notify.ts) quand un appareil a l'app au premier plan — à la place
+// du Web Push. Si l'onglet est passé en arrière-plan juste avant la
+// réception (le hub n'a pas encore reçu le signal "background"), on affiche
+// en plus une notification système via le service worker (si la permission
+// a été accordée), pour ne pas la rater.
 export default function InAppNotifications() {
   const { t } = useTranslation();
   const [toasts, setToasts] = useState<Toast[]>([]);
