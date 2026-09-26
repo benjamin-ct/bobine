@@ -4,7 +4,10 @@
 
 /* ─── Barre : Films/Séries, « Filtres », puces actives ─────────────────── */
 
+/* Hauteur commune à tous les éléments de la barre : le sélecteur Films/Séries
+   donne la référence, « Filtres » et les puces s'alignent dessus. */
 .toolbar {
+  --bar-h: 46px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -21,7 +24,8 @@
 }
 
 .segmented button {
-  min-height: 36px;
+  /* 4 px de padding + 1 px de bordure de chaque côté */
+  min-height: calc(var(--bar-h) - 10px);
   padding: 0 18px;
   border-radius: 999px;
   font-size: 14px;
@@ -39,7 +43,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: var(--bar-h);
   padding: 0 16px;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -92,8 +96,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 0 10px 0 14px;
+  min-height: var(--bar-h);
+  padding: 0 12px 0 16px;
   border-radius: 999px;
   border: 1px solid var(--selected-border);
   background: var(--selected-bg);
@@ -112,7 +116,7 @@
 }
 
 .reset {
-  min-height: 36px;
+  min-height: var(--bar-h);
   padding: 0 6px;
   font-size: 13.5px;
   font-weight: 600;
@@ -266,13 +270,8 @@
 /* ─── Mobile : feuille modale (même seuil que la barre d'onglets) ──────── */
 
 @media (max-width: 860px) {
-  .segmented button {
-    min-height: 40px;
-  }
-
-  .chip,
-  .reset {
-    min-height: 44px;
+  .toolbar {
+    --bar-h: 50px;
   }
 
   .backdrop {

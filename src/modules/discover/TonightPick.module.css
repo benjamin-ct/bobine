@@ -9,7 +9,7 @@
   align-items: center;
   min-height: 320px;
   padding: 28px;
-  margin: 8px 0 28px;
+  margin: 28px 0 28px;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--surface);
@@ -172,7 +172,7 @@
     gap: 14px;
     min-height: 130px;
     padding: 0 14px 0 0;
-    margin-top: 4px;
+    margin-top: 16px;
     margin-bottom: 22px;
     border-radius: var(--radius-lg);
   }
