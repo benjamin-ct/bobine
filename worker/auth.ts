@@ -38,7 +38,7 @@ export interface AuthUser {
   /** Slug du lien de partage public du profil, `null` tant que le profil est
    * privé (voir migrations/0009_profile_share.sql). */
   shareSlug: string | null;
-  /** Pseudo public (migration 0012), `null` tant qu'aucun n'a été choisi. */
+  /** Pseudo public (migration 0014), `null` tant qu'aucun n'a été choisi. */
   username: string | null;
   sessionToken: string;
 }

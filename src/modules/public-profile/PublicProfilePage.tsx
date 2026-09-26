@@ -311,7 +311,11 @@ export default function PublicProfilePage() {
         {profile.isSelf ? (
           <span className={styles.selfHint}>{t("follow.ownProfile")}</span>
         ) : (
-          <FollowButton slug={profile.shareSlug} following={profile.viewerFollows} onChange={applyFollow} />
+          <FollowButton
+            slug={profile.shareSlug}
+            following={profile.viewerFollows}
+            onChange={applyFollow}
+          />
         )}
       </div>
 
