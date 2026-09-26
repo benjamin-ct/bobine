@@ -59,7 +59,7 @@ const PUSH_CONTENT: Record<
       body: `« ${title} » est maintenant disponible en streaming.`,
     }),
     favoriteGenreRelease: (title) => ({
-      title: "Seancy : nouveauté dans tes genres préférés 🍿",
+      title: "Seancy : nouveauté dans vos genres préférés 🍿",
       body: `« ${title} » vient de sortir.`,
     }),
     trendingRelease: (title) => ({
@@ -68,11 +68,11 @@ const PUSH_CONTENT: Record<
     }),
     test: () => ({
       title: "Seancy : notification de test 🔔",
-      body: "Reçue en Web Push : aucun appareil de ton compte n'avait l'app ouverte.",
+      body: "Reçue en Web Push : aucun appareil de votre compte n'avait l'app ouverte.",
     }),
     newFollower: (name) => ({
       title: "Seancy : nouvel abonné 👋",
-      body: `${name || "Quelqu'un"} a commencé à te suivre.`,
+      body: `${name || "Quelqu'un"} a commencé à vous suivre.`,
     }),
   },
   en: {

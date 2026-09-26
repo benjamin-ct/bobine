@@ -30,7 +30,7 @@ export default defineConfig({
         name: "Seancy — Films & séries à regarder",
         short_name: "Seancy",
         description:
-          "Découvre où regarder tes films et séries en streaming, tire un titre au hasard, et suis ce que tu as déjà vu.",
+          "Découvrez où regarder vos films et séries en streaming, tirez un titre au hasard, et suivez ce que vous avez déjà vu.",
         start_url: "/",
         display: "standalone",
         background_color: "#09162b",
