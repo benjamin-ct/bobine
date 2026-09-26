@@ -4,9 +4,33 @@
   padding: 0 var(--gutter) 64px;
 }
 
-.windowRow {
+.period + .period {
+  margin-top: 32px;
+}
+
+/* En-tête de période « CETTE SEMAINE · 6 TITRES » : petites capitales mono,
+   suivies d'un filet jusqu'au bord. */
+.periodTitle {
   display: flex;
-  gap: 8px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 8px 0 16px;
+}
+
+.periodTitle::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+}
+
+/* Compteur « · N titres » en texte tertiaire. */
+.count {
+  color: var(--subtle);
 }

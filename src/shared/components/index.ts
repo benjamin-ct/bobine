@@ -35,7 +35,6 @@ export {
   DEFAULT_SORT_FIELD,
   DEFAULT_SORT_DIRECTION,
 } from "./FilterPanel/FilterPanel.tsx";
-export { default as CountryLanguageFilter } from "./CountryLanguageFilter/CountryLanguageFilter.tsx";
 export { default as PageHeader } from "./PageHeader/PageHeader.tsx";
 export { default as ContinueWatchingRow } from "./ContinueWatchingRow/ContinueWatchingRow.tsx";
 export { default as FeaturedMediaRow } from "./FeaturedMediaRow/FeaturedMediaRow.tsx";

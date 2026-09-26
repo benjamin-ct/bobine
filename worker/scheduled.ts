@@ -16,6 +16,7 @@ import {
   type TmdbListItem,
   type TmdbRunCache,
 } from "./tmdb.ts";
+import { getAllReminders, updateReminderProviders, type ReminderRow } from "./reminders.ts";
 import { notifyUser, type NotificationRecipient } from "./notify.ts";
 import { logError } from "./logger.ts";
 import type { Env, SubscriptionRow } from "./types.ts";
@@ -24,6 +25,9 @@ const GENRE_WINDOW_DAYS = 2; // marge de sécurité au-delà de l'intervalle du 
 const TRENDING_WINDOW_DAYS = 2;
 const TRENDING_MIN_POPULARITY = 40; // filtre les tendances "confidentielles"
 const TRENDING_MAX_PER_RUN = 3; // évite une avalanche de notifs le même jour
+// Un rappel dont la date de sortie est passée depuis plus longtemps (cron
+// manqué, rappel posé après coup) ne prévient plus de la sortie.
+const REMINDER_RELEASE_GRACE_DAYS = 3;
 
 // Déduplication des sorties déjà notifiées : au niveau du compte pour un
 // destinataire rattaché (un compte à plusieurs appareils abonnés ne doit pas
@@ -202,6 +206,97 @@ async function checkTrendingReleases(
   }
 }
 
+// 4. Rappels « Me prévenir » (migration 0014), indépendants de l'envie de
+// voir : une notification le jour de la sortie, puis une à chaque arrivée
+// sur une plateforme de streaming (même principe que la watchlist ci-dessus).
+// Le jour de la sortie, une seule notification même si le titre sort
+// directement sur une plateforme : la sortie prime, et les plateformes
+// présentes ce jour-là servent de référence.
+function isReleaseDue(releaseDate: string | null): boolean {
+  if (!releaseDate) {
+    return false;
+  }
+  const ageDays = (Date.now() - new Date(releaseDate).getTime()) / (1000 * 60 * 60 * 24);
+  return ageDays >= 0 && ageDays <= REMINDER_RELEASE_GRACE_DAYS;
+}
+
+async function checkReminder(
+  env: Env,
+  db: D1Database,
+  recipient: NotificationRecipient,
+  reminder: ReminderRow,
+  tmdbCache: TmdbRunCache
+): Promise<void> {
+  const { media_type: mediaType, tmdb_id: tmdbId } = reminder;
+  const url = `/media/${mediaType}/${tmdbId}`;
+
+  let currentProviders: number[] | null = null;
+  try {
+    currentProviders = await getFlatrateProviderIdsCached(tmdbCache, env, mediaType, tmdbId);
+  } catch (err) {
+    logError(`Providers TMDB indisponibles pour le rappel ${mediaType}/${tmdbId} :`, err);
+  }
+  const knownProviders: number[] | null = reminder.known_providers
+    ? JSON.parse(reminder.known_providers)
+    : null;
+
+  if (
+    isReleaseDue(reminder.release_date) &&
+    !(await wasRecipientNotified(db, recipient, mediaType, tmdbId, "reminder-release"))
+  ) {
+    await notifyUser(env, recipient, {
+      kind: "reminderReleased",
+      mediaTitle: reminder.title,
+      url,
+    });
+    await markRecipientNotified(db, recipient, mediaType, tmdbId, "reminder-release");
+  } else if (
+    currentProviders !== null &&
+    knownProviders !== null &&
+    currentProviders.some((id) => !knownProviders.includes(id))
+  ) {
+    await notifyUser(env, recipient, {
+      kind: "reminderAvailable",
+      mediaTitle: reminder.title,
+      url,
+    });
+  }
+
+  if (currentProviders !== null) {
+    await updateReminderProviders(db, reminder.user_id, mediaType, tmdbId, currentProviders);
+  }
+}
+
+async function checkReminders(
+  env: Env,
+  db: D1Database,
+  subscriptions: SubscriptionRow[],
+  tmdbCache: TmdbRunCache
+): Promise<void> {
+  const byUser = new Map<number, ReminderRow[]>();
+  for (const reminder of await getAllReminders(db)) {
+    const rows = byUser.get(reminder.user_id) ?? [];
+    rows.push(reminder);
+    byUser.set(reminder.user_id, rows);
+  }
+  for (const [userId, reminders] of byUser) {
+    // Hôte du dernier rappel posé : livraison in-app possible même sans
+    // abonnement push sur aucun appareil du compte.
+    const recipient: NotificationRecipient = {
+      userId,
+      subscriptions: subscriptions.filter((s) => s.user_id === userId),
+      syncHost: reminders.find((r) => r.sync_host)?.sync_host ?? undefined,
+    };
+    for (const reminder of reminders) {
+      try {
+        await checkReminder(env, db, recipient, reminder, tmdbCache);
+      } catch (err) {
+        logError(`Rappel ${reminder.media_type}/${reminder.tmdb_id} en échec :`, err);
+      }
+    }
+  }
+}
+
 function isRecentRelease(item: TmdbListItem): boolean {
   const date = item.release_date || item.first_air_date;
   if (!date) {
@@ -235,6 +330,8 @@ export function groupRecipients(subscriptions: SubscriptionRow[]): NotificationR
 export async function runDailyCheck(env: Env): Promise<void> {
   const db = env.DB;
   const subscriptions = await getAllSubscriptions(db);
+  const tmdbCache = createTmdbRunCache();
+  await checkReminders(env, db, subscriptions, tmdbCache);
   if (subscriptions.length === 0) {
     return;
   }
@@ -248,7 +345,6 @@ export async function runDailyCheck(env: Env): Promise<void> {
     logError("Tendances TMDB indisponibles :", err);
   }
 
-  const tmdbCache = createTmdbRunCache();
   for (const recipient of groupRecipients(subscriptions)) {
     await checkWatchlistAvailability(env, db, recipient, tmdbCache);
     await checkFavoriteGenreReleases(env, db, recipient, tmdbCache);

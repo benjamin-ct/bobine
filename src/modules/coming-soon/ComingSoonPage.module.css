@@ -4,35 +4,39 @@
   padding: 0 var(--gutter) 64px;
 }
 
-.windowRow {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
-}
-
 .timeline {
   display: flex;
   flex-direction: column;
 }
 
-.monthHeading {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent-ink);
-  margin: 26px 0 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+/* Un bloc par mois : son en-tête reste collé sous la barre de navigation
+   (--topnav-height, publiée par NavBar) tant qu'on défile dans ce mois. */
+.month {
+  padding-top: 14px;
 }
 
-.monthHeading::after {
-  content: "";
-  height: 1px;
-  flex: 1;
-  background: var(--border);
+.month + .month {
+  padding-top: 26px;
+}
+
+/* En-tête de mois encadré (« OCTOBRE 2026 ») : fond opaque pour masquer
+   les lignes qui défilent dessous. */
+.monthHeading {
+  position: sticky;
+  top: var(--topnav-height, var(--header-height));
+  z-index: 5;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  box-shadow: 0 -14px 0 var(--bg);
 }
 
 .item {
@@ -104,10 +108,43 @@
   white-space: nowrap;
 }
 
+/* Canal et date sur une même ligne, sous le titre. */
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 7px;
+  min-width: 0;
+}
+
 .sub {
   color: var(--muted);
   font-size: 12.5px;
-  margin-top: 3px;
+}
+
+/* Canal de sortie : « Salles » ou plateforme/diffuseur. */
+.channel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channelTheaters {
+  border-color: color-mix(in oklch, var(--gold) 45%, transparent);
+  background: var(--gold-soft);
 }
 
 .bell {
@@ -134,10 +171,44 @@
   border-color: var(--border-2);
 }
 
+/* Actif : corail, comme sur la maquette (rappel posé / envie de voir). */
 .bellOn {
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.want {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.want:hover {
   color: var(--fg);
-  border-color: var(--selected-border);
-  background: var(--selected-bg);
+  border-color: var(--border-2);
+}
+
+.wantOn {
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.wantOn svg {
+  fill: currentColor;
 }
 
 @media (max-width: 640px) {
@@ -149,8 +220,11 @@
   .thumb {
     display: none;
   }
-  .bell {
+  .actions {
     grid-column: 1 / -1;
+  }
+  .bell {
+    flex: 1;
     justify-content: center;
   }
 }

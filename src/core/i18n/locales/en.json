@@ -224,30 +224,41 @@
   },
   "comingSoonPage": {
     "windows": {
-      "next7Days": "Next 7 days",
-      "next30Days": "Next 30 days",
-      "next3Months": "Next 3 months"
+      "next7Days": "7 days",
+      "next30Days": "30 days",
+      "next3Months": "3 months"
     },
     "eyebrow": "Calendar · France",
     "title": "Coming soon",
     "lead": "Upcoming releases, in theaters and streaming. Turn on the bell to get notified on release day.",
     "unknownTitle": "Unknown title",
     "dateTbd": "Date to be confirmed",
-    "notifyTitle": "Get notified on release (adds to Want to watch)",
+    "notifyTitle": "Get notified on release day and when it arrives on a streaming service",
     "notified": "Notified",
     "notifyMe": "Notify me",
-    "emptyState": "No releases scheduled for this period with these filters."
+    "emptyState": "No releases scheduled for this period with these filters.",
+    "theaters": "Theaters",
+    "windowsLabel": "Period",
+    "wantToWatch": "Want to watch"
   },
   "newReleasesPage": {
     "windows": {
-      "last7Days": "Last 7 days",
-      "last30Days": "Last 30 days",
-      "last3Months": "Last 3 months"
+      "last7Days": "7 days",
+      "last30Days": "30 days",
+      "last3Months": "3 months"
     },
     "eyebrow": "Updated today",
     "title": "New releases",
     "lead": "The latest streaming additions and fresh theater releases — filtered for your platforms.",
-    "emptyState": "No releases in this period for these filters."
+    "emptyState": "No releases in this period for these filters.",
+    "periods": {
+      "thisWeek": "This week",
+      "earlierThisMonth": "Earlier this month",
+      "earlier": "Earlier"
+    },
+    "titlesCount_one": "· {{count}} title",
+    "titlesCount_other": "· {{count}} titles",
+    "windowsLabel": "Period"
   },
   "discoverPage": {
     "title": "Discover",
@@ -296,22 +307,34 @@
   },
   "randomPage": {
     "eyebrow": "Don't know what to watch?",
-    "title": "The Seancy wheel",
-    "lead": "A random pick from your universe. Reroll until you find tonight's gem.",
+    "title": "The showtime wheel",
+    "lead": "Reroll until you find tonight's gem.",
     "releaseYear": "Release year",
     "excludeWatched": "Exclude what I've already watched",
-    "rolling": "Rolling…",
-    "reroll": "Reroll",
     "draw": "Draw a title",
     "emptyHint": "No title matches these filters.",
     "badge": "Tonight's pick",
     "viewSheet": "View details",
     "wantToWatchOn": "Want to watch",
     "wantToWatchOff": "Want to watch",
-    "watchedOn": "Already watched",
-    "watchedOff": "Mark as watched",
+    "watchedOn": "Watched",
+    "watchedOff": "Watched",
     "similar": "Similar",
-    "whereToWatch": "Where to watch"
+    "source": "Draw from",
+    "sourceWatchlist": "My watchlist",
+    "sourceCatalog": "Whole catalog",
+    "emptyWatchlistHint": "No title in your watchlist matches these filters.",
+    "drawFromCatalog": "Draw from the whole catalog",
+    "historyTitle": "Recent draws",
+    "sourceWatchlistHint": "Drawing from the titles in your watchlist",
+    "sourceCatalogHint": "Drawing from the whole catalog, with your filters",
+    "refine": "Refine",
+    "withoutWatched": "excluding watched",
+    "typeMovie": "Movie",
+    "typeSeries": "Series",
+    "availableOn": "Available on",
+    "withSubscription": "included with subscription",
+    "rentOrBuy": "to rent or buy"
   },
   "searchPage": {
     "resultsFor": "Results for “{{query}}”",
@@ -464,6 +487,14 @@
       "title": "New follower",
       "body": "{{title}} started following you."
     },
+    "reminderReleased": {
+      "title": "Release day",
+      "body": "\"{{title}}\" is out today."
+    },
+    "reminderAvailable": {
+      "title": "Now streaming",
+      "body": "\"{{title}}\" just arrived on a streaming service."
+    },
     "newFollowerFallback": "Someone"
   },
   "legal": {
@@ -547,6 +578,10 @@
       "follows": {
         "label": "Follows",
         "text": ": when you follow a profile, we store that follow and its date. It is used to show follower/following counts and lists, your activity feed, and to notify the person you follow. If your profile is shared, your display name and a link to your profile appear in those lists; otherwise you only appear as a \"private profile\". A shared profile can also be found by its display name in the profile search available to signed-in members. You can unfollow a profile at any time."
+      },
+      "reminders": {
+        "label": "“Notify me” reminders",
+        "text": ": when you turn on the bell for an upcoming title, we store on your account that title (identifier, name, poster, release date), the date of the reminder and the streaming services already known for it. They are only used to notify you on release day and when the title arrives on a streaming service. Turning the bell off deletes the reminder."
       },
       "sharedProfile": {
         "label": "Shared profile and username",
@@ -834,6 +869,7 @@
     "runtime": "Runtime",
     "minutes": "min",
     "country": "Country",
+    "language": "Language",
     "chip": "{{label}}: {{value}}"
   }
 }

@@ -492,3 +492,31 @@ export function sanitizeKeyList(rawKeys: unknown, maxItems: number): CleanKey[] 
     })
     .filter((k): k is CleanKey => k !== null);
 }
+
+export interface CleanReminder {
+  mediaType: MediaTypeStr;
+  tmdbId: number;
+  title: string;
+  posterPath: string | null;
+  // AAAA-MM-JJ, ou null si la date de sortie n'est pas encore connue.
+  releaseDate: string | null;
+}
+
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// Rappel « Me prévenir » (PUT /api/reminders, voir worker/reminders.ts).
+export function sanitizeReminder(raw: unknown): CleanReminder | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const [item] = sanitizeWatchlistItems([raw], 1);
+  if (!item) {
+    return null;
+  }
+  const r = raw as Record<string, unknown>;
+  const releaseDate =
+    typeof r.releaseDate === "string" && ISO_DATE_PATTERN.test(r.releaseDate)
+      ? r.releaseDate
+      : null;
+  return { ...item, releaseDate };
+}

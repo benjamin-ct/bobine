@@ -4,6 +4,126 @@
   padding: 0 var(--gutter) 64px;
 }
 
+/* Source du tirage, toujours visible : sélecteur pleine largeur, puis une
+   phrase qui dit dans quoi on tire. */
+.source {
+  margin-bottom: 18px;
+}
+
+.sourceSwitch {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.sourceSwitch button {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.sourceSwitch button:hover {
+  color: var(--fg);
+}
+
+.sourceSwitch .sourceActive {
+  background: var(--selected-bg);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--selected-border);
+}
+
+.sourceHint {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* « Tirer un titre », « Affiner » et le résumé des filtres sur une ligne ;
+   sur mobile, le bouton de tirage prend toute la largeur. */
+.drawRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+
+.filtersSummary {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .sourceSwitch button {
+    flex: 1;
+    padding: 0 12px;
+  }
+  .filtersSummary {
+    display: none;
+  }
+}
+
+.filtersToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.filtersToggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.filtersToggle:hover {
+  border-color: var(--border-2);
+  background: var(--surface-2);
+}
+
+.filtersToggleOpen {
+  background: var(--selected-bg);
+  border-color: var(--selected-border);
+}
+
+.count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.filters {
+  margin-top: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.filters[hidden] {
+  display: none;
+}
+
 .yearFilter {
   max-width: 220px;
   margin-bottom: 18px;
@@ -41,28 +161,56 @@
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  margin-bottom: 20px;
 }
 
+/* Gros bouton de tirage : l'action principale de la page. Libellé fixe,
+   seule l'icône tourne pendant le tirage (pas de saut de mise en page). */
 .rollBtn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 13px 22px;
+  justify-content: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 30px;
   border-radius: 999px;
   background: var(--accent);
   color: var(--on-accent);
-  font-weight: 600;
-  box-shadow: 0 6px 18px -8px var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: 0 10px 28px -10px var(--accent);
 }
 
-.rollBtn svg {
-  width: 16px;
-  height: 16px;
+.rollBtn > span {
+  display: inline-flex;
+}
+
+.rollBtn:hover:not(:disabled) {
+  background: var(--accent-strong);
 }
 
 .rollBtn:disabled {
   opacity: 0.6;
+}
+
+.rollBtn[aria-busy="true"] {
+  opacity: 1;
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .rollBtn {
+    width: 100%;
+    min-height: 60px;
+  }
 }
 
 .hint {
@@ -70,20 +218,37 @@
   margin-top: 14px;
 }
 
+.linkBtn {
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .rangeError {
   color: var(--accent-ink);
   font-size: 13px;
+  margin-top: 10px;
 }
 
+/* Carte tirée, avec le spot doré de la « salle de cinéma » centré sur
+   elle. Le cadre reste en place pendant un nouveau tirage : seuls l'affiche
+   et les textes s'estompent puis changent. */
 .spotlight {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-2);
   border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow);
   display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 32px;
-  padding: clamp(22px, 3vw, 36px);
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "poster head"
+    "poster body";
+  column-gap: 32px;
+  padding: clamp(20px, 3vw, 32px);
   margin-top: 26px;
   isolation: isolate;
 }
@@ -93,23 +258,30 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: color-mix(in oklch, var(--bg) 82%, transparent);
+  background: radial-gradient(ellipse 60% 70% at 50% 50%, var(--spotlight), transparent 72%);
+  pointer-events: none;
 }
 
-@media (max-width: 720px) {
-  .spotlight {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
+.fading {
+  opacity: 0.35;
+  transition: opacity 0.2s ease;
+}
+
+.posterWrap,
+.head,
+.body {
+  transition: opacity 0.2s ease;
 }
 
 .posterWrap {
+  grid-area: poster;
+  align-self: start;
   aspect-ratio: 2 / 3;
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lift);
-  max-width: 220px;
+  background: var(--surface-2);
 }
 
 .posterWrap img {
@@ -130,12 +302,24 @@
   line-height: 0.95;
 }
 
+.head {
+  grid-area: head;
+  min-width: 0;
+}
+
+.body {
+  grid-area: body;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .badge {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent-ink);
+  color: var(--muted);
   margin: 0;
 }
 
@@ -143,35 +327,54 @@
   font-family: var(--font-poster);
   font-weight: 400;
   text-transform: uppercase;
-  font-size: clamp(28px, 3.6vw, 42px);
+  font-size: clamp(30px, 4vw, 48px);
   line-height: 0.95;
-  margin-top: 6px;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
 }
 
 .meta {
   color: var(--muted);
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .overview {
   max-width: 62ch;
-  margin-top: 12px;
-  color: color-mix(in oklch, var(--fg) 88%, var(--muted));
+  margin-top: 14px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--fg);
 }
 
+.availability {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.availability b {
+  font-weight: 500;
+  color: var(--fg);
+}
+
+/* Actions en bas de la carte sur desktop. */
 .actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
-  margin-top: 18px;
+  margin-top: auto;
+  padding-top: 24px;
 }
 
 .primaryBtn,
-.secondaryBtn {
+.secondaryBtn,
+.ghostBtn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 18px;
+  min-height: 44px;
+  padding: 0 18px;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
@@ -182,10 +385,18 @@
   color: var(--on-accent);
 }
 
+.primaryBtn:hover {
+  background: var(--accent-strong);
+}
+
 .secondaryBtn {
   border: 1px solid var(--border-2);
   background: var(--surface);
   color: var(--fg);
+}
+
+.secondaryBtn:hover {
+  background: var(--surface-2);
 }
 
 .secondaryBtn.onWant {
@@ -200,7 +411,105 @@
   background: var(--ok);
 }
 
-.whereTitle {
-  margin-top: 22px;
-  font-size: 17px;
+.ghostBtn {
+  color: var(--muted);
+}
+
+.ghostBtn:hover {
+  color: var(--fg);
+}
+
+/* Mobile : petite affiche à côté du titre, résumé et actions dessous. */
+@media (max-width: 720px) {
+  .spotlight {
+    grid-template-columns: 120px 1fr;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "poster head"
+      "body body";
+    column-gap: 18px;
+    row-gap: 18px;
+  }
+  .head {
+    align-self: center;
+  }
+  .title {
+    font-size: 30px;
+  }
+  .overview {
+    margin-top: 0;
+  }
+  .actions {
+    padding-top: 18px;
+  }
+  .posterEmpty {
+    font-size: 18px;
+    padding: 10px;
+  }
+}
+
+/* Derniers tirages (onglet courant) : vignettes, le tirage affiché encadré. */
+.history {
+  margin-top: 36px;
+}
+
+.historyTitle {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.historyList {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  list-style: none;
+  margin: 0;
+}
+
+.historyItem {
+  display: flex;
+  align-items: flex-end;
+  width: 72px;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  transition: border-color 0.15s ease;
+}
+
+.historyItem:hover {
+  border-color: var(--border-2);
+}
+
+.historyItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.historyCurrent,
+.historyCurrent:hover {
+  border: 2px solid var(--accent);
+}
+
+.historyName {
+  padding: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.filters > :last-child {
+  margin-bottom: 0;
 }

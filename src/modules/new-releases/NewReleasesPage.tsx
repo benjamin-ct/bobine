@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
@@ -9,9 +9,7 @@ import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx"
 import {
   MediaCard,
   MediaCardSkeleton,
-  FilterBar,
-  CountryLanguageFilter,
-  Chip,
+  FilterPanel,
   ErrorMessage,
   EmptyState,
   PageHeader,
@@ -33,6 +31,40 @@ function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function daysAgoIso(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return toIsoDate(d);
+}
+
+// Périodes d'affichage (nouvelle DA) : « Cette semaine », « Plus tôt ce
+// mois-ci », puis « Plus tôt » pour la fenêtre de 3 mois. Fenêtres
+// glissantes, comme les puces de période.
+const PERIODS = [
+  { key: "thisWeek", days: 7 },
+  { key: "earlierThisMonth", days: 30 },
+  { key: "earlier", days: Infinity },
+] as const;
+
+type PeriodKey = (typeof PERIODS)[number]["key"];
+
+// Regroupe les résultats par période sans changer leur ordre (popularité)
+// à l'intérieur d'une période. Un titre sans date, ou daté avant la fenêtre
+// (date primaire TMDB plus ancienne que la sortie dans la région), tombe
+// dans la dernière période de la fenêtre.
+function groupByPeriod(items: MediaItem[], windowDays: number) {
+  const periods = PERIODS.filter((_, i) => i === 0 || PERIODS[i - 1].days < windowDays);
+  const bounds = periods.map((p) => (p.days === Infinity ? "" : daysAgoIso(p.days)));
+  const groups = new Map<PeriodKey, MediaItem[]>(periods.map((p) => [p.key, []]));
+  for (const item of items) {
+    const date = item.release_date || item.first_air_date || "";
+    const index = bounds.findIndex((bound) => date >= bound);
+    const period = periods[index === -1 || !date ? periods.length - 1 : index];
+    groups.get(period.key)!.push(item);
+  }
+  return [...groups].filter(([, list]) => list.length > 0);
+}
+
 // Fenêtre [aujourd'hui - windowDays ; aujourd'hui] : uniquement des titres
 // déjà sortis (pas de bornes ouvertes vers le futur, sinon TMDB renvoie
 // aussi des sorties à venir déjà programmées).
@@ -47,7 +79,7 @@ export default function NewReleasesPage() {
   const { t, i18n } = useTranslation();
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
-  const [providerId, setProviderId] = useState("");
+  const [providerIds, setProviderIds] = useState<string[]>([]);
   const [useMyPlatforms, setUseMyPlatforms] = useState(false);
   const [country, setCountry] = useState("");
   const [language, setLanguage] = useState("");
@@ -66,8 +98,8 @@ export default function NewReleasesPage() {
   const { filterExcluded } = useExcludedTitles();
   const activeProviderIds = useMyPlatforms
     ? favoriteProviderIds
-    : providerId
-      ? [providerId]
+    : providerIds.length
+      ? providerIds
       : undefined;
 
   // Ignore le premier montage : sinon `setGenreIds([])` y crée un nouveau
@@ -86,7 +118,7 @@ export default function NewReleasesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreIds, providerId, useMyPlatforms, country, language, windowDays]);
+  }, [genreIds, providerIds, useMyPlatforms, country, language, windowDays]);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,7 +176,7 @@ export default function NewReleasesPage() {
     mediaType,
     genreIds,
     excludedGenreIds,
-    providerId,
+    providerIds,
     useMyPlatforms,
     favoriteProviderIds,
     region,
@@ -193,7 +225,7 @@ export default function NewReleasesPage() {
     mediaType,
     genreIds,
     excludedGenreIds,
-    providerId,
+    providerIds,
     useMyPlatforms,
     favoriteProviderIds,
     region,
@@ -226,46 +258,40 @@ export default function NewReleasesPage() {
 
   useScrollRestoration(status === "success", results.length);
 
+  const groups = useMemo(() => groupByPeriod(results, windowDays), [results, windowDays]);
+
   return (
     <div className={styles.page}>
       <PageHeader
         eyebrow={t("newReleasesPage.eyebrow")}
         title={t("newReleasesPage.title")}
         lead={t("newReleasesPage.lead")}
+        spot
       />
 
-      <FilterBar
+      <FilterPanel
         mediaType={mediaType}
         setMediaType={setMediaType}
+        genres={genres}
         genreIds={genreIds}
         setGenreIds={setGenreIds}
-        genres={genres}
-        providerId={providerId}
-        setProviderId={setProviderId}
         providers={providers}
+        providerIds={providerIds}
+        setProviderIds={setProviderIds}
         favoriteProviderIds={favoriteProviderIds}
-        useFavoriteProviders={useMyPlatforms}
-        setUseFavoriteProviders={setUseMyPlatforms}
+        useMyPlatforms={useMyPlatforms}
+        setUseMyPlatforms={setUseMyPlatforms}
+        countryLanguage={{ country, setCountry, language, setLanguage }}
+        periods={{
+          label: t("newReleasesPage.windowsLabel"),
+          options: WINDOWS.map((w) => ({
+            value: w.value,
+            label: t(`newReleasesPage.windows.${w.key}`),
+          })),
+          value: windowDays,
+          onChange: setWindowDays,
+        }}
       />
-
-      <CountryLanguageFilter
-        country={country}
-        setCountry={setCountry}
-        language={language}
-        setLanguage={setLanguage}
-      />
-
-      <div className={styles.windowRow}>
-        {WINDOWS.map((w) => (
-          <Chip
-            key={w.value}
-            active={windowDays === w.value}
-            onClick={() => setWindowDays(w.value)}
-          >
-            {t(`newReleasesPage.windows.${w.key}`)}
-          </Chip>
-        ))}
-      </div>
 
       {status === "loading" && (
         <div className={gridStyles.grid}>
@@ -281,11 +307,21 @@ export default function NewReleasesPage() {
 
       {status === "success" && results.length > 0 && (
         <>
-          <div className={gridStyles.grid}>
-            {results.map((item) => (
-              <MediaCard key={item.id} item={item} showProviderBadge />
-            ))}
-          </div>
+          {groups.map(([key, items]) => (
+            <section key={key} className={styles.period} aria-labelledby={`period-${key}`}>
+              <h2 id={`period-${key}`} className={styles.periodTitle}>
+                {t(`newReleasesPage.periods.${key}`)}{" "}
+                <span className={styles.count}>
+                  {t("newReleasesPage.titlesCount", { count: items.length })}
+                </span>
+              </h2>
+              <div className={gridStyles.grid}>
+                {items.map((item) => (
+                  <MediaCard key={item.id} item={item} showProviderBadge />
+                ))}
+              </div>
+            </section>
+          ))}
           {page < totalPages && (
             <div ref={sentinelRef} className={gridStyles.loadMore}>
               {loadingMore && <span>{t("common.loading")}</span>}

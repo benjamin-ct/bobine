@@ -137,6 +137,7 @@ export default function NavBar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const { status: authStatus } = useAuth();
   const { region } = useRegion();
   // Pendant la vérification de la session au rechargement ("loading", seulement
@@ -144,6 +145,25 @@ export default function NavBar() {
   // d'un membre connecté : sinon « Connexion » puis l'onglet Profil
   // apparaissent et disparaissent le temps de la réponse de /api/auth/me.
   const authenticated = authStatus !== "anonymous";
+
+  // Hauteur réelle de l'en-tête collant, publiée en --topnav-height pour
+  // les éléments collants posés juste dessous (mois de Prochainement...) :
+  // elle varie selon la largeur et l'ouverture du panneau de recherche.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) {
+      return;
+    }
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() => {
+      root.style.setProperty("--topnav-height", `${el.offsetHeight}px`);
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--topnav-height");
+    };
+  }, []);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -228,7 +248,7 @@ export default function NavBar() {
 
   return (
     <>
-      <header className={styles.topnav}>
+      <header className={styles.topnav} ref={headerRef}>
         <div className={styles.inner}>
           <Link to="/" className={styles.brand} onClick={onNavClick}>
             <TicketLogo className={styles.logo} />
