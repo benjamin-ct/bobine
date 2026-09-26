@@ -55,6 +55,10 @@ export default function PrivacyPolicyPage() {
             <strong>{t("privacyPolicyPage.dataCollected.follows.label")}</strong>
             {t("privacyPolicyPage.dataCollected.follows.text")}
           </li>
+          <li>
+            <strong>{t("privacyPolicyPage.dataCollected.sharedProfile.label")}</strong>
+            {t("privacyPolicyPage.dataCollected.sharedProfile.text")}
+          </li>
         </ul>
       </LegalSection>
 

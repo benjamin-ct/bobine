@@ -197,3 +197,54 @@
 p.savedHint {
   margin: 0;
 }
+
+.handleInput {
+  display: flex;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.handleInput:focus-within {
+  border-color: var(--accent);
+}
+
+.field .handlePrefix {
+  padding-left: 12px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.field .handleInput input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding-left: 4px;
+}
+
+.field .handleInput input:focus {
+  outline: none;
+}
+
+.handleHint,
+.handleOk,
+.handleError {
+  font-size: 12.5px;
+}
+
+.handleHint {
+  color: var(--muted);
+}
+
+.handleOk {
+  color: var(--ok-ink);
+}
+
+.handleError {
+  color: var(--accent-ink);
+}

@@ -43,6 +43,10 @@ interface AuthContextValue {
   // Slug du lien de partage public du profil (/u/<slug>), `null` tant que
   // le profil est privé — voir ProfileShareCard.
   shareSlug: string | null;
+  // Pseudo public unique (users.username), `null` tant qu'aucun n'a été
+  // choisi. Quand il existe, le lien de partage du profil devient
+  // /u/<pseudo> au lieu de /u/<shareSlug>.
+  username: string | null;
   requestLink: (email: string) => Promise<RequestLinkResult>;
   verify: (token: string) => Promise<VerifyResult>;
   verifyCode: (code: string) => Promise<VerifyResult>;
@@ -57,6 +61,18 @@ interface AuthContextValue {
   // est envoyé à la nouvelle adresse, puis sa saisie applique le changement.
   requestEmailChange: (newEmail: string) => Promise<EmailChangeRequestResult>;
   confirmEmailChange: (code: string) => Promise<void>;
+  // Enregistre (ou retire, avec une chaîne vide) le pseudo ; rejette avec un
+  // message lisible s'il est invalide ou déjà pris.
+  updateUsername: (username: string) => Promise<void>;
+  // Vérification indicative pendant la saisie (le PUT refait la vérification).
+  checkUsername: (username: string, signal?: AbortSignal) => Promise<UsernameCheck>;
+}
+
+export interface UsernameCheck {
+  // Pseudo normalisé (minuscules, sans « @ »), `null` si invalide.
+  username: string | null;
+  available: boolean;
+  reason: "invalid" | "taken" | null;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -73,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
 
   // `verify()` (consommation du jeton sur /auth/verify) et `refresh()` (la
   // vérification passive "suis-je déjà connecté" au montage) peuvent
@@ -97,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setEmail(null);
       setDisplayName(null);
       setShareSlug(null);
+      setUsername(null);
       setStatus("anonymous");
       return Promise.resolve();
     }
@@ -109,12 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: string;
           displayName: string | null;
           shareSlug: string | null;
+          username: string | null;
         }>;
       })
       .then((data) => {
         setEmail(data.email);
         setDisplayName(data.displayName ?? null);
         setShareSlug(data.shareSlug ?? null);
+        setUsername(data.username ?? null);
         setStatus("authenticated");
         pinnedRef.current = true;
       })
@@ -125,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setEmail(null);
         setDisplayName(null);
         setShareSlug(null);
+        setUsername(null);
         setStatus("anonymous");
       });
   }, []);
@@ -186,6 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setEmail(data.email);
       setDisplayName(data.displayName ?? null);
       setShareSlug(data.shareSlug ?? null);
+      setUsername(data.username ?? null);
       setStatus("authenticated");
       return data;
     },
@@ -281,6 +303,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [locale, t]
   );
 
+  const updateUsername = useCallback(
+    async (newUsername: string): Promise<void> => {
+      const res = await fetch("/api/account/username", {
+        method: "PUT",
+        headers: { "content-type": "application/json", ...syncClientHeaders() },
+        body: JSON.stringify({ username: newUsername }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          data.reason === "taken"
+            ? t("auth.usernameTaken")
+            : data.reason === "invalid"
+              ? t("auth.usernameInvalid")
+              : data.error || t("auth.updateUsernameError")
+        );
+      }
+      setUsername(data.username ?? null);
+    },
+    [t]
+  );
+
+  const checkUsername = useCallback(
+    async (candidate: string, signal?: AbortSignal): Promise<UsernameCheck> => {
+      const res = await fetch(
+        `/api/account/username/availability?username=${encodeURIComponent(candidate)}`,
+        { signal }
+      );
+      if (!res.ok) {
+        throw new Error(t("auth.updateUsernameError"));
+      }
+      return (await res.json()) as UsernameCheck;
+    },
+    [t]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -288,6 +346,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         displayName,
         shareSlug,
+        username,
         requestLink,
         verify,
         verifyCode,
@@ -296,6 +355,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfileShared,
         requestEmailChange,
         confirmEmailChange,
+        updateUsername,
+        checkUsername,
       }}
     >
       {children}

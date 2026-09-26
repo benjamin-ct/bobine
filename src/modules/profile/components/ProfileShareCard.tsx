@@ -9,12 +9,14 @@ import styles from "./ProfileShareCard.module.css";
 // handleUpdateProfileShare côté Worker).
 export default function ProfileShareCard() {
   const { t } = useTranslation();
-  const { shareSlug, setProfileShared } = useAuth();
+  const { shareSlug, username, setProfileShared } = useAuth();
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sharePath = shareSlug ? `/u/${shareSlug}` : null;
+  // Lien lisible /u/<pseudo> dès qu'un pseudo est choisi (voir AccountCard) ;
+  // l'ancien lien /u/<slug> reste valide tant que le partage est actif.
+  const sharePath = shareSlug ? `/u/${username ?? shareSlug}` : null;
   const shareUrl = sharePath ? `${window.location.origin}${sharePath}` : null;
 
   async function toggle(enabled: boolean) {
@@ -59,6 +61,7 @@ export default function ProfileShareCard() {
     <div className={styles.card}>
       <span className={styles.k}>{t("profileShare.title")}</span>
       <p className={styles.hint}>{t(shareUrl ? "profileShare.hintOn" : "profileShare.hintOff")}</p>
+      {shareUrl && !username && <p className={styles.hint}>{t("profileShare.usernameTip")}</p>}
 
       {shareUrl && sharePath && (
         <div className={styles.linkRow}>

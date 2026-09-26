@@ -6,6 +6,17 @@ import { gravatarUrl } from "../../../shared/lib/gravatar.ts";
 import EmailChangeForm from "./EmailChangeForm.tsx";
 import styles from "./AccountCard.module.css";
 
+// Même règle que normalizeUsername côté Worker (worker/share-slug.ts) : on
+// n'interroge le serveur que pour une saisie déjà valide.
+const USERNAME_PATTERN = /^[a-z0-9_]{3,15}$/;
+const USERNAME_CHECK_DELAY_MS = 400;
+
+function normalizeUsername(value: string): string {
+  return value.trim().replace(/^@/, "").toLowerCase();
+}
+
+type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid" | "error";
+
 function initials(name: string, fallback: string): string {
   const source = name.trim() || fallback;
   return source
@@ -19,8 +30,19 @@ function initials(name: string, fallback: string): string {
 
 export default function AccountCard() {
   const { t } = useTranslation();
-  const { status, email, displayName, updateDisplayName, logout } = useAuth();
+  const {
+    status,
+    email,
+    displayName,
+    username,
+    updateDisplayName,
+    updateUsername,
+    checkUsername,
+    logout,
+  } = useAuth();
   const [name, setName] = useState("");
+  const [handle, setHandle] = useState("");
+  const [handleStatus, setHandleStatus] = useState<UsernameStatus>("idle");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +68,41 @@ export default function AccountCard() {
     setName(displayName ?? "");
   }, [displayName]);
 
+  useEffect(() => {
+    setHandle(username ?? "");
+  }, [username]);
+
+  // Pseudo (ticket « Ajoute de pseudo ») : disponibilité vérifiée pendant la
+  // saisie, avec un léger délai pour ne pas interroger le serveur à chaque
+  // frappe. Purement indicatif — l'enregistrement refait la vérification.
+  const normalizedHandle = normalizeUsername(handle);
+  const handleChanged = normalizedHandle !== (username ?? "");
+  useEffect(() => {
+    if (!handleChanged || normalizedHandle === "") {
+      setHandleStatus("idle");
+      return;
+    }
+    if (!USERNAME_PATTERN.test(normalizedHandle)) {
+      setHandleStatus("invalid");
+      return;
+    }
+    setHandleStatus("checking");
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      checkUsername(normalizedHandle, controller.signal)
+        .then((res) => setHandleStatus(res.available ? "available" : (res.reason ?? "taken")))
+        .catch((err: unknown) => {
+          if (!(err instanceof DOMException && err.name === "AbortError")) {
+            setHandleStatus("error");
+          }
+        });
+    }, USERNAME_CHECK_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [normalizedHandle, handleChanged, checkUsername]);
+
   if (status !== "authenticated") {
     return (
       <div className={styles.card}>
@@ -68,6 +125,9 @@ export default function AccountCard() {
     setError(null);
     try {
       await updateDisplayName(name.trim());
+      if (handleChanged) {
+        await updateUsername(normalizedHandle);
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
     } catch (err) {
@@ -103,6 +163,42 @@ export default function AccountCard() {
               placeholder={t("accountCard.displayNamePlaceholder")}
             />
           </label>
+          <label className={styles.field}>
+            <span>{t("accountCard.username")}</span>
+            <div className={styles.handleInput}>
+              <span className={styles.handlePrefix} aria-hidden="true">
+                @
+              </span>
+              <input
+                type="text"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
+                placeholder={t("accountCard.usernamePlaceholder")}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={16}
+                aria-describedby="account-username-status"
+              />
+            </div>
+            <small
+              id="account-username-status"
+              className={
+                handleStatus === "available"
+                  ? styles.handleOk
+                  : handleStatus === "taken" ||
+                      handleStatus === "invalid" ||
+                      handleStatus === "error"
+                    ? styles.handleError
+                    : styles.handleHint
+              }
+              aria-live="polite"
+            >
+              {handleStatus === "idle"
+                ? t("accountCard.usernameHint")
+                : t(`accountCard.username_${handleStatus}`)}
+            </small>
+          </label>
           <div className={styles.field}>
             <label htmlFor="account-email">{t("accountCard.email")}</label>
             <div className={styles.inline}>
@@ -136,7 +232,14 @@ export default function AccountCard() {
         </div>
       </div>
       <div className={styles.actions}>
-        <button type="button" className={styles.saveBtn} onClick={save} disabled={saving}>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={save}
+          disabled={
+            saving || (handleChanged && handleStatus !== "available" && normalizedHandle !== "")
+          }
+        >
           {saving ? t("accountCard.saving") : t("accountCard.save")}
         </button>
         <button type="button" className={styles.logoutBtn} onClick={logout}>

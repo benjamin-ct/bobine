@@ -74,7 +74,10 @@
     },
     "updateDisplayNameError": "Impossible d'enregistrer le nom affiché.",
     "requestLinkError": "Impossible d'envoyer le lien de connexion.",
-    "updateShareError": "Impossible de modifier le partage du profil."
+    "updateShareError": "Impossible de modifier le partage du profil.",
+    "usernameTaken": "Ce pseudo est déjà pris.",
+    "usernameInvalid": "Pseudo invalide : 3 à 15 caractères, lettres minuscules, chiffres ou « _ ».",
+    "updateUsernameError": "Impossible d'enregistrer le pseudo."
   },
   "loginPage": {
     "title": "Se connecter",
@@ -170,7 +173,15 @@
         "rateLimitedMinutes_other": "Trop de tentatives. Réessaie dans {{count}} minutes.",
         "generic": "Impossible de modifier l'adresse pour le moment. Réessaie plus tard."
       }
-    }
+    },
+    "username": "Pseudo",
+    "usernamePlaceholder": "ton_pseudo",
+    "usernameHint": "Unique, 3 à 15 caractères : lettres minuscules, chiffres ou « _ ». Il sert d'adresse à ton profil partagé.",
+    "username_checking": "Vérification de la disponibilité…",
+    "username_available": "✓ Pseudo disponible",
+    "username_taken": "Ce pseudo est déjà pris.",
+    "username_invalid": "3 à 15 caractères : lettres minuscules, chiffres ou « _ ».",
+    "username_error": "Impossible de vérifier la disponibilité du pseudo."
   },
   "excludedGenres": {
     "summary": "Genres à exclure",
@@ -531,6 +542,10 @@
       "follows": {
         "label": "Abonnements",
         "text": " : quand vous suivez un profil, nous enregistrons ce lien d'abonnement et sa date. Il sert à afficher les compteurs et listes d'abonnés/abonnements, votre fil d'activité et à prévenir la personne suivie. Si votre profil est partagé, votre nom affiché et le lien vers votre profil apparaissent dans ces listes ; sinon, vous y figurez uniquement comme « profil privé ». Un profil partagé peut aussi être trouvé par son nom affiché dans la recherche de profils des membres connectés. Vous pouvez ne plus suivre un profil à tout moment."
+      },
+      "sharedProfile": {
+        "label": "Profil partagé et pseudo",
+        "text": " (si vous choisissez de partager votre profil) : vos titres vus, votre envie de voir, vos listes personnalisées, vos notes, votre nom affiché et votre photo de profil deviennent visibles en lecture seule par toute personne disposant du lien — jamais votre adresse email. Vous pouvez aussi choisir un pseudo, facultatif et unique : il apparaît dans l'adresse du profil partagé (/u/votre_pseudo) et sur celui-ci. Désactiver le partage rend le profil inaccessible, y compris via le pseudo ; vous pouvez modifier ou effacer le pseudo à tout moment depuis votre profil."
       }
     },
     "why": {
@@ -676,7 +691,7 @@
   "profileShare": {
     "title": "Partager mon profil",
     "hintOff": "Ton profil est privé. Active le partage pour obtenir un lien que tu pourras envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, tes titres vus, ton envie de voir, tes listes, tes notes et ta photo de profil (jamais ton adresse e-mail). Un profil partagé peut aussi être trouvé par ton nom affiché et suivi par les autres membres.",
-    "hintOn": "Ton profil est visible en lecture seule par toute personne qui a ce lien, et les membres connectés peuvent le trouver par ton nom affiché et le suivre. Désactiver le partage rend le lien définitivement invalide.",
+    "hintOn": "Ton profil est visible en lecture seule par toute personne qui a ce lien, et les membres connectés peuvent le trouver par ton nom affiché et le suivre. Désactiver le partage le rend aussitôt inaccessible.",
     "linkLabel": "Lien de partage du profil",
     "share": "Partager le lien",
     "preview": "Voir mon profil public",
@@ -685,7 +700,8 @@
     "copied": "✓ Lien copié",
     "copyError": "Impossible de copier le lien.",
     "shareTitle": "Mon profil Bobine",
-    "error": "Impossible de modifier le partage du profil."
+    "error": "Impossible de modifier le partage du profil.",
+    "usernameTip": "Astuce : choisis un pseudo dans la carte Compte pour obtenir un lien plus lisible (/u/ton_pseudo)."
   },
   "topPicks": {
     "title": "Mon Top 5",

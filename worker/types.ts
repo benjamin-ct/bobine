@@ -80,6 +80,7 @@ export interface UserRow {
   email: string;
   display_name: string | null;
   share_slug: string | null;
+  username: string | null;
   created_at: number;
 }
 
