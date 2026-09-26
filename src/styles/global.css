@@ -65,6 +65,17 @@ body {
   flex: 1;
 }
 
+/* Barre d'onglets mobile fixée en bas (NavBar) : on réserve sa hauteur pour
+   que le pied de page et la fin des listes ne passent pas dessous. */
+@media (max-width: 860px) {
+  :root {
+    --tabbar-offset: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  }
+  body {
+    padding-bottom: var(--tabbar-offset);
+  }
+}
+
 /* Fond « salle de cinéma » : bords assombris vers --vignette (un simple voile
    en thème clair). Calque fixe sous tout le contenu (z-index -1, au-dessus du
    fond de <body>) plutôt qu'un background-attachment: fixed, ignoré par

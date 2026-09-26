@@ -52,8 +52,8 @@
 }
 
 .tab {
-  position: relative;
   padding: 8px 14px;
+  border: 1px solid transparent;
   border-radius: 999px;
   white-space: nowrap;
   font-size: 14px;
@@ -69,20 +69,13 @@
   background: var(--surface-2);
 }
 
-.tabActive {
+/* Page active : Surface 3 (le corail est réservé aux actions, voir
+   variables.css). */
+.tabActive,
+.tabActive:hover {
   color: var(--fg);
-}
-
-.tabActive::after {
-  content: "";
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 2px;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
+  background: var(--selected-bg);
+  border-color: var(--selected-border);
 }
 
 .search {
@@ -228,7 +221,6 @@
   flex: none;
   display: grid;
   place-items: center;
-  justify-content: center;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -240,8 +232,14 @@
 }
 
 .iconBtn:hover {
-  border-color: var(--accent);
+  border-color: var(--border-2);
   background: var(--surface-2);
+}
+
+.iconBtnActive,
+.iconBtnActive:hover {
+  background: var(--selected-bg);
+  border-color: var(--selected-border);
 }
 
 .iconBtn svg {
@@ -249,37 +247,25 @@
   height: 18px;
 }
 
-.textBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--border-2);
-  background: var(--surface);
-  color: var(--fg);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.textBtn:hover {
-  border-color: var(--accent);
-  background: var(--surface-2);
-}
-
-.primaryBtn {
+/* « Connexion » : action principale d'un visiteur, donc en corail. */
+.loginBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 11px 18px;
+  flex: none;
+  min-height: 40px;
+  padding: 0 18px;
   border-radius: 999px;
   background: var(--accent);
   color: var(--on-accent);
   font-size: 14px;
   font-weight: 600;
-  flex: 1;
+  white-space: nowrap;
+  transition: background 0.18s ease;
+}
+
+.loginBtn:hover {
+  background: var(--accent-strong);
 }
 
 .desktopOnly {
@@ -288,36 +274,12 @@
 
 .mobileOnly {
   display: none;
-  margin-left: auto;
 }
 
-.hamburger {
-  display: none;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  justify-content: center;
-  margin-left: auto;
-}
-
-.hamburger svg {
-  width: 18px;
-  height: 18px;
-}
-
-.mobileNav {
-  display: flex;
+.mobileSearchPanel {
   flex-direction: column;
-  gap: 14px;
-  padding: 16px var(--gutter) 20px;
-  background: color-mix(in oklch, var(--surface) 97%, transparent);
-  backdrop-filter: blur(18px) saturate(1.3);
-  border-bottom: 1px solid var(--border-2);
-  box-shadow: var(--shadow-lift);
-  max-height: calc(100dvh - 64px);
+  padding: 0 var(--gutter) 14px;
+  max-height: calc(100dvh - 140px);
   overflow-y: auto;
 }
 
@@ -331,11 +293,14 @@
   padding: 10px 14px;
 }
 
+.mobileSearch:focus-within {
+  border-color: var(--border-2);
+}
+
 .mobileSearch svg {
   width: 16px;
   height: 16px;
   color: var(--muted);
-  flex: none;
 }
 
 .mobileSearch input {
@@ -343,70 +308,22 @@
   background: none;
   outline: none;
   color: var(--fg);
-  font-size: 14px;
-  width: 100%;
-}
-
-.mobileLinks {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.mobileLink {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  text-align: left;
-  padding: 13px 14px;
-  border-radius: 12px;
+  /* 16px minimum : en dessous, Safari iOS zoome sur le champ au focus. */
   font-size: 16px;
-  font-weight: 600;
-  color: var(--fg);
+  width: 100%;
+  min-width: 0;
 }
 
-.mobileLink:hover {
-  background: var(--surface-2);
-}
-
-.mobileLinkActive {
-  color: var(--accent-ink);
-  background: var(--accent-soft);
-}
-
-.mobileLegal {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 14px 0;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.mobileLegal a {
-  color: var(--muted);
-}
-
-.mobileLegal a:hover {
-  color: var(--fg);
-}
-
-.mobileFoot {
-  display: flex;
-  gap: 10px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-
-.mobileFoot .textBtn {
-  flex: 1;
-  justify-content: center;
+/* Barre d'onglets mobile, fixée en bas. Sa hauteur (hors encoche) est
+   --tabbar-height : <body> réserve la même place en bas (global.css). */
+.tabbar {
+  display: none;
 }
 
 @media (max-width: 860px) {
-  .tabs {
-    display: none;
+  .inner {
+    gap: 10px;
+    padding-block: 10px;
   }
   .desktopOnly {
     display: none;
@@ -414,8 +331,52 @@
   .mobileOnly {
     display: grid;
   }
-  .hamburger {
-    display: grid;
-    place-items: center;
+  .mobileSearchPanel {
+    display: flex;
+  }
+  /* Logo à gauche, recherche et « Connexion » poussés à droite. */
+  .brand {
+    margin-right: auto;
+  }
+  .loginBtn {
+    min-height: 40px;
+    padding: 0 14px;
+  }
+
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--header-bg);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 6px -3px oklch(0 0 0 / 0.25);
+  }
+  .tabbarItem {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: max(44px, var(--tabbar-height));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.1;
+    transition: color 0.18s ease;
+  }
+  .tabbarItem span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tabbarItemActive {
+    color: var(--accent-ink);
   }
 }

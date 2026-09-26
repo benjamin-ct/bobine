@@ -200,6 +200,12 @@
       "comingSoon": "Prochainement",
       "random": "Aléatoire"
     },
+    "tabLinks": {
+      "discover": "Découvrir",
+      "newReleases": "Nouveautés",
+      "comingSoon": "Bientôt",
+      "random": "Aléatoire"
+    },
     "searching": "Recherche…",
     "noResults": "Aucun résultat.",
     "personRoleHint": "Acteur/Actrice, réalisateur·rice…",
@@ -210,10 +216,8 @@
     "searchAriaLabel": "Rechercher",
     "profileAriaLabel": "Profil",
     "profileTitle": "Profil",
-    "logout": "Déconnexion",
     "login": "Connexion",
-    "openMenuAriaLabel": "Ouvrir le menu",
-    "closeMenuAriaLabel": "Fermer le menu"
+    "tabBarAriaLabel": "Onglets"
   },
   "comingSoonPage": {
     "windows": {

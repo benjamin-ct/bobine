@@ -200,6 +200,12 @@
       "comingSoon": "Coming soon",
       "random": "Random"
     },
+    "tabLinks": {
+      "discover": "Discover",
+      "newReleases": "New releases",
+      "comingSoon": "Soon",
+      "random": "Random"
+    },
     "searching": "Searching…",
     "noResults": "No results.",
     "personRoleHint": "Actor/Actress, director…",
@@ -210,10 +216,8 @@
     "searchAriaLabel": "Search",
     "profileAriaLabel": "Profile",
     "profileTitle": "Profile",
-    "logout": "Log out",
     "login": "Sign in",
-    "openMenuAriaLabel": "Open menu",
-    "closeMenuAriaLabel": "Close menu"
+    "tabBarAriaLabel": "Tabs"
   },
   "comingSoonPage": {
     "windows": {

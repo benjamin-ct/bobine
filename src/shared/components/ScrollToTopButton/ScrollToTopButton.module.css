@@ -1,7 +1,7 @@
 .button {
   position: fixed;
   right: 24px;
-  bottom: 24px;
+  bottom: calc(24px + var(--tabbar-offset));
   width: 44px;
   height: 44px;
   border-radius: 50%;

@@ -1,4 +1,4 @@
-import { NavLink, Link, useNavigate } from "react-router-dom";
+import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
@@ -7,44 +7,19 @@ import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
 import TicketLogo from "../TicketLogo/TicketLogo.tsx";
+import Icon, { type IconName } from "../Icon/Icon.tsx";
 import styles from "./NavBar.module.css";
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
 const MAX_LIVE_RESULTS = 8;
 
-const NAV_LINKS = [
-  { to: "/", key: "discover", end: true },
-  { to: "/nouveautes", key: "newReleases" },
-  { to: "/prochainement", key: "comingSoon" },
-  { to: "/aleatoire", key: "random" },
+const NAV_LINKS: { to: string; key: string; icon: IconName; end?: boolean }[] = [
+  { to: "/", key: "discover", icon: "compass", end: true },
+  { to: "/nouveautes", key: "newReleases", icon: "sparkle" },
+  { to: "/prochainement", key: "comingSoon", icon: "calendar" },
+  { to: "/aleatoire", key: "random", icon: "shuffle" },
 ];
-
-function HamburgerIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M5 5l14 14M19 5 5 19" />
-    </svg>
-  ) : (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M4 7h16M4 12h16M4 17h16" />
-    </svg>
-  );
-}
 
 function SearchResults({
   results,
@@ -158,11 +133,13 @@ export default function NavBar() {
   const [results, setResults] = useState<SearchMultiResult[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [open, setOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const { status: authStatus, email, logout } = useAuth();
+  const { status: authStatus } = useAuth();
   const { region } = useRegion();
+  const authenticated = authStatus === "authenticated";
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -204,7 +181,7 @@ export default function NavBar() {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setOpen(false);
-        setMenuOpen(false);
+        setSearchOpen(false);
       }
     }
     document.addEventListener("mousedown", onClickOutside);
@@ -215,6 +192,12 @@ export default function NavBar() {
     };
   }, []);
 
+  // Le panneau de recherche mobile se referme dès qu'on change de page
+  // (résultat choisi, onglet du bas, lien de la page…).
+  useEffect(() => {
+    setSearchOpen(false);
+  }, [pathname]);
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const q = query.trim();
@@ -222,215 +205,162 @@ export default function NavBar() {
       return;
     }
     setOpen(false);
+    setSearchOpen(false);
     navigate(`/recherche?q=${encodeURIComponent(q)}`);
   }
 
   function goTo(path: string) {
     setOpen(false);
+    setSearchOpen(false);
     setQuery("");
     if (path) {
       navigate(path);
     }
   }
 
-  function scrollTop() {
+  function onNavClick() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function onNavClick() {
-    scrollTop();
-    setMenuOpen(false);
-  }
-
   return (
-    <header className={styles.topnav}>
-      <div className={styles.inner}>
-        <Link to="/" className={styles.brand} onClick={onNavClick}>
-          <TicketLogo className={styles.logo} />
-          Seancy
-        </Link>
-
-        <nav className={styles.tabs} aria-label={t("navBar.mainNavAriaLabel")}>
-          {NAV_LINKS.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.end}
-              onClick={onNavClick}
-              className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
-            >
-              {t(`navBar.navLinks.${link.key}`)}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className={`${styles.search} ${styles.desktopOnly}`} ref={wrapperRef}>
-          <form onSubmit={onSubmit}>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              type="search"
-              placeholder={t("navBar.searchPlaceholder")}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => results.length > 0 && setOpen(true)}
-              aria-label={t("navBar.searchAriaLabel")}
-            />
-          </form>
-          {open && query.trim().length >= MIN_QUERY_LENGTH && (
-            <SearchResults
-              results={results}
-              status={status}
-              query={query.trim()}
-              onPick={goTo}
-              onViewAll={() => setOpen(false)}
-            />
-          )}
-        </div>
-
-        {/* Profil réservé aux membres connectés (voir ProfilePage) : aucun lien
-            pour un visiteur anonyme, ni pendant la vérification de session. */}
-        {authStatus === "authenticated" && (
-          <Link
-            to="/profil"
-            className={`${styles.iconBtn} ${styles.desktopOnly}`}
-            aria-label={t("navBar.profileAriaLabel")}
-            title={t("navBar.profileTitle")}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 21a8 8 0 0 1 16 0" />
-            </svg>
+    <>
+      <header className={styles.topnav}>
+        <div className={styles.inner}>
+          <Link to="/" className={styles.brand} onClick={onNavClick}>
+            <TicketLogo className={styles.logo} />
+            Seancy
           </Link>
-        )}
 
-        {authStatus === "authenticated" ? (
-          <button
-            type="button"
-            className={`${styles.textBtn} ${styles.desktopOnly}`}
-            onClick={logout}
-            title={email ?? undefined}
+          <nav
+            className={`${styles.tabs} ${styles.desktopOnly}`}
+            aria-label={t("navBar.mainNavAriaLabel")}
           >
-            {t("navBar.logout")}
-          </button>
-        ) : (
-          <Link
-            to="/connexion"
-            className={`${styles.textBtn} ${styles.desktopOnly}`}
-            onClick={onNavClick}
-          >
-            {t("navBar.login")}
-          </Link>
-        )}
-
-        <button
-          type="button"
-          className={styles.hamburger}
-          onClick={() => setMenuOpen((v) => !v)}
-          aria-label={menuOpen ? t("navBar.closeMenuAriaLabel") : t("navBar.openMenuAriaLabel")}
-          aria-expanded={menuOpen}
-        >
-          <HamburgerIcon open={menuOpen} />
-        </button>
-      </div>
-
-      {menuOpen && (
-        <div className={styles.mobileNav}>
-          <label className={styles.mobileSearch}>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              type="search"
-              placeholder={t("navBar.searchPlaceholder")}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
-          {query.trim().length >= MIN_QUERY_LENGTH && (
-            <SearchResults
-              results={results}
-              status={status}
-              query={query.trim()}
-              inline
-              onPick={(p) => {
-                goTo(p);
-                setMenuOpen(false);
-              }}
-              onViewAll={() => setMenuOpen(false)}
-            />
-          )}
-          <nav className={styles.mobileLinks}>
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 end={link.end}
                 onClick={onNavClick}
-                className={({ isActive }) =>
-                  `${styles.mobileLink} ${isActive ? styles.mobileLinkActive : ""}`
-                }
+                className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
               >
                 {t(`navBar.navLinks.${link.key}`)}
               </NavLink>
             ))}
-            {authStatus === "authenticated" && (
-              <NavLink to="/profil" onClick={onNavClick} className={styles.mobileLink}>
-                {t("navBar.profileTitle")}
-              </NavLink>
-            )}
-            <div className={styles.mobileLegal}>
-              <Link to="/confidentialite" onClick={onNavClick}>
-                {t("legalLinks.privacy")}
-              </Link>
-              <span aria-hidden="true">·</span>
-              <Link to="/conditions-utilisation" onClick={onNavClick}>
-                {t("legalLinks.terms")}
-              </Link>
-            </div>
           </nav>
-          <div className={styles.mobileFoot}>
-            {authStatus === "authenticated" ? (
-              <button
-                type="button"
-                className={styles.primaryBtn}
-                onClick={() => {
-                  logout();
-                  setMenuOpen(false);
-                }}
-              >
-                {t("navBar.logout")}
-              </button>
-            ) : (
-              <Link to="/connexion" className={styles.primaryBtn} onClick={onNavClick}>
-                {t("navBar.login")}
-              </Link>
+
+          <div className={`${styles.search} ${styles.desktopOnly}`} ref={wrapperRef}>
+            <form onSubmit={onSubmit} role="search">
+              <Icon name="search" />
+              <input
+                type="search"
+                placeholder={t("navBar.searchPlaceholder")}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => results.length > 0 && setOpen(true)}
+                aria-label={t("navBar.searchAriaLabel")}
+              />
+            </form>
+            {open && query.trim().length >= MIN_QUERY_LENGTH && (
+              <SearchResults
+                results={results}
+                status={status}
+                query={query.trim()}
+                onPick={goTo}
+                onViewAll={() => setOpen(false)}
+              />
             )}
           </div>
+
+          <button
+            type="button"
+            className={`${styles.iconBtn} ${styles.mobileOnly} ${searchOpen ? styles.iconBtnActive : ""}`}
+            onClick={() => setSearchOpen((v) => !v)}
+            aria-label={t("navBar.searchAriaLabel")}
+            aria-expanded={searchOpen}
+            aria-controls="mobile-search"
+          >
+            <Icon name="search" />
+          </button>
+
+          {/* Profil réservé aux membres connectés (voir ProfilePage) : un
+              visiteur anonyme n'y a aucun accès visible, seulement
+              « Connexion ». La déconnexion se fait depuis Profil › Compte. */}
+          {authenticated ? (
+            <NavLink
+              to="/profil"
+              className={({ isActive }) =>
+                `${styles.iconBtn} ${styles.desktopOnly} ${isActive ? styles.iconBtnActive : ""}`
+              }
+              aria-label={t("navBar.profileAriaLabel")}
+              title={t("navBar.profileTitle")}
+            >
+              <Icon name="user" strokeWidth={1.8} />
+            </NavLink>
+          ) : (
+            <Link to="/connexion" className={styles.loginBtn} onClick={onNavClick}>
+              {t("navBar.login")}
+            </Link>
+          )}
         </div>
-      )}
-      <div className="perfStrip perfStripTop" aria-hidden="true" />
-    </header>
+
+        {searchOpen && (
+          <div id="mobile-search" className={`${styles.mobileSearchPanel} ${styles.mobileOnly}`}>
+            <form onSubmit={onSubmit} role="search" className={styles.mobileSearch}>
+              <Icon name="search" />
+              <input
+                type="search"
+                autoFocus
+                placeholder={t("navBar.searchPlaceholder")}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label={t("navBar.searchAriaLabel")}
+              />
+            </form>
+            {query.trim().length >= MIN_QUERY_LENGTH && (
+              <SearchResults
+                results={results}
+                status={status}
+                query={query.trim()}
+                inline
+                onPick={goTo}
+                onViewAll={() => setSearchOpen(false)}
+              />
+            )}
+          </div>
+        )}
+        <div className="perfStrip perfStripTop" aria-hidden="true" />
+      </header>
+
+      {/* Barre d'onglets mobile (masquée au-delà de 860px). « Ma liste » n'y
+          figure pas : elle vit dans Profil. */}
+      <nav className={styles.tabbar} aria-label={t("navBar.tabBarAriaLabel")}>
+        {NAV_LINKS.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            end={link.end}
+            onClick={onNavClick}
+            className={({ isActive }) =>
+              `${styles.tabbarItem} ${isActive ? styles.tabbarItemActive : ""}`
+            }
+          >
+            <Icon name={link.icon} size={22} strokeWidth={1.8} />
+            <span>{t(`navBar.tabLinks.${link.key}`)}</span>
+          </NavLink>
+        ))}
+        {authenticated && (
+          <NavLink
+            to="/profil"
+            onClick={onNavClick}
+            className={({ isActive }) =>
+              `${styles.tabbarItem} ${isActive ? styles.tabbarItemActive : ""}`
+            }
+          >
+            <Icon name="user" size={22} strokeWidth={1.8} />
+            <span>{t("navBar.profileTitle")}</span>
+          </NavLink>
+        )}
+      </nav>
+    </>
   );
 }
