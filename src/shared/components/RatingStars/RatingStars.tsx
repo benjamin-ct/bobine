@@ -10,13 +10,21 @@ interface RatingStarsProps {
   onRate: (value: number | null) => void;
   /** Ajoute un bouton « Effacer » quand une note est donnée (fiche détail). */
   clearable?: boolean;
+  /** Masque « Votre note : 8/10 » et le badge de palier, quand le parent
+   * les affiche déjà dans son propre en-tête (fiche détail). */
+  hideValue?: boolean;
 }
 
 // Notation 0-10 avec aperçu au survol (chaque étoile montre son propre
 // libellé pendant le survol, puis revient à la note choisie) et badge dont
 // l'aspect (couleur/taille) suit le palier — repris de la maquette HTML,
 // remplace l'ancien RatingInput (étoiles Unicode statiques).
-export default function RatingStars({ value, onRate, clearable = false }: RatingStarsProps) {
+export default function RatingStars({
+  value,
+  onRate,
+  clearable = false,
+  hideValue = false,
+}: RatingStarsProps) {
   const { t } = useTranslation();
   const [hovered, setHovered] = useState<number | null>(null);
   const displayValue = hovered ?? value ?? 0;
@@ -44,16 +52,18 @@ export default function RatingStars({ value, onRate, clearable = false }: Rating
           </button>
         ))}
       </div>
-      <span className={styles.valueLabel}>
-        {value ? (
-          <>
-            {t("ratingStars.yourRating")} <b>{value}</b>/10
-          </>
-        ) : (
-          t("ratingStars.notRatedYet")
-        )}
-      </span>
-      {value != null && (
+      {!hideValue && (
+        <span className={styles.valueLabel}>
+          {value ? (
+            <>
+              {t("ratingStars.yourRating")} <b>{value}</b>/10
+            </>
+          ) : (
+            t("ratingStars.notRatedYet")
+          )}
+        </span>
+      )}
+      {!hideValue && value != null && (
         <span className={`${styles.badge} ${styles[`s-${ratingTier(value).cls}`]}`}>
           <span className={styles.dot} />
           {t(ratingTier(value).labelKey)}

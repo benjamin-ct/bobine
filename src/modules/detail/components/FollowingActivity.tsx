@@ -6,6 +6,8 @@ import { useAuth } from "../../../core/context/AuthContext.tsx";
 import type { TitleActivity } from "../../../core/types/social.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
 import { Icon } from "../../../shared/components/index.ts";
+import { posterAccentFromSeed } from "../../../shared/lib/posterAccent.ts";
+import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import styles from "./FollowingActivity.module.css";
 
 function initials(name: string): string {
@@ -18,12 +20,41 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
+// « il y a 3 jours » (maquette) ; null si la date manque ou est dans le futur.
+function timeAgo(ms: number | undefined, locale: string): string | null {
+  if (!ms) {
+    return null;
+  }
+  const seconds = (ms - Date.now()) / 1000;
+  if (seconds > 60) {
+    return null;
+  }
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["year", 31536000],
+    ["month", 2592000],
+    ["week", 604800],
+    ["day", 86400],
+    ["hour", 3600],
+    ["minute", 60],
+  ];
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  for (const [unit, size] of units) {
+    if (Math.abs(seconds) >= size) {
+      return rtf.format(Math.round(seconds / size), unit);
+    }
+  }
+  return rtf.format(0, "minute");
+}
+
 // Même source que la page de profil public (/api/public-profile/:slug/avatar,
 // 404 → initiales).
 function Avatar({ slug, name }: { slug: string; name: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <span className={styles.avatar} aria-hidden="true">
+    <span
+      className={`${styles.avatar} ${posterStyles[posterAccentFromSeed(slug)]}`}
+      aria-hidden="true"
+    >
       {failed ? (
         initials(name)
       ) : (
@@ -41,7 +72,7 @@ function Avatar({ slug, name }: { slug: string; name: string }) {
 // sa note) ou veut le voir. Masqué si l'utilisateur n'est pas connecté ou
 // ne suit personne ; en cas d'erreur réseau aussi (bloc secondaire).
 export default function FollowingActivity({ mediaType, id }: { mediaType: MediaType; id: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { status } = useAuth();
   const [activity, setActivity] = useState<TitleActivity | null>(null);
   const signedIn = status === "authenticated";
@@ -71,8 +102,9 @@ export default function FollowingActivity({ mediaType, id }: { mediaType: MediaT
         <p className={styles.empty}>{t("detailPage.followingEmpty")}</p>
       ) : (
         <ul className={styles.list}>
-          {activity.entries.map(({ profile, status: entryStatus, rating }) => {
+          {activity.entries.map(({ profile, status: entryStatus, rating, updatedAt }) => {
             const name = profile.displayName || t("detailPage.followingUnnamed");
+            const when = timeAgo(updatedAt, i18n.language);
             return (
               <li key={profile.slug}>
                 <Link to={`/u/${encodeURIComponent(profile.slug)}`} className={styles.row}>
@@ -81,25 +113,21 @@ export default function FollowingActivity({ mediaType, id }: { mediaType: MediaT
                     <span className={styles.name}>{name}</span>
                     <span className={styles.what}>
                       {entryStatus === "watched"
-                        ? t("detailPage.followingWatched")
+                        ? [
+                            rating != null
+                              ? t("detailPage.followingRated", { rating })
+                              : t("detailPage.followingWatched"),
+                            when,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
                         : t("detailPage.followingWants")}
                     </span>
                   </span>
-                  {entryStatus === "watched" ? (
-                    rating != null ? (
-                      <span className={styles.rating}>
-                        <Icon name="star" filled />
-                        {rating}
-                        <span className={styles.outOf}>/10</span>
-                      </span>
-                    ) : (
-                      <span className={`${styles.tag} ${styles.tagWatched}`}>
-                        <Icon name="check" strokeWidth={3} />
-                      </span>
-                    )
-                  ) : (
-                    <span className={`${styles.tag} ${styles.tagWant}`}>
+                  {rating != null && (
+                    <span className={styles.rating}>
                       <Icon name="star" filled />
+                      {rating}
                     </span>
                   )}
                 </Link>

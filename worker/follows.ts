@@ -195,7 +195,8 @@ export async function getTitleActivity(
     getFollowCounts(db, userId),
     db
       .prepare(
-        `SELECT users.share_slug, users.display_name, library_items.status, library_items.data
+        `SELECT users.share_slug, users.display_name, library_items.status, library_items.data,
+                library_items.updated_at
          FROM follows
          JOIN users ON users.id = follows.followed_id AND users.share_slug IS NOT NULL
          JOIN library_items ON library_items.user_id = users.id
@@ -210,6 +211,7 @@ export async function getTitleActivity(
         display_name: string | null;
         status: "watched" | "watchlist";
         data: string;
+        updated_at: number;
       }>(),
   ]);
   return {
@@ -220,6 +222,7 @@ export async function getTitleActivity(
         profile: { slug: row.share_slug, displayName: row.display_name },
         status: row.status,
         rating: row.status === "watched" && typeof rating === "number" ? rating : null,
+        updatedAt: row.updated_at,
       };
     }),
   };

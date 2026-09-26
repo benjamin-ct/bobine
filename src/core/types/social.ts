@@ -39,5 +39,7 @@ export interface TitleActivity {
     status: "watched" | "watchlist";
     /** Note sur 10, seulement pour un titre vu et noté. */
     rating: number | null;
+    /** Dernière mise à jour (ms) : « il y a 3 jours ». */
+    updatedAt: number;
   }[];
 }

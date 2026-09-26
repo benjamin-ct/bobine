@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { getCollection } from "../../../core/api/tmdb.ts";
+import { getCollection, posterUrl } from "../../../core/api/tmdb.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
-import { MediaCard } from "../../../shared/components/index.ts";
+import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
+import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import type { CollectionDetails } from "../../../core/types/tmdb.ts";
-import gridStyles from "../../../shared/styles/mediaGrid.module.css";
 import styles from "./CollectionSection.module.css";
 
 interface CollectionSectionProps {
@@ -23,7 +24,7 @@ export default function CollectionSection({
   currentMovieId,
 }: CollectionSectionProps) {
   const { t } = useTranslation();
-  const { isWatched } = useLibrary();
+  const { isWatched, getRating } = useLibrary();
   const [collection, setCollection] = useState<CollectionDetails | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
@@ -47,26 +48,78 @@ export default function CollectionSection({
     return null;
   }
 
-  const otherParts = collection.parts.filter((p) => p.id !== currentMovieId);
-  if (otherParts.length === 0) {
+  if (!collection.parts.some((p) => p.id !== currentMovieId)) {
     return null;
   }
 
-  const watchedCount = collection.parts.filter((p) => isWatched("movie", p.id)).length;
+  // Tous les films de la saga, dans l'ordre de sortie (les films sans date,
+  // pas encore annoncés, à la fin) — y compris celui de la fiche, marqué
+  // « ce titre ».
+  const parts = [...collection.parts].sort((a, b) =>
+    (a.release_date || "9999").localeCompare(b.release_date || "9999")
+  );
+  const watchedCount = parts.filter((p) => isWatched("movie", p.id)).length;
 
   return (
     <section className={styles.section}>
       <h2 className={styles.title}>
-        {t("collection.heading")} <span className={styles.name}>{collection.name}</span>
+        {collection.name}{" "}
+        <span className={styles.count}>
+          {t("collection.watchedCount", { watched: watchedCount, count: parts.length })}
+        </span>
       </h2>
-      <p className={styles.count}>
-        {t("collection.watchedCount", { watched: watchedCount, count: collection.parts.length })}
-      </p>
-      <div className={gridStyles.grid}>
-        {otherParts.map((part) => (
-          <MediaCard key={part.id} item={{ ...part, mediaType: "movie" }} />
-        ))}
-      </div>
+      <ul className={styles.list}>
+        {parts.map((part) => {
+          const current = part.id === currentMovieId;
+          const title = part.title || part.name || "";
+          const rating = getRating("movie", part.id);
+          const meta = [
+            part.release_date?.slice(0, 4),
+            current
+              ? t("collection.thisTitle")
+              : isWatched("movie", part.id)
+                ? rating != null
+                  ? t("collection.watchedRated", { rating })
+                  : t("collection.watched")
+                : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          const content = (
+            <>
+              {part.poster_path ? (
+                <img
+                  src={posterUrl(part.poster_path, "w92") ?? undefined}
+                  alt=""
+                  className={styles.thumb}
+                  loading="lazy"
+                />
+              ) : (
+                <span
+                  className={`${styles.thumb} ${posterStyles[posterAccentFromGenres(part.genre_ids, `movie:${part.id}`)]}`}
+                />
+              )}
+              <span className={styles.text}>
+                <span className={styles.partTitle}>{title}</span>
+                {meta && <span className={styles.meta}>{meta}</span>}
+              </span>
+            </>
+          );
+          return (
+            <li key={part.id}>
+              {current ? (
+                <div className={`${styles.part} ${styles.current}`} aria-current="page">
+                  {content}
+                </div>
+              ) : (
+                <Link to={`/media/movie/${part.id}`} className={styles.part}>
+                  {content}
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

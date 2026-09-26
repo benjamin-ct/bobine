@@ -4,7 +4,13 @@ import type { Video } from "../../../core/types/tmdb.ts";
 import Icon from "../Icon/Icon.tsx";
 import styles from "./TrailerButton.module.css";
 
-export default function TrailerButton({ videos }: { videos: Video[] | undefined }) {
+interface TrailerButtonProps {
+  videos: Video[] | undefined;
+  /** Sur mobile, n'affiche que l'icône ▷ (rangée d'actions de la fiche). */
+  compact?: boolean;
+}
+
+export default function TrailerButton({ videos, compact = false }: TrailerButtonProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -31,11 +37,16 @@ export default function TrailerButton({ videos }: { videos: Video[] | undefined 
 
   return (
     <>
-      <button type="button" className={styles.trigger} onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className={`${styles.trigger} ${compact ? styles.compact : ""}`}
+        onClick={() => setOpen(true)}
+        aria-label={compact ? t("trailer.button") : undefined}
+      >
         <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
           <path d="M8 5v14l11-7z" />
         </svg>
-        {t("trailer.button")}
+        <span className={styles.label}>{t("trailer.button")}</span>
       </button>
       {open && (
         <div className={styles.overlay} onClick={() => setOpen(false)}>

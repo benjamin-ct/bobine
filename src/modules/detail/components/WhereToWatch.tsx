@@ -40,7 +40,10 @@ export default function WhereToWatch({ providers, regionName }: WhereToWatchProp
         <h3 className={styles.groupTitle}>{label}</h3>
         <ul className={styles.list}>
           {sorted.map((p) => (
-            <li key={p.provider_id} className={styles.provider}>
+            <li
+              key={p.provider_id}
+              className={`${styles.provider} ${isFavoriteProvider(p.provider_id) ? styles.providerYours : ""}`}
+            >
               <img src={logoUrl(p.logo_path) ?? undefined} alt="" className={styles.logo} />
               <span className={styles.name}>{p.provider_name}</span>
               {isFavoriteProvider(p.provider_id) && (
@@ -57,7 +60,11 @@ export default function WhereToWatch({ providers, regionName }: WhereToWatchProp
     <section className={styles.section}>
       <h2 className={styles.title}>
         {t("detailPage.whereToWatch")}
-        {regionName && <span className={styles.region}> · {regionName}</span>}
+        {regionName && (
+          <span className={styles.region}>
+            {t("detailPage.whereToWatchSource", { region: regionName })}
+          </span>
+        )}
       </h2>
       {flatrate.length === 0 && rentOrBuy.length === 0 ? (
         <p className={styles.empty}>

@@ -35,6 +35,7 @@ import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx"
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import { useMembersOnly } from "../../core/context/MembersOnlyContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
+import { STAR_LABEL_KEYS } from "../../shared/lib/ratingTier.ts";
 import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPreviewCache.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
@@ -276,6 +277,23 @@ export default function DetailPage() {
 
   const listCount = customLists.filter((list) => isInList(list.id, mediaType, id)).length;
 
+  const rating = watched ? getRating(mediaType, id) : null;
+
+  // Noter un titre pas encore vu le marque comme vu (la note est portée par
+  // l'entrée « vu » de la bibliothèque).
+  function rate(value: number | null) {
+    if (!mediaType || !id || !requireMember()) {
+      return;
+    }
+    if (!watched) {
+      if (value == null) {
+        return;
+      }
+      toggleWatched(libItem);
+    }
+    rateWatched(mediaType, id, value);
+  }
+
   function scrollToRecommendations() {
     recommendationsRef.current?.scrollIntoView({ behavior: "smooth" });
   }
@@ -389,8 +407,8 @@ export default function DetailPage() {
               : undefined
           }
         />
-        {backLink(styles.back)}
         <div className={styles.heroInner}>
+          {backLink(styles.back)}
           <div className={styles.posterWrap}>
             {details.poster_path ? (
               <img
@@ -408,6 +426,9 @@ export default function DetailPage() {
           <div className={styles.heading}>
             {eyebrow && <p className="eyebrow">{eyebrow}</p>}
             <h1 className={styles.title}>{title}</h1>
+          </div>
+
+          <div className={styles.meta}>
             {details.genres && details.genres.length > 0 && (
               <ul className={styles.genres}>
                 {details.genres.map((g) => (
@@ -474,9 +495,12 @@ export default function DetailPage() {
               </button>
               <Dropdown
                 label={
-                  listCount > 0
-                    ? t("detailPage.inLists", { count: listCount })
-                    : t("detailPage.addToList")
+                  <>
+                    <Icon name="list" />
+                    {listCount > 0
+                      ? t("detailPage.inLists", { count: listCount })
+                      : t("detailPage.addToList")}
+                  </>
                 }
                 pill
                 active={listCount > 0}
@@ -526,7 +550,7 @@ export default function DetailPage() {
                   </button>
                 </div>
               </Dropdown>
-              <TrailerButton videos={details.videos?.results} />
+              <TrailerButton videos={details.videos?.results} compact />
               <Dropdown
                 label={<Icon name="more" size={20} />}
                 ariaLabel={t("detailPage.moreActions")}
@@ -578,15 +602,23 @@ export default function DetailPage() {
               </div>
             )}
 
-            {watched && (
-              <div className={styles.yourRating}>
-                <RatingStars
-                  value={getRating(mediaType, id)}
-                  onRate={(r) => rateWatched(mediaType, id, r)}
-                  clearable
-                />
-              </div>
-            )}
+            <div className={styles.yourRating}>
+              <p className={styles.yourRatingHead}>
+                <span className="eyebrow">{t("detailPage.yourRatingHeading")}</span>
+                {rating != null ? (
+                  <>
+                    <b className={styles.yourRatingValue}>{rating}/10</b>
+                    <span>{t(STAR_LABEL_KEYS[rating - 1])}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.yourRatingDash} aria-hidden="true" />
+                    <span>{t("ratingStars.notRatedYet")}</span>
+                  </>
+                )}
+              </p>
+              <RatingStars value={rating} onRate={rate} clearable hideValue />
+            </div>
           </div>
         </div>
       </div>

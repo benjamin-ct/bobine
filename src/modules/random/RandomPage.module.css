@@ -10,8 +10,10 @@
   margin-bottom: 18px;
 }
 
+/* Juste la largeur des deux boutons sur desktop ; pleine largeur sur mobile. */
 .sourceSwitch {
-  display: flex;
+  display: inline-flex;
+  max-width: 100%;
   gap: 2px;
   padding: 4px;
   border: 1px solid var(--border);
@@ -60,6 +62,9 @@
 }
 
 @media (max-width: 640px) {
+  .sourceSwitch {
+    display: flex;
+  }
   .sourceSwitch button {
     flex: 1;
     padding: 0 12px;

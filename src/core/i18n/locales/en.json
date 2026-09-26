@@ -127,9 +127,11 @@
     "star10": "Masterpiece"
   },
   "collection": {
-    "heading": "The saga",
     "watchedCount_one": "{{watched}} watched out of {{count}}",
-    "watchedCount_other": "{{watched}} watched out of {{count}}"
+    "watchedCount_other": "{{watched}} watched out of {{count}}",
+    "thisTitle": "this title",
+    "watched": "✓ Watched",
+    "watchedRated": "✓ Watched, rated {{rating}}/10"
   },
   "countryLanguageFilter": {
     "allCountries": "All countries",
@@ -682,6 +684,8 @@
     "excludeTitleHint": "Stop suggesting this title",
     "excludeTitle": "Exclude from suggestions",
     "whereToWatch": "Where to watch",
+    "whereToWatchSource": "{{region}} · via JustWatch",
+    "yourRatingHeading": "Your rating",
     "directing": "Directing",
     "createdBy": "Created by",
     "mainCast": "Main cast",
@@ -718,6 +722,7 @@
     "followingEmpty": "None of the people you follow has watched this title or wants to.",
     "followingUnnamed": "Unnamed profile",
     "followingWatched": "Watched it",
+    "followingRated": "Rated {{rating}}/10",
     "followingWants": "Wants to watch it"
   },
   "personPage": {

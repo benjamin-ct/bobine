@@ -127,9 +127,11 @@
     "star10": "Chef-d'œuvre"
   },
   "collection": {
-    "heading": "La saga",
     "watchedCount_one": "{{watched}} vu sur {{count}}",
-    "watchedCount_other": "{{watched}} vus sur {{count}}"
+    "watchedCount_other": "{{watched}} vus sur {{count}}",
+    "thisTitle": "ce titre",
+    "watched": "✓ Vu",
+    "watchedRated": "✓ Vu, noté {{rating}}/10"
   },
   "countryLanguageFilter": {
     "allCountries": "Tous les pays",
@@ -682,6 +684,8 @@
     "excludeTitleHint": "Ne plus proposer ce titre dans les suggestions",
     "excludeTitle": "Exclure des suggestions",
     "whereToWatch": "Où le voir",
+    "whereToWatchSource": "{{region}} · via JustWatch",
+    "yourRatingHeading": "Votre note",
     "directing": "Réalisation",
     "createdBy": "Créé par",
     "mainCast": "Casting principal",
@@ -703,7 +707,7 @@
     "subscription": "En abonnement",
     "rentOrBuy": "Location ou achat",
     "yourPlatform": "Chez vous",
-    "noStreamingNote": "Seancy ne diffuse rien : ces plateformes proposent le titre dans votre région.",
+    "noStreamingNote": "Seancy ne diffuse rien : ces services proposent le titre dans votre région.",
     "showLessCast": "Réduire",
     "infos": "Infos",
     "originalTitle": "Titre original",
@@ -718,6 +722,7 @@
     "followingEmpty": "Aucun de vos abonnements n'a encore vu ce titre ni ne veut le voir.",
     "followingUnnamed": "Profil sans nom",
     "followingWatched": "L'a vu",
+    "followingRated": "Noté {{rating}}/10",
     "followingWants": "Veut le voir"
   },
   "personPage": {

@@ -22,11 +22,13 @@
 /* ─── Grand bloc du haut ────────────────────────────────────────────────
    Backdrop TMDB assombri par un dégradé, 36 px sous la bande pellicule de
    l'en-tête. Une seule lumière sur la page (le spot doré du fond) : aucun
-   halo ni teinte de genre ici. */
+   halo ni teinte de genre ici. Sur desktop, le bloc déborde du conteneur
+   jusqu'à 40 px des bords de la fenêtre (maquette). */
 .hero {
   position: relative;
   isolation: isolate;
   margin-top: 36px;
+  margin-inline: min(0px, calc(50% - 50vw + 40px));
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -56,15 +58,15 @@
     linear-gradient(0deg, color-mix(in oklch, var(--bg) 70%, transparent), transparent 55%);
 }
 
+/* Desktop : pilule au-dessus de l'affiche, de la même largeur. */
 .back {
-  position: absolute;
-  top: 18px;
-  left: clamp(24px, 3.4vw, 40px);
-  z-index: 1;
+  grid-area: back;
+  justify-self: stretch;
+  margin-bottom: 24px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
+  padding: 9px 16px;
   border-radius: 999px;
   border: 1px solid var(--border-2);
   background: color-mix(in oklch, var(--bg) 55%, transparent);
@@ -81,14 +83,21 @@
 
 .heroInner {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
-  grid-template-rows: auto 1fr;
-  column-gap: 36px;
-  padding: 72px clamp(24px, 3.4vw, 40px) clamp(24px, 3.4vw, 36px);
+  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-rows: auto auto auto 1fr;
+  grid-template-areas:
+    "back ."
+    "poster heading"
+    "poster meta"
+    "poster details";
+  column-gap: 44px;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: 28px clamp(24px, 3.4vw, 40px) 44px;
 }
 
 .posterWrap {
-  grid-row: 1 / span 2;
+  grid-area: poster;
 }
 
 .poster {
@@ -113,32 +122,47 @@
   line-height: 0.95;
 }
 
-.heading,
+.heading {
+  grid-area: heading;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.meta {
+  grid-area: meta;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 18px;
+}
+
 .details {
+  grid-area: details;
   min-width: 0;
 }
 
 .title {
-  margin-top: 8px;
-  font-family: var(--font-poster);
-  font-weight: 400;
-  text-transform: uppercase;
-  font-size: clamp(34px, 4.6vw, 58px);
-  line-height: 0.92;
-  letter-spacing: 0.012em;
+  margin-top: 12px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(34px, 4.2vw, 56px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
 }
 
 .genres {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin: 14px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .genres li {
-  padding: 4px 11px;
+  padding: 5px 12px;
   border-radius: 999px;
   border: 1px solid var(--border-2);
   background: color-mix(in oklch, var(--surface-3) 70%, transparent);
@@ -152,7 +176,6 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 14px;
   font-size: 15px;
 }
 
@@ -194,7 +217,7 @@
 }
 
 .overview {
-  margin-top: 16px;
+  margin-top: 18px;
   max-width: 64ch;
   color: color-mix(in oklch, var(--fg) 88%, var(--muted));
   font-size: 15.5px;
@@ -339,10 +362,41 @@
   background: var(--surface-2);
 }
 
+/* Votre note : toujours visible (noter marque le titre comme vu). */
 .yourRating {
-  margin-top: 16px;
-  padding-top: 4px;
+  max-width: 540px;
+  margin-top: 26px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
+}
+
+.yourRating > div {
+  margin-block: 8px 0;
+}
+
+.yourRatingHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.yourRatingHead :global(.eyebrow) {
+  color: var(--muted);
+}
+
+.yourRatingValue {
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.yourRatingDash {
+  width: 12px;
+  height: 2px;
+  background: currentColor;
 }
 
 /* ─── Sous le bloc : 2 colonnes sur desktop ─────────────────────────── */
@@ -419,10 +473,10 @@
 }
 
 .infoRow {
-  display: grid;
-  grid-template-columns: 108px minmax(0, 1fr);
-  gap: 12px;
-  padding: 9px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
   border-top: 1px solid var(--border);
   font-size: 14px;
 }
@@ -432,12 +486,15 @@
 }
 
 .infoRow dt {
+  flex: none;
   color: var(--subtle);
 }
 
 .infoRow dd {
+  min-width: 0;
   margin: 0;
   color: var(--fg);
+  text-align: right;
 }
 
 .infoLink {
@@ -492,40 +549,57 @@
     background: linear-gradient(0deg, var(--bg) 0%, transparent 60%);
   }
 
+  /* Mobile : petite pilule en haut à gauche, sur l'image. */
   .back {
+    position: absolute;
     top: 12px;
     left: var(--gutter);
+    z-index: 2;
+    margin: 0;
+    padding: 7px 14px;
   }
 
+  /* Pas de position ici : .back se place par rapport à .hero. */
   .heroInner {
-    position: relative;
-    z-index: 1;
-    grid-template-columns: 112px minmax(0, 1fr);
-    grid-template-rows: auto auto;
+    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "poster heading"
+      "meta meta"
+      "details details";
     column-gap: 16px;
     padding: 0 var(--gutter);
   }
 
   .posterWrap {
-    grid-row: 1;
+    position: relative;
+    z-index: 1;
     margin-top: -72px;
   }
 
   .heading {
     align-self: end;
-  }
-
-  .details {
-    grid-column: 1 / -1;
+    padding-top: 0;
   }
 
   .title {
-    font-size: 34px;
+    font-size: 28px;
   }
 
+  /* Genres puis note TMDB sur la ligne suivante. */
+  .meta {
+    margin-top: 16px;
+    gap: 12px;
+  }
+
+  .score {
+    flex-basis: 100%;
+  }
+
+  /* Envie / Vu sur une ligne, puis listes (largeur restante), bande-annonce
+     et ⋯ en boutons ronds. */
   .actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .actions > * {
@@ -533,15 +607,70 @@
   }
 
   .actionBtn {
+    flex: 1 1 40%;
     padding-inline: 12px;
   }
 
+  .listDropdown {
+    flex: 1;
+  }
+
+  .listDropdown > button {
+    width: 100%;
+  }
+
+  .yourRating {
+    max-width: none;
+    margin-top: 18px;
+    padding: 14px 16px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+
+  /* Une seule colonne, dans l'ordre de la maquette : Où le voir, Vos
+     abonnements, casting, saga, Infos. */
   .body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
     margin-top: 24px;
   }
 
+  .main,
+  .aside {
+    display: contents;
+  }
+
+  .main > * {
+    order: 3;
+  }
+
+  .main > :first-child {
+    order: 1;
+  }
+
+  .aside > * {
+    order: 2;
+    margin-top: 28px;
+  }
+
+  .aside > .infoCard {
+    order: 4;
+  }
+
+  /* Casting : rangée qui défile horizontalement. */
   .castGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
     gap: 14px;
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .castGrid > * {
+    flex: none;
+    width: 96px;
   }
 }

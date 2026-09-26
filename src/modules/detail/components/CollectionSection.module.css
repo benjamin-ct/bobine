@@ -3,21 +3,83 @@
 }
 
 .title {
+  margin-bottom: 14px;
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
-.name {
-  color: var(--gold);
-}
-
-/* « 1 vu sur 2 » : petites capitales mono, comme les en-têtes de période. */
+/* « 1 vu sur 2 » : petites capitales mono à côté du nom de la saga. */
 .count {
-  margin: 6px 0 16px;
+  margin-left: 4px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 400;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--subtle);
+}
+
+/* Une ligne compacte par film : vignette, titre, « 2021 · ✓ Vu, noté 8/10 ». */
+.list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.part {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--fg);
+}
+
+a.part:hover {
+  background: var(--surface-2);
+}
+
+.current {
+  border-color: var(--selected-border);
+  background: var(--selected-bg);
+}
+
+.thumb {
+  width: 46px;
+  aspect-ratio: 2 / 3;
+  flex: none;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.partTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .list {
+    grid-template-columns: 1fr;
+  }
 }
