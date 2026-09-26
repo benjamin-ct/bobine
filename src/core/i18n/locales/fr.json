@@ -53,7 +53,10 @@
   "continueWatching": {
     "episodesWatched_one": "{{count}} épisode vu",
     "episodesWatched_other": "{{count}} épisodes vus",
-    "resume": "Reprendre →"
+    "watchedUpTo": "Vu jusqu'à S{{season}} · É{{episode}}",
+    "nextEpisode": "À voir : S{{season}} · É{{episode}}",
+    "markWatched": "Vu",
+    "markWatchedAria": "Marquer {{title}} S{{season}} · É{{episode}} comme vu"
   },
   "personCard": {
     "departmentActing": "Acteur/Actrice",
@@ -247,10 +250,8 @@
     "emptyState": "Aucune sortie sur cette période pour ces filtres."
   },
   "discoverPage": {
-    "eyebrow": "Rien que pour vous",
     "title": "Découvrir",
-    "lead": "Une sélection qui apprend de vos goûts — ce que vous avez vu, aimé, zappé, et ce qui patiente dans votre liste.",
-    "resumeTitle": "Reprendre",
+    "resumeTitle": "Séries en cours",
     "resumeSubtitle": "· là où vous en êtes",
     "featuredTitle": "Mise en avant",
     "featuredSubtitle": "· sorties à venir",
@@ -804,5 +805,35 @@
     "feedWatched": "a vu",
     "feedRated": "a noté {{rating}}/10",
     "feedWantToSee": "veut voir"
+  },
+  "tonightPick": {
+    "eyebrow": "Pour vous ce soir",
+    "seeDetails": "Voir la fiche"
+  },
+  "filterPanel": {
+    "filters": "Filtres",
+    "activeCount_one": "{{count}} filtre actif",
+    "activeCount_other": "{{count}} filtres actifs",
+    "activeFilters": "Filtres actifs",
+    "removeFilter": "Retirer le filtre {{label}}",
+    "reset": "Réinitialiser",
+    "close": "Fermer",
+    "showResults": "Voir les résultats",
+    "genres": "Genres",
+    "platforms": "Plateformes",
+    "filterByPlatform": "Filtrer par plateforme",
+    "platformsCount_one": "{{count}} plateforme",
+    "platformsCount_other": "{{count}} plateformes",
+    "myPlatforms": "Mes plateformes",
+    "onlyMyPlatforms": "Seulement mes plateformes",
+    "noFavoritePlatforms": "Choisissez vos plateformes dans votre profil",
+    "sort": "Tri",
+    "year": "Année",
+    "rating": "Note",
+    "votes": "Votes",
+    "runtime": "Durée",
+    "minutes": "min",
+    "country": "Pays",
+    "chip": "{{label}} : {{value}}"
   }
 }

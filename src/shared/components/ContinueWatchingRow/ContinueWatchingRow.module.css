@@ -1,11 +1,12 @@
 .row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
 }
 
 .card {
   display: flex;
+  align-items: center;
   gap: 12px;
   padding: 12px;
   border: 1px solid var(--border);
@@ -19,6 +20,13 @@
 .card:hover {
   border-color: var(--border-2);
   transform: translateY(-2px);
+}
+
+.link {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .thumb {
@@ -46,7 +54,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  justify-content: center;
+  gap: 4px;
 }
 
 .title {
@@ -67,10 +76,30 @@
   margin: 0;
 }
 
-.resume {
-  margin-top: auto;
-  align-self: flex-start;
-  font-size: 12px;
+.next {
+  font-size: 13px;
   font-weight: 600;
-  color: var(--accent-ink);
+  color: var(--fg);
+  margin: 0;
+}
+
+/* « ✓ Vu » : teal (couleur « déjà vu » de la DA), cible tactile de 44 px. */
+.watchedBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--ok);
+  color: var(--on-ok);
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+}
+
+.watchedBtn:hover {
+  filter: brightness(1.08);
 }

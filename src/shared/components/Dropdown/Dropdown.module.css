@@ -150,3 +150,13 @@
 .optionOn .radio::after {
   transform: scale(1);
 }
+
+.trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.trigger:disabled:hover {
+  border-color: var(--border);
+  background: var(--surface);
+}

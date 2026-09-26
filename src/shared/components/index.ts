@@ -30,6 +30,11 @@ export {
   getAdvancedFiltersRangeError,
 } from "./AdvancedFilters/AdvancedFilters.tsx";
 export type { AdvancedFiltersState } from "./AdvancedFilters/AdvancedFilters.tsx";
+export {
+  default as FilterPanel,
+  DEFAULT_SORT_FIELD,
+  DEFAULT_SORT_DIRECTION,
+} from "./FilterPanel/FilterPanel.tsx";
 export { default as CountryLanguageFilter } from "./CountryLanguageFilter/CountryLanguageFilter.tsx";
 export { default as PageHeader } from "./PageHeader/PageHeader.tsx";
 export { default as ContinueWatchingRow } from "./ContinueWatchingRow/ContinueWatchingRow.tsx";

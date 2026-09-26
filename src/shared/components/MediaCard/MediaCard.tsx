@@ -51,6 +51,12 @@ interface MediaCardProps {
    * médaillon en haut à gauche de l'affiche (le badge Film/Série se décale
    * à sa droite). */
   rank?: number;
+  /** Opt-in (Découvrir, nouvelle DA) : sous le titre, « année · genre » au
+   * lieu de la date complète. Le nom du genre est résolu par la page, qui a
+   * déjà la liste des genres TMDB (une chaîne plutôt qu'un tableau pour ne
+   * pas casser le memo). */
+  yearGenre?: boolean;
+  genreName?: string;
 }
 
 // `memo` : les grilles (Découvrir, Nouveautés, Ma liste...) affichent des
@@ -63,6 +69,8 @@ function MediaCard({
   showFutureReleaseBadge = false,
   showEpisodeBadge = false,
   rank,
+  yearGenre = false,
+  genreName,
 }: MediaCardProps) {
   const { t } = useTranslation();
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
@@ -261,8 +269,9 @@ function MediaCard({
       ? t("mediaCard.upcomingFallback")
       : null);
   const effectiveDate = (showFutureReleaseBadge && upcomingRelease?.date) || date;
-  const displayDate =
-    formatFullDate(effectiveDate, locale) || (effectiveDate ? effectiveDate.slice(0, 4) : "—");
+  const displayDate = yearGenre
+    ? [effectiveDate?.slice(0, 4), genreName].filter(Boolean).join(" · ") || "—"
+    : formatFullDate(effectiveDate, locale) || (effectiveDate ? effectiveDate.slice(0, 4) : "—");
 
   const libItem = {
     id: item.id,

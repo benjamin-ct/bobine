@@ -1,0 +1,223 @@
+/* « Pour vous ce soir » — grand bloc sur desktop, avec le spot doré de la
+   « salle de cinéma » (--spotlight) derrière l'affiche. */
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+  min-height: 320px;
+  padding: 28px;
+  margin: 8px 0 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(ellipse 420px 320px at 120px 45%, var(--spotlight), transparent 70%);
+  pointer-events: none;
+}
+
+.placeholder {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Image de fond côté droit, fondue vers la gauche pour laisser le texte
+   lisible sur la surface. */
+.backdrop {
+  position: absolute;
+  inset: 0 0 0 35%;
+  z-index: -2;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.35;
+  mask-image: linear-gradient(to right, transparent, #000 45%);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 45%);
+}
+
+.poster {
+  display: block;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border-2);
+  box-shadow: var(--shadow-lift);
+}
+
+.poster img,
+.noPoster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.titleLink {
+  color: inherit;
+}
+
+.meta {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.rating {
+  white-space: nowrap;
+}
+
+.rating svg {
+  color: var(--gold);
+  vertical-align: -2px;
+}
+
+.overview {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: var(--pill-padding);
+  border-radius: 999px;
+  font-size: var(--pill-font-size);
+  font-weight: var(--pill-font-weight);
+}
+
+.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.primary:hover {
+  background: var(--accent-strong);
+}
+
+.secondary {
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--fg);
+}
+
+.secondaryOn svg {
+  color: var(--accent-ink);
+}
+
+/* ─── Mobile : carte compacte d'environ 130 px ─────────────────────────── */
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 87px minmax(0, 1fr);
+    gap: 14px;
+    min-height: 130px;
+    padding: 0 14px 0 0;
+    margin-top: 4px;
+    margin-bottom: 22px;
+    border-radius: var(--radius-lg);
+  }
+
+  .hero::before {
+    background: radial-gradient(ellipse 200px 160px at 44px 50%, var(--spotlight), transparent 70%);
+  }
+
+  .backdrop,
+  .overview,
+  .actions {
+    display: none;
+  }
+
+  .poster {
+    height: 130px;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .body {
+    gap: 5px;
+  }
+
+  .eyebrow {
+    font-size: 10.5px;
+  }
+
+  .title {
+    font-size: 20px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Toute la carte est cliquable sur mobile (le lien du titre s'étend). */
+  .titleLink::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .meta {
+    font-size: 12px;
+  }
+}
