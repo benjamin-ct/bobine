@@ -118,22 +118,36 @@
   left: 46px;
 }
 
+/* Statut de sortie (En salles, Prochainement, Vient de sortir...) : petite
+   étiquette sous le badge Film / Série, à la largeur de son texte, pour
+   laisser le bas de l'affiche aux pastilles Envie / Vu. */
 .theatrical {
   position: absolute;
-  /* Au-dessus de la rangée de pastilles (8 + 32 + 6). */
-  bottom: 46px;
+  top: 32px;
   left: 8px;
-  right: 8px;
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
   background: oklch(0 0 0 / 0.65);
   color: var(--on-image);
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  text-align: center;
+  line-height: 1.2;
+  backdrop-filter: blur(4px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Top 5 : le médaillon de rang (34 px) occupe le coin haut gauche. */
+.rank ~ .theatrical {
+  top: 46px;
+}
+
+/* Ne pas passer sous le logo de plateforme (Nouveautés, coin haut droit). */
+.poster:has(.provider) .theatrical {
+  max-width: calc(100% - 46px);
 }
 
 .theatricalUnknown {
