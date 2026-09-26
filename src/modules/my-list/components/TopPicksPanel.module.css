@@ -292,6 +292,21 @@
 .search {
   width: 100%;
   margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 14px;
+  transition: border-color 0.18s ease;
+}
+
+/* Pas d'anneau de focus rouge (accent) : la modale focalise le champ à
+   l'ouverture, une bordure neutre plus marquée suffit à signaler le focus. */
+.search:focus,
+.search:focus-visible {
+  outline: none;
+  border-color: var(--border-2);
 }
 
 .grid {
