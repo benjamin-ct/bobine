@@ -353,7 +353,7 @@ function MediaCard({
           aria-label={t("mediaCard.wantToWatch")}
           title={t("mediaCard.wantToWatch")}
         >
-          <Icon name="star" size={18} strokeWidth={inWatchlist ? 2 : 1.5} filled={inWatchlist} />
+          <Icon name="star" size={16} strokeWidth={inWatchlist ? 2 : 1.5} filled={inWatchlist} />
         </button>
         <button
           type="button"
@@ -363,7 +363,7 @@ function MediaCard({
           aria-label={t("mediaCard.markAsWatched")}
           title={t("mediaCard.markAsWatched")}
         >
-          <Icon name="check" size={18} strokeWidth={watched ? 3 : 1.5} />
+          <Icon name="check" size={16} strokeWidth={watched ? 3 : 1.5} />
         </button>
       </div>
     </div>

@@ -1,5 +1,8 @@
 .card {
   position: relative;
+  /* Conteneur de référence pour placer les pastilles au bas de l'affiche
+     (hauteur = 150cqw, voir .pastilles). */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -41,6 +44,8 @@
   align-items: flex-end;
   height: 100%;
   padding: 12px;
+  /* Laisse la place aux pastilles Envie / Vu posées en bas de l'affiche. */
+  padding-bottom: 48px;
   text-align: left;
   color: var(--on-image);
   font-family: var(--font-poster);
@@ -115,7 +120,8 @@
 
 .theatrical {
   position: absolute;
-  bottom: 8px;
+  /* Au-dessus de la rangée de pastilles (8 + 32 + 6). */
+  bottom: 46px;
   left: 8px;
   right: 8px;
   background: oklch(0 0 0 / 0.65);
@@ -139,7 +145,7 @@
 
 .provider {
   position: absolute;
-  bottom: 8px;
+  top: 8px;
   right: 8px;
   width: 26px;
   height: 26px;
@@ -184,17 +190,17 @@
   white-space: nowrap;
 }
 
-/* Pastilles Envie / Vu, en haut à droite de l'affiche (la carte est le
-   bloc de positionnement ; l'affiche en occupe le haut). Rondes 40 px, cible
-   tactile portée à 44 px par le ::before. */
+/* Pastilles Envie / Vu, côte à côte en bas à droite de l'affiche. La carte
+   est le bloc de positionnement et l'affiche (2/3) en occupe le haut : son
+   bas est à 150cqw du haut de la carte. Rondes 32 px, cible tactile portée à
+   44 px par le ::before. */
 .pastilles {
   position: absolute;
-  top: 8px;
+  top: calc(150cqw - 32px - 8px);
   right: 8px;
   z-index: 2;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -207,8 +213,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
   background: var(--pastille-bg);
   border: 1.5px solid var(--pastille-border);
@@ -223,7 +229,7 @@
 .pastille::before {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: -6px;
   border-radius: inherit;
 }
 
