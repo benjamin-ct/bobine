@@ -1,11 +1,12 @@
 // Petites fonctions d'accès à D1. Pas d'ORM : le schéma est simple (voir
 // migrations/) et les requêtes préparées suffisent largement.
-import { decodeHtmlEntities } from "./validate.ts";
+import { decodeHtmlEntities, sanitizeTopPicks } from "./validate.ts";
 import type {
   CleanCustomListMap,
   CleanGenrePref,
   CleanKey,
   CleanLibraryItem,
+  CleanTopPick,
   CleanWatchlistItem,
   SyncDelete,
   SyncUpsert,
@@ -333,34 +334,57 @@ export async function setShareSlug(
 
 // Top 5 choisi à la main pour le profil partagé (migration 0011), ordre
 // d'affichage conservé. Tableau vide = pas de choix (calcul automatique).
+// Chaque entrée copie les métadonnées d'affichage du titre (CleanTopPick) :
+// il peut venir du catalogue sans être marqué « vu ».
 export const TOP_PICKS_MAX = 5;
 
-function parseTopPicks(raw: string | null): string[] {
-  if (!raw) {
-    return [];
-  }
+// Relit la colonne et reprend l'item « vu » quand il existe (note, affiche à
+// jour). Une entrée sous forme de simple clé "mediaType:id" (premier format
+// de la colonne, avant la recherche dans le catalogue) n'est gardée que si
+// le titre est toujours vu.
+function resolveTopPicks(raw: string | null, watched: LibraryState["watched"]): LibraryItem[] {
+  let parsed: unknown;
   try {
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((k): k is string => typeof k === "string").slice(0, TOP_PICKS_MAX)
-      : [];
+    parsed = raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+  const picks: LibraryItem[] = [];
+  for (const entry of parsed.slice(0, TOP_PICKS_MAX)) {
+    const pick = typeof entry === "string" ? undefined : sanitizeTopPicks([entry], 1)[0];
+    const key = typeof entry === "string" ? entry : pick && `${pick.mediaType}:${pick.id}`;
+    const seen = key ? watched[key] : undefined;
+    if (seen) {
+      picks.push(toPublicItem(seen));
+    } else if (pick) {
+      picks.push({ ...pick, addedAt: 0, updatedAt: 0, rating: null });
+    }
+  }
+  return picks;
 }
 
-export async function getTopPicks(db: D1Database, userId: number): Promise<string[]> {
-  const row = await db
-    .prepare("SELECT top_picks FROM users WHERE id = ?")
-    .bind(userId)
-    .first<{ top_picks: string | null }>();
-  return parseTopPicks(row?.top_picks ?? null);
+export async function getTopPicks(db: D1Database, userId: number): Promise<LibraryItem[]> {
+  const [row, library] = await Promise.all([
+    db
+      .prepare("SELECT top_picks FROM users WHERE id = ?")
+      .bind(userId)
+      .first<{ top_picks: string | null }>(),
+    getLibraryForUser(db, userId),
+  ]);
+  return resolveTopPicks(row?.top_picks ?? null, library.watched);
 }
 
-export async function setTopPicks(db: D1Database, userId: number, keys: string[]): Promise<void> {
+export async function setTopPicks(
+  db: D1Database,
+  userId: number,
+  picks: CleanTopPick[]
+): Promise<void> {
   await db
     .prepare("UPDATE users SET top_picks = ? WHERE id = ?")
-    .bind(keys.length ? JSON.stringify(keys) : null, userId)
+    .bind(picks.length ? JSON.stringify(picks) : null, userId)
     .run();
 }
 
@@ -401,9 +425,7 @@ export async function getPublicProfileBySlug(
   });
   return {
     displayName: user.display_name,
-    // Un titre retiré des « vus » depuis sort du Top sans qu'il faille
-    // réécrire la colonne.
-    topPicks: parseTopPicks(user.top_picks).filter((key) => library.watched[key]),
+    topPicks: resolveTopPicks(user.top_picks, library.watched),
     watched: Object.values(library.watched).map(toPublicItem).sort(byMostRecent),
     watchlist: Object.values(library.watchlist).map(toPublicItem).sort(byMostRecent),
     customLists: Object.values(customLists)

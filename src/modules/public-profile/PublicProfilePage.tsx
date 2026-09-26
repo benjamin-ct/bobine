@@ -166,8 +166,7 @@ export default function PublicProfilePage() {
   // mieux notés — à égalité de note, les plus récemment vus passent devant.
   const top = useMemo(() => {
     if (topPicks?.length) {
-      const byKey = new Map((watched ?? []).map((item) => [`${item.mediaType}:${item.id}`, item]));
-      return topPicks.flatMap((key) => byKey.get(key) ?? []).slice(0, TOP_COUNT);
+      return topPicks.slice(0, TOP_COUNT);
     }
     return (watched ?? [])
       .filter((item) => item.rating != null)

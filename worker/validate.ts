@@ -492,3 +492,33 @@ export function sanitizeKeyList(rawKeys: unknown, maxItems: number): CleanKey[] 
     })
     .filter((k): k is CleanKey => k !== null);
 }
+
+// Top 5 du profil partagé : titres vus ou non (recherche dans le catalogue),
+// d'où une copie des métadonnées d'affichage plutôt qu'une simple clé vers
+// la bibliothèque. On ne garde que ce que la page publique affiche ; la note
+// est relue sur l'item « vu » à la lecture (voir resolveTopPicks, db.ts).
+export interface CleanTopPick {
+  id: number;
+  mediaType: MediaTypeStr;
+  title: string;
+  posterPath: string | null;
+  date?: string;
+}
+
+export function sanitizeTopPicks(rawItems: unknown, maxItems: number): CleanTopPick[] {
+  const seen = new Set<string>();
+  const picks: CleanTopPick[] = [];
+  for (const raw of Array.isArray(rawItems) ? rawItems.slice(0, maxItems) : []) {
+    const item = sanitizeCustomListItem(raw);
+    const key = item && `${item.mediaType}:${item.id}`;
+    if (!item || !key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    const { id, mediaType, title, posterPath, date } = item;
+    picks.push(
+      date ? { id, mediaType, title, posterPath, date } : { id, mediaType, title, posterPath }
+    );
+  }
+  return picks;
+}
