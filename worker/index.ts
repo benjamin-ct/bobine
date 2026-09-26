@@ -52,6 +52,11 @@ import {
   sessionCookieHeader,
   authHintCookieHeader,
   sendMagicLinkEmail,
+  createEmailChange,
+  confirmEmailChange,
+  isEmailUsedByAnotherUser,
+  sendEmailChangeCode,
+  sendEmailChangedNotice,
   type EmailLocale,
 } from "./auth.ts";
 
@@ -703,6 +708,120 @@ async function handleUpdateDisplayName(request: Request, env: Env): Promise<Resp
   await updateDisplayName(env.DB, user.id, displayName);
   publishToUser(request, user.id, { type: "display-name" });
   return json({ ok: true, displayName });
+}
+
+// Changement d'adresse email (ticket « modifier l'adresse mail ») ---------
+//
+// En deux temps, depuis une session déjà ouverte : 1) request envoie un code
+// à la NOUVELLE adresse (preuve qu'on la contrôle), 2) confirm applique le
+// changement si le code correspond à la demande en attente du compte, puis
+// avertit l'ANCIENNE adresse. Les sessions en cours restent ouvertes. Même
+// garde IDOR que les autres endpoints authentifiés : user.id vient
+// uniquement du cookie de session.
+async function handleRequestEmailChange(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const newEmail = String(body?.email || "")
+    .trim()
+    .toLowerCase();
+  if (!isValidEmail(newEmail)) {
+    return json({ error: "Adresse email invalide.", reason: "invalid" }, 400);
+  }
+  if (newEmail === user.email) {
+    return json({ error: "C'est déjà ton adresse actuelle.", reason: "same" }, 400);
+  }
+  const locale = sanitizeEmailLocale(body?.locale);
+
+  // Par compte (évite de s'en servir pour sonder quelles adresses ont un
+  // compte, voir plus bas) ET par adresse cible (évite de spammer la boîte
+  // d'un tiers), comme pour les liens de connexion.
+  const withinLimits = await Promise.all([
+    checkRateLimit(env.DB, `email-change:user:${user.id}:m`, { limit: 1, windowMs: 60_000 }),
+    checkRateLimit(env.DB, `email-change:user:${user.id}:h`, { limit: 5, windowMs: 60 * 60_000 }),
+    checkRateLimit(env.DB, `email-change:email:${newEmail}:h`, { limit: 5, windowMs: 60 * 60_000 }),
+  ]);
+  if (withinLimits.some((ok) => !ok)) {
+    return RATE_LIMIT_RESPONSE();
+  }
+
+  // Deux comptes ne peuvent pas partager une adresse (index unique sur
+  // users.email). Le dire explicitement révèle qu'un compte existe à cette
+  // adresse, mais seulement à un membre connecté et au débit ci-dessus.
+  if (await isEmailUsedByAnotherUser(env.DB, newEmail, user.id)) {
+    return json(
+      { error: "Cette adresse est déjà utilisée par un autre compte.", reason: "taken" },
+      409
+    );
+  }
+
+  const code = await createEmailChange(env.DB, user.id, newEmail);
+  try {
+    const { skipped } = await sendEmailChangeCode(env, newEmail, code, locale);
+    // Même logique que handleRequestLink : le code n'est renvoyé que sans
+    // RESEND_API_KEY (dev local), jamais en production.
+    return json({ ok: true, email: newEmail, devCode: skipped ? code : undefined });
+  } catch (err) {
+    logError("Échec de l'envoi du code de changement d'adresse :", err);
+    return json({ error: "Impossible d'envoyer le code pour le moment. Réessaie plus tard." }, 502);
+  }
+}
+
+async function handleConfirmEmailChange(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  // Seule vraie protection contre un bruteforce du code à 6 caractères,
+  // comme pour /api/auth/verify.
+  if (
+    !(await checkRateLimit(env.DB, `email-change-confirm:user:${user.id}`, {
+      limit: 10,
+      windowMs: 15 * 60_000,
+    }))
+  ) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const result = await confirmEmailChange(env.DB, user.id, body?.code as string | undefined);
+  if (!result.ok) {
+    return result.reason === "taken"
+      ? json(
+          { error: "Cette adresse est déjà utilisée par un autre compte.", reason: "taken" },
+          409
+        )
+      : json(
+          { error: "Ce code est invalide, expiré, ou déjà utilisé.", reason: "invalid-code" },
+          400
+        );
+  }
+  try {
+    await sendEmailChangedNotice(
+      env,
+      result.oldEmail,
+      result.newEmail,
+      sanitizeEmailLocale(body?.locale)
+    );
+  } catch (err) {
+    // Le changement est déjà fait : un échec de l'avertissement ne doit pas
+    // le faire passer pour raté côté client.
+    logError("Échec de l'envoi de l'avertissement de changement d'adresse :", err);
+  }
+  // Les autres appareils rechargent /api/auth/me, qui porte l'email.
+  publishToUser(request, user.id, { type: "display-name" });
+  return json({ ok: true, email: result.newEmail });
 }
 
 // Partage public du profil (lecture seule) -------------------------------
@@ -1596,6 +1715,12 @@ async function routeRequest(
     return handleUpdateDisplayName(request, env);
   }
 
+  if (url.pathname === "/api/account/email/request" && request.method === "POST") {
+    return handleRequestEmailChange(request, env);
+  }
+  if (url.pathname === "/api/account/email/confirm" && request.method === "POST") {
+    return handleConfirmEmailChange(request, env);
+  }
   if (url.pathname === "/api/account/share" && request.method === "PUT") {
     return handleUpdateProfileShare(request, env);
   }

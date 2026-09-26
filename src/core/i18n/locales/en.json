@@ -141,7 +141,31 @@
     "saving": "Saving…",
     "save": "Save",
     "logout": "Sign out",
-    "saved": "✓ Changes saved"
+    "saved": "✓ Changes saved",
+    "emailChange": {
+      "edit": "Change",
+      "newEmail": "New email address",
+      "newEmailPlaceholder": "new@address.com",
+      "hint": "We'll send a code to this address to check that it's yours. Your current address stays active until the code is confirmed.",
+      "sendCode": "Send code",
+      "sending": "Sending…",
+      "cancel": "Cancel",
+      "back": "Use another address",
+      "codeSent": "Code sent to {{email}}. Enter it here (valid for 15 minutes).",
+      "devCode": "Code (local dev): {{code}}",
+      "code": "Code received",
+      "confirm": "Confirm",
+      "confirming": "Checking…",
+      "done": "✓ Email address changed. A notice was sent to your previous address.",
+      "errors": {
+        "invalid": "This email address isn't valid.",
+        "same": "That's already your current address.",
+        "taken": "This address is already used by another account.",
+        "invalid-code": "This code is invalid, expired or already used.",
+        "rateLimited": "Too many attempts. Try again in a few minutes.",
+        "generic": "Couldn't change the address right now. Try again later."
+      }
+    }
   },
   "excludedGenres": {
     "summary": "Genres to exclude",
@@ -463,7 +487,7 @@
   "privacyPolicyPage": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated: {{date}}",
-    "lastUpdatedValue": "September 25, 2026",
+    "lastUpdatedValue": "September 26, 2026",
     "controller": {
       "title": "Data controller",
       "textBefore": "Bobine is a personal project, with no commercial structure, operated from France. The data processing described below is therefore governed by French law and the GDPR. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
@@ -472,7 +496,7 @@
       "title": "Data we collect",
       "account": {
         "label": "Account",
-        "text": ": your email address (the only information requested at sign-up), used for single-use link/code sign-in — no password is stored. You can also set an optional display name, visible on your account card and synced across your devices."
+        "text": ": your email address (the only information requested at sign-up), used for single-use link/code sign-in — no password is stored. You can change it from your profile: the new address is only saved once you enter a code sent to it (the pending request is kept for 15 minutes at most), and a notice is sent to the previous one. You can also set an optional display name, visible on your account card and synced across your devices."
       },
       "library": {
         "label": "Personal library",
@@ -508,7 +532,7 @@
       },
       "resend": {
         "label": "Resend",
-        "text": ": sends the emails containing your sign-in link/code — receives your email address for this purpose only."
+        "text": ": sends the emails containing your sign-in link/code, as well as the confirmation code and notice for an email address change — receives your email address (both old and new, in that case) for this purpose only."
       },
       "recaptcha": {
         "label": "Google reCAPTCHA",

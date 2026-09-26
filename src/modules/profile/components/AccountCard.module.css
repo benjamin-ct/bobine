@@ -76,7 +76,7 @@
   gap: 5px;
 }
 
-.field span {
+.field > span {
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -140,4 +140,60 @@
 .errorHint {
   color: var(--accent-ink);
   font-size: 13px;
+}
+
+.field label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.inline {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.inline input {
+  flex: 1;
+  min-width: 0;
+}
+
+.secondaryBtn {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.secondaryBtn:hover {
+  background: var(--surface-2);
+}
+
+.emailChange {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.emailChange .hint {
+  margin: 0;
+}
+
+.emailChange input {
+  background: var(--surface);
+}
+
+p.savedHint {
+  margin: 0;
 }
