@@ -19,7 +19,9 @@ import {
   getPublicListBySlug,
   updateDisplayName,
   setShareSlug,
-  getPublicProfileBySlug,
+  getPublicProfile,
+  setUsername,
+  isUsernameAvailable,
   getSharedProfileEmail,
   getTopPicks,
   setTopPicks,
@@ -87,7 +89,7 @@ import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
 import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
 import { openSyncSocket, publishToUser } from "./sync.ts";
-import { randomShareSlug, SHARE_SLUG_PATTERN } from "./share-slug.ts";
+import { randomShareSlug, normalizeUsername, SHARE_SLUG_PATTERN } from "./share-slug.ts";
 import {
   follow,
   unfollow,
@@ -682,7 +684,13 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
   const sessionToken = await createSession(env.DB, user.id);
 
   return json(
-    { ok: true, email: user.email, displayName: user.displayName, shareSlug: user.shareSlug },
+    {
+      ok: true,
+      email: user.email,
+      displayName: user.displayName,
+      shareSlug: user.shareSlug,
+      username: user.username,
+    },
     200,
     { "set-cookie": [sessionCookieHeader(request, sessionToken), authHintCookieHeader(request)] }
   );
@@ -693,7 +701,12 @@ async function handleMe(request: Request, env: Env): Promise<Response> {
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  return json({ email: user.email, displayName: user.displayName, shareSlug: user.shareSlug });
+  return json({
+    email: user.email,
+    displayName: user.displayName,
+    shareSlug: user.shareSlug,
+    username: user.username,
+  });
 }
 
 // Nom affiché (ticket #45) : mis à jour uniquement sur un save manuel côté
@@ -848,12 +861,65 @@ async function handleConfirmEmailChange(request: Request, env: Env): Promise<Res
   return json({ ok: true, email: result.newEmail });
 }
 
+// Pseudo public (ticket « Ajoute de pseudo ») -----------------------------
+//
+// Facultatif et unique ; une fois choisi il devient l'URL du profil partagé
+// (/u/<pseudo>) à la place du slug aléatoire. La disponibilité est vérifiée
+// pendant la saisie (GET, plafonné par compte pour ne pas servir à lister
+// les pseudos existants), puis de nouveau à l'enregistrement (PUT), où
+// l'index unique fait foi.
+async function handleUsernameAvailability(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  if (!checkRateLimitInMemory(`username-check:user:${user.id}`, { limit: 60, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  const username = normalizeUsername(new URL(request.url).searchParams.get("username"));
+  if (username === null) {
+    return json({ username: null, available: false, reason: "invalid" });
+  }
+  const available = await isUsernameAvailable(env.DB, username, user.id);
+  return json({ username, available, reason: available ? null : "taken" });
+}
+
+async function handleUpdateUsername(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  // Chaîne vide ou null : retire le pseudo (le lien de partage repasse sur
+  // le slug aléatoire).
+  const raw = body?.username;
+  const clearing = raw === null || (typeof raw === "string" && raw.trim() === "");
+  const username = clearing ? null : normalizeUsername(raw);
+  if (!clearing && username === null) {
+    return json({ error: "Pseudo invalide.", reason: "invalid" }, 400);
+  }
+  if (username !== user.username && !(await setUsername(env.DB, user.id, username))) {
+    return json({ error: "Ce pseudo est déjà pris.", reason: "taken" }, 409);
+  }
+  // Même événement que le nom affiché : les autres appareils rechargent
+  // /api/auth/me, qui porte aussi le pseudo.
+  publishToUser(request, user.id, { type: "display-name" });
+  return json({ ok: true, username });
+}
+
 // Partage public du profil (lecture seule) -------------------------------
 //
 // Opt-in explicite : activer génère un slug aléatoire (96 bits, non
 // devinable) qui devient l'URL publique /u/<slug> ; désactiver le remet à
 // NULL, ce qui invalide l'ancien lien. Réactiver en génère un nouveau plutôt
-// que de ressusciter l'ancien, pour qu'un lien révoqué le reste. Même garde
+// que de ressusciter l'ancien, pour qu'un lien révoqué le reste (seul
+// /u/<pseudo>, qui dépend du pseudo et pas du slug, redevient joignable si
+// le pseudo n'a pas changé entre-temps). Même garde
 // IDOR que les autres endpoints authentifiés : user.id vient uniquement du
 // cookie de session.
 async function handleUpdateProfileShare(request: Request, env: Env): Promise<Response> {
@@ -919,11 +985,8 @@ async function handleGetPublicProfile(request: Request, env: Env, slug: string):
   if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
     return RATE_LIMIT_RESPONSE();
   }
-  if (!SHARE_SLUG_PATTERN.test(slug)) {
-    return json({ error: "Profil introuvable ou privé." }, 404);
-  }
   const viewer = await getUserFromRequest(env.DB, request);
-  const profile = await getPublicProfileBySlug(env.DB, slug, viewer?.id ?? null);
+  const profile = await getPublicProfile(env.DB, slug, viewer?.id ?? null);
   if (!profile) {
     return json({ error: "Profil introuvable ou privé." }, 404);
   }
@@ -1890,6 +1953,12 @@ async function routeRequest(
   }
   if (url.pathname === "/api/account/email/confirm" && request.method === "POST") {
     return handleConfirmEmailChange(request, env);
+  }
+  if (url.pathname === "/api/account/username" && request.method === "PUT") {
+    return handleUpdateUsername(request, env);
+  }
+  if (url.pathname === "/api/account/username/availability" && request.method === "GET") {
+    return handleUsernameAvailability(request, env);
   }
   if (url.pathname === "/api/account/share" && request.method === "PUT") {
     return handleUpdateProfileShare(request, env);

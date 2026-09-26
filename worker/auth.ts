@@ -38,6 +38,8 @@ export interface AuthUser {
   /** Slug du lien de partage public du profil, `null` tant que le profil est
    * privé (voir migrations/0009_profile_share.sql). */
   shareSlug: string | null;
+  /** Pseudo public (migration 0012), `null` tant qu'aucun n'a été choisi. */
+  username: string | null;
   sessionToken: string;
 }
 
@@ -122,24 +124,37 @@ export async function consumeMagicLinkByCode(
 export async function findOrCreateUser(
   db: D1Database,
   email: string
-): Promise<{ id: number; email: string; displayName: string | null; shareSlug: string | null }> {
+): Promise<{
+  id: number;
+  email: string;
+  displayName: string | null;
+  shareSlug: string | null;
+  username: string | null;
+}> {
   const existing = await db
-    .prepare("SELECT id, email, display_name, share_slug FROM users WHERE email = ?")
+    .prepare("SELECT id, email, display_name, share_slug, username FROM users WHERE email = ?")
     .bind(email)
-    .first<Pick<UserRow, "id" | "email" | "display_name" | "share_slug">>();
+    .first<Pick<UserRow, "id" | "email" | "display_name" | "share_slug" | "username">>();
   if (existing) {
     return {
       id: existing.id,
       email: existing.email,
       displayName: existing.display_name,
       shareSlug: existing.share_slug,
+      username: existing.username,
     };
   }
   const result = await db
     .prepare("INSERT INTO users (email, created_at) VALUES (?, ?)")
     .bind(email, Date.now())
     .run();
-  return { id: Number(result.meta.last_row_id), email, displayName: null, shareSlug: null };
+  return {
+    id: Number(result.meta.last_row_id),
+    email,
+    displayName: null,
+    shareSlug: null,
+    username: null,
+  };
 }
 
 export async function createSession(db: D1Database, userId: number): Promise<string> {
@@ -176,7 +191,8 @@ export async function getUserFromRequest(
   }
   const row = await db
     .prepare(
-      `SELECT users.id, users.email, users.display_name, users.share_slug, sessions.expires_at
+      `SELECT users.id, users.email, users.display_name, users.share_slug, users.username,
+              sessions.expires_at
        FROM sessions JOIN users ON users.id = sessions.user_id
        WHERE sessions.token = ?`
     )
@@ -186,6 +202,7 @@ export async function getUserFromRequest(
       email: string;
       display_name: string | null;
       share_slug: string | null;
+      username: string | null;
       expires_at: number;
     }>();
   if (!row || row.expires_at < Date.now()) {
@@ -196,6 +213,7 @@ export async function getUserFromRequest(
     email: row.email,
     displayName: row.display_name,
     shareSlug: row.share_slug,
+    username: row.username,
     sessionToken: token,
   };
 }

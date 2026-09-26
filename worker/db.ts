@@ -2,6 +2,7 @@
 // migrations/) et les requêtes préparées suffisent largement.
 import { decodeHtmlEntities } from "./validate.ts";
 import { getFollowCounts, isFollowing } from "./follows.ts";
+import { SHARE_SLUG_PATTERN, USERNAME_PATTERN } from "./share-slug.ts";
 import type {
   CleanCustomListMap,
   CleanGenrePref,
@@ -365,6 +366,41 @@ export async function setTopPicks(db: D1Database, userId: number, keys: string[]
     .run();
 }
 
+// Pseudo public (migration 0012). `username` doit déjà être normalisé
+// (normalizeUsername) ; `null` le retire. Renvoie `false` si le pseudo est
+// déjà pris : l'index unique tranche même quand deux comptes le demandent
+// au même instant (la vérification de disponibilité côté client n'est
+// qu'indicative).
+export async function setUsername(
+  db: D1Database,
+  userId: number,
+  username: string | null
+): Promise<boolean> {
+  try {
+    await db.prepare("UPDATE users SET username = ? WHERE id = ?").bind(username, userId).run();
+    return true;
+  } catch (err) {
+    if (err instanceof Error && /UNIQUE constraint failed/i.test(err.message)) {
+      return false;
+    }
+    throw err;
+  }
+}
+
+// Disponibilité d'un pseudo (déjà normalisé) pour `userId` : son propre
+// pseudo actuel compte comme disponible.
+export async function isUsernameAvailable(
+  db: D1Database,
+  username: string,
+  userId: number
+): Promise<boolean> {
+  const row = await db
+    .prepare("SELECT id FROM users WHERE username = ?")
+    .bind(username)
+    .first<{ id: number }>();
+  return !row || row.id === userId;
+}
+
 // Le détail des épisodes vus n'est pas exposé : la page publique n'affiche
 // que les titres, affiches et notes.
 function toPublicItem({ watchedEpisodes: _watchedEpisodes, ...item }: LibraryItem): LibraryItem {
@@ -375,19 +411,32 @@ function byMostRecent(a: LibraryItem, b: LibraryItem): number {
   return (b.updatedAt || b.addedAt || 0) - (a.updatedAt || a.addedAt || 0);
 }
 
-// Profil partagé en lecture seule. Le compte n'est résolu QUE par le slug
-// aléatoire (jamais par un id ou un nom affiché) : un profil privé
+// Profil partagé en lecture seule, résolu par le slug aléatoire ou par le
+// pseudo (/u/<slug|pseudo> ; les deux formats sont disjoints, voir
+// USERNAME_PATTERN). Jamais par un id ou un nom affiché, et le pseudo ne
+// résout que les profils dont le partage est actif : un profil privé
 // (share_slug NULL) est donc introuvable par construction. `viewerId` :
 // compte connecté qui consulte la page (bouton Suivre/Suivi), null sinon.
-export async function getPublicProfileBySlug(
+export async function getPublicProfile(
   db: D1Database,
-  shareSlug: string,
+  handle: string,
   viewerId: number | null
 ): Promise<PublicProfile | null> {
-  const user = await db
-    .prepare("SELECT id, display_name, top_picks FROM users WHERE share_slug = ?")
-    .bind(shareSlug)
-    .first<{ id: number; display_name: string | null; top_picks: string | null }>();
+  const query = SHARE_SLUG_PATTERN.test(handle)
+    ? "SELECT id, display_name, username, share_slug, top_picks FROM users WHERE share_slug = ?"
+    : USERNAME_PATTERN.test(handle)
+      ? "SELECT id, display_name, username, share_slug, top_picks FROM users WHERE username = ? AND share_slug IS NOT NULL"
+      : null;
+  if (!query) {
+    return null;
+  }
+  const user = await db.prepare(query).bind(handle).first<{
+    id: number;
+    display_name: string | null;
+    username: string | null;
+    share_slug: string;
+    top_picks: string | null;
+  }>();
   if (!user) {
     return null;
   }
@@ -406,6 +455,10 @@ export async function getPublicProfileBySlug(
   });
   return {
     displayName: user.display_name,
+    username: user.username,
+    // Les endpoints abonnement/photo restent adressés par slug : le client
+    // en a besoin même quand la page est ouverte via /u/<pseudo>.
+    shareSlug: user.share_slug,
     // Un titre retiré des « vus » depuis sort du Top sans qu'il faille
     // réécrire la colonne.
     topPicks: parseTopPicks(user.top_picks).filter((key) => library.watched[key]),

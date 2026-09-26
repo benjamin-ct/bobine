@@ -111,8 +111,8 @@ function ItemGrid({ items, ranked = false }: { items: LibraryItem[]; ranked?: bo
   );
 }
 
-// Profil d'un autre membre, partagé en lecture seule via /u/<slug> (voir
-// ProfileShareCard) : accessible sans compte. Les cartes restent les
+// Profil d'un autre membre, partagé en lecture seule via /u/<slug> ou
+// /u/<pseudo> (voir ProfileShareCard) : accessible sans compte. Les cartes restent les
 // MediaCard habituelles — leurs boutons « vu »/« envie de voir » agissent
 // sur la bibliothèque du visiteur, jamais sur celle du profil consulté.
 export default function PublicProfilePage() {
@@ -279,9 +279,13 @@ export default function PublicProfilePage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <ProfileAvatar slug={slug} name={name} />
+        <ProfileAvatar slug={profile.shareSlug} name={name} />
         <PageHeader
-          eyebrow={t("publicProfile.eyebrow")}
+          eyebrow={
+            profile.username
+              ? `${t("publicProfile.eyebrow")} · @${profile.username}`
+              : t("publicProfile.eyebrow")
+          }
           title={name}
           lead={t("publicProfile.lead", {
             watched: profile.watched.length,
@@ -300,14 +304,18 @@ export default function PublicProfilePage() {
 
       <div className={styles.social}>
         <FollowStats
-          slug={slug}
+          slug={profile.shareSlug}
           counts={{ followers: profile.followers, following: profile.following }}
           onListChange={refreshOwnCounts}
         />
         {profile.isSelf ? (
           <span className={styles.selfHint}>{t("follow.ownProfile")}</span>
         ) : (
-          <FollowButton slug={slug} following={profile.viewerFollows} onChange={applyFollow} />
+          <FollowButton
+            slug={profile.shareSlug}
+            following={profile.viewerFollows}
+            onChange={applyFollow}
+          />
         )}
       </div>
 

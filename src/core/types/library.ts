@@ -59,6 +59,10 @@ export interface PublicProfile {
   /** Top 5 choisi à la main (clés "mediaType:id" présentes dans `watched`,
    * dans l'ordre) ; vide = calcul automatique à partir des notes. */
   topPicks: string[];
+  username: string | null;
+  /** Slug canonique du partage, même quand la page est ouverte via
+   * /u/<pseudo> : c'est lui qu'utilisent les endpoints abonnement/photo. */
+  shareSlug: string;
   watched: LibraryItem[];
   watchlist: LibraryItem[];
   customLists: CustomList[];

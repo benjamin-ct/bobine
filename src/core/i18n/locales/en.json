@@ -74,7 +74,10 @@
     },
     "updateDisplayNameError": "Unable to save the display name.",
     "requestLinkError": "Unable to send the sign-in link.",
-    "updateShareError": "Couldn't update profile sharing."
+    "updateShareError": "Couldn't update profile sharing.",
+    "usernameTaken": "This username is already taken.",
+    "usernameInvalid": "Invalid username: 3 to 15 characters, lowercase letters, digits or “_”.",
+    "updateUsernameError": "Couldn't save the username."
   },
   "loginPage": {
     "title": "Sign in",
@@ -170,7 +173,15 @@
         "rateLimitedMinutes_other": "Too many attempts. Try again in {{count}} minutes.",
         "generic": "Couldn't change the address right now. Try again later."
       }
-    }
+    },
+    "username": "Username",
+    "usernamePlaceholder": "your_username",
+    "usernameHint": "Unique, 3 to 15 characters: lowercase letters, digits or “_”. It's the address of your shared profile.",
+    "username_checking": "Checking availability…",
+    "username_available": "✓ Username available",
+    "username_taken": "This username is already taken.",
+    "username_invalid": "3 to 15 characters: lowercase letters, digits or “_”.",
+    "username_error": "Couldn't check whether this username is available."
   },
   "excludedGenres": {
     "summary": "Genres to exclude",
@@ -531,6 +542,10 @@
       "follows": {
         "label": "Follows",
         "text": ": when you follow a profile, we store that follow and its date. It is used to show follower/following counts and lists, your activity feed, and to notify the person you follow. If your profile is shared, your display name and a link to your profile appear in those lists; otherwise you only appear as a \"private profile\". A shared profile can also be found by its display name in the profile search available to signed-in members. You can unfollow a profile at any time."
+      },
+      "sharedProfile": {
+        "label": "Shared profile and username",
+        "text": " (if you choose to share your profile): what you've watched, your watchlist, your custom lists, your ratings, your display name and your profile picture become visible read-only to anyone who has the link — never your email address. You can also pick an optional, unique username: it appears in the shared profile's address (/u/your_username) and on the profile itself. Turning sharing off makes the profile unreachable, including through the username; you can change or clear the username at any time from your profile."
       }
     },
     "why": {
@@ -676,7 +691,7 @@
   "profileShare": {
     "title": "Share my profile",
     "hintOff": "Your profile is private. Turn on sharing to get a link you can send: anyone with it will be able to see, without changing anything, what you've watched, your watchlist, your lists, your ratings and your profile picture (never your email address). A shared profile can also be found by your display name and followed by other members.",
-    "hintOn": "Your profile is visible read-only to anyone with this link, and signed-in members can find it by your display name and follow it. Turning sharing off permanently invalidates the link.",
+    "hintOn": "Your profile is visible read-only to anyone with this link, and signed-in members can find it by your display name and follow it. Turning sharing off makes it unreachable right away.",
     "linkLabel": "Profile share link",
     "share": "Share link",
     "preview": "View my public profile",
@@ -685,7 +700,8 @@
     "copied": "✓ Link copied",
     "copyError": "Couldn't copy the link.",
     "shareTitle": "My Bobine profile",
-    "error": "Couldn't update profile sharing."
+    "error": "Couldn't update profile sharing.",
+    "usernameTip": "Tip: pick a username in the Account card to get a more readable link (/u/your_username)."
   },
   "topPicks": {
     "title": "My Top 5",
