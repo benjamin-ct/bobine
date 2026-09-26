@@ -139,7 +139,11 @@ export default function NavBar() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { status: authStatus } = useAuth();
   const { region } = useRegion();
-  const authenticated = authStatus === "authenticated";
+  // Pendant la vérification de la session au rechargement ("loading", seulement
+  // quand le cookie compagnon est présent), on affiche déjà la navigation
+  // d'un membre connecté : sinon « Connexion » puis l'onglet Profil
+  // apparaissent et disparaissent le temps de la réponse de /api/auth/me.
+  const authenticated = authStatus !== "anonymous";
 
   useEffect(() => {
     const trimmed = query.trim();

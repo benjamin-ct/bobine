@@ -77,6 +77,12 @@ export interface UsernameCheck {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Cookie compagnon de la session (voir worker/auth.ts, AUTH_HINT_COOKIE) :
+// absent, une réponse 401 de /api/auth/me est garantie.
+function hasAuthHint(): boolean {
+  return document.cookie.includes("bobine_auth=1");
+}
+
 // Toutes les routes /api/* sont servies par le même Worker que l'app (même
 // origine), donc les cookies de session partent automatiquement avec
 // `credentials: "same-origin"` (comportement par défaut de fetch) — pas
@@ -85,7 +91,10 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { locale } = useLocale();
-  const [status, setStatus] = useState<AuthStatus>("loading");
+  // Sans cookie compagnon, le visiteur est anonyme dès le premier rendu :
+  // pas de passage par "loading" (et donc pas d'interface qui change
+  // d'aspect au rechargement). Avec, "loading" le temps de /api/auth/me.
+  const [status, setStatus] = useState<AuthStatus>(() => (hasAuthHint() ? "loading" : "anonymous"));
   const [email, setEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
@@ -110,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // (dont l'intégralité du trafic anonyme et des crawlers/bots — voir
     // worker/auth.ts, AUTH_HINT_COOKIE) : sans ce cookie compagnon, une
     // réponse 401 est de toute façon garantie.
-    if (!pinnedRef.current && !document.cookie.includes("bobine_auth=1")) {
+    if (!pinnedRef.current && !hasAuthHint()) {
       setEmail(null);
       setDisplayName(null);
       setShareSlug(null);

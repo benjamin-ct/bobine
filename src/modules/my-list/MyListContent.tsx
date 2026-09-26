@@ -60,7 +60,9 @@ export default function MyListContent() {
 
   return (
     <div>
-      {authStatus !== "authenticated" && (
+      {/* Pas pendant "loading" : la bannière clignoterait à chaque
+          rechargement pour un membre connecté. */}
+      {authStatus === "anonymous" && (
         <div className={styles.authBanner}>
           <p className={styles.authBannerText}>{t("myListPage.authBannerText")}</p>
           <Link to="/connexion" className={styles.loginBtn}>
