@@ -257,25 +257,25 @@ const MAGIC_LINK_EMAIL_CONTENT: Record<
   { subject: string; html: (link: string, code: string) => string }
 > = {
   fr: {
-    subject: "Votre lien de connexion Bobine 🎬",
+    subject: "Votre lien de connexion Seancy 🎬",
     html: (link, code) => `
-        <p>Cliquez sur le lien ci-dessous pour vous connecter à Bobine (valable 15 minutes) :</p>
+        <p>Cliquez sur le lien ci-dessous pour vous connecter à Seancy (valable 15 minutes) :</p>
         <p><a href="${link}">${link}</a></p>
-        <p>Si vous avez installé Bobine sur votre écran d'accueil (iPhone/Android), le lien
+        <p>Si vous avez installé Seancy sur votre écran d'accueil (iPhone/Android), le lien
         ci-dessus risque de s'ouvrir dans votre navigateur au lieu de l'app installée.
-        Dans ce cas, ouvrez plutôt l'app Bobine et entrez ce code à la place :</p>
+        Dans ce cas, ouvrez plutôt l'app Seancy et entrez ce code à la place :</p>
         <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
         <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
       `,
   },
   en: {
-    subject: "Your Bobine sign-in link 🎬",
+    subject: "Your Seancy sign-in link 🎬",
     html: (link, code) => `
-        <p>Click the link below to sign in to Bobine (valid for 15 minutes):</p>
+        <p>Click the link below to sign in to Seancy (valid for 15 minutes):</p>
         <p><a href="${link}">${link}</a></p>
-        <p>If you installed Bobine on your home screen (iPhone/Android), the link
+        <p>If you installed Seancy on your home screen (iPhone/Android), the link
         above might open in your browser instead of the installed app.
-        In that case, open the Bobine app instead and enter this code:</p>
+        In that case, open the Seancy app instead and enter this code:</p>
         <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
         <p>If you didn't request this, you can safely ignore this email.</p>
       `,
@@ -291,9 +291,9 @@ const EMAIL_CHANGE_CODE_CONTENT: Record<
   { subject: string; html: (code: string) => string }
 > = {
   fr: {
-    subject: "Confirmez votre nouvelle adresse email Bobine",
+    subject: "Confirmez votre nouvelle adresse email Seancy",
     html: (code) => `
-        <p>Pour associer cette adresse à votre compte Bobine, entrez ce code dans
+        <p>Pour associer cette adresse à votre compte Seancy, entrez ce code dans
         Profil → Compte (valable 15 minutes) :</p>
         <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
         <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre
@@ -301,9 +301,9 @@ const EMAIL_CHANGE_CODE_CONTENT: Record<
       `,
   },
   en: {
-    subject: "Confirm your new Bobine email address",
+    subject: "Confirm your new Seancy email address",
     html: (code) => `
-        <p>To link this address to your Bobine account, enter this code in
+        <p>To link this address to your Seancy account, enter this code in
         Profile → Account (valid for 15 minutes):</p>
         <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
         <p>If you didn't request this, you can safely ignore this email: your
@@ -317,9 +317,9 @@ const EMAIL_CHANGED_NOTICE_CONTENT: Record<
   { subject: string; html: (newEmail: string) => string }
 > = {
   fr: {
-    subject: "L'adresse email de votre compte Bobine a changé",
+    subject: "L'adresse email de votre compte Seancy a changé",
     html: (newEmail) => `
-        <p>L'adresse email de votre compte Bobine vient d'être remplacée par
+        <p>L'adresse email de votre compte Seancy vient d'être remplacée par
         <strong>${escapeHtml(newEmail)}</strong>. Vous ne recevrez plus vos liens de
         connexion à cette adresse-ci.</p>
         <p>Si vous n'êtes pas à l'origine de ce changement, contactez-nous au plus vite
@@ -327,9 +327,9 @@ const EMAIL_CHANGED_NOTICE_CONTENT: Record<
       `,
   },
   en: {
-    subject: "Your Bobine account email address has changed",
+    subject: "Your Seancy account email address has changed",
     html: (newEmail) => `
-        <p>The email address of your Bobine account has just been changed to
+        <p>The email address of your Seancy account has just been changed to
         <strong>${escapeHtml(newEmail)}</strong>. You won't receive sign-in links at
         this address anymore.</p>
         <p>If you didn't make this change, contact us as soon as possible by
@@ -473,7 +473,7 @@ async function sendEmail(
     return { skipped: true };
   }
 
-  const from = env.RESEND_FROM_EMAIL || "Bobine <onboarding@resend.dev>";
+  const from = env.RESEND_FROM_EMAIL || "Seancy <onboarding@resend.dev>";
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {

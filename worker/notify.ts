@@ -55,45 +55,45 @@ const PUSH_CONTENT: Record<
 > = {
   fr: {
     watchlistAvailable: (title) => ({
-      title: "Bobine : nouvelle dispo 🎬",
+      title: "Seancy : nouvelle dispo 🎬",
       body: `« ${title} » est maintenant disponible en streaming.`,
     }),
     favoriteGenreRelease: (title) => ({
-      title: "Bobine : nouveauté dans vos genres préférés 🍿",
+      title: "Seancy : nouveauté dans vos genres préférés 🍿",
       body: `« ${title} » vient de sortir.`,
     }),
     trendingRelease: (title) => ({
-      title: "Bobine : ça sort en ce moment 🔥",
+      title: "Seancy : ça sort en ce moment 🔥",
       body: `« ${title} » fait parler de lui.`,
     }),
     test: () => ({
-      title: "Bobine : notification de test 🔔",
+      title: "Seancy : notification de test 🔔",
       body: "Reçue en Web Push : aucun appareil de votre compte n'avait l'app ouverte.",
     }),
     newFollower: (name) => ({
-      title: "Bobine : nouvel abonné 👋",
+      title: "Seancy : nouvel abonné 👋",
       body: `${name || "Quelqu'un"} a commencé à vous suivre.`,
     }),
   },
   en: {
     watchlistAvailable: (title) => ({
-      title: "Bobine: new availability 🎬",
+      title: "Seancy: new availability 🎬",
       body: `"${title}" is now available to stream.`,
     }),
     favoriteGenreRelease: (title) => ({
-      title: "Bobine: new in your favorite genres 🍿",
+      title: "Seancy: new in your favorite genres 🍿",
       body: `"${title}" was just released.`,
     }),
     trendingRelease: (title) => ({
-      title: "Bobine: trending right now 🔥",
+      title: "Seancy: trending right now 🔥",
       body: `"${title}" is getting a lot of buzz.`,
     }),
     test: () => ({
-      title: "Bobine: test notification 🔔",
+      title: "Seancy: test notification 🔔",
       body: "Received via Web Push: no device on your account had the app open.",
     }),
     newFollower: (name) => ({
-      title: "Bobine: new follower 👋",
+      title: "Seancy: new follower 👋",
       body: `${name || "Someone"} started following you.`,
     }),
   },

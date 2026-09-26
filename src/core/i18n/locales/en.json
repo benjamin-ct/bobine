@@ -88,7 +88,7 @@
     "checkInbox": "Check your inbox (and spam folder) — the link is valid for 15 minutes.",
     "devModeLinkLabel": "Development mode (no email configured): ",
     "codeLabel": "Or enter the code you received by email",
-    "codeHint": "If Bobine is installed on your home screen, the link might open in the browser instead of the app — the code always works here.",
+    "codeHint": "If Seancy is installed on your home screen, the link might open in the browser instead of the app — the code always works here.",
     "devModeCodeLabel": "Development mode: code {{code}}",
     "verifying": "Verifying…",
     "submitCode": "Submit code",
@@ -187,7 +187,7 @@
     "summary": "Genres to exclude",
     "meta_one": "{{count}} excluded",
     "meta_other": "{{count}} excluded",
-    "description": "These genres will never be suggested anywhere in Bobine.",
+    "description": "These genres will never be suggested anywhere in Seancy.",
     "loading": "Loading genres…",
     "error": "Couldn't load the genre list.",
     "searchPlaceholder": "Search a genre…"
@@ -291,7 +291,7 @@
   },
   "randomPage": {
     "eyebrow": "Don't know what to watch?",
-    "title": "The Bobine wheel",
+    "title": "The Seancy wheel",
     "lead": "A random pick from your universe. Reroll until you find tonight's gem.",
     "releaseYear": "Release year",
     "excludeWatched": "Exclude what I've already watched",
@@ -468,14 +468,14 @@
   "termsPage": {
     "title": "Terms of Use",
     "lastUpdated": "Last updated: {{date}}",
-    "lastUpdatedValue": "September 1, 2026",
+    "lastUpdatedValue": "September 26, 2026",
     "publisher": {
       "title": "Publisher",
-      "textBefore": "Bobine is a personal project, with no commercial structure, developed and operated from France. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
+      "textBefore": "Seancy is a personal project, with no commercial structure, developed and operated from France. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
     },
     "service": {
       "title": "The service",
-      "textBefore": "Bobine lets you discover movies and shows, keep track of a personal library (\"watched\", \"want to watch\", custom lists), and receive notifications about new releases. Catalog data, pages, posters, and streaming availability come from third-party services (see our ",
+      "textBefore": "Seancy lets you discover movies and shows, keep track of a personal library (\"watched\", \"want to watch\", custom lists), and receive notifications about new releases. Catalog data, pages, posters, and streaming availability come from third-party services (see our ",
       "privacyLink": "privacy policy",
       "textAfter": ") and are provided for informational purposes only: we do not guarantee their accuracy or completeness."
     },
@@ -489,7 +489,7 @@
     },
     "availability": {
       "title": "Availability and evolution of the service",
-      "text1": "Bobine is a personal project under active development: features, appearance, and availability may change, including being interrupted, without notice. No guarantee of continuous availability is provided (no service level commitment).",
+      "text1": "Seancy is a personal project under active development: features, appearance, and availability may change, including being interrupted, without notice. No guarantee of continuous availability is provided (no service level commitment).",
       "text2": "The service is free today and will remain so for its current features; an optional funding method (one-off donations) may be introduced in the future, without making access to the service paid."
     },
     "liability": {
@@ -511,7 +511,7 @@
     "lastUpdatedValue": "September 26, 2026",
     "controller": {
       "title": "Data controller",
-      "textBefore": "Bobine is a personal project, with no commercial structure, operated from France. The data processing described below is therefore governed by French law and the GDPR. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
+      "textBefore": "Seancy is a personal project, with no commercial structure, operated from France. The data processing described below is therefore governed by French law and the GDPR. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
     },
     "dataCollected": {
       "title": "Data we collect",
@@ -554,7 +554,7 @@
     },
     "sharing": {
       "title": "Who this data is shared with",
-      "intro": "Bobine relies on the following providers to operate:",
+      "intro": "Seancy relies on the following providers to operate:",
       "tmdb": {
         "label": "TMDB",
         "text": " (The Movie Database): provides the catalog, pages, and posters — no personal data is sent to it, only content requests."
@@ -587,7 +587,7 @@
     },
     "cookies": {
       "title": "Cookies and measurement tools",
-      "text": "Bobine uses Cloudflare Web Analytics to measure site traffic anonymously, without cookies or identifiers that would allow tracking a person from one visit to another. Sentry is used to track and diagnose technical errors (see above). Neither of these two tools is used for advertising or profiling purposes. Should a new audience-measurement or ad-tracking tool ever be added, this policy will be updated beforehand to reflect it."
+      "text": "Seancy uses Cloudflare Web Analytics to measure site traffic anonymously, without cookies or identifiers that would allow tracking a person from one visit to another. Sentry is used to track and diagnose technical errors (see above). Neither of these two tools is used for advertising or profiling purposes. Should a new audience-measurement or ad-tracking tool ever be added, this policy will be updated beforehand to reflect it."
     },
     "retention": {
       "title": "Retention period",
@@ -694,7 +694,7 @@
     "disable": "Turn off sharing",
     "copied": "Link copied",
     "copyError": "Couldn't copy the link.",
-    "shareTitle": "My Bobine profile",
+    "shareTitle": "My Seancy profile",
     "error": "Couldn't update profile sharing.",
     "usernameTip": "Tip: pick a username in the Account card to get a more readable link (/u/your_username)."
   },

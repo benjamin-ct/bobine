@@ -20,10 +20,15 @@ export default defineConfig({
       },
       registerType: "autoUpdate",
       devOptions: { enabled: true, type: "module" },
-      includeAssets: ["favicon.svg", "apple-touch-icon.png", "apple-touch-icon-dark.png"],
+      includeAssets: [
+        "favicon.svg",
+        "favicon-32.png",
+        "apple-touch-icon.png",
+        "apple-touch-icon-dark.png",
+      ],
       manifest: {
-        name: "Bobine — Films & séries à regarder",
-        short_name: "Bobine",
+        name: "Seancy — Films & séries à regarder",
+        short_name: "Seancy",
         description:
           "Découvrez où regarder vos films et séries en streaming, tirez un titre au hasard, et suivez ce que vous avez déjà vu.",
         start_url: "/",

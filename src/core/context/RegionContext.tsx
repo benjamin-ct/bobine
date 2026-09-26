@@ -27,7 +27,7 @@ const RegionContext = createContext<RegionContextValue | null>(null);
 // géolocalisation IP ne doit plus jamais l'écraser au chargement suivant —
 // elle ne sert que de repli tant qu'aucun choix explicite n'existe (VPN/
 // déplacement : le profil reste sur la région de base de l'utilisateur).
-const STORAGE_KEY = "bobine.region";
+const STORAGE_KEY = "seancy.region";
 
 export function isValidRegionCode(value: string): boolean {
   return /^[A-Z]{2}$/.test(value);

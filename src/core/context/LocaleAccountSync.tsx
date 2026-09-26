@@ -14,7 +14,7 @@ import { syncClientHeaders, useLiveSyncRevision } from "../sync/liveSync.ts";
 // langue est une valeur unique : pas de fusion, le serveur fait autorité
 // dès qu'une valeur y est enregistrée ; sinon la valeur locale actuelle est
 // poussée comme valeur initiale du compte.
-const SYNCED_FOR_KEY = "bobine.locale.syncedFor";
+const SYNCED_FOR_KEY = "seancy.locale.syncedFor";
 
 export function LocaleAccountSync({ children }: { children: ReactNode }): ReactNode {
   const { status, email } = useAuth();
@@ -56,7 +56,7 @@ export function LocaleAccountSync({ children }: { children: ReactNode }): ReactN
           body: JSON.stringify({ locale: localeRef.current }),
         }).then(() => undefined);
       })
-      .catch((err) => logWarn("Bobine : synchronisation de la langue impossible.", err))
+      .catch((err) => logWarn("Seancy : synchronisation de la langue impossible.", err))
       .finally(() => {
         if (!cancelled) {
           syncingRef.current = false;
@@ -87,7 +87,7 @@ export function LocaleAccountSync({ children }: { children: ReactNode }): ReactN
       })
       .catch((err) =>
         logWarn(
-          "Bobine : synchronisation de la langue impossible, nouvelle tentative au prochain changement.",
+          "Seancy : synchronisation de la langue impossible, nouvelle tentative au prochain changement.",
           err
         )
       );

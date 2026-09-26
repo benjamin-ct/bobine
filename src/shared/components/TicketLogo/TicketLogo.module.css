@@ -1,0 +1,14 @@
+.ticket {
+  flex: none;
+  aspect-ratio: 3 / 2;
+  filter: drop-shadow(0 0 10px oklch(0.505 0.15 25 / 0.22));
+}
+
+.body {
+  fill: oklch(0.505 0.15 25);
+}
+
+/* Couleur du fond de page : donne l'effet de découpe, dans les deux thèmes. */
+.perforation {
+  stroke: var(--bg);
+}

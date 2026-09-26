@@ -6,25 +6,25 @@
 //
 // Restent volontairement sur l'appareil : le thème, la langue et le pays
 // (réglages d'affichage appliqués aussi hors connexion), ainsi que
-// l'abonnement push de l'appareil (bobine.push.*), nécessaire pour le
+// l'abonnement push de l'appareil (seancy.push.*), nécessaire pour le
 // détacher du compte côté serveur (voir core/sync/pushAccountLink.ts).
 const ACCOUNT_DATA_KEYS = [
-  "bobine.library.v1",
-  "bobine.customLists.v1",
-  "bobine.watchlistOrder.v1",
-  "bobine.excludedTitles.v1",
-  "bobine.excludedTitles.labels.v1",
-  "bobine.excludedGenres.v1",
-  "bobine.favoriteProviders.v1",
+  "seancy.library.v1",
+  "seancy.customLists.v1",
+  "seancy.watchlistOrder.v1",
+  "seancy.excludedTitles.v1",
+  "seancy.excludedTitles.labels.v1",
+  "seancy.excludedGenres.v1",
+  "seancy.favoriteProviders.v1",
 ];
 
 const SYNCED_FOR_KEYS = [
-  "bobine.library.syncedFor",
-  "bobine.customLists.syncedFor",
-  "bobine.excludedGenres.syncedFor",
-  "bobine.favoriteProviders.syncedFor",
-  "bobine.locale.syncedFor",
-  "bobine.region.syncedFor",
+  "seancy.library.syncedFor",
+  "seancy.customLists.syncedFor",
+  "seancy.excludedGenres.syncedFor",
+  "seancy.favoriteProviders.syncedFor",
+  "seancy.locale.syncedFor",
+  "seancy.region.syncedFor",
 ];
 
 // Vrai si cet appareil a déjà été synchronisé avec un compte : sert à

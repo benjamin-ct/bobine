@@ -138,7 +138,7 @@ export function useLiveSyncConnection(enabled: boolean): void {
             emit(event);
           }
         } catch (err) {
-          logWarn("Bobine : événement de synchro illisible.", err);
+          logWarn("Seancy : événement de synchro illisible.", err);
         }
       };
       ws.onclose = () => {

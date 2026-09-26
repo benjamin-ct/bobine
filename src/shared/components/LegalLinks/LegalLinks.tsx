@@ -15,7 +15,7 @@ export default function LegalLinks() {
 
   return (
     <nav className={styles.bar} aria-label={t("legalLinks.ariaLabel")}>
-      <span className={styles.copy}>© {year} Bobine</span>
+      <span className={styles.copy}>© {year} Seancy</span>
       <span className={`${styles.sep} ${styles.copy}`} aria-hidden="true">
         ·
       </span>

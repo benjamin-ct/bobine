@@ -39,12 +39,9 @@
   flex: none;
 }
 
-.reel {
-  width: 28px;
-  height: 28px;
-  color: var(--accent);
-  flex: none;
-  filter: drop-shadow(0 0 10px var(--accent-soft));
+.logo {
+  width: 36px;
+  height: 24px;
 }
 
 .tabs {
