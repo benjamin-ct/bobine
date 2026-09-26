@@ -23,6 +23,7 @@ import {
   TrailerButton,
   ErrorMessage,
   PageHeader,
+  Icon,
 } from "../../shared/components/index.ts";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
@@ -233,7 +234,7 @@ export default function RandomPage() {
         </div>
         {yearRangeError && (
           <p className={styles.rangeError} role="alert">
-            ⚠️ {yearRangeError}
+            <Icon name="alert" /> {yearRangeError}
           </p>
         )}
       </div>
@@ -289,7 +290,12 @@ export default function RandomPage() {
               {pickDetails?.genres?.length
                 ? ` · ${pickDetails.genres.map((g) => g.name).join(", ")}`
                 : ""}
-              {tier && pick.vote_average != null ? ` · ⭐ ${pick.vote_average.toFixed(1)}` : ""}
+              {tier && pick.vote_average != null && (
+                <>
+                  {" · "}
+                  <Icon name="star" filled /> {pick.vote_average.toFixed(1)}
+                </>
+              )}
             </p>
             <p className={styles.overview}>{pick.overview}</p>
             <div className={styles.actions}>
@@ -298,7 +304,7 @@ export default function RandomPage() {
               </Link>
               <button
                 type="button"
-                className={`${styles.secondaryBtn} ${inWatchlist ? styles.on : ""}`}
+                className={`${styles.secondaryBtn} ${inWatchlist ? styles.onWant : ""}`}
                 onClick={() => {
                   const item = buildLibItem();
                   if (item) {
@@ -306,11 +312,12 @@ export default function RandomPage() {
                   }
                 }}
               >
+                <Icon name="star" filled={inWatchlist} />
                 {inWatchlist ? t("randomPage.wantToWatchOn") : t("randomPage.wantToWatchOff")}
               </button>
               <button
                 type="button"
-                className={`${styles.secondaryBtn} ${watched ? styles.on : ""}`}
+                className={`${styles.secondaryBtn} ${watched ? styles.onWatched : ""}`}
                 onClick={() => {
                   const item = buildLibItem();
                   if (item) {
@@ -318,6 +325,7 @@ export default function RandomPage() {
                   }
                 }}
               >
+                <Icon name="check" strokeWidth={watched ? 3 : 2} />
                 {watched ? t("randomPage.watchedOn") : t("randomPage.watchedOff")}
               </button>
               <TrailerButton videos={pickDetails?.videos?.results} />
@@ -325,6 +333,7 @@ export default function RandomPage() {
                 to={`/media/${mediaType}/${pick.id}#recommendations`}
                 className={styles.secondaryBtn}
               >
+                <Icon name="repeat" />
                 {t("randomPage.similar")}
               </Link>
             </div>

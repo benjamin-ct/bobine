@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Video } from "../../../core/types/tmdb.ts";
+import Icon from "../Icon/Icon.tsx";
 import styles from "./TrailerButton.module.css";
 
 export default function TrailerButton({ videos }: { videos: Video[] | undefined }) {
@@ -45,7 +46,7 @@ export default function TrailerButton({ videos }: { videos: Video[] | undefined 
               onClick={() => setOpen(false)}
               title={t("common.close")}
             >
-              ✕
+              <Icon name="close" />
             </button>
             <iframe
               src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1`}

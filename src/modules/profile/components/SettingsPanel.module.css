@@ -39,8 +39,9 @@
 }
 
 .segActive {
-  background: var(--accent);
-  color: var(--on-accent) !important;
+  background: var(--selected-bg);
+  color: var(--fg) !important;
+  box-shadow: inset 0 0 0 1px var(--selected-border);
 }
 
 .grid {
@@ -74,7 +75,7 @@
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  accent-color: var(--accent);
+  accent-color: var(--control);
 }
 
 .chips {

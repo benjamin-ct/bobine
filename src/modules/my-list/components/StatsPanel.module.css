@@ -186,7 +186,7 @@
 
 .recentTitle {
   margin: 0;
-  color: oklch(0.98 0 0);
+  color: var(--on-image);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 13px;

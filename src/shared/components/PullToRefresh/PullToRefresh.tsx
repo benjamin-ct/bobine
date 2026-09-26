@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./PullToRefresh.module.css";
+import Icon from "../Icon/Icon.tsx";
 
 // Distance de tirage (après résistance) à dépasser pour déclencher le
 // rechargement au relâchement.
@@ -129,7 +130,7 @@ export default function PullToRefresh() {
         data-ready={ready}
         aria-hidden="true"
       >
-        ↻
+        <Icon name="refresh" />
       </span>
     </div>
   );

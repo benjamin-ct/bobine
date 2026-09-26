@@ -2,7 +2,7 @@ import { useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
-import { MediaCard, Dropdown, EmptyState } from "../../../shared/components/index.ts";
+import { MediaCard, Dropdown, EmptyState, Icon } from "../../../shared/components/index.ts";
 import dropdownStyles from "../../../shared/components/Dropdown/Dropdown.module.css";
 import { libraryItemToMediaItem } from "../../../shared/lib/libraryItem.ts";
 import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
@@ -136,7 +136,7 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
                 title={t("customListPanel.gridViewTitle")}
                 onClick={() => setViewMode("grid")}
               >
-                ▦
+                <Icon name="grid" />
               </button>
               <button
                 type="button"
@@ -145,7 +145,7 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
                 title={t("customListPanel.listViewTitle")}
                 onClick={() => setViewMode("list")}
               >
-                ☰
+                <Icon name="grip" />
               </button>
             </div>
             <Dropdown
@@ -174,11 +174,11 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
         <ListShareControls listId={list.id} listName={list.name} />
         {!renaming && (
           <button type="button" className={styles.ghostBtn} onClick={() => setRenaming(true)}>
-            {t("customListPanel.renameButton")}
+            <Icon name="edit" /> {t("customListPanel.renameButton")}
           </button>
         )}
         <button type="button" className={styles.ghostBtn} onClick={handleDelete}>
-          {t("customListPanel.deleteButton")}
+          <Icon name="trash" /> {t("customListPanel.deleteButton")}
         </button>
       </div>
 

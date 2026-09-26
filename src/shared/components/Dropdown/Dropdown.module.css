@@ -35,9 +35,9 @@
 }
 
 .active {
-  border-color: var(--accent);
-  color: var(--accent-ink);
-  background: var(--accent-soft);
+  border-color: var(--selected-border);
+  color: var(--fg);
+  background: var(--selected-bg);
 }
 
 .caret {
@@ -118,9 +118,9 @@
 }
 
 .optionOn .check {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  background: var(--control);
+  border-color: var(--control);
+  color: var(--on-control);
 }
 
 .radio {
@@ -138,9 +138,13 @@
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--control);
   transform: scale(0);
   transition: transform 0.14s ease;
+}
+
+.optionOn .radio {
+  border-color: var(--control);
 }
 
 .optionOn .radio::after {

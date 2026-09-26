@@ -33,8 +33,8 @@ export default defineConfig({
           "Découvre où regarder tes films et séries en streaming, tire un titre au hasard, et suis ce que tu as déjà vu.",
         start_url: "/",
         display: "standalone",
-        background_color: "#130e0a",
-        theme_color: "#130e0a",
+        background_color: "#09162b",
+        theme_color: "#0c1a30",
         lang: "fr",
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

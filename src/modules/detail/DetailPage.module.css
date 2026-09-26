@@ -88,7 +88,7 @@
   display: flex;
   align-items: flex-end;
   padding: 14px;
-  color: oklch(0.99 0 0);
+  color: var(--on-image);
   font-family: var(--font-poster);
   text-transform: uppercase;
   font-size: 22px;
@@ -150,7 +150,7 @@
   border-color: color-mix(in oklch, var(--accent) 34%, transparent);
 }
 .s-high {
-  color: oklch(0.3 0.055 80);
+  color: var(--on-gold);
   background: var(--gold);
   border-color: color-mix(in oklch, var(--gold) 70%, oklch(0 0 0));
 }
@@ -218,7 +218,7 @@
 
 .actionBtnOn {
   background: var(--ok);
-  color: oklch(0.16 0.02 150);
+  color: var(--on-ok);
   border-color: var(--ok);
 }
 
@@ -230,8 +230,8 @@
 
 .actionBtnSecondaryOn {
   border-color: var(--accent);
-  color: var(--accent-ink);
-  background: var(--accent-soft);
+  color: var(--on-accent);
+  background: var(--accent);
 }
 
 .ghostBtn {

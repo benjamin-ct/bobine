@@ -2,17 +2,16 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  /* Opaque, sans mélange : un fond translucide laissait transparaître les
-     radial-gradient de couleur (accent/gold) posés en haut de <body> (voir
-     global.css), ce qui recréait une démarcation avec la barre de statut
-     (theme-color, ThemeContext.tsx) même une fois aligné sur --bg. */
-  background: var(--bg);
+  /* Opaque, sans mélange : un fond translucide laissait transparaître le
+     spot doré posé en haut de <body> (voir global.css). Même couleur que la
+     barre de statut (theme-color, ThemeContext.tsx). */
+  background: var(--header-bg);
   /* Garde-fou si la page est un jour dessinée sous la barre de statut
      (viewport-fit=cover sans barre opaque) : pousse le contenu de la nav
      sous l'encoche. Vaut 0 aujourd'hui, la PWA iOS ayant une barre de statut
      opaque (voir index.html). */
   padding-top: env(safe-area-inset-top);
-  border-bottom: 1px solid var(--border-2);
+  border-bottom: 1px solid var(--border);
   /* Ombre courte et nette : l'ancien halo (30px de flou) formait une bande
      floue sous le header sur tout le site, encore plus visible sous un toast
      in-app. */

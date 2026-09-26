@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FollowStats, ProfileList } from "../../../shared/components/index.ts";
+import { FollowStats, Icon, ProfileList } from "../../../shared/components/index.ts";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { getFeed, getFollowList, searchProfiles } from "../../../core/api/follows.ts";
 import { posterUrl } from "../../../core/api/tmdb.ts";
@@ -41,7 +41,7 @@ function FeedItem({ entry }: { entry: FeedEntry }) {
   return (
     <li className={styles.feedItem}>
       <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.poster}>
-        {poster ? <img src={poster} alt="" loading="lazy" /> : <span aria-hidden="true">🎬</span>}
+        {poster ? <img src={poster} alt="" loading="lazy" /> : <Icon name="film" size={20} />}
       </Link>
       <div className={styles.feedText}>
         <p>

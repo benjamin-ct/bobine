@@ -1,0 +1,7 @@
+/* global.css met tous les svg en display: block : une icône posée dans une
+   ligne de texte doit rester en ligne, alignée sur le texte. */
+.icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: -0.125em;
+}

@@ -29,10 +29,12 @@
   border-color: var(--border-2);
 }
 
+/* Sélection : Surface 3 + bordure marquée, le corail étant réservé aux
+   actions (voir variables.css). */
 .tabActive {
-  background: var(--accent);
-  color: var(--on-accent) !important;
-  border-color: var(--accent);
+  background: var(--selected-bg);
+  color: var(--fg) !important;
+  border-color: var(--selected-border);
 }
 
 .grid {

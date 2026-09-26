@@ -7,6 +7,7 @@ import { regionName } from "../../../core/context/RegionContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { clampNumericValue, isRangeInverted } from "../../lib/numericRangeFilter.ts";
 import Chip from "../Chip/Chip.tsx";
+import Icon from "../Icon/Icon.tsx";
 import styles from "./AdvancedFilters.module.css";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -113,7 +114,7 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
   return (
     <div className={styles.wrap}>
       <Chip active={open} onClick={() => setOpen((o) => !o)}>
-        {open ? "▲" : "▼"} {t("advancedFilters.toggle")}
+        <Icon name={open ? "chevronUp" : "chevronDown"} /> {t("advancedFilters.toggle")}
         {activeCount > 0 ? ` (${activeCount})` : ""}
       </Chip>
 
@@ -230,13 +231,13 @@ export default function AdvancedFilters({ filters, setFilters }: AdvancedFilters
 
           {rangeError && (
             <p className={styles.rangeError} role="alert">
-              ⚠️ {t(rangeError)}
+              <Icon name="alert" /> {t(rangeError)}
             </p>
           )}
 
           {activeCount > 0 && (
             <button type="button" className={styles.reset} onClick={reset}>
-              ✕ {t("advancedFilters.reset")}
+              <Icon name="close" /> {t("advancedFilters.reset")}
             </button>
           )}
         </div>

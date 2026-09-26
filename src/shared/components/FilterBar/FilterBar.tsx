@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import Dropdown from "../Dropdown/Dropdown.tsx";
 import Chip from "../Chip/Chip.tsx";
+import Icon from "../Icon/Icon.tsx";
 import { SORT_FIELDS, type DiscoverSortField, type SortDirection } from "../../../core/api/tmdb.ts";
 import type { Genre } from "../../../core/types/tmdb.ts";
 import type { WatchProviderOption } from "../../../core/api/tmdb.ts";
@@ -141,7 +142,7 @@ export default function FilterBar({
           onClick={onToggleFavorites}
           title={t("filterBar.myPlatformsTitle")}
         >
-          {t("filterBar.myPlatforms")}
+          <Icon name="target" /> {t("filterBar.myPlatforms")}
         </Chip>
       )}
 

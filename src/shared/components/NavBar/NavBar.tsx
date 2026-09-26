@@ -430,7 +430,7 @@ export default function NavBar() {
           </div>
         </div>
       )}
-      <div className="perfStrip" aria-hidden="true" />
+      <div className="perfStrip perfStripTop" aria-hidden="true" />
     </header>
   );
 }
