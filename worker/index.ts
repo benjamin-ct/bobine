@@ -20,6 +20,10 @@ import {
   updateDisplayName,
   setShareSlug,
   getPublicProfileBySlug,
+  getSharedProfileEmail,
+  getTopPicks,
+  setTopPicks,
+  TOP_PICKS_MAX,
   getExcludedGenresForUser,
   replaceExcludedGenresForUser,
   getFavoriteProvidersForUser,
@@ -741,6 +745,40 @@ async function handleUpdateProfileShare(request: Request, env: Env): Promise<Res
   return json({ ok: true, shareSlug });
 }
 
+// Top 5 du profil partagé choisi à la main, façon « films favoris » de
+// Letterboxd. Seuls des titres « vus » du compte sont acceptés ; l'ordre du
+// tableau est l'ordre d'affichage.
+async function handleGetTopPicks(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  return json({ topPicks: await getTopPicks(env.DB, user.id) });
+}
+
+async function handlePutTopPicks(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  if (!Array.isArray(body?.topPicks) || body.topPicks.length > TOP_PICKS_MAX) {
+    return json({ error: 'Paramètre "topPicks" invalide.' }, 400);
+  }
+  const keys = [
+    ...new Set(sanitizeKeyList(body.topPicks, TOP_PICKS_MAX).map((k) => `${k.mediaType}:${k.id}`)),
+  ];
+  const library = await getLibraryForUser(env.DB, user.id);
+  const topPicks = keys.filter((key) => library.watched[key]);
+  await setTopPicks(env.DB, user.id, topPicks);
+  return json({ ok: true, topPicks });
+}
+
 // Accessible sans compte (c'est tout l'intérêt d'un lien de partage), mais
 // plafonné par IP pour qu'on ne puisse pas balayer l'espace des slugs.
 async function handleGetPublicProfile(request: Request, env: Env, slug: string): Promise<Response> {
@@ -899,6 +937,40 @@ async function handleSearchProfiles(request: Request, env: Env, url: URL): Promi
     return json({ profiles: [] });
   }
   return json({ profiles: await searchProfiles(env.DB, query, user.id) });
+}
+
+// Photo de profil d'un profil partagé : Gravatar est résolu ici plutôt que
+// dans le navigateur, car l'URL Gravatar contient le MD5 de l'email — un
+// hash qui se retrouve facilement par dictionnaire et révélerait l'adresse
+// que la page publique promet de ne jamais exposer. 404 si le profil est
+// privé ou si le compte n'a pas de Gravatar (la page affiche alors ses
+// initiales).
+async function handleGetPublicProfileAvatar(
+  request: Request,
+  env: Env,
+  slug: string
+): Promise<Response> {
+  const ip = getClientIp(request);
+  if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  const email = SHARE_SLUG_PATTERN.test(slug) ? await getSharedProfileEmail(env.DB, slug) : null;
+  if (!email) {
+    return json({ error: "Profil introuvable ou privé." }, 404);
+  }
+  const digest = await crypto.subtle.digest(
+    "MD5",
+    new TextEncoder().encode(email.trim().toLowerCase())
+  );
+  const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const upstream = await fetch(`https://www.gravatar.com/avatar/${hash}?s=192&d=404`);
+  const contentType = upstream.headers.get("content-type") || "";
+  if (!upstream.ok || !contentType.startsWith("image/")) {
+    return new Response(null, { status: 404, headers: { "cache-control": "public, max-age=600" } });
+  }
+  return new Response(upstream.body, {
+    headers: { "content-type": contentType, "cache-control": "public, max-age=3600" },
+  });
 }
 
 async function handleLogout(request: Request, env: Env): Promise<Response> {
@@ -1693,6 +1765,16 @@ async function routeRequest(
       publicFollowList[1],
       publicFollowList[2] as "followers" | "following"
     );
+  }
+  if (url.pathname === "/api/account/top-picks" && request.method === "GET") {
+    return handleGetTopPicks(request, env);
+  }
+  if (url.pathname === "/api/account/top-picks" && request.method === "PUT") {
+    return handlePutTopPicks(request, env);
+  }
+  const avatarMatch = url.pathname.match(/^\/api\/public-profile\/([^/]+)\/avatar$/);
+  if (avatarMatch && request.method === "GET") {
+    return handleGetPublicProfileAvatar(request, env, avatarMatch[1]);
   }
   if (url.pathname.startsWith("/api/public-profile/") && request.method === "GET") {
     return handleGetPublicProfile(request, env, url.pathname.slice("/api/public-profile/".length));

@@ -482,7 +482,7 @@
       },
       "library": {
         "label": "Bibliothèque personnelle",
-        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu. Si vous activez le partage de votre profil (facultatif, désactivé par défaut), ces éléments ainsi que vos notes et votre nom affiché deviennent visibles en lecture seule par toute personne disposant du lien de partage — jamais votre adresse email. Vous pouvez désactiver ce partage à tout moment, ce qui rend le lien définitivement invalide."
+        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu. Si vous activez le partage de votre profil (facultatif, désactivé par défaut), ces éléments ainsi que vos notes, votre nom affiché et votre photo de profil Gravatar (si vous en avez une) deviennent visibles en lecture seule par toute personne disposant du lien de partage — jamais votre adresse email. Vous pouvez désactiver ce partage à tout moment, ce qui rend le lien définitivement invalide."
       },
       "preferences": {
         "label": "Préférences",
@@ -567,6 +567,7 @@
     "watchedBadge": "✔ Vu",
     "movie": "Film",
     "series": "Série",
+    "rank": "N° {{rank}}",
     "upcomingFallback": "Cinéma",
     "episodeJustReleased": "🆕 Vient de sortir",
     "episodeUpcoming": "📅 Prochainement",
@@ -646,7 +647,7 @@
   },
   "profileShare": {
     "title": "Partager mon profil",
-    "hintOff": "Ton profil est privé. Active le partage pour obtenir un lien que tu pourras envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, tes titres vus, ton envie de voir, tes listes et tes notes (jamais ton adresse e-mail). Un profil partagé peut aussi être trouvé par ton nom affiché et suivi par les autres membres.",
+    "hintOff": "Ton profil est privé. Active le partage pour obtenir un lien que tu pourras envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, tes titres vus, ton envie de voir, tes listes, tes notes et ta photo de profil (jamais ton adresse e-mail). Un profil partagé peut aussi être trouvé par ton nom affiché et suivi par les autres membres.",
     "hintOn": "Ton profil est visible en lecture seule par toute personne qui a ce lien, et les membres connectés peuvent le trouver par ton nom affiché et le suivre. Désactiver le partage rend le lien définitivement invalide.",
     "linkLabel": "Lien de partage du profil",
     "share": "Partager le lien",
@@ -658,11 +659,50 @@
     "shareTitle": "Mon profil Bobine",
     "error": "Impossible de modifier le partage du profil."
   },
+  "topPicks": {
+    "title": "Mon Top 5",
+    "hintEmpty": "Choisis jusqu'à 5 titres parmi ceux que tu as vus, comme les films favoris sur Letterboxd. Ils s'affichent en tête de ton profil partagé. Tant que tu n'en choisis aucun, ton profil affiche tes titres vus les mieux notés.",
+    "hint": "Ce titre s'affiche en tête de ton profil partagé.",
+    "hintDrag": "Ces titres s'affichent dans cet ordre en tête de ton profil partagé. Fais glisser une affiche pour changer l'ordre.",
+    "choose": "Choisir mon Top 5",
+    "edit": "Modifier",
+    "addAt": "Ajouter un titre en n° {{rank}}",
+    "pickerTitle": "Ajouter à mon Top 5",
+    "full": "Ton Top 5 est complet : touche un titre choisi pour le retirer.",
+    "searchLabel": "Rechercher parmi tes titres vus",
+    "searchPlaceholder": "Rechercher parmi tes titres vus…",
+    "noResult": "Aucun titre vu ne correspond.",
+    "noWatched": "Marque des titres comme vus pour pouvoir composer ton Top 5, affiché en tête de ton profil partagé.",
+    "remove": "Retirer du Top 5",
+    "removeTitle": "Retirer {{title}} du Top 5",
+    "loadError": "Impossible de charger ton Top 5.",
+    "saveError": "Impossible d'enregistrer ton Top 5.",
+    "freeSlots_one": "1 place libre · touche un titre pour l'ajouter",
+    "freeSlots_other": "{{count}} places libres · touche un titre pour l'ajouter",
+    "close": "Fermer",
+    "typeFilter": "Type de titre",
+    "type": {
+      "all": "Tous",
+      "movie": "Films",
+      "tv": "Séries"
+    },
+    "seenSection": "Tes titres vus · les mieux notés d'abord",
+    "inTop": "Dans le top"
+  },
   "publicProfile": {
     "eyebrow": "Profil partagé",
     "anonymousName": "Un·e cinéphile",
     "lead": "{{watched}} titre(s) vu(s) · {{watchlist}} en envie de voir · {{lists}} liste(s)",
     "recent": "Vus récemment",
+    "top": "Top {{count}}",
+    "sortLabel": "Trier",
+    "sortBy": "Trier par",
+    "sortRecent": "Date de visionnage",
+    "sortRating": "Note",
+    "sortTitle": "A → Z",
+    "sortYear": "Année de sortie",
+    "genreLabel": "Genre",
+    "genreAll": "Tous les genres",
     "rating": "★ {{rating}}/10",
     "emptySeen": "Aucun titre vu pour l'instant.",
     "emptyWant": "Aucun titre en envie de voir.",
