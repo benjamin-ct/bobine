@@ -74,6 +74,25 @@ const PATHS = {
       <path d="M3.5 6.5L12 13l8.5-6.5" />
     </>
   ),
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M15.5 8.5l-2 5-5 2 2-5z" />
+    </>
+  ),
+  shuffle: <path d="M16 3.5h4.5V8M4 19.5l16.5-16M16 20.5h4.5V16M14.5 14.5l6 6M4 4.5l5 5" />,
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </>
+  ),
   frown: (
     <>
       <circle cx="12" cy="12" r="9" />
