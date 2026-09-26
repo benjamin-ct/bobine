@@ -38,6 +38,15 @@
   color: var(--accent);
 }
 
+.disabled .star {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.disabled .star:hover svg {
+  transform: none;
+}
+
 .s-low .star.lit {
   color: color-mix(in oklch, var(--accent) 55%, var(--muted));
 }

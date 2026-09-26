@@ -13,6 +13,8 @@ interface RatingStarsProps {
   /** Masque « Votre note : 8/10 » et le badge de palier, quand le parent
    * les affiche déjà dans son propre en-tête (fiche détail). */
   hideValue?: boolean;
+  /** Étoiles inactives (fiche détail : un titre pas encore vu ne se note pas). */
+  disabled?: boolean;
 }
 
 // Notation 0-10 avec aperçu au survol (chaque étoile montre son propre
@@ -24,6 +26,7 @@ export default function RatingStars({
   onRate,
   clearable = false,
   hideValue = false,
+  disabled = false,
 }: RatingStarsProps) {
   const { t } = useTranslation();
   const [hovered, setHovered] = useState<number | null>(null);
@@ -31,7 +34,7 @@ export default function RatingStars({
   const tier = ratingTier(displayValue || 1);
 
   return (
-    <div className={styles.rate}>
+    <div className={`${styles.rate} ${disabled ? styles.disabled : ""}`}>
       <div
         className={`${styles.stars} ${styles[`s-${tier.cls}`]}`}
         onMouseLeave={() => setHovered(null)}
@@ -41,6 +44,7 @@ export default function RatingStars({
             key={n}
             type="button"
             className={`${styles.star} ${n <= displayValue ? styles.lit : ""}`}
+            disabled={disabled}
             onMouseEnter={() => setHovered(n)}
             onClick={() => onRate(n === value ? null : n)}
             aria-label={t("ratingStars.starAriaLabel", { n, label: t(STAR_LABEL_KEYS[n - 1]) })}

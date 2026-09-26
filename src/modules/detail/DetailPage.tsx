@@ -279,17 +279,11 @@ export default function DetailPage() {
 
   const rating = watched ? getRating(mediaType, id) : null;
 
-  // Noter un titre pas encore vu le marque comme vu (la note est portée par
-  // l'entrée « vu » de la bibliothèque).
+  // La note est portée par l'entrée « vu » de la bibliothèque : seul un titre
+  // déjà vu peut être noté (les étoiles sont inactives sinon).
   function rate(value: number | null) {
-    if (!mediaType || !id || !requireMember()) {
+    if (!mediaType || !id || !watched || !requireMember()) {
       return;
-    }
-    if (!watched) {
-      if (value == null) {
-        return;
-      }
-      toggleWatched(libItem);
     }
     rateWatched(mediaType, id, value);
   }
@@ -614,11 +608,13 @@ export default function DetailPage() {
                 ) : (
                   <>
                     <span className={styles.yourRatingDash} aria-hidden="true" />
-                    <span>{t("ratingStars.notRatedYet")}</span>
+                    <span>
+                      {t(watched ? "ratingStars.notRatedYet" : "detailPage.rateAfterWatched")}
+                    </span>
                   </>
                 )}
               </p>
-              <RatingStars value={rating} onRate={rate} clearable hideValue />
+              <RatingStars value={rating} onRate={rate} clearable hideValue disabled={!watched} />
             </div>
           </div>
         </div>
