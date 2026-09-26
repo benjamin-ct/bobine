@@ -72,7 +72,6 @@ import {
   sanitizeCustomListsPayload,
   sanitizeDisplayName,
   sanitizeIdList,
-  sanitizeTopPicks,
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
 import { getTheatricalIndex } from "./tmdb.ts";
@@ -737,9 +736,8 @@ async function handleUpdateProfileShare(request: Request, env: Env): Promise<Res
 }
 
 // Top 5 du profil partagé choisi à la main, façon « films favoris » de
-// Letterboxd : titres vus ou cherchés dans le catalogue, d'où l'envoi des
-// métadonnées d'affichage et pas seulement des clés. L'ordre du tableau est
-// l'ordre d'affichage.
+// Letterboxd. Seuls des titres « vus » du compte sont acceptés ; l'ordre du
+// tableau est l'ordre d'affichage.
 async function handleGetTopPicks(request: Request, env: Env): Promise<Response> {
   const user = await getUserFromRequest(env.DB, request);
   if (!user) {
@@ -762,8 +760,13 @@ async function handlePutTopPicks(request: Request, env: Env): Promise<Response> 
   if (!Array.isArray(body?.topPicks) || body.topPicks.length > TOP_PICKS_MAX) {
     return json({ error: 'Paramètre "topPicks" invalide.' }, 400);
   }
-  await setTopPicks(env.DB, user.id, sanitizeTopPicks(body.topPicks, TOP_PICKS_MAX));
-  return json({ ok: true, topPicks: await getTopPicks(env.DB, user.id) });
+  const keys = [
+    ...new Set(sanitizeKeyList(body.topPicks, TOP_PICKS_MAX).map((k) => `${k.mediaType}:${k.id}`)),
+  ];
+  const library = await getLibraryForUser(env.DB, user.id);
+  const topPicks = keys.filter((key) => library.watched[key]);
+  await setTopPicks(env.DB, user.id, topPicks);
+  return json({ ok: true, topPicks });
 }
 
 // Accessible sans compte (c'est tout l'intérêt d'un lien de partage), mais
