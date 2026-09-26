@@ -366,7 +366,7 @@ export async function setTopPicks(db: D1Database, userId: number, keys: string[]
     .run();
 }
 
-// Pseudo public (migration 0014). `username` doit déjà être normalisé
+// Pseudo public (migration 0012). `username` doit déjà être normalisé
 // (normalizeUsername) ; `null` le retire. Renvoie `false` si le pseudo est
 // déjà pris : l'index unique tranche même quand deux comptes le demandent
 // au même instant (la vérification de disponibilité côté client n'est
