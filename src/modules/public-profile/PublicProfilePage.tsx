@@ -162,7 +162,7 @@ export default function PublicProfilePage() {
   const topPicks = state.status === "success" ? state.profile.topPicks : null;
 
   // Top : celui choisi à la main par le propriétaire (façon « films
-  // favoris » de Letterboxd, voir TopPicksEditor), sinon les titres vus les
+  // favoris » de Letterboxd, voir TopPicksPanel dans Ma liste), sinon les titres vus les
   // mieux notés — à égalité de note, les plus récemment vus passent devant.
   const top = useMemo(() => {
     if (topPicks?.length) {
