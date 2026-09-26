@@ -23,7 +23,7 @@
   display: grid;
   place-items: center;
   background: linear-gradient(150deg, var(--g-thril-1), var(--g-thril-2));
-  color: oklch(0.99 0 0);
+  color: var(--on-image);
   font-family: var(--font-display);
   font-weight: 800;
   font-size: clamp(22px, 4vw, 32px);
@@ -79,10 +79,12 @@
   border-color: var(--border-2);
 }
 
+/* Sélection : Surface 3 + bordure marquée, le corail étant réservé aux
+   actions (voir variables.css). */
 .tabActive {
-  background: var(--accent);
-  color: var(--on-accent) !important;
-  border-color: var(--accent);
+  background: var(--selected-bg);
+  color: var(--fg) !important;
+  border-color: var(--selected-border);
 }
 
 .count {
@@ -122,7 +124,7 @@
 }
 
 .rating-high {
-  color: oklch(0.3 0.055 80);
+  color: var(--on-gold);
   background: var(--gold);
   border-color: color-mix(in oklch, var(--gold) 65%, oklch(0 0 0));
 }

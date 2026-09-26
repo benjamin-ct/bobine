@@ -48,7 +48,7 @@
   display: grid;
   place-items: center;
   background: linear-gradient(150deg, var(--g-thril-1), var(--g-thril-2));
-  color: oklch(0.99 0 0);
+  color: var(--on-image);
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 24px;

@@ -1,33 +1,82 @@
-/* ─── Design tokens — thème "rouge velours" ──────────────────────────────
-   Repris du design de référence (maquette HTML) : palette OKLCH (perceptuelle,
-   contraste stable entre les deux thèmes), typographie à trois rôles
-   (affiche / titres / corps), et une échelle d'espacement/rayon partagée par
-   tous les modules CSS de l'app. Un seul fichier de vérité pour ces valeurs :
-   les *.module.css de chaque composant ne font que les référencer via var(). */
+/* ─── Design tokens — « Seancy — Mix v2 » ────────────────────────────────
+   Nouvelle DA (ticket « Nouvelle DA 1/10 · Fondations ») : fond bleu nuit de
+   salle de cinéma, corail réservé aux actions, teal pour « vu », contrôles
+   (cases, interrupteurs, radios) en bleu. Un seul fichier de vérité pour ces
+   valeurs : les *.module.css de chaque composant ne font que les référencer
+   via var().
+
+   Règles d'usage :
+   - --accent (corail) uniquement pour les actions : bouton principal,
+     « Envie de voir » actif. Jamais pour un onglet, une puce ou un filtre
+     sélectionné : ceux-là prennent --selected-bg/--selected-border/--fg.
+   - --surface : cartes. --surface-2 : éléments flottants uniquement (menus,
+     modales, survol). --surface-3 : état actif/sélectionné.
+   - Texte à trois niveaux : --fg (principal), --muted (secondaire, aussi pour
+     les eyebrows/libellés monospace), --subtle (tertiaire : compteurs,
+     indications). */
 
 :root {
   /* thème sombre (par défaut) */
-  --bg: oklch(0.17 0.012 66);
-  --surface: oklch(0.215 0.014 66);
-  --surface-2: oklch(0.255 0.016 66);
-  --fg: oklch(0.96 0.008 85);
-  --muted: oklch(0.72 0.018 80);
-  --border: oklch(0.31 0.016 66);
-  --border-2: oklch(0.38 0.02 66);
+  --bg: #09162b;
+  --surface: #0e1e38;
+  --surface-2: #13284a;
+  --surface-3: #1a3560;
+  --fg: #f5f8ff;
+  --muted: #a7b6d0;
+  --subtle: #6e7e9c;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-2: rgba(255, 255, 255, 0.16);
 
-  --accent: oklch(0.505 0.15 25); /* rouge velours chaud */
+  /* onglets, puces, filtres, segments sélectionnés */
+  --selected-bg: var(--surface-3);
+  --selected-border: var(--border-2);
+
+  --header-bg: #0c1a30;
+
+  --accent: oklch(0.505 0.15 25); /* corail : actions uniquement */
   --accent-strong: oklch(0.43 0.15 25);
-  --accent-ink: oklch(0.68 0.125 30); /* rouge lisible en texte sur fond sombre */
+  --accent-ink: oklch(0.68 0.125 30); /* corail lisible en texte sur fond sombre */
   --accent-soft: color-mix(in oklch, var(--accent) 22%, transparent);
   --on-accent: oklch(0.98 0.012 70);
 
-  --ok: oklch(0.76 0.15 150); /* "déjà vu" */
-  --ok-ink: oklch(0.8 0.15 152);
+  --ok: #3e9b8a; /* teal "déjà vu" */
+  --ok-ink: #8fd6c8;
+  --on-ok: #06201b;
   --ok-soft: color-mix(in oklch, var(--ok) 18%, transparent);
+
+  --control: #4666a0; /* cases à cocher, interrupteurs, radios */
+  --on-control: #f5f8ff;
 
   --gold: oklch(0.84 0.075 85); /* accent secondaire, popcorn */
   --gold-soft: color-mix(in oklch, var(--gold) 24%, transparent);
+  --on-gold: oklch(0.3 0.055 80);
 
+  /* texte posé sur une affiche/photo (identique dans les deux thèmes) */
+  --on-image: oklch(0.99 0 0);
+
+  /* fond « salle de cinéma » : bords assombris + un seul spot doré */
+  --vignette: #060e1c;
+  --spotlight: rgba(201, 162, 75, 0.2);
+  --vignette-side: 110px;
+  --vignette-top: 60px; /* sous l'en-tête */
+  --header-height: 72px; /* hauteur approximative de .topnav (NavBar) */
+  --vignette-bottom: 90px;
+
+  /* pastilles Envie / Vu non cochées, posées sur l'affiche */
+  --pastille-bg: rgba(9, 22, 43, 0.3);
+  --pastille-border: rgba(255, 255, 255, 0.7);
+  --pastille-fg: #f5f8ff;
+
+  /* médailles du top 5 : or, argent, bronze pleins (4 et 5 en contour) */
+  --medal-1: oklch(0.84 0.1 85);
+  --medal-1-ink: oklch(0.28 0.06 70);
+  --medal-2: oklch(0.83 0.012 250);
+  --medal-2-ink: oklch(0.26 0.02 250);
+  --medal-3: oklch(0.68 0.1 50);
+  --medal-3-ink: oklch(0.2 0.04 45);
+  --medal-outline: rgba(255, 255, 255, 0.7);
+  --medal-outline-bg: rgba(9, 22, 43, 0.6);
+  --medal-outline-ink: #f5f8ff;
   --data-1: oklch(0.54 0.15 26); /* films, dataviz */
   --data-2: var(--gold); /* séries, dataviz */
 
@@ -86,13 +135,23 @@
 /* Thème clair : opt-in explicite (data-theme="light") ou repli système si
    aucun choix n'a jamais été fait — voir ThemeContext. */
 [data-theme="light"] {
+  /* Thème clair : mêmes fonds, surfaces et textes qu'avant la nouvelle DA,
+     mais mêmes règles d'usage que le sombre (corail = actions, sélection en
+     Surface 3 à bordure marquée, contrôles bleus, succès teal). */
   --bg: oklch(0.975 0.012 82);
   --surface: oklch(1 0 0);
   --surface-2: oklch(0.955 0.012 82);
+  --surface-3: oklch(0.915 0.02 80);
   --fg: oklch(0.24 0.02 55);
   --muted: oklch(0.49 0.02 60);
+  --subtle: oklch(0.56 0.018 62);
   --border: oklch(0.9 0.014 80);
   --border-2: oklch(0.84 0.02 78);
+
+  --selected-bg: var(--surface-3);
+  --selected-border: oklch(0.66 0.03 70);
+
+  --header-bg: var(--bg);
 
   --accent: oklch(0.485 0.155 25);
   --accent-strong: oklch(0.41 0.155 25);
@@ -100,12 +159,28 @@
   --accent-soft: color-mix(in oklch, var(--accent) 15%, transparent);
   --on-accent: oklch(0.98 0.012 70);
 
-  --ok: oklch(0.62 0.14 152);
-  --ok-ink: oklch(0.48 0.13 152);
+  --ok: #3e9b8a;
+  --ok-ink: #1d6a5c;
+  --on-ok: #06201b;
   --ok-soft: color-mix(in oklch, var(--ok) 16%, transparent);
+
+  --control: #4666a0;
+  --on-control: #ffffff;
 
   --gold: oklch(0.74 0.085 82);
   --gold-soft: color-mix(in oklch, var(--gold) 22%, transparent);
+
+  /* voile très léger sur les bords au lieu de l'assombrissement */
+  --vignette: oklch(0.9 0.02 80 / 0.55);
+  --spotlight: rgba(201, 162, 75, 0.16);
+
+  --medal-1: oklch(0.8 0.12 85);
+  --medal-1-ink: oklch(0.28 0.06 70);
+  --medal-2: oklch(0.8 0.015 250);
+  --medal-2-ink: oklch(0.24 0.02 250);
+  --medal-3: oklch(0.7 0.1 50);
+  --medal-3-ink: oklch(0.2 0.04 45);
+
   --data-1: oklch(0.5 0.16 26);
   --data-2: var(--gold);
 

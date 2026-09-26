@@ -7,6 +7,7 @@ import {
   Loading,
   ErrorMessage,
   EmptyState,
+  Icon,
 } from "../../shared/components/index.ts";
 import { libraryItemToMediaItem } from "../../shared/lib/libraryItem.ts";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
@@ -111,7 +112,9 @@ export default function SharedListPage() {
             <div key={`${item.mediaType}:${item.id}`}>
               <MediaCard item={libraryItemToMediaItem(item)} />
               {item.rating != null && (
-                <p className={styles.rating}>{t("sharedList.rating", { rating: item.rating })}</p>
+                <p className={styles.rating}>
+                  <Icon name="star" filled /> {t("sharedList.rating", { rating: item.rating })}
+                </p>
               )}
             </div>
           ))}

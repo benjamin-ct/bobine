@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useMembersOnly } from "../../core/context/MembersOnlyContext.tsx";
 import LoginForm from "./LoginForm.tsx";
+import { Icon } from "../../shared/components/index.ts";
 import styles from "./MembersOnlyDialog.module.css";
 
 // Modale ouverte quand un visiteur non connecté tente une action qui écrit
@@ -49,7 +50,7 @@ export default function MembersOnlyDialog() {
             aria-label={t("common.close")}
             title={t("common.close")}
           >
-            ✕
+            <Icon name="close" />
           </button>
           <h2 id="members-only-title" className={styles.title}>
             {t("membersOnly.title")}

@@ -42,16 +42,12 @@ body {
   line-height: 1.55;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  background-image:
-    radial-gradient(1150px 660px at 50% -16%, var(--accent-soft), transparent 58%),
-    radial-gradient(760px 620px at 97% 2%, var(--gold-soft), transparent 56%),
-    radial-gradient(
-      680px 520px at 2% 92%,
-      color-mix(in oklch, var(--accent) 6%, transparent),
-      transparent 62%
-    );
+  /* Une seule source de lumière : un spot doré derrière le hero / le titre
+     de la page (en haut, défile avec elle). Aucun halo en haut à droite,
+     aucune lueur rouge. Les cartes et tuiles (--surface, opaques) le
+     cachent. */
+  background-image: radial-gradient(900px 520px at 50% 120px, var(--spotlight), transparent 70%);
   background-repeat: no-repeat;
-  background-attachment: fixed;
   transition:
     background-color 0.35s ease,
     color 0.35s ease;
@@ -67,6 +63,33 @@ body {
 
 #root > main {
   flex: 1;
+}
+
+/* Fond « salle de cinéma » : bords assombris vers --vignette (un simple voile
+   en thème clair). Calque fixe sous tout le contenu (z-index -1, au-dessus du
+   fond de <body>) plutôt qu'un background-attachment: fixed, ignoré par
+   Safari iOS. Le haut démarre sous l'en-tête collant, qui le recouvre. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, var(--vignette), transparent var(--vignette-side)),
+    linear-gradient(to left, var(--vignette), transparent var(--vignette-side)),
+    linear-gradient(
+      to bottom,
+      var(--vignette) var(--header-height),
+      transparent calc(var(--header-height) + var(--vignette-top))
+    ),
+    linear-gradient(to top, var(--vignette), transparent var(--vignette-bottom));
+}
+
+@media (max-width: 720px) {
+  body::before {
+    --vignette-side: 24px;
+  }
 }
 
 img,
@@ -92,6 +115,12 @@ button,
 select,
 input {
   font-family: inherit;
+}
+
+/* Contrôles natifs (cases, radios) en bleu, jamais en corail. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--control);
 }
 
 /* Évite le zoom automatique de Safari iOS à la mise au point d'un champ :
@@ -153,9 +182,28 @@ h4 {
   border: 0;
 }
 
-/* Motif signature : bande de perforations de pellicule (topnav, footer). */
+/* Eyebrow : petit libellé monospace au-dessus d'un titre, en texte
+   secondaire (jamais en corail). */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Motif signature : bande de perforations de pellicule dorée (topnav,
+   footer), avec une lueur. Sur mobile, seule la bande du haut (en-tête)
+   garde la lueur — voir .perfStripTop. */
 .perfStrip {
   height: 8px;
   background: repeating-linear-gradient(90deg, var(--gold) 0 9px, transparent 9px 22px);
   opacity: 0.85;
+  filter: drop-shadow(0 0 6px var(--gold-soft));
+}
+
+@media (max-width: 720px) {
+  .perfStrip:not(.perfStripTop) {
+    filter: none;
+  }
 }

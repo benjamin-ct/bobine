@@ -8,7 +8,7 @@ import {
   posterUrl,
 } from "../../../core/api/tmdb.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
-import { DonutChart } from "../../../shared/components/index.ts";
+import { DonutChart, Icon } from "../../../shared/components/index.ts";
 import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import type { LibraryItem } from "../../../core/types/library.ts";
@@ -253,7 +253,9 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
                   <p className={styles.recentMeta}>
                     {year}
                     {item.rating != null && (
-                      <span className={styles.recentRating}>★ {item.rating}/10</span>
+                      <span className={styles.recentRating}>
+                        <Icon name="star" filled /> {item.rating}/10
+                      </span>
                     )}
                   </p>
                 </div>

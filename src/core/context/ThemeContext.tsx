@@ -11,11 +11,11 @@ export type ThemePreference = Theme | "auto";
 
 const STORAGE_KEY = "bobine.theme";
 
-// Couleurs de fond (voir --bg dans variables.css) dupliquées ici en dur :
+// Couleurs de l'en-tête (voir --header-bg dans variables.css) dupliquées ici en dur :
 // on ne peut pas lire une custom property CSS pour alimenter un <meta>, et
 // ce sont les mêmes valeurs que le loader statique d'index.html.
 const THEME_COLOR: Record<Theme, string> = {
-  dark: "#130e0a",
+  dark: "#0c1a30",
   light: "#fbf9f5",
 };
 

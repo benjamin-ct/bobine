@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
+import Icon from "../Icon/Icon.tsx";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import posterStyles from "../../styles/posterAccents.module.css";
 import styles from "./FeaturedMediaRow.module.css";
@@ -61,7 +62,7 @@ export default function FeaturedMediaRow({ items }: FeaturedMediaRowProps) {
               <p
                 className={`${styles.badge} ${badge.kind === "just_released" ? styles.badgeNew : styles.badgeUpcoming}`}
               >
-                {badgeLabel}
+                <Icon name={badge.kind === "just_released" ? "sparkle" : "calendar"} /> {badgeLabel}
               </p>
               <span className={styles.date}>{formatFullDate(badge.date, locale)}</span>
             </div>

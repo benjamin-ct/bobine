@@ -135,9 +135,9 @@
 }
 
 .bellOn {
-  color: var(--accent-ink);
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--fg);
+  border-color: var(--selected-border);
+  background: var(--selected-bg);
 }
 
 @media (max-width: 640px) {

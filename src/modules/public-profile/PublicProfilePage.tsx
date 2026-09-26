@@ -10,6 +10,7 @@ import {
   FollowButton,
   FollowStats,
   Dropdown,
+  Icon,
 } from "../../shared/components/index.ts";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
 import { getGenres } from "../../core/api/tmdb.ts";
@@ -101,7 +102,7 @@ function ItemGrid({ items, ranked = false }: { items: LibraryItem[]; ranked?: bo
               <span
                 className={`${styles.rating} ${styles[`rating-${ratingTier(item.rating).cls}`]}`}
               >
-                {t("publicProfile.rating", { rating: item.rating })}
+                <Icon name="star" filled /> {t("publicProfile.rating", { rating: item.rating })}
               </span>
             </p>
           )}

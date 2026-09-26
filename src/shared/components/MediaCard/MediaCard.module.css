@@ -1,4 +1,5 @@
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -25,7 +26,7 @@
 .card:hover .poster {
   transform: translateY(-6px) rotate(-0.6deg);
   box-shadow: var(--shadow-lift);
-  border-color: var(--accent);
+  border-color: var(--border-2);
 }
 
 .poster img {
@@ -41,7 +42,7 @@
   height: 100%;
   padding: 12px;
   text-align: left;
-  color: oklch(0.99 0 0);
+  color: var(--on-image);
   font-family: var(--font-poster);
   font-weight: 400;
   text-transform: uppercase;
@@ -49,21 +50,6 @@
   font-size: clamp(18px, 2.2vw, 24px);
   line-height: 0.95;
   text-shadow: 0 2px 16px oklch(0 0 0 / 0.55);
-}
-
-.badgeWatched {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--ok);
-  color: oklch(0.16 0.02 150);
 }
 
 .type {
@@ -77,7 +63,7 @@
   padding: 3px 8px;
   border-radius: 6px;
   background: oklch(0 0 0 / 0.55);
-  color: oklch(0.98 0 0);
+  color: var(--on-image);
   backdrop-filter: blur(4px);
 }
 
@@ -95,30 +81,31 @@
   font-weight: 800;
   font-size: 17px;
   line-height: 1;
-  background: oklch(0.2 0.01 60 / 0.8);
-  color: oklch(0.98 0 0);
-  border: 1.5px solid oklch(1 0 0 / 0.35);
+  /* 4 et 5 : médaille en contour */
+  background: var(--medal-outline-bg);
+  color: var(--medal-outline-ink);
+  border: 1.5px solid var(--medal-outline);
   box-shadow: 0 3px 10px oklch(0 0 0 / 0.45);
   backdrop-filter: blur(4px);
 }
 
-/* Or / argent / bronze pour le podium. */
+/* Or / argent / bronze pleins pour le podium. */
 .rank1 {
-  background: linear-gradient(145deg, oklch(0.9 0.1 90), oklch(0.72 0.12 75));
-  color: oklch(0.28 0.06 70);
-  border-color: oklch(0.95 0.06 90);
+  background: var(--medal-1);
+  color: var(--medal-1-ink);
+  border-color: var(--medal-1);
 }
 
 .rank2 {
-  background: linear-gradient(145deg, oklch(0.92 0.01 250), oklch(0.7 0.015 250));
-  color: oklch(0.26 0.02 250);
-  border-color: oklch(0.97 0.005 250);
+  background: var(--medal-2);
+  color: var(--medal-2-ink);
+  border-color: var(--medal-2);
 }
 
 .rank3 {
-  background: linear-gradient(145deg, oklch(0.78 0.09 55), oklch(0.58 0.1 45));
-  color: oklch(0.97 0.02 60);
-  border-color: oklch(0.85 0.07 55);
+  background: var(--medal-3);
+  color: var(--medal-3-ink);
+  border-color: var(--medal-3);
 }
 
 .rank ~ .type {
@@ -132,7 +119,7 @@
   left: 8px;
   right: 8px;
   background: oklch(0 0 0 / 0.65);
-  color: oklch(0.98 0 0);
+  color: var(--on-image);
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 11px;
@@ -197,43 +184,57 @@
   white-space: nowrap;
 }
 
-.actions {
+/* Pastilles Envie / Vu, en haut à droite de l'affiche (la carte est le
+   bloc de positionnement ; l'affiche en occupe le haut). Rondes 40 px, cible
+   tactile portée à 44 px par le ::before. */
+.pastilles {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Suit l'affiche quand elle se soulève au survol. */
+.card:hover .pastilles {
+  transform: translateY(-6px);
+}
+
+.pastille {
+  position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.actionBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 7px 6px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--muted);
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--pastille-bg);
+  border: 1.5px solid var(--pastille-border);
+  color: var(--pastille-fg);
+  backdrop-filter: blur(4px);
   transition:
+    background 0.15s ease,
     border-color 0.15s ease,
-    color 0.15s ease,
-    background 0.15s ease;
+    color 0.15s ease;
 }
 
-.actionBtn:hover {
-  color: var(--fg);
-  border-color: var(--border-2);
+.pastille::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
 }
 
-.actionBtnGold {
-  color: var(--accent-ink);
+.pastilleWant {
+  background: var(--accent);
   border-color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--on-accent);
 }
 
-.actionBtnGreen {
-  color: var(--ok-ink);
-  border-color: color-mix(in oklch, var(--ok) 45%, transparent);
-  background: var(--ok-soft);
+.pastilleWatched {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: var(--on-ok);
 }

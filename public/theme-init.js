@@ -23,7 +23,7 @@
     document.documentElement.setAttribute("data-theme", theme);
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute("content", theme === "light" ? "#fbf9f5" : "#130e0a");
+      meta.setAttribute("content", theme === "light" ? "#fbf9f5" : "#0c1a30");
     }
   } catch (e) {
     // localStorage indisponible : repli silencieux sur le thème sombre par

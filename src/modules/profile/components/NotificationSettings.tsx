@@ -8,6 +8,7 @@ import { logWarn } from "../../../core/logger.ts";
 import { PUSH_ENDPOINT_STORAGE_KEY as ENDPOINT_STORAGE_KEY } from "../../../core/sync/pushAccountLink.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
+import { Icon } from "../../../shared/components/index.ts";
 import styles from "./NotificationSettings.module.css";
 
 const TOP_GENRES_FOR_NOTIFICATIONS = 8;
@@ -450,7 +451,7 @@ export default function NotificationSettings() {
             onClick={disable}
             disabled={status === "working"}
           >
-            {t("notificationSettings.disableButton")}
+            <Icon name="bell" /> {t("notificationSettings.disableButton")}
           </button>
           <p className={styles.hint}>{t("notificationSettings.enabledHint")}</p>
           {SHOW_TEST_NOTIFICATION && authStatus === "authenticated" && <TestNotification />}
@@ -463,9 +464,13 @@ export default function NotificationSettings() {
             onClick={enable}
             disabled={status === "working"}
           >
-            {status === "working"
-              ? t("notificationSettings.enabling")
-              : t("notificationSettings.enableButton")}
+            {status === "working" ? (
+              t("notificationSettings.enabling")
+            ) : (
+              <>
+                <Icon name="bellOff" /> {t("notificationSettings.enableButton")}
+              </>
+            )}
           </button>
           <p className={styles.hint}>{t("notificationSettings.disabledHint")}</p>
         </>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getFollowList, type FollowListKind } from "../../../core/api/follows.ts";
 import ProfileList from "../ProfileList/ProfileList.tsx";
+import Icon from "../Icon/Icon.tsx";
 import type { FollowCounts, ProfileSummary } from "../../../core/types/social.ts";
 import styles from "./FollowStats.module.css";
 
@@ -101,7 +102,7 @@ export default function FollowStats({ slug, counts, onListChange }: Props) {
               aria-label={t("common.close")}
               title={t("common.close")}
             >
-              ✕
+              <Icon name="close" />
             </button>
             <h2 id="follow-list-title" className={styles.title}>
               {open === "followers" ? t("follow.followersTitle") : t("follow.followingTitle")}

@@ -20,6 +20,7 @@ import {
   RatingStars,
   ErrorMessage,
   Dropdown,
+  Icon,
 } from "../../shared/components/index.ts";
 import EpisodeTracker from "./components/EpisodeTracker.tsx";
 import CollectionSection from "./components/CollectionSection.tsx";
@@ -313,8 +314,18 @@ export default function DetailPage() {
                 </span>
               ) : null}
             </p>
-            {theatricalMessage && <p className={styles.statusPill}>{theatricalMessage}</p>}
-            {episodeBadgeMessage && <p className={styles.statusPill}>{episodeBadgeMessage}</p>}
+            {theatricalMessage && (
+              <p className={styles.statusPill}>
+                <Icon name={theatricalStatus === "upcoming" ? "calendar" : "film"} />{" "}
+                {theatricalMessage}
+              </p>
+            )}
+            {episodeBadgeMessage && (
+              <p className={styles.statusPill}>
+                <Icon name={episodeBadge?.kind === "just_released" ? "sparkle" : "calendar"} />{" "}
+                {episodeBadgeMessage}
+              </p>
+            )}
             <p className={styles.overview}>{details.overview || t("detailPage.noOverview")}</p>
 
             <div className={styles.actions}>
@@ -324,6 +335,7 @@ export default function DetailPage() {
                 onClick={() => toggleWatched(libItem)}
                 aria-pressed={watched}
               >
+                <Icon name="check" strokeWidth={watched ? 3 : 2} />
                 {watched ? t("detailPage.watchedOn") : t("detailPage.watchedOff")}
               </button>
               <button
@@ -332,6 +344,7 @@ export default function DetailPage() {
                 onClick={() => toggleWatchlist(libItem)}
                 aria-pressed={inWatchlist}
               >
+                <Icon name="star" filled={inWatchlist} />
                 {inWatchlist ? t("detailPage.wantToWatchOn") : t("detailPage.wantToWatchOff")}
               </button>
               <TrailerButton videos={details.videos?.results} />
@@ -386,6 +399,7 @@ export default function DetailPage() {
               </Dropdown>
               {recommendations.length > 0 && (
                 <button type="button" className={styles.ghostBtn} onClick={scrollToRecommendations}>
+                  <Icon name="repeat" />
                   {t("detailPage.similar")}
                 </button>
               )}

@@ -24,6 +24,7 @@ import type {
   ReleaseDatesResponse,
   WatchProviderEntry,
 } from "../../../core/types/tmdb.ts";
+import Icon, { type IconName } from "../Icon/Icon.tsx";
 import posterStyles from "../../styles/posterAccents.module.css";
 import styles from "./MediaCard.module.css";
 
@@ -71,6 +72,7 @@ function MediaCard({
     in_theaters: t("mediaCard.inTheaters"),
     upcoming: t("mediaCard.upcomingTheatrical"),
   };
+  const theatricalIcons: Record<string, IconName> = { in_theaters: "film", upcoming: "calendar" };
   const mediaType = item.mediaType;
   const title = item.title || item.name || t("common.unknownTitle");
   // item.region_release_date (résolu côté Worker, voir discover() avec
@@ -282,7 +284,6 @@ function MediaCard({
           ) : (
             <div className={`${styles.noPoster} ${posterStyles[accentKey]}`}>{title}</div>
           )}
-          {watched && <span className={styles.badgeWatched}>{t("mediaCard.watchedBadge")}</span>}
           {rank != null && (
             <span
               className={`${styles.rank} ${rank <= 3 ? styles[`rank${rank}`] : ""}`}
@@ -300,23 +301,27 @@ function MediaCard({
                 className={styles.theatrical}
                 title={`${episodeBadgeLabel} (${episodeBadgeDateFormatted})`}
               >
+                <Icon name={episodeBadge?.kind === "just_released" ? "sparkle" : "calendar"} />{" "}
                 {episodeBadgeLabel}
               </span>
             )
           ) : showFutureReleaseBadge ? (
             futureReleaseLabel && (
               <span className={styles.theatrical} title={futureReleaseLabel}>
-                {futureReleaseLabel}
+                <Icon name="calendar" /> {futureReleaseLabel}
               </span>
             )
           ) : (
             <>
               {hasTheatricalBadge && theatricalStatus && (
-                <span className={styles.theatrical}>{theatricalBadges[theatricalStatus]}</span>
+                <span className={styles.theatrical}>
+                  <Icon name={theatricalIcons[theatricalStatus]} />{" "}
+                  {theatricalBadges[theatricalStatus]}
+                </span>
               )}
               {showUnknownStatus && (
                 <span className={`${styles.theatrical} ${styles.theatricalUnknown}`}>
-                  {t("mediaCard.unknownReleaseStatus")}
+                  <Icon name="help" /> {t("mediaCard.unknownReleaseStatus")}
                 </span>
               )}
               {provider?.logo_path && (
@@ -337,24 +342,28 @@ function MediaCard({
           <p className={styles.year}>{displayDate}</p>
         </div>
       </Link>
-      <div className={styles.actions}>
+      {/* Pastilles Envie / Vu : toujours visibles, posées sur l'affiche mais
+          hors du <Link> (pas de bouton imbriqué dans un lien). */}
+      <div className={styles.pastilles}>
         <button
           type="button"
-          className={`${styles.actionBtn} ${inWatchlist ? styles.actionBtnGold : ""}`}
+          className={`${styles.pastille} ${inWatchlist ? styles.pastilleWant : ""}`}
           onClick={() => toggleWatchlist(libItem)}
           aria-pressed={inWatchlist}
+          aria-label={t("mediaCard.wantToWatch")}
           title={t("mediaCard.wantToWatch")}
         >
-          {inWatchlist ? t("mediaCard.wantToWatchOn") : t("mediaCard.wantToWatchOff")}
+          <Icon name="star" size={18} strokeWidth={inWatchlist ? 2 : 1.5} filled={inWatchlist} />
         </button>
         <button
           type="button"
-          className={`${styles.actionBtn} ${watched ? styles.actionBtnGreen : ""}`}
+          className={`${styles.pastille} ${watched ? styles.pastilleWatched : ""}`}
           onClick={() => toggleWatched(libItem)}
           aria-pressed={watched}
+          aria-label={t("mediaCard.markAsWatched")}
           title={t("mediaCard.markAsWatched")}
         >
-          {watched ? t("mediaCard.watchedOn") : t("mediaCard.watchedOff")}
+          <Icon name="check" size={18} strokeWidth={watched ? 3 : 1.5} />
         </button>
       </div>
     </div>

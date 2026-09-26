@@ -6,6 +6,7 @@ import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import type { LibraryItemInput } from "../../../core/types/library.ts";
 import type { Episode, Season } from "../../../core/types/tmdb.ts";
 import styles from "./EpisodeTracker.module.css";
+import { Icon } from "../../../shared/components/index.ts";
 
 interface EpisodeTrackerProps {
   item: LibraryItemInput;
@@ -98,7 +99,9 @@ export default function EpisodeTracker({ item, seasons }: EpisodeTrackerProps) {
                 >
                   {seasonWatchedCount}/{season.episode_count}
                 </span>
-                <span className={styles.chevron}>{isOpen ? "▲" : "▼"}</span>
+                <span className={styles.chevron}>
+                  <Icon name={isOpen ? "chevronUp" : "chevronDown"} />
+                </span>
               </button>
 
               {isOpen && (

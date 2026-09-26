@@ -152,28 +152,29 @@
   font-weight: 800;
   font-size: 13px;
   line-height: 1;
-  background: oklch(0.2 0.01 60 / 0.8);
-  color: oklch(0.98 0 0);
-  border: 1.5px solid oklch(1 0 0 / 0.35);
+  /* 4 et 5 : médaille en contour (tokens --medal-* de variables.css) */
+  background: var(--medal-outline-bg);
+  color: var(--medal-outline-ink);
+  border: 1.5px solid var(--medal-outline);
   box-shadow: 0 3px 10px oklch(0 0 0 / 0.45);
 }
 
 .rank1 {
-  background: linear-gradient(145deg, oklch(0.9 0.1 90), oklch(0.72 0.12 75));
-  color: oklch(0.28 0.06 70);
-  border-color: oklch(0.95 0.06 90);
+  background: var(--medal-1);
+  color: var(--medal-1-ink);
+  border-color: var(--medal-1);
 }
 
 .rank2 {
-  background: linear-gradient(145deg, oklch(0.92 0.01 250), oklch(0.7 0.015 250));
-  color: oklch(0.26 0.02 250);
-  border-color: oklch(0.97 0.005 250);
+  background: var(--medal-2);
+  color: var(--medal-2-ink);
+  border-color: var(--medal-2);
 }
 
 .rank3 {
-  background: linear-gradient(145deg, oklch(0.78 0.09 55), oklch(0.58 0.1 45));
-  color: oklch(0.97 0.02 60);
-  border-color: oklch(0.85 0.07 55);
+  background: var(--medal-3);
+  color: var(--medal-3-ink);
+  border-color: var(--medal-3);
 }
 
 .remove {
@@ -187,7 +188,7 @@
   border-radius: 999px;
   font-size: 11px;
   background: oklch(0 0 0 / 0.6);
-  color: oklch(1 0 0);
+  color: var(--on-image);
 }
 
 .dialog {
@@ -362,7 +363,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   background: oklch(0 0 0 / 0.65);
-  color: oklch(1 0 0);
+  color: var(--on-image);
 }
 
 .rating {
@@ -374,7 +375,7 @@
   font-size: 11px;
   font-weight: 700;
   background: oklch(0 0 0 / 0.65);
-  color: oklch(1 0 0);
+  color: var(--on-image);
 }
 
 /* Titre déjà dans le Top : affiche assombrie, rang au centre. */
@@ -388,7 +389,7 @@
   gap: 4px;
   border-radius: 8px;
   background: oklch(0.15 0.02 260 / 0.72);
-  color: oklch(1 0 0);
+  color: var(--on-image);
 }
 
 .inTopRank {
@@ -399,15 +400,15 @@
 }
 
 .inTopRank1 {
-  color: oklch(0.88 0.12 85);
+  color: var(--medal-1);
 }
 
 .inTopRank2 {
-  color: oklch(0.88 0.015 250);
+  color: var(--medal-2);
 }
 
 .inTopRank3 {
-  color: oklch(0.75 0.11 55);
+  color: var(--medal-3);
 }
 
 .inTopLabel {

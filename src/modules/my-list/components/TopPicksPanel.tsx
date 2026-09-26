@@ -4,6 +4,7 @@ import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { posterUrl } from "../../../core/api/tmdbClient.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
+import { Icon } from "../../../shared/components/index.ts";
 import styles from "./TopPicksPanel.module.css";
 
 const MAX_PICKS = 5;
@@ -171,7 +172,7 @@ export default function TopPicksPanel() {
                   aria-label={t("topPicks.removeTitle", { title: item.title })}
                   title={t("topPicks.remove")}
                 >
-                  ✕
+                  <Icon name="close" />
                 </button>
                 <span className={styles.slotTitle}>{item.title}</span>
               </li>
@@ -283,7 +284,7 @@ function TopPicksPicker({ open, onClose, watched, chosen, onToggle }: PickerProp
               onClick={onClose}
               aria-label={t("topPicks.close")}
             >
-              ✕
+              <Icon name="close" />
             </button>
           </div>
           <input
@@ -338,7 +339,9 @@ function TopPicksPicker({ open, onClose, watched, chosen, onToggle }: PickerProp
                               {t(item.mediaType === "tv" ? "mediaCard.series" : "mediaCard.movie")}
                             </span>
                             {item.rating != null && (
-                              <span className={styles.rating}>★ {item.rating}</span>
+                              <span className={styles.rating}>
+                                <Icon name="star" filled /> {item.rating}
+                              </span>
                             )}
                             {rank > 0 && (
                               <span className={styles.inTop}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./ScrollToTopButton.module.css";
+import Icon from "../Icon/Icon.tsx";
 
 const SHOW_AFTER_PX = 400;
 
@@ -31,7 +32,7 @@ export default function ScrollToTopButton() {
       aria-label={t("scrollToTop.ariaLabel")}
       title={t("scrollToTop.title")}
     >
-      ↑
+      <Icon name="arrowUp" />
     </button>
   );
 }
