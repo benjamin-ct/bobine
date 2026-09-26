@@ -1,0 +1,379 @@
+.wrap {
+  margin-bottom: 20px;
+}
+
+/* ─── Barre : Films/Séries, « Filtres », puces actives ─────────────────── */
+
+/* Hauteur commune à tous les éléments de la barre : le sélecteur Films/Séries
+   donne la référence, « Filtres » et les puces s'alignent dessus. */
+.toolbar {
+  --bar-h: 46px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.segmented {
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 2px;
+}
+
+.segmented button {
+  /* 4 px de padding + 1 px de bordure de chaque côté */
+  min-height: calc(var(--bar-h) - 10px);
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.segActive {
+  background: var(--selected-bg);
+  color: var(--fg) !important;
+  box-shadow: inset 0 0 0 1px var(--selected-border);
+}
+
+.filtersBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--bar-h);
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.filtersBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.filtersBtn:hover {
+  border-color: var(--border-2);
+  background: var(--surface-2);
+}
+
+.filtersBtnOpen {
+  background: var(--selected-bg);
+  border-color: var(--selected-border);
+}
+
+.count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--bar-h);
+  padding: 0 12px 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--selected-border);
+  background: var(--selected-bg);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.chip svg {
+  color: var(--muted);
+}
+
+.chip:hover svg {
+  color: var(--fg);
+}
+
+.reset {
+  min-height: var(--bar-h);
+  padding: 0 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.reset:hover {
+  color: var(--fg);
+}
+
+/* ─── Panneau : grille de 4 colonnes alignées (desktop) ────────────────── */
+
+.backdrop {
+  display: none;
+}
+
+.panel {
+  margin-top: 14px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px 18px;
+  align-items: start;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Même traitement que les libellés d'AdvancedFilterFields (variante
+   « panel ») : hauteur fixe pour aligner les contrôles d'une rangée. */
+.label {
+  display: flex;
+  align-items: flex-end;
+  min-height: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.control {
+  height: 44px;
+}
+
+.control > button {
+  justify-content: space-between;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 14px;
+}
+
+.controlLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 14px;
+  color: var(--fg);
+  text-align: left;
+}
+
+.switchRow:disabled {
+  color: var(--subtle);
+  cursor: not-allowed;
+}
+
+.switchText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border-2);
+  transition: background 0.15s ease;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--on-control);
+  transition: transform 0.15s ease;
+}
+
+.switchOn {
+  background: var(--control);
+}
+
+.switchOn::after {
+  transform: translateX(16px);
+}
+
+.rangeError {
+  grid-column: 1 / -1;
+  color: var(--accent-ink);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* En-tête et pied de la feuille : mobile uniquement. */
+.sheetHead,
+.sheetFoot {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ─── Mobile : feuille modale (même seuil que la barre d'onglets) ──────── */
+
+@media (max-width: 860px) {
+  .toolbar {
+    --bar-h: 50px;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 54;
+    background: rgba(3, 8, 18, 0.6);
+    animation: fade 0.18s ease;
+  }
+
+  /* z-index : au-dessus de la barre d'onglets (40), sous les menus
+     déroulants (60) qui s'ouvrent depuis la feuille. */
+  .panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 55;
+    margin: 0;
+    max-height: 88dvh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom: none;
+    background: var(--surface);
+    box-shadow: var(--shadow-lift);
+    animation: slideUp 0.22s ease;
+  }
+
+  .sheetHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 12px 6px 20px;
+  }
+
+  .sheetHead h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .close {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--muted);
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 8px 20px 16px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .sheetFoot {
+    display: flex;
+    gap: 10px;
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+  }
+
+  .footReset,
+  .apply {
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  .footReset {
+    border: 1px solid var(--border-2);
+    color: var(--fg);
+  }
+
+  .footReset:disabled {
+    opacity: 0.5;
+  }
+
+  .apply {
+    flex: 1;
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}

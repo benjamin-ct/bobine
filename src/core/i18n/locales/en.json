@@ -53,7 +53,10 @@
   "continueWatching": {
     "episodesWatched_one": "{{count}} episode watched",
     "episodesWatched_other": "{{count}} episodes watched",
-    "resume": "Resume →"
+    "watchedUpTo": "Watched up to S{{season}} · E{{episode}}",
+    "nextEpisode": "Up next: S{{season}} · E{{episode}}",
+    "markWatched": "Watched",
+    "markWatchedAria": "Mark {{title}} S{{season}} · E{{episode}} as watched"
   },
   "personCard": {
     "departmentActing": "Actor/Actress",
@@ -247,10 +250,8 @@
     "emptyState": "No releases in this period for these filters."
   },
   "discoverPage": {
-    "eyebrow": "Just for you",
     "title": "Discover",
-    "lead": "A selection that learns from your taste — what you've watched, liked, skipped, and what's waiting in your list.",
-    "resumeTitle": "Resume",
+    "resumeTitle": "Series in progress",
     "resumeSubtitle": "· right where you left off",
     "featuredTitle": "Featured",
     "featuredSubtitle": "· upcoming releases",
@@ -804,5 +805,35 @@
     "feedWatched": "watched",
     "feedRated": "rated {{rating}}/10",
     "feedWantToSee": "wants to see"
+  },
+  "tonightPick": {
+    "eyebrow": "For you tonight",
+    "seeDetails": "See details"
+  },
+  "filterPanel": {
+    "filters": "Filters",
+    "activeCount_one": "{{count}} active filter",
+    "activeCount_other": "{{count}} active filters",
+    "activeFilters": "Active filters",
+    "removeFilter": "Remove filter {{label}}",
+    "reset": "Reset",
+    "close": "Close",
+    "showResults": "Show results",
+    "genres": "Genres",
+    "platforms": "Platforms",
+    "filterByPlatform": "Filter by platform",
+    "platformsCount_one": "{{count}} platform",
+    "platformsCount_other": "{{count}} platforms",
+    "myPlatforms": "My platforms",
+    "onlyMyPlatforms": "Only my platforms",
+    "noFavoritePlatforms": "Choose your platforms in your profile",
+    "sort": "Sort",
+    "year": "Year",
+    "rating": "Rating",
+    "votes": "Votes",
+    "runtime": "Runtime",
+    "minutes": "min",
+    "country": "Country",
+    "chip": "{{label}}: {{value}}"
   }
 }

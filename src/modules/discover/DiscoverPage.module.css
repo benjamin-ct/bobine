@@ -4,12 +4,21 @@
   padding: 0 var(--gutter) 64px;
 }
 
-.resumeShelf {
-  border: 1px solid color-mix(in oklch, var(--accent) 24%, var(--border));
-  background: color-mix(in oklch, var(--accent) 6%, var(--surface));
-  border-radius: var(--radius-lg);
-  padding: 18px 18px 20px;
-  box-shadow: var(--shadow);
+/* Titre de page pour les lecteurs d'écran : visuellement, la page s'ouvre
+   directement sur « Pour vous ce soir ». */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.shelf {
   margin-bottom: 28px;
 }
 
@@ -33,27 +42,27 @@
   font-weight: 400;
 }
 
-.resumeIcon {
+/* Pastille d'icône de section : dorée (accent secondaire), le corail étant
+   réservé aux actions. */
+.blockIcon {
   width: 26px;
   height: 26px;
   flex: none;
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--gold-soft);
+  color: var(--gold);
 }
 
-.resumeIcon svg {
+.blockIcon svg {
   width: 14px;
   height: 14px;
 }
 
-.eyebrowSmall {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 0 0 10px;
+.sectionTitle {
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 8px 0 14px;
 }

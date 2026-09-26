@@ -2,6 +2,9 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import { createPortal } from "react-dom";
 import styles from "./Dropdown.module.css";
 
+// Doit rester aligné sur .panel { max-height } dans Dropdown.module.css.
+const PANEL_MAX_HEIGHT = 340;
+
 interface DropdownProps {
   label: ReactNode;
   active?: boolean;
@@ -10,11 +13,16 @@ interface DropdownProps {
    * détail (voir .trigger.pill dans Dropdown.module.css) au lieu du style
    * compact par défaut utilisé par la FilterBar et les panneaux de listes. */
   pill?: boolean;
+  /** Grise le déclencheur et empêche l'ouverture (ex. Plateformes quand
+   * « Seulement mes plateformes » est activé dans FilterPanel). */
+  disabled?: boolean;
+  className?: string;
   children: ReactNode;
 }
 
 interface PanelPosition {
-  top: number;
+  top?: number;
+  bottom?: number;
   left?: number;
   right?: number;
 }
@@ -33,6 +41,8 @@ export default function Dropdown({
   active = false,
   align = "left",
   pill = false,
+  disabled = false,
+  className,
   children,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
@@ -47,12 +57,26 @@ export default function Dropdown({
       return;
     }
     const rect = trigger.getBoundingClientRect();
+    // Ouvre vers le haut quand la place manque en dessous (déclencheur en
+    // bas d'écran, ex. dans la feuille de filtres mobile) et qu'il y en a
+    // davantage au-dessus — sinon le panneau sortirait de l'écran.
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const vertical =
+      spaceBelow < PANEL_MAX_HEIGHT + 16 && rect.top > spaceBelow
+        ? { bottom: window.innerHeight - rect.top + 8 }
+        : { top: rect.bottom + 8 };
     setPosition(
       align === "right"
-        ? { top: rect.bottom + 8, right: window.innerWidth - rect.right }
-        : { top: rect.bottom + 8, left: rect.left }
+        ? { ...vertical, right: window.innerWidth - rect.right }
+        : { ...vertical, left: rect.left }
     );
   }, [align]);
+
+  useEffect(() => {
+    if (disabled) {
+      setOpen(false);
+    }
+  }, [disabled]);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -93,12 +117,13 @@ export default function Dropdown({
   }, [open, updatePosition]);
 
   return (
-    <div className={styles.dropdown} ref={wrapperRef}>
+    <div className={`${styles.dropdown} ${className || ""}`} ref={wrapperRef}>
       <button
         type="button"
         ref={triggerRef}
         className={`${styles.trigger} ${pill ? styles.pill : ""} ${active ? styles.active : ""}`}
         onClick={() => setOpen((o) => !o)}
+        disabled={disabled}
         aria-haspopup="true"
         aria-expanded={open}
       >
@@ -122,6 +147,7 @@ export default function Dropdown({
             className={styles.panel}
             style={{
               top: position.top,
+              bottom: position.bottom,
               left: position.left,
               right: position.right,
             }}

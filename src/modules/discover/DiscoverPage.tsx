@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
@@ -14,20 +14,22 @@ import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import {
   MediaCard,
   MediaCardSkeleton,
-  FilterBar,
-  AdvancedFilters,
+  FilterPanel,
+  DEFAULT_SORT_FIELD,
+  DEFAULT_SORT_DIRECTION,
   EMPTY_ADVANCED_FILTERS,
   getAdvancedFiltersRangeError,
   ErrorMessage,
   EmptyState,
-  PageHeader,
   ContinueWatchingRow,
   FeaturedMediaRow,
+  Icon,
 } from "../../shared/components/index.ts";
 import type { AdvancedFiltersState } from "../../shared/components/index.ts";
 import type { Genre, MediaItem, MediaType } from "../../core/types/tmdb.ts";
 import type { DiscoverSortField, SortDirection, WatchProviderOption } from "../../core/api/tmdb.ts";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
+import TonightPick from "./TonightPick.tsx";
 import styles from "./DiscoverPage.module.css";
 
 const GRID_SKELETON_COUNT = 12;
@@ -35,7 +37,7 @@ const GRID_SKELETON_COUNT = 12;
 interface FiltersSnapshot {
   mediaType: MediaType;
   genreIds: number[];
-  providerId: string;
+  providerIds: string[];
   useMyPlatforms: boolean;
   sortField: DiscoverSortField;
   sortDirection: SortDirection;
@@ -72,13 +74,13 @@ export default function DiscoverPage() {
 
   const [mediaType, setMediaType] = useState<MediaType>(restoredFilters?.mediaType ?? "movie");
   const [genreIds, setGenreIds] = useState<number[]>(restoredFilters?.genreIds ?? []);
-  const [providerId, setProviderId] = useState(restoredFilters?.providerId ?? "");
+  const [providerIds, setProviderIds] = useState<string[]>(restoredFilters?.providerIds ?? []);
   const [useMyPlatforms, setUseMyPlatforms] = useState(restoredFilters?.useMyPlatforms ?? false);
   const [sortField, setSortField] = useState<DiscoverSortField>(
-    restoredFilters?.sortField ?? "popularity"
+    restoredFilters?.sortField ?? DEFAULT_SORT_FIELD
   );
   const [sortDirection, setSortDirection] = useState<SortDirection>(
-    restoredFilters?.sortDirection ?? "desc"
+    restoredFilters?.sortDirection ?? DEFAULT_SORT_DIRECTION
   );
   const [advanced, setAdvanced] = useState<AdvancedFiltersState>(
     restoredFilters?.advanced ?? EMPTY_ADVANCED_FILTERS
@@ -103,11 +105,13 @@ export default function DiscoverPage() {
   const advancedError = getAdvancedFiltersRangeError(advanced);
   const activeProviderIds = useMyPlatforms
     ? favoriteProviderIds
-    : providerId
-      ? [providerId]
+    : providerIds.length
+      ? providerIds
       : undefined;
+  // « année · genre » sous chaque carte : premier genre TMDB du titre.
+  const genreNames = useMemo(() => new Map(genres.map((g) => [g.id, g.name])), [genres]);
 
-  // "Reprendre" : séries entamées avec au moins un épisode non vu déjà
+  // "Séries en cours" : séries entamées avec au moins un épisode non vu déjà
   // sorti (indépendant du filtre Films/Séries de la grille de suggestions
   // ci-dessous).
   const continuingSeries = useResumableSeries(watchlist);
@@ -116,8 +120,8 @@ export default function DiscoverPage() {
   // "Mise en avant" : séries suivies (watchlist incluse, pas seulement
   // entamées) dont un épisode vient de sortir ou arrive bientôt, et films
   // suivis dont la sortie initiale vient d'avoir lieu ou arrive bientôt —
-  // sauf les séries déjà affichées dans "Reprendre" juste au-dessus, pour ne
-  // pas dupliquer la même série dans les deux rangées ("Reprendre" ne
+  // sauf les séries déjà affichées dans "Séries en cours" juste au-dessus, pour ne
+  // pas dupliquer la même série dans les deux rangées ("Séries en cours" ne
   // concerne que des séries, jamais des films).
   const featuredSeries = useFeaturedSeries(watchlist).filter(
     ({ item }) => !continuingSeriesIds.has(item.id)
@@ -148,7 +152,7 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreIds, providerId, useMyPlatforms, sortField, sortDirection, advancedKey]);
+  }, [genreIds, providerIds, useMyPlatforms, sortField, sortDirection, advancedKey]);
 
   // Mémorise les filtres actifs pour cette entrée d'historique, afin de les
   // réappliquer si l'utilisateur revient sur cette page via un retour arrière
@@ -158,7 +162,7 @@ export default function DiscoverPage() {
     filtersMemory.set(location.key, {
       mediaType,
       genreIds,
-      providerId,
+      providerIds,
       useMyPlatforms,
       sortField,
       sortDirection,
@@ -168,7 +172,7 @@ export default function DiscoverPage() {
     location.key,
     mediaType,
     genreIds,
-    providerId,
+    providerIds,
     useMyPlatforms,
     sortField,
     sortDirection,
@@ -240,7 +244,7 @@ export default function DiscoverPage() {
     mediaType,
     genreIds,
     excludedGenreIds,
-    providerId,
+    providerIds,
     useMyPlatforms,
     favoriteProviderIds,
     region,
@@ -291,7 +295,7 @@ export default function DiscoverPage() {
     mediaType,
     genreIds,
     excludedGenreIds,
-    providerId,
+    providerIds,
     useMyPlatforms,
     favoriteProviderIds,
     region,
@@ -328,19 +332,15 @@ export default function DiscoverPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader
-        eyebrow={t("discoverPage.eyebrow")}
-        title={t("discoverPage.title")}
-        lead={t("discoverPage.lead")}
-      />
+      <h1 className={styles.srOnly}>{t("discoverPage.title")}</h1>
+
+      <TonightPick />
 
       {continuingSeries.length > 0 && (
-        <section className={styles.resumeShelf}>
+        <section className={styles.shelf}>
           <div className={styles.blockTitle}>
-            <span className={styles.resumeIcon}>
-              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
-                <path d="M8 5v14l11-7z" />
-              </svg>
+            <span className={styles.blockIcon}>
+              <Icon name="repeat" />
             </span>
             <h2>
               {t("discoverPage.resumeTitle")}{" "}
@@ -352,12 +352,10 @@ export default function DiscoverPage() {
       )}
 
       {featuredItems.length > 0 && (
-        <section className={styles.resumeShelf}>
+        <section className={styles.shelf}>
           <div className={styles.blockTitle}>
-            <span className={styles.resumeIcon}>
-              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
-                <path d="M12 2l1.9 5.9H20l-5 3.6 1.9 5.9-5-3.6-5 3.6 1.9-5.9-5-3.6h6.1z" />
-              </svg>
+            <span className={styles.blockIcon}>
+              <Icon name="sparkle" />
             </span>
             <h2>
               {t("discoverPage.featuredTitle")}{" "}
@@ -368,26 +366,26 @@ export default function DiscoverPage() {
         </section>
       )}
 
-      <p className={styles.eyebrowSmall}>{t("discoverPage.suggestionsEyebrow")}</p>
-      <FilterBar
+      <h2 className={styles.sectionTitle}>{t("discoverPage.suggestionsEyebrow")}</h2>
+      <FilterPanel
         mediaType={mediaType}
         setMediaType={setMediaType}
+        genres={genres}
         genreIds={genreIds}
         setGenreIds={setGenreIds}
-        genres={genres}
-        providerId={providerId}
-        setProviderId={setProviderId}
         providers={providers}
+        providerIds={providerIds}
+        setProviderIds={setProviderIds}
         favoriteProviderIds={favoriteProviderIds}
-        useFavoriteProviders={useMyPlatforms}
-        setUseFavoriteProviders={setUseMyPlatforms}
+        useMyPlatforms={useMyPlatforms}
+        setUseMyPlatforms={setUseMyPlatforms}
         sortField={sortField}
         setSortField={setSortField}
         sortDirection={sortDirection}
         setSortDirection={setSortDirection}
+        advanced={advanced}
+        setAdvanced={setAdvanced}
       />
-
-      <AdvancedFilters filters={advanced} setFilters={setAdvanced} />
 
       {status === "loading" && (
         <div className={gridStyles.grid}>
@@ -406,7 +404,12 @@ export default function DiscoverPage() {
         <>
           <div className={gridStyles.grid}>
             {results.map((item) => (
-              <MediaCard key={item.id} item={item} />
+              <MediaCard
+                key={item.id}
+                item={item}
+                yearGenre
+                genreName={genreNames.get(item.genre_ids?.[0] ?? -1)}
+              />
             ))}
           </div>
           {page < totalPages && (

@@ -62,3 +62,31 @@
   color: var(--accent-ink);
   font-size: 13px;
 }
+
+/* Variante « panel » (FilterPanel de Découvrir) : libellé à hauteur fixe
+   pour que les contrôles de toutes les colonnes restent alignés, contrôles
+   de 44 px (cible tactile). */
+.fieldPanel {
+  gap: 8px;
+}
+
+.fieldPanel label {
+  display: flex;
+  align-items: flex-end;
+  min-height: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fieldPanel input,
+.fieldPanel select {
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
