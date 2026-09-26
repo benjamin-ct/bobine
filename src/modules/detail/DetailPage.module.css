@@ -22,13 +22,12 @@
 /* ─── Grand bloc du haut ────────────────────────────────────────────────
    Backdrop TMDB assombri par un dégradé, 36 px sous la bande pellicule de
    l'en-tête. Une seule lumière sur la page (le spot doré du fond) : aucun
-   halo ni teinte de genre ici. Sur desktop, le bloc déborde du conteneur
-   jusqu'à 40 px des bords de la fenêtre (maquette). */
+   halo ni teinte de genre ici. Sur desktop, le bloc a la largeur du reste
+   de la page. */
 .hero {
   position: relative;
   isolation: isolate;
   margin-top: 36px;
-  margin-inline: min(0px, calc(50% - 50vw + 40px));
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   overflow: hidden;
