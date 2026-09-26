@@ -21,9 +21,9 @@
 
 /* ─── Grand bloc du haut ────────────────────────────────────────────────
    Backdrop TMDB assombri par un dégradé, 36 px sous la bande pellicule de
-   l'en-tête. Une seule lumière sur la page (le spot doré du fond) : aucun
-   halo ni teinte de genre ici. Sur desktop, le bloc a la largeur du reste
-   de la page. */
+   l'en-tête, puis un halo teinté selon le genre (comme la maquette : indigo
+   en haut à droite, violet en bas à droite pour la SF). Sur desktop, le
+   bloc a la largeur du reste de la page. */
 .hero {
   position: relative;
   isolation: isolate;
@@ -55,6 +55,64 @@
       color-mix(in oklch, var(--bg) 45%, transparent) 100%
     ),
     linear-gradient(0deg, color-mix(in oklch, var(--bg) 70%, transparent), transparent 55%);
+}
+
+/* Halo du genre, par-dessus le backdrop assombri : la couleur reste
+   visible à droite et s'efface vers le texte à gauche. */
+.halo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 70% 90% at 85% 0%,
+      color-mix(in oklch, var(--halo-1) 55%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 80% at 90% 100%,
+      color-mix(in oklch, var(--halo-2) 75%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 70% at 30% 100%,
+      color-mix(in oklch, var(--halo-2) 35%, transparent),
+      transparent 70%
+    );
+}
+
+.halo_scifi {
+  --halo-1: var(--g-scifi-1);
+  --halo-2: var(--g-scifi-2);
+}
+.halo_drama {
+  --halo-1: var(--g-drama-1);
+  --halo-2: var(--g-drama-2);
+}
+.halo_thriller {
+  --halo-1: var(--g-thril-1);
+  --halo-2: var(--g-thril-2);
+}
+.halo_horror {
+  --halo-1: var(--g-horr-1);
+  --halo-2: var(--g-horr-2);
+}
+.halo_animation {
+  --halo-1: var(--g-anim-1);
+  --halo-2: var(--g-anim-2);
+}
+.halo_romance {
+  --halo-1: var(--g-roman-1);
+  --halo-2: var(--g-roman-2);
+}
+.halo_comedy {
+  --halo-1: var(--g-com-1);
+  --halo-2: var(--g-com-2);
+}
+.halo_adventure {
+  --halo-1: var(--g-adv-1);
+  --halo-2: var(--g-adv-2);
 }
 
 /* Desktop : pilule au-dessus de l'affiche, de la même largeur. */
@@ -546,6 +604,26 @@
 
   .backdrop::after {
     background: linear-gradient(0deg, var(--bg) 0%, transparent 60%);
+  }
+
+  /* Mobile : le halo teinte le haut de l'image et s'efface avant le titre,
+     qui chevauche le bas de l'image. */
+  .halo {
+    z-index: 0;
+    bottom: auto;
+    aspect-ratio: 16 / 9;
+    background:
+      radial-gradient(
+        ellipse 90% 80% at 80% 10%,
+        color-mix(in oklch, var(--halo-1) 55%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 80% 70% at 90% 90%,
+        color-mix(in oklch, var(--halo-2) 60%, transparent),
+        transparent 70%
+      );
+    mask-image: linear-gradient(0deg, transparent 40%, #000 80%);
   }
 
   /* Mobile : petite pilule en haut à gauche, sur l'image. */

@@ -407,6 +407,7 @@ export default function DetailPage() {
               : undefined
           }
         />
+        <div className={`${styles.halo} ${styles[`halo_${accentKey}`]}`} aria-hidden="true" />
         <div className={styles.heroInner}>
           {backLink(styles.back)}
           <div className={styles.posterWrap}>
