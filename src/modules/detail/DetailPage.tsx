@@ -28,6 +28,7 @@ import CollectionSection from "./components/CollectionSection.tsx";
 import DetailSkeleton from "./components/DetailSkeleton.tsx";
 import WhereToWatch from "./components/WhereToWatch.tsx";
 import FollowingActivity from "./components/FollowingActivity.tsx";
+import { airedEpisodesUpTo, useSeasonEpisodes } from "./useSeasonEpisodes.ts";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { regionName as countryDisplayName, useRegion } from "../../core/context/RegionContext.tsx";
 import { useLocale } from "../../core/context/LocaleContext.tsx";
@@ -44,6 +45,16 @@ import type { MediaDetails, MediaType } from "../../core/types/tmdb.ts";
 import styles from "./DetailPage.module.css";
 
 const MAIN_CAST_COUNT = 6;
+
+// Statut TMDB d'une série (« Returning Series », « Ended »…) → clé i18n.
+const TV_STATUS_KEYS: Record<string, string> = {
+  "Returning Series": "detailPage.tvStatusInProduction",
+  "In Production": "detailPage.tvStatusInProduction",
+  Planned: "detailPage.tvStatusPlanned",
+  Pilot: "detailPage.tvStatusPlanned",
+  Ended: "detailPage.tvStatusEnded",
+  Canceled: "detailPage.tvStatusCanceled",
+};
 
 // « 2 h 46 » plutôt que « 166 min » (maquette) ; les durées de moins d'une
 // heure (épisodes) restent en minutes.
@@ -82,11 +93,14 @@ export default function DetailPage() {
   const [showFullCast, setShowFullCast] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [markingSeries, setMarkingSeries] = useState(false);
+  const { episodesBySeason, loadSeason } = useSeasonEpisodes(Number(id));
   const {
     isWatched,
     isInWatchlist,
     toggleWatched,
     toggleWatchlist,
+    markSeriesWatched,
     getRating,
     rateWatched,
     customLists,
@@ -199,7 +213,8 @@ export default function DetailPage() {
   const originalTitle = details.original_title || details.original_name;
   const date = details.release_date || details.first_air_date;
   const providers = watchProvidersFromDetails(details, region);
-  const runtime = details.runtime || details.episode_run_time?.[0];
+  const runtime =
+    details.runtime || details.episode_run_time?.[0] || details.last_episode_to_air?.runtime;
   const watched = isWatched(mediaType, id);
   const inWatchlist = isInWatchlist(mediaType, id);
   const excluded = isExcludedTitle(mediaType, id);
@@ -236,15 +251,18 @@ export default function DetailPage() {
       : t("detailPage.episodeUpcoming", { date: episodeBadgeDateFormatted })
     : null;
 
-  const eyebrow = [
-    mediaType === "movie" ? t("detailPage.kindMovie") : t("detailPage.kindTv"),
-    displayDate?.slice(0, 4),
-    mediaType === "movie" && runtime
-      ? formatRuntime(t, runtime)
-      : mediaType === "tv" && details.number_of_seasons
-        ? t("detailPage.seasonsCount", { count: details.number_of_seasons })
-        : null,
-  ]
+  // Série : « Série · depuis 2022 · 2 saisons · ≈ 50 min/épisode ».
+  const eyebrow = (
+    mediaType === "movie"
+      ? [t("detailPage.kindMovie"), displayDate?.slice(0, 4), runtime && formatRuntime(t, runtime)]
+      : [
+          t("detailPage.kindTv"),
+          displayDate && t("detailPage.sinceYear", { year: displayDate.slice(0, 4) }),
+          details.number_of_seasons &&
+            t("detailPage.seasonsCount", { count: details.number_of_seasons }),
+          runtime && t("detailPage.approxPerEpisode", { duration: formatRuntime(t, runtime) }),
+        ]
+  )
     .filter(Boolean)
     .join(" · ");
 
@@ -286,6 +304,24 @@ export default function DetailPage() {
       return;
     }
     rateWatched(mediaType, id, value);
+  }
+
+  // « Marquer la série comme vue » coche tous les épisodes diffusés (listes
+  // chargées saison par saison) ; « Série vue » la retire comme un film.
+  async function toggleSeriesWatched() {
+    if (watched || !details?.seasons) {
+      toggleWatched(libItem);
+      return;
+    }
+    if (!requireMember()) {
+      return;
+    }
+    setMarkingSeries(true);
+    try {
+      markSeriesWatched(libItem, await airedEpisodesUpTo(details.seasons, loadSeason));
+    } finally {
+      setMarkingSeries(false);
+    }
   }
 
   function scrollToRecommendations() {
@@ -338,7 +374,7 @@ export default function DetailPage() {
   const infoRows: { label: string; value: ReactNode }[] = [];
   if (directors.length > 0) {
     infoRows.push({
-      label: mediaType === "movie" ? t("detailPage.directing") : t("detailPage.createdBy"),
+      label: mediaType === "movie" ? t("detailPage.directing") : t("detailPage.creation"),
       value: directors.map((d, i) => (
         <span key={d.id}>
           {i > 0 && ", "}
@@ -371,17 +407,27 @@ export default function DetailPage() {
         .join(" · "),
     });
   }
-  if (runtime) {
+  // Série : durée, langue et pays passent dans l'eyebrow ou disparaissent
+  // (maquette) au profit du statut de diffusion.
+  const tvStatusKey = details.status ? TV_STATUS_KEYS[details.status] : undefined;
+  if (mediaType === "tv" && tvStatusKey) {
+    infoRows.push({ label: t("detailPage.status"), value: t(tvStatusKey) });
+  }
+  if (runtime && mediaType === "movie") {
     infoRows.push({
       label: t("detailPage.runtime"),
-      value: `${formatRuntime(t, runtime)}${mediaType === "tv" ? t("detailPage.perEpisodeSuffix") : ""}`,
+      value: formatRuntime(t, runtime),
     });
   }
   const language = languageName(details.original_language, localeTag);
-  if (language) {
+  if (language && mediaType === "movie") {
     infoRows.push({ label: t("detailPage.language"), value: language });
   }
-  if (details.production_countries && details.production_countries.length > 0) {
+  if (
+    mediaType === "movie" &&
+    details.production_countries &&
+    details.production_countries.length > 0
+  ) {
     infoRows.push({
       label: t("detailPage.countries", { count: details.production_countries.length }),
       value: details.production_countries
@@ -482,11 +528,20 @@ export default function DetailPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${watched ? styles.watchedOn : ""}`}
-                onClick={() => toggleWatched(libItem)}
+                onClick={() =>
+                  mediaType === "tv" ? toggleSeriesWatched() : toggleWatched(libItem)
+                }
                 aria-pressed={watched}
+                disabled={markingSeries}
               >
                 <Icon name="check" strokeWidth={watched ? 3 : 2} />
-                {watched ? t("detailPage.watchedOn") : t("detailPage.watchedOff")}
+                {mediaType === "tv"
+                  ? watched
+                    ? t("detailPage.seriesWatchedOn")
+                    : t("detailPage.seriesWatchedOff")
+                  : watched
+                    ? t("detailPage.watchedOn")
+                    : t("detailPage.watchedOff")}
               </button>
               <Dropdown
                 label={
@@ -622,11 +677,18 @@ export default function DetailPage() {
 
       <div className={styles.body}>
         <div className={styles.main}>
-          <WhereToWatch providers={providers} regionName={regionName} />
-
           {mediaType === "tv" && details.seasons && details.seasons.length > 0 && (
-            <EpisodeTracker item={libItem} seasons={details.seasons} />
+            <EpisodeTracker
+              item={libItem}
+              seasons={details.seasons}
+              episodesBySeason={episodesBySeason}
+              loadSeason={loadSeason}
+              episodeBadge={episodeBadge}
+              nextEpisodeToAir={details.next_episode_to_air}
+            />
           )}
+
+          <WhereToWatch providers={providers} regionName={regionName} />
 
           {cast.length > 0 && (
             <section className={styles.section}>

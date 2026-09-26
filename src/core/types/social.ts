@@ -1,7 +1,7 @@
 // Types du domaine "suivre des profils" (abonnés / abonnements / fil
 // d'activité) — forme partagée entre le worker (worker/follows.ts) et le
 // client (core/api/follows.ts, composants shared/components/Follow*).
-import type { LibraryItem } from "./library.ts";
+import type { EpisodeRef, LibraryItem } from "./library.ts";
 
 /** Un profil dans une liste d'abonnés/abonnements ou un résultat de
  * recherche. Jamais d'email ni d'identifiant de compte : `slug` et
@@ -41,5 +41,9 @@ export interface TitleActivity {
     rating: number | null;
     /** Dernière mise à jour (ms) : « il y a 3 jours ». */
     updatedAt: number;
+    /** Série entamée (encore en « envie de voir ») : dernier épisode vu,
+     * pour « En cours · S2 É2 ». Seul ce repère est exposé, jamais la liste
+     * des épisodes vus. */
+    progress: EpisodeRef | null;
   }[];
 }

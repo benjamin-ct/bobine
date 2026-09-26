@@ -148,6 +148,7 @@ export interface EpisodeAirInfo {
   air_date?: string | null;
   episode_number: number;
   season_number: number;
+  runtime?: number | null;
 }
 
 export interface CollectionSummary {

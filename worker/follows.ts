@@ -8,7 +8,7 @@
 //   suit, mais anonymisé (ni nom ni lien) : il n'a rien choisi de rendre
 //   public.
 import { decodeHtmlEntities } from "./validate.ts";
-import type { LibraryItem } from "../src/core/types/library.ts";
+import type { EpisodeRef, LibraryItem } from "../src/core/types/library.ts";
 import type {
   FeedEntry,
   FollowCounts,
@@ -185,6 +185,26 @@ export async function getFeed(db: D1Database, userId: number): Promise<FeedEntry
 // partagés) ont fait d'un titre précis — vu (avec leur note) ou envie de
 // voir. `following` sert au client pour masquer le bloc quand on ne suit
 // personne (et seulement dans ce cas).
+// Dernier épisode vu au sens chronologique (hors épisodes spéciaux, saison
+// 0), à partir des clés "saison-épisode" de `watchedEpisodes`.
+function lastWatchedEpisode(keys: string[] | undefined): EpisodeRef | null {
+  let last: EpisodeRef | null = null;
+  for (const key of Array.isArray(keys) ? keys : []) {
+    const [seasonNumber, episodeNumber] = String(key).split("-").map(Number);
+    if (!(seasonNumber > 0) || !(episodeNumber > 0)) {
+      continue;
+    }
+    if (
+      !last ||
+      seasonNumber > last.seasonNumber ||
+      (seasonNumber === last.seasonNumber && episodeNumber > last.episodeNumber)
+    ) {
+      last = { seasonNumber, episodeNumber };
+    }
+  }
+  return last;
+}
+
 export async function getTitleActivity(
   db: D1Database,
   userId: number,
@@ -217,12 +237,13 @@ export async function getTitleActivity(
   return {
     following: counts.following,
     entries: results.map((row) => {
-      const { rating } = JSON.parse(row.data) as LibraryItem;
+      const { rating, watchedEpisodes } = JSON.parse(row.data) as LibraryItem;
       return {
         profile: { slug: row.share_slug, displayName: row.display_name },
         status: row.status,
         rating: row.status === "watched" && typeof rating === "number" ? rating : null,
         updatedAt: row.updated_at,
+        progress: row.status === "watchlist" ? lastWatchedEpisode(watchedEpisodes) : null,
       };
     }),
   };

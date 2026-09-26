@@ -18,6 +18,7 @@ import type {
   CustomList,
   CustomListMap,
   DirectorRef,
+  EpisodeRef,
   LibraryItem,
   LibraryItemInput,
   LibraryItemMap,
@@ -88,12 +89,10 @@ interface LibraryContextValue {
     episode: number
   ) => boolean;
   toggleEpisodeWatched: (item: LibraryItemInput, season: number, episode: number) => void;
-  setSeasonEpisodesWatched: (
-    item: LibraryItemInput,
-    season: number,
-    episodeNumbers: number[],
-    watched: boolean
-  ) => void;
+  /** Coche/décoche plusieurs épisodes d'un coup (saison entière, « Vu jusqu'ici »). */
+  setEpisodesWatched: (item: LibraryItemInput, episodes: EpisodeRef[], watched: boolean) => void;
+  /** « Marquer la série comme vue » : passe la série en "vu" et coche `episodes`. */
+  markSeriesWatched: (item: LibraryItemInput, episodes: EpisodeRef[]) => void;
   /** Glisser-déposer dans "Envie de voir" (tri manuel) — voir modules/my-list. */
   reorderWatchlist: (fromKey: string, toKey: string, insertAfter: boolean) => void;
   customLists: CustomList[];
@@ -931,9 +930,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  // Coche/décoche toute une saison d'un coup (bouton "Tout marquer comme vu").
-  const setSeasonEpisodesWatched = useCallback(
-    (item: LibraryItemInput, season: number, episodeNumbers: number[], watched: boolean) => {
+  // Coche/décoche plusieurs épisodes d'un coup (saison entière, « Vu
+  // jusqu'ici »), sans changer le statut de la série.
+  const setEpisodesWatched = useCallback(
+    (item: LibraryItemInput, episodes: EpisodeRef[], watched: boolean) => {
       const key = makeKey(item.mediaType, item.id);
       setState((prev) => {
         const listName: "watched" | "watchlist" = prev.watched[key] ? "watched" : "watchlist";
@@ -943,8 +943,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           updatedAt: Date.now(),
         };
         const nextEpisodes = new Set(existing.watchedEpisodes || []);
-        for (const episode of episodeNumbers) {
-          const epKey = makeEpisodeKey(season, episode);
+        for (const { seasonNumber, episodeNumber } of episodes) {
+          const epKey = makeEpisodeKey(seasonNumber, episodeNumber);
           if (watched) {
             nextEpisodes.add(epKey);
           } else {
@@ -968,6 +968,41 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     },
     []
   );
+
+  // « Marquer la série comme vue » : comme toggleWatched (passage en "vu",
+  // retrait de la liste à voir), en cochant en plus tous les épisodes
+  // diffusés — la série disparaît ainsi aussi de « Séries en cours ».
+  const markSeriesWatched = useCallback((item: LibraryItemInput, episodes: EpisodeRef[]) => {
+    const key = makeKey(item.mediaType, item.id);
+    setState((prev) => {
+      const existing = prev.watched[key] || prev.watchlist[key];
+      const nextEpisodes = new Set(existing?.watchedEpisodes || []);
+      for (const { seasonNumber, episodeNumber } of episodes) {
+        nextEpisodes.add(makeEpisodeKey(seasonNumber, episodeNumber));
+      }
+      const newItem: LibraryItem = {
+        ...existing,
+        ...item,
+        watchedEpisodes: Array.from(nextEpisodes),
+        addedAt: existing?.addedAt ?? Date.now(),
+        updatedAt: Date.now(),
+      };
+      const next = { ...prev, watched: { ...prev.watched, [key]: newItem } };
+      if (next.watchlist[key]) {
+        next.watchlist = { ...next.watchlist };
+        delete next.watchlist[key];
+      }
+      pendingOpsRef.current.set(key, {
+        action: "upsert",
+        mediaType: item.mediaType,
+        id: item.id,
+        status: "watched",
+        item: newItem,
+      });
+      return next;
+    });
+    setWatchlistOrder((prev) => prev.filter((k) => k !== key));
+  }, []);
 
   // Glisser-déposer dans "Envie de voir" : déplace `fromKey` juste avant ou
   // après `toKey` dans l'ordre manuel affiché.
@@ -1156,7 +1191,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       getWatchedEpisodes,
       isEpisodeWatched,
       toggleEpisodeWatched: gated(toggleEpisodeWatched, undefined),
-      setSeasonEpisodesWatched: gated(setSeasonEpisodesWatched, undefined),
+      setEpisodesWatched: gated(setEpisodesWatched, undefined),
+      markSeriesWatched: gated(markSeriesWatched, undefined),
       reorderWatchlist: gated(reorderWatchlist, undefined),
       customLists: customListsArray,
       createList: gated(createList, null),
@@ -1183,7 +1219,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     getWatchedEpisodes,
     isEpisodeWatched,
     toggleEpisodeWatched,
-    setSeasonEpisodesWatched,
+    setEpisodesWatched,
+    markSeriesWatched,
     reorderWatchlist,
     customListsArray,
     createList,

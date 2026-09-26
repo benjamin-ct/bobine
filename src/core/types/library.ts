@@ -31,6 +31,12 @@ export interface LibraryItem extends LibraryItemInput {
   directors?: DirectorRef[];
 }
 
+/** Un épisode de série (clé "saison-épisode" dans `watchedEpisodes`). */
+export interface EpisodeRef {
+  seasonNumber: number;
+  episodeNumber: number;
+}
+
 export type LibraryItemMap = Record<string, LibraryItem>;
 
 export interface LibraryState {
