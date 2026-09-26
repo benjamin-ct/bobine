@@ -258,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(emailChangeErrorMessage(t, data.reason, res.status));
+        throw new Error(emailChangeErrorMessage(t, data, res.status));
       }
       return data;
     },
@@ -274,7 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(emailChangeErrorMessage(t, data.reason, res.status));
+        throw new Error(emailChangeErrorMessage(t, data, res.status));
       }
       setEmail(data.email);
     },
@@ -306,10 +306,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 // Les messages d'erreur du Worker sont en français : on les traduit côté
 // client à partir du `reason` (ou du statut HTTP) qu'il renvoie.
 function emailChangeErrorMessage(
-  t: (key: string) => string,
-  reason: unknown,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  data: { reason?: unknown; retryAfter?: unknown },
   status: number
 ): string {
+  const { reason, retryAfter } = data;
   if (
     reason === "invalid" ||
     reason === "same" ||
@@ -319,6 +320,14 @@ function emailChangeErrorMessage(
     return t(`accountCard.emailChange.errors.${reason}`);
   }
   if (status === 429) {
+    // Délai exact renvoyé par le Worker (fin de la fenêtre de limitation).
+    if (typeof retryAfter === "number" && retryAfter > 0) {
+      return retryAfter < 60
+        ? t("accountCard.emailChange.errors.rateLimitedSeconds", { count: retryAfter })
+        : t("accountCard.emailChange.errors.rateLimitedMinutes", {
+            count: Math.ceil(retryAfter / 60),
+          });
+    }
     return t("accountCard.emailChange.errors.rateLimited");
   }
   return t("accountCard.emailChange.errors.generic");

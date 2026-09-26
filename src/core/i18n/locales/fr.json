@@ -163,6 +163,10 @@
         "taken": "Cette adresse est déjà utilisée par un autre compte.",
         "invalid-code": "Ce code est invalide, expiré, ou déjà utilisé.",
         "rateLimited": "Trop de tentatives. Réessaie dans quelques minutes.",
+        "rateLimitedSeconds_one": "Trop de tentatives. Réessaie dans {{count}} seconde.",
+        "rateLimitedSeconds_other": "Trop de tentatives. Réessaie dans {{count}} secondes.",
+        "rateLimitedMinutes_one": "Trop de tentatives. Réessaie dans {{count}} minute.",
+        "rateLimitedMinutes_other": "Trop de tentatives. Réessaie dans {{count}} minutes.",
         "generic": "Impossible de modifier l'adresse pour le moment. Réessaie plus tard."
       }
     }

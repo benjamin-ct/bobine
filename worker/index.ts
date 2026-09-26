@@ -65,7 +65,7 @@ const EMAIL_LOCALES: EmailLocale[] = ["fr", "en"];
 function sanitizeEmailLocale(value: unknown): EmailLocale {
   return EMAIL_LOCALES.includes(value as EmailLocale) ? (value as EmailLocale) : "fr";
 }
-import { checkRateLimit, getClientIp } from "./rate-limit.ts";
+import { checkRateLimit, getClientIp, secondsUntilWindowEnd } from "./rate-limit.ts";
 import { checkRateLimitInMemory } from "./rate-limit-memory.ts";
 import { detectKnownCrawler } from "./bots.ts";
 import {
@@ -742,14 +742,25 @@ async function handleRequestEmailChange(request: Request, env: Env): Promise<Res
 
   // Par compte (évite de s'en servir pour sonder quelles adresses ont un
   // compte, voir plus bas) ET par adresse cible (évite de spammer la boîte
-  // d'un tiers), comme pour les liens de connexion.
-  const withinLimits = await Promise.all([
-    checkRateLimit(env.DB, `email-change:user:${user.id}:m`, { limit: 1, windowMs: 60_000 }),
-    checkRateLimit(env.DB, `email-change:user:${user.id}:h`, { limit: 5, windowMs: 60 * 60_000 }),
-    checkRateLimit(env.DB, `email-change:email:${newEmail}:h`, { limit: 5, windowMs: 60 * 60_000 }),
-  ]);
+  // d'un tiers). Pas de limite par minute sur le compte : corriger une faute
+  // de frappe ou essayer une autre adresse juste après doit rester possible
+  // (retour de review : « trop de tentatives » à chaque essai).
+  const limits = [
+    { key: `email-change:user:${user.id}:h`, limit: 10, windowMs: 60 * 60_000 },
+    { key: `email-change:email:${newEmail}:m`, limit: 1, windowMs: 60_000 },
+    { key: `email-change:email:${newEmail}:h`, limit: 5, windowMs: 60 * 60_000 },
+  ];
+  const withinLimits = await Promise.all(
+    limits.map(({ key, limit, windowMs }) => checkRateLimit(env.DB, key, { limit, windowMs }))
+  );
   if (withinLimits.some((ok) => !ok)) {
-    return RATE_LIMIT_RESPONSE();
+    // Le client affiche le délai exact plutôt que « quelques minutes ».
+    const retryAfter = Math.max(
+      ...limits.filter((_, i) => !withinLimits[i]).map((l) => secondsUntilWindowEnd(l.windowMs))
+    );
+    return json({ error: "Trop de tentatives.", reason: "rate-limited", retryAfter }, 429, {
+      "retry-after": String(retryAfter),
+    });
   }
 
   // Deux comptes ne peuvent pas partager une adresse (index unique sur
@@ -787,7 +798,10 @@ async function handleConfirmEmailChange(request: Request, env: Env): Promise<Res
       windowMs: 15 * 60_000,
     }))
   ) {
-    return RATE_LIMIT_RESPONSE();
+    const retryAfter = secondsUntilWindowEnd(15 * 60_000);
+    return json({ error: "Trop de tentatives.", reason: "rate-limited", retryAfter }, 429, {
+      "retry-after": String(retryAfter),
+    });
   }
   let body: Record<string, unknown>;
   try {
