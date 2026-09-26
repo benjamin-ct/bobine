@@ -88,7 +88,7 @@
     "checkInbox": "Vérifie ta boîte mail (et tes spams) — le lien est valable 15 minutes.",
     "devModeLinkLabel": "Mode développement (pas d'email configuré) : ",
     "codeLabel": "Ou entre le code reçu par email",
-    "codeHint": "Si Bobine est installée sur ton écran d'accueil, le lien risque de s'ouvrir dans le navigateur au lieu de l'app — le code, lui, fonctionne toujours ici.",
+    "codeHint": "Si Seancy est installée sur ton écran d'accueil, le lien risque de s'ouvrir dans le navigateur au lieu de l'app — le code, lui, fonctionne toujours ici.",
     "devModeCodeLabel": "Mode développement : code {{code}}",
     "verifying": "Vérification…",
     "submitCode": "Valider le code",
@@ -187,7 +187,7 @@
     "summary": "Genres à exclure",
     "meta_one": "{{count}} exclu",
     "meta_other": "{{count}} exclus",
-    "description": "Ces genres ne seront jamais suggérés, où que ce soit dans Bobine.",
+    "description": "Ces genres ne seront jamais suggérés, où que ce soit dans Seancy.",
     "loading": "Chargement des genres…",
     "error": "Impossible de charger la liste des genres.",
     "searchPlaceholder": "Rechercher un genre…"
@@ -291,7 +291,7 @@
   },
   "randomPage": {
     "eyebrow": "Vous ne savez pas quoi regarder ?",
-    "title": "La roue de la bobine",
+    "title": "La roue Seancy",
     "lead": "Un tirage au sort dans votre univers. Relancez jusqu'à trouver la perle du soir.",
     "releaseYear": "Année de sortie",
     "excludeWatched": "Exclure ce que j'ai déjà vu",
@@ -468,14 +468,14 @@
   "termsPage": {
     "title": "Conditions d'utilisation",
     "lastUpdated": "Dernière mise à jour : {{date}}",
-    "lastUpdatedValue": "1 septembre 2026",
+    "lastUpdatedValue": "26 septembre 2026",
     "publisher": {
       "title": "Éditeur",
-      "textBefore": "Bobine est un projet personnel, sans structure commerciale, développé et opéré depuis la France. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
+      "textBefore": "Seancy est un projet personnel, sans structure commerciale, développé et opéré depuis la France. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
     },
     "service": {
       "title": "Le service",
-      "textBefore": "Bobine permet de découvrir des films et séries, de suivre une bibliothèque personnelle (« vu », « envie de voir », listes personnalisées) et de recevoir des notifications sur les nouveautés. Les catalogues, fiches, affiches et disponibilités par plateforme de streaming proviennent de services tiers (voir notre ",
+      "textBefore": "Seancy permet de découvrir des films et séries, de suivre une bibliothèque personnelle (« vu », « envie de voir », listes personnalisées) et de recevoir des notifications sur les nouveautés. Les catalogues, fiches, affiches et disponibilités par plateforme de streaming proviennent de services tiers (voir notre ",
       "privacyLink": "politique de confidentialité",
       "textAfter": ") et sont fournis à titre indicatif : nous ne garantissons pas leur exactitude ni leur exhaustivité."
     },
@@ -489,7 +489,7 @@
     },
     "availability": {
       "title": "Disponibilité et évolution du service",
-      "text1": "Bobine est un projet personnel en développement actif : fonctionnalités, apparence et disponibilité peuvent évoluer, y compris être interrompues, sans préavis. Aucune garantie de disponibilité continue n'est fournie (pas d'engagement de niveau de service).",
+      "text1": "Seancy est un projet personnel en développement actif : fonctionnalités, apparence et disponibilité peuvent évoluer, y compris être interrompues, sans préavis. Aucune garantie de disponibilité continue n'est fournie (pas d'engagement de niveau de service).",
       "text2": "Le service est gratuit à ce jour et le restera pour ses fonctionnalités actuelles ; un moyen de financement libre (dons ponctuels) pourra être proposé à l'avenir, sans que cela ne rende l'accès au service payant."
     },
     "liability": {
@@ -511,7 +511,7 @@
     "lastUpdatedValue": "26 septembre 2026",
     "controller": {
       "title": "Responsable du traitement",
-      "textBefore": "Bobine est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
+      "textBefore": "Seancy est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
     },
     "dataCollected": {
       "title": "Données que nous collectons",
@@ -554,7 +554,7 @@
     },
     "sharing": {
       "title": "Avec qui ces données sont partagées",
-      "intro": "Bobine s'appuie sur les prestataires suivants pour fonctionner :",
+      "intro": "Seancy s'appuie sur les prestataires suivants pour fonctionner :",
       "tmdb": {
         "label": "TMDB",
         "text": " (The Movie Database) : fournit le catalogue, les fiches et les affiches — aucune donnée personnelle ne lui est transmise, seules des requêtes de contenu."
@@ -587,7 +587,7 @@
     },
     "cookies": {
       "title": "Cookies et outils de mesure",
-      "text": "Bobine utilise Cloudflare Web Analytics pour mesurer la fréquentation du site de façon anonyme, sans cookies ni identifiant permettant de suivre une personne d'une visite à l'autre. Sentry est utilisé pour le suivi et le diagnostic des erreurs techniques (voir ci-dessus). Aucun de ces deux outils ne sert à des fins publicitaires ou de profilage. Si un nouvel outil de mesure d'audience ou de tracking publicitaire venait à être ajouté, cette politique serait mise à jour au préalable pour le refléter."
+      "text": "Seancy utilise Cloudflare Web Analytics pour mesurer la fréquentation du site de façon anonyme, sans cookies ni identifiant permettant de suivre une personne d'une visite à l'autre. Sentry est utilisé pour le suivi et le diagnostic des erreurs techniques (voir ci-dessus). Aucun de ces deux outils ne sert à des fins publicitaires ou de profilage. Si un nouvel outil de mesure d'audience ou de tracking publicitaire venait à être ajouté, cette politique serait mise à jour au préalable pour le refléter."
     },
     "retention": {
       "title": "Durée de conservation",
@@ -699,7 +699,7 @@
     "disable": "Désactiver le partage",
     "copied": "✓ Lien copié",
     "copyError": "Impossible de copier le lien.",
-    "shareTitle": "Mon profil Bobine",
+    "shareTitle": "Mon profil Seancy",
     "error": "Impossible de modifier le partage du profil.",
     "usernameTip": "Astuce : choisis un pseudo dans la carte Compte pour obtenir un lien plus lisible (/u/ton_pseudo)."
   },

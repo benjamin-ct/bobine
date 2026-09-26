@@ -1,16 +1,22 @@
-// Génère des icônes PWA reprenant le logo "bobine" (anneau + 5 points, voir
-// ReelIcon dans src/shared/components/NavBar/NavBar.tsx) en PNG brut, sans
-// dépendance externe (juste zlib, déjà fourni par Node).
+// Génère les icônes PWA reprenant le logo Seancy (piste « Ticket », voir
+// src/shared/components/TicketLogo/TicketLogo.tsx) en PNG brut, sans
+// dépendance externe (juste zlib, déjà fourni par Node) : le ticket et sa
+// perforation sont calculés analytiquement, le « S » vectorisé est rempli
+// par balayage de lignes, le tout suréchantillonné 4×4 pour l'anticrénelage.
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 
 type Rgba = readonly [number, number, number, number];
 
-const BG_DARK: Rgba = [0x13, 0x0e, 0x0a, 0xff]; // #130e0a (--bg thème sombre, src/styles/variables.css)
-const ACCENT_DARK: Rgba = [0xaa, 0x38, 0x36, 0xff]; // #aa3836 (--accent thème sombre, idem logo NavBar)
-const BG_LIGHT: Rgba = [0xfb, 0xf6, 0xee, 0xff]; // #fbf6ee (--bg thème clair)
-const ACCENT_LIGHT: Rgba = [0xa5, 0x2e, 0x2e, 0xff]; // #a52e2e (--accent thème clair)
+const BG_DARK: Rgba = [0x09, 0x16, 0x2b, 0xff]; // #09162B (fond de la maquette « Nouvelle DA »)
+const BG_LIGHT: Rgba = [0xf5, 0xf8, 0xff, 0xff]; // #F5F8FF
+const CORAL: Rgba = [0xaa, 0x38, 0x36, 0xff]; // oklch(0.505 0.15 25) en sRGB
+const S_COLOR: Rgba = [0xf5, 0xf8, 0xff, 0xff]; // #F5F8FF
+
+// Même tracé que TICKET_S_PATH (TicketLogo.tsx), repère viewBox 0 0 120 80.
+const S_PATH =
+  "M43.2 56.5Q41.2 56.5 39.9 56.1Q38.6 55.7 37.8 55.1Q37 54.6 36.6 54.1Q36.2 53.7 36 53.7Q35.7 53.7 35.3 54.1Q34.9 54.5 34.5 54.9Q34 55.4 33.6 55.8Q33.2 56.2 32.9 56.2Q32.5 56.2 32.4 55.9Q32.2 55.7 32.2 55.3L33.6 46.6Q33.6 46.1 33.8 45.9Q34.1 45.6 34.4 45.6Q34.7 45.6 34.9 45.9Q35.1 46.1 35.2 46.5L35.7 49.4Q36.1 52.2 37.9 53.6Q39.6 55.1 42 55.1Q43.7 55.1 44.9 54.4Q46.2 53.8 47 52.7Q47.7 51.5 47.9 50.1Q48.3 48 47.3 46.2Q46.3 44.4 43.4 42.4Q40.1 40.1 38.7 37.9Q37.4 35.7 37.7 32.8Q37.9 30.3 39.4 28.1Q40.9 26 43.6 24.6Q46.3 23.2 50 23.2Q53.1 23.2 55.1 24.2Q57.2 25.2 58.2 26.8Q59.2 28.4 59.1 30.2Q59 31.5 58.4 32.2Q57.9 33 56.9 33Q56.1 33 55.6 32.5Q55.2 32 54.9 30.9L54.5 29Q54 26.6 52.7 25.5Q51.5 24.5 49.6 24.5Q47.7 24.5 46.2 25.3Q44.8 26.1 43.9 27.4Q43.1 28.7 42.9 30.3Q42.6 32.6 43.7 34.4Q44.8 36.3 47.6 38.4Q50.2 40.2 51.5 41.9Q52.9 43.5 53.3 45.1Q53.7 46.7 53.5 48.4Q53.3 50.9 51.8 52.7Q50.4 54.5 48.2 55.5Q45.9 56.5 43.2 56.5Z";
 
 const CRC_TABLE: readonly number[] = (() => {
   const table: number[] = [];
@@ -41,75 +47,176 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, typeBuf, data, crcBuf]);
 }
 
-// Reprend les proportions du ReelIcon de la NavBar (viewBox 0..24, centre
-// 12,12, anneau r=9 d'épaisseur 1.6, points r=1.5/2.2 décalés de 5.4) mises à
-// l'échelle sur le canevas de sortie.
+type Point = readonly [number, number];
+
+// Aplatit le tracé (M/L/Q/Z uniquement) en segments.
+function flattenPath(d: string): [Point, Point][] {
+  const tokens = d.match(/[MLQZ]|-?[\d.]+/g) ?? [];
+  const edges: [Point, Point][] = [];
+  let i = 0;
+  let cur: Point = [0, 0];
+  let start: Point = [0, 0];
+  const num = () => Number(tokens[i++]);
+  while (i < tokens.length) {
+    const cmd = tokens[i++];
+    if (cmd === "M") {
+      cur = start = [num(), num()];
+    } else if (cmd === "L") {
+      const next: Point = [num(), num()];
+      edges.push([cur, next]);
+      cur = next;
+    } else if (cmd === "Q") {
+      const c: Point = [num(), num()];
+      const end: Point = [num(), num()];
+      const steps = 8;
+      let prev = cur;
+      for (let k = 1; k <= steps; k++) {
+        const t = k / steps;
+        const u = 1 - t;
+        const pt: Point = [
+          u * u * cur[0] + 2 * u * t * c[0] + t * t * end[0],
+          u * u * cur[1] + 2 * u * t * c[1] + t * t * end[1],
+        ];
+        edges.push([prev, pt]);
+        prev = pt;
+      }
+      cur = end;
+    } else if (cmd === "Z") {
+      edges.push([cur, start]);
+      cur = start;
+    }
+  }
+  return edges;
+}
+
+const S_EDGES = flattenPath(S_PATH);
+
+// Vrai si (x, y), en unités du viewBox 120×80, est dans le ticket : rectangle
+// moins les deux encoches demi-rondes (rayon 10, centrées à mi-hauteur).
+function inTicket(x: number, y: number): boolean {
+  if (x < 0 || x > 120 || y < 0 || y > 80) {
+    return false;
+  }
+  const dy = y - 40;
+  if (x * x + dy * dy < 100) {
+    return false;
+  }
+  if ((x - 120) * (x - 120) + dy * dy < 100) {
+    return false;
+  }
+  return true;
+}
+
+// Ligne de perforation : x=86, trait 3, pointillés 5/5 de y=8 à y=72.
+function inPerforation(x: number, y: number): boolean {
+  return Math.abs(x - 86) <= 1.5 && y >= 8 && y <= 72 && (y - 8) % 10 < 5;
+}
+
+// Abscisses où la ligne horizontale y croise le « S » (règle pair-impair).
+function sCrossings(y: number): number[] {
+  const xs: number[] = [];
+  for (const [[x1, y1], [x2, y2]] of S_EDGES) {
+    if (y1 <= y !== y2 <= y) {
+      xs.push(x1 + ((y - y1) / (y2 - y1)) * (x2 - x1));
+    }
+  }
+  return xs.sort((a, b) => a - b);
+}
+
+function inS(x: number, crossings: number[]): boolean {
+  let inside = false;
+  for (const cx of crossings) {
+    if (cx > x) {
+      break;
+    }
+    inside = !inside;
+  }
+  return inside;
+}
+
+function blend(dst: number[], src: Rgba, alpha: number): void {
+  for (let c = 0; c < 3; c++) {
+    dst[c] = dst[c] * (1 - alpha) + src[c] * alpha;
+  }
+}
+
+const SUPERSAMPLE = 4;
+
 function drawIcon(
   size: number,
   {
     rounded = true,
-    markDiameterRatio = 0.62,
+    ticketWidthRatio = 0.72,
     bg = BG_DARK,
-    accent = ACCENT_DARK,
-  }: { rounded?: boolean; markDiameterRatio?: number; bg?: Rgba; accent?: Rgba } = {}
+  }: { rounded?: boolean; ticketWidthRatio?: number; bg?: Rgba | null } = {}
 ): Buffer {
-  const cx = size / 2;
-  const cy = size / 2;
   const cornerR = rounded ? size * 0.18 : 0;
-
-  const scale = (markDiameterRatio * size) / 18;
-  const ringOuterR = scale * 9.8;
-  const ringInnerR = scale * 8.2;
-  const centerDotR = scale * 2.2;
-  const satelliteDotR = scale * 1.5;
-  const satelliteOffset = scale * 5.4;
-  const dots: readonly [number, number][] = [
-    [cx, cy - satelliteOffset],
-    [cx, cy + satelliteOffset],
-    [cx - satelliteOffset, cy],
-    [cx + satelliteOffset, cy],
-  ];
+  // Pixels → unités du viewBox du ticket, centré sur le canevas.
+  const scale = 120 / (ticketWidthRatio * size);
+  const originX = (size - 120 / scale) / 2;
+  const originY = (size - 80 / scale) / 2;
+  const n = SUPERSAMPLE;
+  const samples = n * n;
 
   const raw = Buffer.alloc((size * 4 + 1) * size);
   let offset = 0;
   for (let y = 0; y < size; y++) {
     raw[offset++] = 0; // filter type 0 (none) for this scanline
+    const rows: { py: number; v: number; crossings: number[] }[] = [];
+    for (let sy = 0; sy < n; sy++) {
+      const py = y + (sy + 0.5) / n;
+      const v = (py - originY) * scale;
+      rows.push({ py, v, crossings: sCrossings(v) });
+    }
     for (let x = 0; x < size; x++) {
-      let color: Rgba = bg;
-      let alpha = 255;
-
-      if (rounded) {
-        // Coins arrondis : pixels hors du rectangle à coins arrondis = transparents.
-        const nearestX = Math.min(Math.max(x, cornerR), size - cornerR);
-        const nearestY = Math.min(Math.max(y, cornerR), size - cornerR);
-        const dx = x - nearestX;
-        const dy = y - nearestY;
-        if (dx * dx + dy * dy > cornerR * cornerR) {
-          alpha = 0;
+      let ticket = 0;
+      let perforation = 0;
+      let letter = 0;
+      let mask = 0;
+      for (const { py, v, crossings } of rows) {
+        for (let sx = 0; sx < n; sx++) {
+          const px = x + (sx + 0.5) / n;
+          const u = (px - originX) * scale;
+          if (inTicket(u, v)) {
+            ticket++;
+            if (inPerforation(u, v)) {
+              perforation++;
+            } else if (inS(u, crossings)) {
+              letter++;
+            }
+          }
+          if (rounded) {
+            // Coins arrondis : hors du rectangle à coins arrondis = transparent.
+            const nearestX = Math.min(Math.max(px, cornerR), size - cornerR);
+            const nearestY = Math.min(Math.max(py, cornerR), size - cornerR);
+            const dx = px - nearestX;
+            const dy = py - nearestY;
+            if (dx * dx + dy * dy <= cornerR * cornerR) {
+              mask++;
+            }
+          } else {
+            mask++;
+          }
         }
       }
-
-      const dx = x - cx;
-      const dy = y - cy;
-      const distSq = dx * dx + dy * dy;
-      if (distSq >= ringInnerR * ringInnerR && distSq <= ringOuterR * ringOuterR) {
-        color = accent;
+      let alpha = mask / samples;
+      const color = [CORAL[0], CORAL[1], CORAL[2]];
+      if (bg) {
+        color.splice(0, 3, bg[0], bg[1], bg[2]);
+        blend(color, CORAL, ticket / samples);
+        blend(color, bg, perforation / samples);
+      } else {
+        // Fond transparent (favicon) : la perforation est découpée dans le
+        // ticket, qui porte seul l'opacité.
+        alpha = (ticket - perforation) / samples;
       }
-      if (dx * dx + dy * dy <= centerDotR * centerDotR) {
-        color = accent;
+      if (ticket - perforation > 0) {
+        blend(color, S_COLOR, letter / (ticket - perforation));
       }
-      for (const [dcx, dcy] of dots) {
-        const ddx = x - dcx;
-        const ddy = y - dcy;
-        if (ddx * ddx + ddy * ddy <= satelliteDotR * satelliteDotR) {
-          color = accent;
-        }
-      }
-
-      raw[offset++] = color[0];
-      raw[offset++] = color[1];
-      raw[offset++] = color[2];
-      raw[offset++] = alpha;
+      raw[offset++] = Math.round(color[0]);
+      raw[offset++] = Math.round(color[1]);
+      raw[offset++] = Math.round(color[2]);
+      raw[offset++] = Math.round(255 * alpha);
     }
   }
   return raw;
@@ -118,7 +225,7 @@ function drawIcon(
 function writePng(
   filePath: string,
   size: number,
-  opts?: { rounded?: boolean; markDiameterRatio?: number; bg?: Rgba; accent?: Rgba }
+  opts?: { rounded?: boolean; ticketWidthRatio?: number; bg?: Rgba | null }
 ): void {
   const raw = drawIcon(size, opts);
   const idat = zlib.deflateSync(raw, { level: 9 });
@@ -152,10 +259,11 @@ writePng(path.join(publicDir, "icon-192.png"), 192, { rounded: true });
 writePng(path.join(publicDir, "icon-512.png"), 512, { rounded: true });
 // Icône maskable : le motif doit rester dans la zone de sécurité (cercle de
 // 80% de diamètre centré) du masque adaptatif Android, qui gère lui-même la
-// forme — donc pas de coins arrondis ici, et un motif plus petit.
+// forme — donc pas de coins arrondis ici, et un motif plus petit (demi-
+// diagonale du ticket ≈ 0,6 × sa largeur, à garder sous 0,4 × la taille).
 writePng(path.join(publicDir, "icon-maskable-512.png"), 512, {
   rounded: false,
-  markDiameterRatio: 0.42,
+  ticketWidthRatio: 0.58,
 });
 // iOS ("Ajouter à l'écran d'accueil") : Safari choisit entre ces deux icônes
 // au moment de l'ajout selon le thème système (voir les deux
@@ -163,10 +271,15 @@ writePng(path.join(publicDir, "icon-maskable-512.png"), 512, {
 writePng(path.join(publicDir, "apple-touch-icon.png"), 180, {
   rounded: true,
   bg: BG_LIGHT,
-  accent: ACCENT_LIGHT,
 });
 writePng(path.join(publicDir, "apple-touch-icon-dark.png"), 180, {
   rounded: true,
   bg: BG_DARK,
-  accent: ACCENT_DARK,
+});
+// Favicon PNG (repli des navigateurs sans favicon SVG) : ticket seul, sur
+// fond transparent.
+writePng(path.join(publicDir, "favicon-32.png"), 32, {
+  rounded: false,
+  ticketWidthRatio: 1,
+  bg: null,
 });

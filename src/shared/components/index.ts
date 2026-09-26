@@ -19,6 +19,7 @@ export { default as Chip } from "./Chip/Chip.tsx";
 export { default as Dropdown } from "./Dropdown/Dropdown.tsx";
 export { default as NavBar } from "./NavBar/NavBar.tsx";
 export { default as Footer } from "./Footer/Footer.tsx";
+export { default as TicketLogo } from "./TicketLogo/TicketLogo.tsx";
 export { default as LegalLinks } from "./LegalLinks/LegalLinks.tsx";
 export { default as FilterBar } from "./FilterBar/FilterBar.tsx";
 export {
