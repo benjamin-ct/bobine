@@ -10,3 +10,23 @@
   margin-bottom: 18px;
   flex-wrap: wrap;
 }
+
+.period + .period {
+  margin-top: 36px;
+}
+
+.periodTitle {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+}
+
+/* Compteur « · N titres » en texte tertiaire. */
+.count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--subtle);
+}

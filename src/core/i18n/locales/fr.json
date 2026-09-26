@@ -236,7 +236,8 @@
     "notifyTitle": "Être prévenu·e de la sortie (ajoute à Envie de voir)",
     "notified": "Prévenu·e",
     "notifyMe": "Me prévenir",
-    "emptyState": "Aucune sortie prévue sur cette période pour ces filtres."
+    "emptyState": "Aucune sortie prévue sur cette période pour ces filtres.",
+    "theaters": "Salles"
   },
   "newReleasesPage": {
     "windows": {
@@ -247,7 +248,14 @@
     "eyebrow": "Mis à jour aujourd'hui",
     "title": "Nouveautés",
     "lead": "Les derniers ajouts en streaming et les sorties fraîches en salles — filtrés pour vos plateformes.",
-    "emptyState": "Aucune sortie sur cette période pour ces filtres."
+    "emptyState": "Aucune sortie sur cette période pour ces filtres.",
+    "periods": {
+      "thisWeek": "Cette semaine",
+      "earlierThisMonth": "Plus tôt ce mois-ci",
+      "earlier": "Plus tôt"
+    },
+    "titlesCount_one": "· {{count}} titre",
+    "titlesCount_other": "· {{count}} titres"
   },
   "discoverPage": {
     "title": "Découvrir",
@@ -311,7 +319,16 @@
     "watchedOn": "Déjà vu",
     "watchedOff": "Marquer comme vu",
     "similar": "Similaire",
-    "whereToWatch": "Où regarder"
+    "whereToWatch": "Où regarder",
+    "source": "Tirer dans",
+    "sourceWatchlist": "Mes envies de voir",
+    "sourceCatalog": "Tout le catalogue",
+    "filters": "Filtres",
+    "emptyWatchlistHint": "Aucun titre de vos envies de voir ne correspond à ces filtres.",
+    "drawFromCatalog": "Tirer dans tout le catalogue",
+    "historyTitle": "Vos derniers tirages",
+    "historyCount_one": "· {{count}} titre",
+    "historyCount_other": "· {{count}} titres"
   },
   "searchPage": {
     "resultsFor": "Résultats pour « {{query}} »",

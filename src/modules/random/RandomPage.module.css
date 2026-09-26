@@ -4,6 +4,93 @@
   padding: 0 var(--gutter) 64px;
 }
 
+/* Source du tirage, toujours visible au-dessus du bouton. */
+.sourceRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 18px;
+}
+
+.sourceLabel {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sourceChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sourceChips button {
+  min-height: 44px;
+}
+
+/* Filtres repliés par défaut, sous le bouton de tirage. */
+.filtersBar {
+  margin-top: 16px;
+}
+
+.filtersToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.filtersToggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.filtersToggle:hover {
+  border-color: var(--border-2);
+  background: var(--surface-2);
+}
+
+.filtersToggleOpen {
+  background: var(--selected-bg);
+  border-color: var(--selected-border);
+}
+
+.count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.filters {
+  margin-top: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.filters[hidden] {
+  display: none;
+}
+
 .yearFilter {
   max-width: 220px;
   margin-bottom: 18px;
@@ -41,24 +128,33 @@
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  margin-bottom: 20px;
 }
 
+/* Gros bouton de tirage : l'action principale de la page. */
 .rollBtn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 13px 22px;
+  justify-content: center;
+  gap: 12px;
+  min-height: 60px;
+  min-width: min(100%, 320px);
+  padding: 16px 32px;
   border-radius: 999px;
   background: var(--accent);
   color: var(--on-accent);
-  font-weight: 600;
-  box-shadow: 0 6px 18px -8px var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: 0 10px 28px -10px var(--accent);
 }
 
-.rollBtn svg {
-  width: 16px;
-  height: 16px;
+.rollBtn:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+@media (max-width: 640px) {
+  .rollBtn {
+    width: 100%;
+  }
 }
 
 .rollBtn:disabled {
@@ -70,16 +166,28 @@
   margin-top: 14px;
 }
 
+.linkBtn {
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .rangeError {
   color: var(--accent-ink);
   font-size: 13px;
+  margin-top: 10px;
 }
 
+/* Carte tirée, avec le spot doré de la « salle de cinéma » centré sur
+   elle (plus de dégradé coloré selon le genre). */
 .spotlight {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow);
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 32px;
@@ -93,7 +201,8 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: color-mix(in oklch, var(--bg) 82%, transparent);
+  background: radial-gradient(ellipse 60% 70% at 50% 50%, var(--spotlight), transparent 72%);
+  pointer-events: none;
 }
 
 @media (max-width: 720px) {
@@ -203,4 +312,69 @@
 .whereTitle {
   margin-top: 22px;
   font-size: 17px;
+}
+
+/* Historique des tirages (onglet courant). */
+.history {
+  margin-top: 36px;
+}
+
+.historyTitle {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+}
+
+.historyMeta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--subtle);
+}
+
+.historyList {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  list-style: none;
+  margin: 0;
+}
+
+.historyItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 96px;
+}
+
+.historyPoster {
+  display: block;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.historyPoster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.historyName {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.filters > :last-child {
+  margin-bottom: 0;
 }

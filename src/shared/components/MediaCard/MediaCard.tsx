@@ -6,13 +6,12 @@ import {
   logoUrl,
   getWatchProviders,
   getDetails,
-  getMovieReleaseDates,
-  getUpcomingMovieRelease,
-  getUpcomingSeriesRelease,
   getSeriesEpisodeBadge,
   formatFullDate,
 } from "../../../core/api/tmdb.ts";
 import type { SeriesEpisodeBadge } from "../../../core/api/tmdb.ts";
+import { useNearViewport } from "../../hooks/useNearViewport.ts";
+import { useUpcomingRelease } from "../../hooks/useUpcomingRelease.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
@@ -21,7 +20,6 @@ import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type {
   MediaItem,
   RegionWatchProviders,
-  ReleaseDatesResponse,
   WatchProviderEntry,
 } from "../../../core/types/tmdb.ts";
 import Icon, { type IconName } from "../Icon/Icon.tsx";
@@ -118,27 +116,10 @@ function MediaCard({
   // partent tous en parallèle dès le montage, y compris pour les cartes
   // hors écran — pic qui épuise le quota de la clé TMDB partagée.
   const posterRef = useRef<HTMLDivElement>(null);
-  const [isNearViewport, setIsNearViewport] = useState(false);
-  useEffect(() => {
-    if (!showProviderBadge && !showFutureReleaseBadge && !showEpisodeBadge) {
-      return;
-    }
-    const el = posterRef.current;
-    if (!el) {
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setIsNearViewport(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [showProviderBadge, showFutureReleaseBadge, showEpisodeBadge]);
+  const isNearViewport = useNearViewport(
+    posterRef,
+    showProviderBadge || showFutureReleaseBadge || showEpisodeBadge
+  );
 
   const [provider, setProvider] = useState<WatchProviderEntry | null>(null);
   // Distingue "pas encore vérifié" de "vérifié, rien trouvé".
@@ -189,39 +170,13 @@ function MediaCard({
     showProviderBadge && providerStatus === "done" && !provider && !hasTheatricalBadge;
 
   // Prochainement : prochaine sortie/diffusion connue (label + date).
-  const [upcomingRelease, setUpcomingRelease] = useState<{ label: string; date: string } | null>(
-    null
+  const { release: upcomingRelease, status: upcomingStatus } = useUpcomingRelease(
+    showFutureReleaseBadge && isNearViewport,
+    mediaType,
+    item.id,
+    region,
+    date
   );
-  const [upcomingStatus, setUpcomingStatus] = useState<"idle" | "loading" | "done">("idle");
-  useEffect(() => {
-    if (!showFutureReleaseBadge || !isNearViewport) {
-      return;
-    }
-    let cancelled = false;
-    setUpcomingStatus("loading");
-    const fetchUpcoming =
-      mediaType === "movie"
-        ? getMovieReleaseDates(item.id).then((data) =>
-            getUpcomingMovieRelease(data as ReleaseDatesResponse, region, date)
-          )
-        : getDetails("tv", item.id).then((data) => getUpcomingSeriesRelease(data));
-    fetchUpcoming
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-        setUpcomingRelease(result);
-        setUpcomingStatus("done");
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setUpcomingStatus("done");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [showFutureReleaseBadge, isNearViewport, mediaType, item.id, region, date]);
 
   // Vient de sortir / Prochainement (séries) : indépendant de
   // showFutureReleaseBadge (films uniquement), basé sur

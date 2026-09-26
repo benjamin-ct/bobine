@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
@@ -31,6 +31,40 @@ const GRID_SKELETON_COUNT = 12;
 
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function daysAgoIso(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return toIsoDate(d);
+}
+
+// Périodes d'affichage (nouvelle DA) : « Cette semaine », « Plus tôt ce
+// mois-ci », puis « Plus tôt » pour la fenêtre de 3 mois. Fenêtres
+// glissantes, comme les puces de période.
+const PERIODS = [
+  { key: "thisWeek", days: 7 },
+  { key: "earlierThisMonth", days: 30 },
+  { key: "earlier", days: Infinity },
+] as const;
+
+type PeriodKey = (typeof PERIODS)[number]["key"];
+
+// Regroupe les résultats par période sans changer leur ordre (popularité)
+// à l'intérieur d'une période. Un titre sans date, ou daté avant la fenêtre
+// (date primaire TMDB plus ancienne que la sortie dans la région), tombe
+// dans la dernière période de la fenêtre.
+function groupByPeriod(items: MediaItem[], windowDays: number) {
+  const periods = PERIODS.filter((_, i) => i === 0 || PERIODS[i - 1].days < windowDays);
+  const bounds = periods.map((p) => (p.days === Infinity ? "" : daysAgoIso(p.days)));
+  const groups = new Map<PeriodKey, MediaItem[]>(periods.map((p) => [p.key, []]));
+  for (const item of items) {
+    const date = item.release_date || item.first_air_date || "";
+    const index = bounds.findIndex((bound) => date >= bound);
+    const period = periods[index === -1 || !date ? periods.length - 1 : index];
+    groups.get(period.key)!.push(item);
+  }
+  return [...groups].filter(([, list]) => list.length > 0);
 }
 
 // Fenêtre [aujourd'hui - windowDays ; aujourd'hui] : uniquement des titres
@@ -226,12 +260,15 @@ export default function NewReleasesPage() {
 
   useScrollRestoration(status === "success", results.length);
 
+  const groups = useMemo(() => groupByPeriod(results, windowDays), [results, windowDays]);
+
   return (
     <div className={styles.page}>
       <PageHeader
         eyebrow={t("newReleasesPage.eyebrow")}
         title={t("newReleasesPage.title")}
         lead={t("newReleasesPage.lead")}
+        spot
       />
 
       <FilterBar
@@ -281,11 +318,21 @@ export default function NewReleasesPage() {
 
       {status === "success" && results.length > 0 && (
         <>
-          <div className={gridStyles.grid}>
-            {results.map((item) => (
-              <MediaCard key={item.id} item={item} showProviderBadge />
-            ))}
-          </div>
+          {groups.map(([key, items]) => (
+            <section key={key} className={styles.period} aria-labelledby={`period-${key}`}>
+              <h2 id={`period-${key}`} className={styles.periodTitle}>
+                {t(`newReleasesPage.periods.${key}`)}{" "}
+                <span className={styles.count}>
+                  {t("newReleasesPage.titlesCount", { count: items.length })}
+                </span>
+              </h2>
+              <div className={gridStyles.grid}>
+                {items.map((item) => (
+                  <MediaCard key={item.id} item={item} showProviderBadge />
+                ))}
+              </div>
+            </section>
+          ))}
           {page < totalPages && (
             <div ref={sentinelRef} className={gridStyles.loadMore}>
               {loadingMore && <span>{t("common.loading")}</span>}

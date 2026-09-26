@@ -25,3 +25,21 @@
   max-width: 62ch;
   margin-top: 12px;
 }
+
+/* Petit spot doré centré sur le titre (à gauche), sous le texte. */
+.spot {
+  position: relative;
+  isolation: isolate;
+}
+
+.spot::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -60px;
+  top: 0;
+  width: 420px;
+  height: 100%;
+  background: radial-gradient(ellipse 210px 110px at 50% 55%, var(--spotlight), transparent 70%);
+  pointer-events: none;
+}

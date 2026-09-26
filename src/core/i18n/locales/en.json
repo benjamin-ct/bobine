@@ -236,7 +236,8 @@
     "notifyTitle": "Get notified on release (adds to Want to watch)",
     "notified": "Notified",
     "notifyMe": "Notify me",
-    "emptyState": "No releases scheduled for this period with these filters."
+    "emptyState": "No releases scheduled for this period with these filters.",
+    "theaters": "Theaters"
   },
   "newReleasesPage": {
     "windows": {
@@ -247,7 +248,14 @@
     "eyebrow": "Updated today",
     "title": "New releases",
     "lead": "The latest streaming additions and fresh theater releases — filtered for your platforms.",
-    "emptyState": "No releases in this period for these filters."
+    "emptyState": "No releases in this period for these filters.",
+    "periods": {
+      "thisWeek": "This week",
+      "earlierThisMonth": "Earlier this month",
+      "earlier": "Earlier"
+    },
+    "titlesCount_one": "· {{count}} title",
+    "titlesCount_other": "· {{count}} titles"
   },
   "discoverPage": {
     "title": "Discover",
@@ -311,7 +319,16 @@
     "watchedOn": "Already watched",
     "watchedOff": "Mark as watched",
     "similar": "Similar",
-    "whereToWatch": "Where to watch"
+    "whereToWatch": "Where to watch",
+    "source": "Draw from",
+    "sourceWatchlist": "My watchlist",
+    "sourceCatalog": "Whole catalog",
+    "filters": "Filters",
+    "emptyWatchlistHint": "No title in your watchlist matches these filters.",
+    "drawFromCatalog": "Draw from the whole catalog",
+    "historyTitle": "Your recent draws",
+    "historyCount_one": "· {{count}} title",
+    "historyCount_other": "· {{count}} titles"
   },
   "searchPage": {
     "resultsFor": "Results for “{{query}}”",

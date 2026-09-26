@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
+import { useNearViewport } from "../../shared/hooks/useNearViewport.ts";
+import { useUpcomingRelease } from "../../shared/hooks/useUpcomingRelease.ts";
 import {
   discover,
   getGenres,
@@ -24,6 +26,7 @@ import {
   ErrorMessage,
   EmptyState,
   PageHeader,
+  Icon,
 } from "../../shared/components/index.ts";
 import ComingSoonSkeleton from "./components/ComingSoonSkeleton.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
@@ -98,17 +101,40 @@ async function fetchPages(
   return pages.flatMap((p) => p.results || []) as MediaItem[];
 }
 
+// « Cinéma » (libellé de releaseBadge.ts) devient « Salles » ; les autres
+// libellés (plateforme/diffuseur, « Sortie numérique »...) restent tels quels.
+const THEATRICAL_LABEL = "Cinéma";
+
 function TimelineItem({ item }: { item: MediaItem }) {
   const { t } = useTranslation();
   const { isInWatchlist, toggleWatchlist } = useLibrary();
   const { locale } = useLocale();
+  const { region, getTheatricalStatus } = useRegion();
+  const rowRef = useRef<HTMLDivElement>(null);
+  const isNearViewport = useNearViewport(rowRef, true);
+  const { release, status: releaseStatus } = useUpcomingRelease(
+    isNearViewport,
+    item.mediaType,
+    item.id,
+    region,
+    item.release_date || item.first_air_date
+  );
+  // Film sans date exploitable dans release_dates : repli sur l'index des
+  // sorties en salle (même logique que MediaCard).
+  const isTheatrical =
+    release?.label === THEATRICAL_LABEL ||
+    (!release &&
+      releaseStatus === "done" &&
+      item.mediaType === "movie" &&
+      getTheatricalStatus(item.id) === "upcoming");
+  const channel = isTheatrical ? t("comingSoonPage.theaters") : release?.label;
   const title = item.title || item.name || t("comingSoonPage.unknownTitle");
   const date = item.release_date || item.first_air_date;
   const notifying = isInWatchlist(item.mediaType, item.id);
   const accentKey = posterAccentFromGenres(item.genre_ids, `${item.mediaType}:${item.id}`);
 
   return (
-    <div className={styles.item}>
+    <div className={styles.item} ref={rowRef}>
       <div className={styles.date}>
         <b>{date ? new Date(date).getDate() : "—"}</b>
         <span>
@@ -128,6 +154,12 @@ function TimelineItem({ item }: { item: MediaItem }) {
       </Link>
       <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.body}>
         <div className={styles.title}>{title}</div>
+        {channel && (
+          <span className={`${styles.channel} ${isTheatrical ? styles.channelTheaters : ""}`}>
+            {isTheatrical && <Icon name="film" size={12} />}
+            {channel}
+          </span>
+        )}
         <div className={styles.sub}>
           {formatFullDate(date, locale) || (date ? date.slice(0, 4) : t("comingSoonPage.dateTbd"))}
         </div>
@@ -329,10 +361,21 @@ export default function ComingSoonPage() {
 
   useScrollRestoration(status === "success", visibleResults.length);
 
-  // Regroupement par mois pour l'affichage calendrier (repris de la maquette
-  // HTML) — calculé au rendu, pas de tri supplémentaire (visibleResults est
-  // déjà trié par date, voir fetchBatch).
-  let currentMonth = "";
+  // Regroupement par mois pour l'affichage calendrier, un bloc par mois pour
+  // que son en-tête reste collé en haut tant qu'on défile dans ce mois — pas
+  // de tri supplémentaire (visibleResults est déjà trié par date, voir
+  // fetchBatch).
+  const months: { label: string; items: MediaItem[] }[] = [];
+  for (const item of visibleResults) {
+    const date = item.release_date || item.first_air_date;
+    const label = date ? monthLabel(date, locale) : t("comingSoonPage.dateTbd");
+    const last = months[months.length - 1];
+    if (last?.label === label) {
+      last.items.push(item);
+    } else {
+      months.push({ label, items: [item] });
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -384,18 +427,14 @@ export default function ComingSoonPage() {
       {status === "success" && visibleResults.length > 0 && (
         <>
           <div className={styles.timeline}>
-            {visibleResults.map((item) => {
-              const date = item.release_date || item.first_air_date;
-              const label = date ? monthLabel(date, locale) : t("comingSoonPage.dateTbd");
-              const showMonthHeading = label !== currentMonth;
-              currentMonth = label;
-              return (
-                <div key={`${item.mediaType}:${item.id}`}>
-                  {showMonthHeading && <div className={styles.monthHeading}>{label}</div>}
-                  <TimelineItem item={item} />
-                </div>
-              );
-            })}
+            {months.map((month) => (
+              <section key={month.label} className={styles.month}>
+                <h2 className={styles.monthHeading}>{month.label}</h2>
+                {month.items.map((item) => (
+                  <TimelineItem key={`${item.mediaType}:${item.id}`} item={item} />
+                ))}
+              </section>
+            ))}
           </div>
           {hasMore && (
             <div ref={sentinelRef} className={gridStyles.loadMore}>
