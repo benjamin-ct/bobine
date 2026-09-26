@@ -62,10 +62,16 @@ interface AdvancedFiltersProps {
   setFilters: (updater: (prev: AdvancedFiltersState) => AdvancedFiltersState) => void;
 }
 
+export type AdvancedFilterField = "year" | "rating" | "votes" | "runtime" | "country";
+
+const ALL_FIELDS: AdvancedFilterField[] = ["year", "rating", "votes", "runtime", "country"];
+
 interface AdvancedFilterFieldsProps extends AdvancedFiltersProps {
   /** "panel" : libellés à hauteur fixe et contrôles de 44 px, pour la grille
    * alignée du panneau de filtres de Découvrir (FilterPanel). */
   variant?: "compact" | "panel";
+  /** Champs affichés (tous par défaut). Aléatoire n'a que l'année. */
+  fields?: AdvancedFilterField[];
 }
 
 /** Champs des filtres avancés (année, note, votes, durée, pays), sans
@@ -75,12 +81,18 @@ export function AdvancedFilterFields({
   filters,
   setFilters,
   variant = "compact",
+  fields = ALL_FIELDS,
 }: AdvancedFilterFieldsProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
   const [countries, setCountries] = useState<Country[]>([]);
 
+  const withCountry = fields.includes("country");
+
   useEffect(() => {
+    if (!withCountry) {
+      return;
+    }
     let cancelled = false;
     getCountries()
       .then((list) => !cancelled && setCountries(list))
@@ -88,7 +100,7 @@ export function AdvancedFilterFields({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [withCountry]);
 
   // Nom localisé (locale active) plutôt que le english_name figé renvoyé par
   // TMDB, avec repli sur ce dernier si Intl.DisplayNames est indisponible.
@@ -120,114 +132,124 @@ export function AdvancedFilterFields({
 
   return (
     <>
-      <div className={fieldClass}>
-        <label>{t("advancedFilters.releaseYear")}</label>
-        <div className={styles.range}>
-          <input
-            type="number"
-            inputMode="numeric"
-            placeholder={t("advancedFilters.min")}
-            min={YEAR_MIN}
-            max={YEAR_MAX}
-            value={filters.yearMin}
-            onChange={(e) => update("yearMin", e.target.value)}
-            onBlur={clampOnBlur("yearMin", YEAR_MIN, YEAR_MAX)}
-          />
-          <span>–</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            placeholder={t("advancedFilters.max")}
-            min={YEAR_MIN}
-            max={YEAR_MAX}
-            value={filters.yearMax}
-            onChange={(e) => update("yearMax", e.target.value)}
-            onBlur={clampOnBlur("yearMax", YEAR_MIN, YEAR_MAX)}
-          />
+      {fields.includes("year") && (
+        <div className={fieldClass}>
+          <label>{t("advancedFilters.releaseYear")}</label>
+          <div className={styles.range}>
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder={t("advancedFilters.min")}
+              min={YEAR_MIN}
+              max={YEAR_MAX}
+              value={filters.yearMin}
+              onChange={(e) => update("yearMin", e.target.value)}
+              onBlur={clampOnBlur("yearMin", YEAR_MIN, YEAR_MAX)}
+            />
+            <span>–</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder={t("advancedFilters.max")}
+              min={YEAR_MIN}
+              max={YEAR_MAX}
+              value={filters.yearMax}
+              onChange={(e) => update("yearMax", e.target.value)}
+              onBlur={clampOnBlur("yearMax", YEAR_MIN, YEAR_MAX)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className={fieldClass}>
-        <label>{t("advancedFilters.ratingOutOf10")}</label>
-        <div className={styles.range}>
-          <input
-            type="number"
-            inputMode="decimal"
-            placeholder={t("advancedFilters.min")}
-            min={VOTE_MIN}
-            max={VOTE_MAX}
-            step={0.5}
-            value={filters.voteAverageMin}
-            onChange={(e) => update("voteAverageMin", e.target.value)}
-            onBlur={clampOnBlur("voteAverageMin", VOTE_MIN, VOTE_MAX)}
-          />
-          <span>–</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            placeholder={t("advancedFilters.max")}
-            min={VOTE_MIN}
-            max={VOTE_MAX}
-            step={0.5}
-            value={filters.voteAverageMax}
-            onChange={(e) => update("voteAverageMax", e.target.value)}
-            onBlur={clampOnBlur("voteAverageMax", VOTE_MIN, VOTE_MAX)}
-          />
+      {fields.includes("rating") && (
+        <div className={fieldClass}>
+          <label>{t("advancedFilters.ratingOutOf10")}</label>
+          <div className={styles.range}>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder={t("advancedFilters.min")}
+              min={VOTE_MIN}
+              max={VOTE_MAX}
+              step={0.5}
+              value={filters.voteAverageMin}
+              onChange={(e) => update("voteAverageMin", e.target.value)}
+              onBlur={clampOnBlur("voteAverageMin", VOTE_MIN, VOTE_MAX)}
+            />
+            <span>–</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder={t("advancedFilters.max")}
+              min={VOTE_MIN}
+              max={VOTE_MAX}
+              step={0.5}
+              value={filters.voteAverageMax}
+              onChange={(e) => update("voteAverageMax", e.target.value)}
+              onBlur={clampOnBlur("voteAverageMax", VOTE_MIN, VOTE_MAX)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className={fieldClass}>
-        <label>{t("advancedFilters.minVoteCount")}</label>
-        <input
-          type="number"
-          inputMode="numeric"
-          placeholder={t("advancedFilters.minVoteCountPlaceholder")}
-          min={0}
-          value={filters.voteCountMin}
-          onChange={(e) => update("voteCountMin", e.target.value)}
-          onBlur={clampOnBlur("voteCountMin", 0)}
-        />
-      </div>
-
-      <div className={fieldClass}>
-        <label>{t("advancedFilters.runtimeMinutes")}</label>
-        <div className={styles.range}>
+      {fields.includes("votes") && (
+        <div className={fieldClass}>
+          <label>{t("advancedFilters.minVoteCount")}</label>
           <input
             type="number"
             inputMode="numeric"
-            placeholder={t("advancedFilters.min")}
+            placeholder={t("advancedFilters.minVoteCountPlaceholder")}
             min={0}
-            value={filters.runtimeMin}
-            onChange={(e) => update("runtimeMin", e.target.value)}
-            onBlur={clampOnBlur("runtimeMin", 0)}
-          />
-          <span>–</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            placeholder={t("advancedFilters.max")}
-            min={0}
-            value={filters.runtimeMax}
-            onChange={(e) => update("runtimeMax", e.target.value)}
-            onBlur={clampOnBlur("runtimeMax", 0)}
+            value={filters.voteCountMin}
+            onChange={(e) => update("voteCountMin", e.target.value)}
+            onBlur={clampOnBlur("voteCountMin", 0)}
           />
         </div>
-      </div>
+      )}
 
-      <div className={fieldClass}>
-        <label>{t("advancedFilters.originCountry")}</label>
-        <select
-          value={filters.originCountry}
-          onChange={(e) => update("originCountry", e.target.value)}
-        >
-          <option value="">{t("advancedFilters.allCountries")}</option>
-          {localizedCountries.map((c) => (
-            <option key={c.iso_3166_1} value={c.iso_3166_1}>
-              {c.displayName}
-            </option>
-          ))}
-        </select>
-      </div>
+      {fields.includes("runtime") && (
+        <div className={fieldClass}>
+          <label>{t("advancedFilters.runtimeMinutes")}</label>
+          <div className={styles.range}>
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder={t("advancedFilters.min")}
+              min={0}
+              value={filters.runtimeMin}
+              onChange={(e) => update("runtimeMin", e.target.value)}
+              onBlur={clampOnBlur("runtimeMin", 0)}
+            />
+            <span>–</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder={t("advancedFilters.max")}
+              min={0}
+              value={filters.runtimeMax}
+              onChange={(e) => update("runtimeMax", e.target.value)}
+              onBlur={clampOnBlur("runtimeMax", 0)}
+            />
+          </div>
+        </div>
+      )}
+
+      {fields.includes("country") && (
+        <div className={fieldClass}>
+          <label>{t("advancedFilters.originCountry")}</label>
+          <select
+            value={filters.originCountry}
+            onChange={(e) => update("originCountry", e.target.value)}
+          >
+            <option value="">{t("advancedFilters.allCountries")}</option>
+            {localizedCountries.map((c) => (
+              <option key={c.iso_3166_1} value={c.iso_3166_1}>
+                {c.displayName}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </>
   );
 }

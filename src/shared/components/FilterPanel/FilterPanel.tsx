@@ -6,6 +6,7 @@ import {
   AdvancedFilterFields,
   EMPTY_ADVANCED_FILTERS,
   getAdvancedFiltersRangeError,
+  type AdvancedFilterField,
   type AdvancedFiltersState,
 } from "../AdvancedFilters/AdvancedFilters.tsx";
 import { regionName } from "../../../core/context/RegionContext.tsx";
@@ -54,6 +55,12 @@ interface FilterPanelProps {
   setSortDirection?: (v: SortDirection) => void;
   advanced?: AdvancedFiltersState;
   setAdvanced?: (updater: (prev: AdvancedFiltersState) => AdvancedFiltersState) => void;
+  /** Champs avancés affichés (tous par défaut). Aléatoire : l'année seule. */
+  advancedFields?: AdvancedFilterField[];
+  /** Interrupteurs propres à la page (Aléatoire : « Sans les déjà vus »),
+   * rendus comme « Mes plateformes » et listés en puce quand ils sont
+   * activés. */
+  switches?: PanelSwitch[];
   /** Pays de production / langue originale (Nouveautés, Prochainement). */
   countryLanguage?: CountryLanguageState;
   /** Puces de période (« 7 jours », « 30 jours », « 3 mois »), à côté de la
@@ -73,6 +80,14 @@ interface PeriodOptions {
   options: { value: number; label: string }[];
   value: number;
   onChange: (v: number) => void;
+}
+
+interface PanelSwitch {
+  key: string;
+  label: string;
+  text: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
 }
 
 interface ActiveFilter {
@@ -115,6 +130,8 @@ export default function FilterPanel({
   setSortDirection,
   advanced,
   setAdvanced,
+  advancedFields,
+  switches = [],
   countryLanguage,
   periods,
 }: FilterPanelProps) {
@@ -207,6 +224,7 @@ export default function FilterPanel({
     setAdvanced?.(() => EMPTY_ADVANCED_FILTERS);
     countryLanguage?.setCountry("");
     countryLanguage?.setLanguage("");
+    switches.forEach((s) => s.onChange(false));
   }
 
   const chip = (label: string, value: string) => t("filterPanel.chip", { label, value });
@@ -327,6 +345,9 @@ export default function FilterPanel({
           },
         ]
       : []),
+    ...switches
+      .filter((s) => s.checked)
+      .map((s) => ({ key: s.key, label: s.text, remove: () => s.onChange(false) })),
   ];
 
   const genreLabel =
@@ -616,8 +637,35 @@ export default function FilterPanel({
               )}
 
               {advanced && setAdvanced && (
-                <AdvancedFilterFields filters={advanced} setFilters={setAdvanced} variant="panel" />
+                <AdvancedFilterFields
+                  filters={advanced}
+                  setFilters={setAdvanced}
+                  variant="panel"
+                  fields={advancedFields}
+                />
               )}
+
+              {switches.map((s) => (
+                <div key={s.key} className={styles.field}>
+                  <span className={styles.label} id={`${panelId}-${s.key}`}>
+                    {s.label}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={s.checked}
+                    aria-labelledby={`${panelId}-${s.key}`}
+                    className={styles.switchRow}
+                    onClick={() => s.onChange(!s.checked)}
+                  >
+                    <span className={styles.switchText}>{s.text}</span>
+                    <span
+                      className={`${styles.switch} ${s.checked ? styles.switchOn : ""}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+              ))}
 
               {rangeError && (
                 <p className={styles.rangeError} role="alert">
