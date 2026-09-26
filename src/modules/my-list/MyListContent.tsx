@@ -8,6 +8,7 @@ import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
 import StatsPanel from "./components/StatsPanel.tsx";
 import WatchlistPanel from "./components/WatchlistPanel.tsx";
 import CustomListPanel from "./components/CustomListPanel.tsx";
+import TopPicksPanel from "./components/TopPicksPanel.tsx";
 import styles from "./MyListPage.module.css";
 
 type Tab = "seen" | "want" | "progress" | string; // string = id de liste personnalisée
@@ -67,6 +68,9 @@ export default function MyListContent() {
           </Link>
         </div>
       )}
+
+      {/* Top 5 du profil partagé : enregistré sur le compte, donc connecté uniquement. */}
+      {authStatus === "authenticated" && <TopPicksPanel />}
 
       <div className={styles.tabs} role="tablist">
         <button

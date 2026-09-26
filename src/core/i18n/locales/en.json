@@ -476,7 +476,7 @@
       },
       "library": {
         "label": "Personal library",
-        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", your custom lists, and their content. If you turn on profile sharing (optional, off by default), these items along with your ratings and display name become visible read-only to anyone who has the share link — never your email address. You can turn sharing off at any time, which permanently invalidates the link."
+        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", your custom lists, and their content. If you turn on profile sharing (optional, off by default), these items along with your ratings, display name and Gravatar profile picture (if you have one) become visible read-only to anyone who has the share link — never your email address. You can turn sharing off at any time, which permanently invalidates the link."
       },
       "preferences": {
         "label": "Preferences",
@@ -557,6 +557,7 @@
     "watchedBadge": "✔ Watched",
     "movie": "Movie",
     "series": "Series",
+    "rank": "No. {{rank}}",
     "upcomingFallback": "Theaters",
     "episodeJustReleased": "🆕 Just released",
     "episodeUpcoming": "📅 Coming soon",
@@ -636,7 +637,7 @@
   },
   "profileShare": {
     "title": "Share my profile",
-    "hintOff": "Your profile is private. Turn on sharing to get a link you can send: anyone with it will be able to see, without changing anything, what you've watched, your watchlist, your lists and your ratings (never your email address).",
+    "hintOff": "Your profile is private. Turn on sharing to get a link you can send: anyone with it will be able to see, without changing anything, what you've watched, your watchlist, your lists, your ratings and your profile picture (never your email address).",
     "hintOn": "Your profile is visible read-only to anyone with this link. Turning sharing off permanently invalidates the link.",
     "linkLabel": "Profile share link",
     "share": "Share link",
@@ -648,11 +649,50 @@
     "shareTitle": "My Bobine profile",
     "error": "Couldn't update profile sharing."
   },
+  "topPicks": {
+    "title": "My Top 5",
+    "hintEmpty": "Pick up to 5 titles you've watched, like favorite films on Letterboxd. They appear at the top of your shared profile. Until you pick any, your profile shows your highest-rated watched titles.",
+    "hint": "This title appears at the top of your shared profile.",
+    "hintDrag": "These titles appear in this order at the top of your shared profile. Drag a poster to change the order.",
+    "choose": "Pick my Top 5",
+    "edit": "Edit",
+    "addAt": "Add a title at #{{rank}}",
+    "pickerTitle": "Add to my Top 5",
+    "full": "Your Top 5 is full: tap a picked title to remove it.",
+    "searchLabel": "Search your watched titles",
+    "searchPlaceholder": "Search your watched titles…",
+    "noResult": "No watched title matches.",
+    "noWatched": "Mark titles as watched to build your Top 5, shown at the top of your shared profile.",
+    "remove": "Remove from Top 5",
+    "removeTitle": "Remove {{title}} from Top 5",
+    "loadError": "Couldn't load your Top 5.",
+    "saveError": "Couldn't save your Top 5.",
+    "freeSlots_one": "1 spot left · tap a title to add it",
+    "freeSlots_other": "{{count}} spots left · tap a title to add it",
+    "close": "Close",
+    "typeFilter": "Title type",
+    "type": {
+      "all": "All",
+      "movie": "Movies",
+      "tv": "Shows"
+    },
+    "seenSection": "Your watched titles · highest rated first",
+    "inTop": "In your top"
+  },
   "publicProfile": {
     "eyebrow": "Shared profile",
     "anonymousName": "A film lover",
     "lead": "{{watched}} watched · {{watchlist}} on the watchlist · {{lists}} list(s)",
     "recent": "Recently watched",
+    "top": "Top {{count}}",
+    "sortLabel": "Sort",
+    "sortBy": "Sort by",
+    "sortRecent": "Date watched",
+    "sortRating": "Rating",
+    "sortTitle": "A → Z",
+    "sortYear": "Release year",
+    "genreLabel": "Genre",
+    "genreAll": "All genres",
     "rating": "★ {{rating}}/10",
     "emptySeen": "Nothing watched yet.",
     "emptyWant": "Nothing on the watchlist.",
