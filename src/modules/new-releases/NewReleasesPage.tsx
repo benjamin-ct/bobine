@@ -9,9 +9,7 @@ import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx"
 import {
   MediaCard,
   MediaCardSkeleton,
-  FilterBar,
-  CountryLanguageFilter,
-  Chip,
+  FilterPanel,
   ErrorMessage,
   EmptyState,
   PageHeader,
@@ -81,7 +79,7 @@ export default function NewReleasesPage() {
   const { t, i18n } = useTranslation();
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
-  const [providerId, setProviderId] = useState("");
+  const [providerIds, setProviderIds] = useState<string[]>([]);
   const [useMyPlatforms, setUseMyPlatforms] = useState(false);
   const [country, setCountry] = useState("");
   const [language, setLanguage] = useState("");
@@ -100,8 +98,8 @@ export default function NewReleasesPage() {
   const { filterExcluded } = useExcludedTitles();
   const activeProviderIds = useMyPlatforms
     ? favoriteProviderIds
-    : providerId
-      ? [providerId]
+    : providerIds.length
+      ? providerIds
       : undefined;
 
   // Ignore le premier montage : sinon `setGenreIds([])` y crée un nouveau
@@ -120,7 +118,7 @@ export default function NewReleasesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [genreIds, providerId, useMyPlatforms, country, language, windowDays]);
+  }, [genreIds, providerIds, useMyPlatforms, country, language, windowDays]);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,7 +176,7 @@ export default function NewReleasesPage() {
     mediaType,
     genreIds,
     excludedGenreIds,
-    providerId,
+    providerIds,
     useMyPlatforms,
     favoriteProviderIds,
     region,
@@ -227,7 +225,7 @@ export default function NewReleasesPage() {
     mediaType,
     genreIds,
     excludedGenreIds,
-    providerId,
+    providerIds,
     useMyPlatforms,
     favoriteProviderIds,
     region,
@@ -271,38 +269,29 @@ export default function NewReleasesPage() {
         spot
       />
 
-      <FilterBar
+      <FilterPanel
         mediaType={mediaType}
         setMediaType={setMediaType}
+        genres={genres}
         genreIds={genreIds}
         setGenreIds={setGenreIds}
-        genres={genres}
-        providerId={providerId}
-        setProviderId={setProviderId}
         providers={providers}
+        providerIds={providerIds}
+        setProviderIds={setProviderIds}
         favoriteProviderIds={favoriteProviderIds}
-        useFavoriteProviders={useMyPlatforms}
-        setUseFavoriteProviders={setUseMyPlatforms}
+        useMyPlatforms={useMyPlatforms}
+        setUseMyPlatforms={setUseMyPlatforms}
+        countryLanguage={{ country, setCountry, language, setLanguage }}
+        periods={{
+          label: t("newReleasesPage.windowsLabel"),
+          options: WINDOWS.map((w) => ({
+            value: w.value,
+            label: t(`newReleasesPage.windows.${w.key}`),
+          })),
+          value: windowDays,
+          onChange: setWindowDays,
+        }}
       />
-
-      <CountryLanguageFilter
-        country={country}
-        setCountry={setCountry}
-        language={language}
-        setLanguage={setLanguage}
-      />
-
-      <div className={styles.windowRow}>
-        {WINDOWS.map((w) => (
-          <Chip
-            key={w.value}
-            active={windowDays === w.value}
-            onClick={() => setWindowDays(w.value)}
-          >
-            {t(`newReleasesPage.windows.${w.key}`)}
-          </Chip>
-        ))}
-      </div>
 
       {status === "loading" && (
         <div className={gridStyles.grid}>

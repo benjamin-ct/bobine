@@ -224,9 +224,9 @@
   },
   "comingSoonPage": {
     "windows": {
-      "next7Days": "Next 7 days",
-      "next30Days": "Next 30 days",
-      "next3Months": "Next 3 months"
+      "next7Days": "7 days",
+      "next30Days": "30 days",
+      "next3Months": "3 months"
     },
     "eyebrow": "Calendar · France",
     "title": "Coming soon",
@@ -237,13 +237,14 @@
     "notified": "Notified",
     "notifyMe": "Notify me",
     "emptyState": "No releases scheduled for this period with these filters.",
-    "theaters": "Theaters"
+    "theaters": "Theaters",
+    "windowsLabel": "Period"
   },
   "newReleasesPage": {
     "windows": {
-      "last7Days": "Last 7 days",
-      "last30Days": "Last 30 days",
-      "last3Months": "Last 3 months"
+      "last7Days": "7 days",
+      "last30Days": "30 days",
+      "last3Months": "3 months"
     },
     "eyebrow": "Updated today",
     "title": "New releases",
@@ -255,7 +256,8 @@
       "earlier": "Earlier"
     },
     "titlesCount_one": "· {{count}} title",
-    "titlesCount_other": "· {{count}} titles"
+    "titlesCount_other": "· {{count}} titles",
+    "windowsLabel": "Period"
   },
   "discoverPage": {
     "title": "Discover",
@@ -304,31 +306,34 @@
   },
   "randomPage": {
     "eyebrow": "Don't know what to watch?",
-    "title": "The Seancy wheel",
-    "lead": "A random pick from your universe. Reroll until you find tonight's gem.",
+    "title": "The showtime wheel",
+    "lead": "Reroll until you find tonight's gem.",
     "releaseYear": "Release year",
     "excludeWatched": "Exclude what I've already watched",
-    "rolling": "Rolling…",
-    "reroll": "Reroll",
     "draw": "Draw a title",
     "emptyHint": "No title matches these filters.",
     "badge": "Tonight's pick",
     "viewSheet": "View details",
     "wantToWatchOn": "Want to watch",
     "wantToWatchOff": "Want to watch",
-    "watchedOn": "Already watched",
-    "watchedOff": "Mark as watched",
+    "watchedOn": "Watched",
+    "watchedOff": "Watched",
     "similar": "Similar",
-    "whereToWatch": "Where to watch",
     "source": "Draw from",
     "sourceWatchlist": "My watchlist",
     "sourceCatalog": "Whole catalog",
-    "filters": "Filters",
     "emptyWatchlistHint": "No title in your watchlist matches these filters.",
     "drawFromCatalog": "Draw from the whole catalog",
-    "historyTitle": "Your recent draws",
-    "historyCount_one": "· {{count}} title",
-    "historyCount_other": "· {{count}} titles"
+    "historyTitle": "Recent draws",
+    "sourceWatchlistHint": "Drawing from the titles in your watchlist",
+    "sourceCatalogHint": "Drawing from the whole catalog, with your filters",
+    "refine": "Refine",
+    "withoutWatched": "excluding watched",
+    "typeMovie": "Movie",
+    "typeSeries": "Series",
+    "availableOn": "Available on",
+    "withSubscription": "included with subscription",
+    "rentOrBuy": "to rent or buy"
   },
   "searchPage": {
     "resultsFor": "Results for “{{query}}”",
@@ -851,6 +856,7 @@
     "runtime": "Runtime",
     "minutes": "min",
     "country": "Country",
+    "language": "Language",
     "chip": "{{label}}: {{value}}"
   }
 }

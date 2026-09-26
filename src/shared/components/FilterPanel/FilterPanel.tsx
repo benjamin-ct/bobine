@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Dropdown from "../Dropdown/Dropdown.tsx";
 import Icon from "../Icon/Icon.tsx";
@@ -9,6 +9,7 @@ import {
   type AdvancedFiltersState,
 } from "../AdvancedFilters/AdvancedFilters.tsx";
 import { regionName } from "../../../core/context/RegionContext.tsx";
+import { getCountries, getLanguages } from "../../../core/api/tmdb.ts";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import {
   SORT_FIELDS,
@@ -16,7 +17,7 @@ import {
   type SortDirection,
   type WatchProviderOption,
 } from "../../../core/api/tmdb.ts";
-import type { Genre, MediaType } from "../../../core/types/tmdb.ts";
+import type { Country, Genre, Language, MediaType } from "../../../core/types/tmdb.ts";
 import dropdownStyles from "../Dropdown/Dropdown.module.css";
 import styles from "./FilterPanel.module.css";
 
@@ -45,12 +46,33 @@ interface FilterPanelProps {
   favoriteProviderIds: number[];
   useMyPlatforms: boolean;
   setUseMyPlatforms: (v: boolean) => void;
-  sortField: DiscoverSortField;
-  setSortField: (v: DiscoverSortField) => void;
-  sortDirection: SortDirection;
-  setSortDirection: (v: SortDirection) => void;
-  advanced: AdvancedFiltersState;
-  setAdvanced: (updater: (prev: AdvancedFiltersState) => AdvancedFiltersState) => void;
+  // Tri et filtres avancés : Découvrir uniquement. Nouveautés et
+  // Prochainement ont leur propre ordre et une fenêtre de dates.
+  sortField?: DiscoverSortField;
+  setSortField?: (v: DiscoverSortField) => void;
+  sortDirection?: SortDirection;
+  setSortDirection?: (v: SortDirection) => void;
+  advanced?: AdvancedFiltersState;
+  setAdvanced?: (updater: (prev: AdvancedFiltersState) => AdvancedFiltersState) => void;
+  /** Pays de production / langue originale (Nouveautés, Prochainement). */
+  countryLanguage?: CountryLanguageState;
+  /** Puces de période (« 7 jours », « 30 jours », « 3 mois »), à côté de la
+   * bascule Films/Séries ; « Filtres » passe alors sur la ligne suivante. */
+  periods?: PeriodOptions;
+}
+
+interface CountryLanguageState {
+  country: string;
+  setCountry: (v: string) => void;
+  language: string;
+  setLanguage: (v: string) => void;
+}
+
+interface PeriodOptions {
+  label: string;
+  options: { value: number; label: string }[];
+  value: number;
+  onChange: (v: number) => void;
 }
 
 interface ActiveFilter {
@@ -73,7 +95,8 @@ function rangeText(min: string, max: string, unit = ""): string {
  * et « Réinitialiser ». Le panneau est une grille de 4 colonnes alignées sur
  * desktop et une feuille modale sur mobile — un seul rendu, la différence
  * est entièrement en CSS. Remplace FilterBar + AdvancedFilters sur cette
- * page ; les autres pages les gardent jusqu'à leur propre ticket DA. */
+ * page, ainsi que sur Nouveautés et Prochainement (sans tri ni filtres
+ * avancés, avec pays/langue et puces de période). */
 export default function FilterPanel({
   mediaType,
   setMediaType,
@@ -92,13 +115,45 @@ export default function FilterPanel({
   setSortDirection,
   advanced,
   setAdvanced,
+  countryLanguage,
+  periods,
 }: FilterPanelProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const hasFavorites = favoriteProviderIds.length > 0;
-  const rangeError = getAdvancedFiltersRangeError(advanced);
+  const rangeError = advanced ? getAdvancedFiltersRangeError(advanced) : null;
+  const hasSort = !!(sortField && sortDirection && setSortField && setSortDirection);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const withCountryLanguage = !!countryLanguage;
+
+  useEffect(() => {
+    if (!withCountryLanguage) {
+      return;
+    }
+    let cancelled = false;
+    getCountries()
+      .then((list) => !cancelled && setCountries(list))
+      .catch(() => !cancelled && setCountries([]));
+    getLanguages()
+      .then((list) => !cancelled && setLanguages(list))
+      .catch(() => !cancelled && setLanguages([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [withCountryLanguage]);
+
+  // Nom localisé (locale active) plutôt que le english_name figé renvoyé
+  // par TMDB, avec repli sur ce dernier si Intl.DisplayNames est indisponible.
+  const localizedCountries = useMemo(
+    () =>
+      countries
+        .map((c) => ({ ...c, displayName: regionName(c.iso_3166_1, locale) || c.english_name }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName, locale)),
+    [countries, locale]
+  );
 
   // Feuille modale mobile : Échap la ferme et le fond ne défile plus
   // derrière. Sur desktop, le panneau reste dans le flux (pas de verrou).
@@ -136,7 +191,7 @@ export default function FilterPanel({
   }
 
   function clearAdvanced(...keys: (keyof AdvancedFiltersState)[]) {
-    setAdvanced((prev) => {
+    setAdvanced?.((prev) => {
       const next = { ...prev };
       keys.forEach((k) => (next[k] = ""));
       return next;
@@ -147,9 +202,11 @@ export default function FilterPanel({
     setGenreIds([]);
     setProviderIds([]);
     setUseMyPlatforms(false);
-    setSortField(DEFAULT_SORT_FIELD);
-    setSortDirection(DEFAULT_SORT_DIRECTION);
-    setAdvanced(() => EMPTY_ADVANCED_FILTERS);
+    setSortField?.(DEFAULT_SORT_FIELD);
+    setSortDirection?.(DEFAULT_SORT_DIRECTION);
+    setAdvanced?.(() => EMPTY_ADVANCED_FILTERS);
+    countryLanguage?.setCountry("");
+    countryLanguage?.setLanguage("");
   }
 
   const chip = (label: string, value: string) => t("filterPanel.chip", { label, value });
@@ -175,7 +232,7 @@ export default function FilterPanel({
           label: providers.find((p) => String(p.id) === id)?.name || id,
           remove: () => setProviderIds(providerIds.filter((p) => p !== id)),
         }))),
-    ...(sortField !== DEFAULT_SORT_FIELD || sortDirection !== DEFAULT_SORT_DIRECTION
+    ...(hasSort && (sortField !== DEFAULT_SORT_FIELD || sortDirection !== DEFAULT_SORT_DIRECTION)
       ? [
           {
             key: "sort",
@@ -184,13 +241,13 @@ export default function FilterPanel({
               `${sortLabel} ${sortDirection === "desc" ? "↓" : "↑"}`
             ),
             remove: () => {
-              setSortField(DEFAULT_SORT_FIELD);
-              setSortDirection(DEFAULT_SORT_DIRECTION);
+              setSortField?.(DEFAULT_SORT_FIELD);
+              setSortDirection?.(DEFAULT_SORT_DIRECTION);
             },
           },
         ]
       : []),
-    ...(advanced.yearMin || advanced.yearMax
+    ...(advanced && (advanced.yearMin || advanced.yearMax)
       ? [
           {
             key: "year",
@@ -199,7 +256,7 @@ export default function FilterPanel({
           },
         ]
       : []),
-    ...(advanced.voteAverageMin || advanced.voteAverageMax
+    ...(advanced && (advanced.voteAverageMin || advanced.voteAverageMax)
       ? [
           {
             key: "rating",
@@ -211,7 +268,7 @@ export default function FilterPanel({
           },
         ]
       : []),
-    ...(advanced.voteCountMin
+    ...(advanced && advanced.voteCountMin
       ? [
           {
             key: "votes",
@@ -220,7 +277,7 @@ export default function FilterPanel({
           },
         ]
       : []),
-    ...(advanced.runtimeMin || advanced.runtimeMax
+    ...(advanced && (advanced.runtimeMin || advanced.runtimeMax)
       ? [
           {
             key: "runtime",
@@ -232,7 +289,7 @@ export default function FilterPanel({
           },
         ]
       : []),
-    ...(advanced.originCountry
+    ...(advanced && advanced.originCountry
       ? [
           {
             key: "country",
@@ -241,6 +298,32 @@ export default function FilterPanel({
               regionName(advanced.originCountry, locale) || advanced.originCountry
             ),
             remove: () => clearAdvanced("originCountry"),
+          },
+        ]
+      : []),
+    ...(countryLanguage?.country
+      ? [
+          {
+            key: "origin-country",
+            label: chip(
+              t("filterPanel.country"),
+              regionName(countryLanguage.country, locale) || countryLanguage.country
+            ),
+            remove: () => countryLanguage.setCountry(""),
+          },
+        ]
+      : []),
+    ...(countryLanguage?.language
+      ? [
+          {
+            key: "language",
+            label: chip(
+              t("filterPanel.language"),
+              languages.find((l) => l.iso_639_1 === countryLanguage.language)?.name ||
+                languages.find((l) => l.iso_639_1 === countryLanguage.language)?.english_name ||
+                countryLanguage.language
+            ),
+            remove: () => countryLanguage.setLanguage(""),
           },
         ]
       : []),
@@ -261,77 +344,102 @@ export default function FilterPanel({
           t("filterPanel.platformsCount", { count: 1 })
         : t("filterPanel.platformsCount", { count: providerIds.length });
 
+  const segmented = (
+    <div className={styles.segmented} role="group" aria-label={t("filterBar.typeAriaLabel")}>
+      <button
+        type="button"
+        className={mediaType === "movie" ? styles.segActive : ""}
+        aria-pressed={mediaType === "movie"}
+        onClick={() => setMediaType("movie")}
+      >
+        {t("filterBar.movies")}
+      </button>
+      <button
+        type="button"
+        className={mediaType === "tv" ? styles.segActive : ""}
+        aria-pressed={mediaType === "tv"}
+        onClick={() => setMediaType("tv")}
+      >
+        {t("filterBar.series")}
+      </button>
+    </div>
+  );
+
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
-        <div className={styles.segmented} role="group" aria-label={t("filterBar.typeAriaLabel")}>
-          <button
-            type="button"
-            className={mediaType === "movie" ? styles.segActive : ""}
-            aria-pressed={mediaType === "movie"}
-            onClick={() => setMediaType("movie")}
-          >
-            {t("filterBar.movies")}
-          </button>
-          <button
-            type="button"
-            className={mediaType === "tv" ? styles.segActive : ""}
-            aria-pressed={mediaType === "tv"}
-            onClick={() => setMediaType("tv")}
-          >
-            {t("filterBar.series")}
-          </button>
-        </div>
-
-        <button
-          type="button"
-          className={`${styles.filtersBtn} ${open ? styles.filtersBtnOpen : ""}`}
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-controls={panelId}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path d="M4 6h16M7 12h10M10 18h4" />
-          </svg>
-          {t("filterPanel.filters")}
-          {active.length > 0 && (
-            <span
-              className={styles.count}
-              aria-label={t("filterPanel.activeCount", { count: active.length })}
-            >
-              {active.length}
-            </span>
-          )}
-        </button>
-
-        {active.length > 0 && (
-          <ul className={styles.chips} aria-label={t("filterPanel.activeFilters")}>
-            {active.map((f) => (
-              <li key={f.key}>
+        {periods ? (
+          <div className={styles.toolbarRow}>
+            {segmented}
+            <div className={styles.periods} role="group" aria-label={periods.label}>
+              {periods.options.map((o) => (
                 <button
+                  key={o.value}
                   type="button"
-                  className={styles.chip}
-                  onClick={f.remove}
-                  aria-label={t("filterPanel.removeFilter", { label: f.label })}
+                  className={`${styles.period} ${periods.value === o.value ? styles.periodActive : ""}`}
+                  aria-pressed={periods.value === o.value}
+                  onClick={() => periods.onChange(o.value)}
                 >
-                  {f.label}
-                  <Icon name="close" size={14} />
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          segmented
+        )}
+
+        <div className={periods ? styles.toolbarRow : styles.contents}>
+          <button
+            type="button"
+            className={`${styles.filtersBtn} ${open ? styles.filtersBtnOpen : ""}`}
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-controls={panelId}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+            >
+              <path d="M4 6h16M7 12h10M10 18h4" />
+            </svg>
+            {t("filterPanel.filters")}
+            {active.length > 0 && (
+              <span
+                className={styles.count}
+                aria-label={t("filterPanel.activeCount", { count: active.length })}
+              >
+                {active.length}
+              </span>
+            )}
+          </button>
+
+          {active.length > 0 && (
+            <ul className={styles.chips} aria-label={t("filterPanel.activeFilters")}>
+              {active.map((f) => (
+                <li key={f.key}>
+                  <button
+                    type="button"
+                    className={styles.chip}
+                    onClick={f.remove}
+                    aria-label={t("filterPanel.removeFilter", { label: f.label })}
+                  >
+                    {f.label}
+                    <Icon name="close" size={14} />
+                  </button>
+                </li>
+              ))}
+              <li>
+                <button type="button" className={styles.reset} onClick={resetAll}>
+                  {t("filterPanel.reset")}
                 </button>
               </li>
-            ))}
-            <li>
-              <button type="button" className={styles.reset} onClick={resetAll}>
-                {t("filterPanel.reset")}
-              </button>
-            </li>
-          </ul>
-        )}
+            </ul>
+          )}
+        </div>
       </div>
 
       {open && (
@@ -433,44 +541,83 @@ export default function FilterPanel({
                 </button>
               </div>
 
-              <div className={styles.field}>
-                <span className={styles.label}>{t("filterPanel.sort")}</span>
-                <Dropdown
-                  className={styles.control}
-                  label={
-                    <span className={styles.controlLabel}>
-                      {sortLabel} {sortDirection === "desc" ? "↓" : "↑"}
-                    </span>
-                  }
-                  align="right"
-                >
-                  <div className={dropdownStyles.head}>{t("filterBar.sortBy")}</div>
-                  {SORT_FIELDS.map((s) => (
-                    <button
-                      key={s.value}
-                      type="button"
-                      className={`${dropdownStyles.option} ${sortField === s.value ? dropdownStyles.optionOn : ""}`}
-                      role="menuitemradio"
-                      aria-checked={sortField === s.value}
-                      onClick={() => setSortField(s.value)}
-                    >
-                      <span className={dropdownStyles.radio} /> {t(s.labelKey)}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    className={dropdownStyles.option}
-                    onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
+              {hasSort && (
+                <div className={styles.field}>
+                  <span className={styles.label}>{t("filterPanel.sort")}</span>
+                  <Dropdown
+                    className={styles.control}
+                    label={
+                      <span className={styles.controlLabel}>
+                        {sortLabel} {sortDirection === "desc" ? "↓" : "↑"}
+                      </span>
+                    }
+                    align="right"
                   >
-                    {sortDirection === "desc"
-                      ? t("filterBar.sortDescending")
-                      : t("filterBar.sortAscending")}{" "}
-                    {t("filterBar.sortToggleHint")}
-                  </button>
-                </Dropdown>
-              </div>
+                    <div className={dropdownStyles.head}>{t("filterBar.sortBy")}</div>
+                    {SORT_FIELDS.map((s) => (
+                      <button
+                        key={s.value}
+                        type="button"
+                        className={`${dropdownStyles.option} ${sortField === s.value ? dropdownStyles.optionOn : ""}`}
+                        role="menuitemradio"
+                        aria-checked={sortField === s.value}
+                        onClick={() => setSortField(s.value)}
+                      >
+                        <span className={dropdownStyles.radio} /> {t(s.labelKey)}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className={dropdownStyles.option}
+                      onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
+                    >
+                      {sortDirection === "desc"
+                        ? t("filterBar.sortDescending")
+                        : t("filterBar.sortAscending")}{" "}
+                      {t("filterBar.sortToggleHint")}
+                    </button>
+                  </Dropdown>
+                </div>
+              )}
 
-              <AdvancedFilterFields filters={advanced} setFilters={setAdvanced} variant="panel" />
+              {countryLanguage && (
+                <>
+                  <label className={styles.field}>
+                    <span className={styles.label}>{t("filterPanel.country")}</span>
+                    <select
+                      className={styles.select}
+                      value={countryLanguage.country}
+                      onChange={(e) => countryLanguage.setCountry(e.target.value)}
+                    >
+                      <option value="">{t("countryLanguageFilter.allCountries")}</option>
+                      {localizedCountries.map((c) => (
+                        <option key={c.iso_3166_1} value={c.iso_3166_1}>
+                          {c.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.label}>{t("filterPanel.language")}</span>
+                    <select
+                      className={styles.select}
+                      value={countryLanguage.language}
+                      onChange={(e) => countryLanguage.setLanguage(e.target.value)}
+                    >
+                      <option value="">{t("countryLanguageFilter.allLanguages")}</option>
+                      {languages.map((l) => (
+                        <option key={l.iso_639_1} value={l.iso_639_1}>
+                          {l.name || l.english_name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
+
+              {advanced && setAdvanced && (
+                <AdvancedFilterFields filters={advanced} setFilters={setAdvanced} variant="panel" />
+              )}
 
               {rangeError && (
                 <p className={styles.rangeError} role="alert">

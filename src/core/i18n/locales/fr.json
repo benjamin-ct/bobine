@@ -224,9 +224,9 @@
   },
   "comingSoonPage": {
     "windows": {
-      "next7Days": "7 prochains jours",
-      "next30Days": "30 prochains jours",
-      "next3Months": "3 prochains mois"
+      "next7Days": "7 jours",
+      "next30Days": "30 jours",
+      "next3Months": "3 mois"
     },
     "eyebrow": "Calendrier · France",
     "title": "Prochainement",
@@ -237,13 +237,14 @@
     "notified": "Prévenu·e",
     "notifyMe": "Me prévenir",
     "emptyState": "Aucune sortie prévue sur cette période pour ces filtres.",
-    "theaters": "Salles"
+    "theaters": "Salles",
+    "windowsLabel": "Période"
   },
   "newReleasesPage": {
     "windows": {
-      "last7Days": "7 derniers jours",
-      "last30Days": "30 derniers jours",
-      "last3Months": "3 derniers mois"
+      "last7Days": "7 jours",
+      "last30Days": "30 jours",
+      "last3Months": "3 mois"
     },
     "eyebrow": "Mis à jour aujourd'hui",
     "title": "Nouveautés",
@@ -255,7 +256,8 @@
       "earlier": "Plus tôt"
     },
     "titlesCount_one": "· {{count}} titre",
-    "titlesCount_other": "· {{count}} titres"
+    "titlesCount_other": "· {{count}} titres",
+    "windowsLabel": "Période"
   },
   "discoverPage": {
     "title": "Découvrir",
@@ -304,12 +306,10 @@
   },
   "randomPage": {
     "eyebrow": "Vous ne savez pas quoi regarder ?",
-    "title": "La roue Seancy",
-    "lead": "Un tirage au sort dans votre univers. Relancez jusqu'à trouver la perle du soir.",
+    "title": "La roue de la séance",
+    "lead": "Relancez jusqu'à trouver la perle du soir.",
     "releaseYear": "Année de sortie",
     "excludeWatched": "Exclure ce que j'ai déjà vu",
-    "rolling": "Tirage en cours…",
-    "reroll": "Relancer le tirage",
     "draw": "Tirer un titre",
     "emptyHint": "Aucun titre ne correspond à ces filtres.",
     "badge": "Tirage du soir",
@@ -317,18 +317,23 @@
     "wantToWatchOn": "Envie de voir",
     "wantToWatchOff": "Envie de voir",
     "watchedOn": "Déjà vu",
-    "watchedOff": "Marquer comme vu",
-    "similar": "Similaire",
-    "whereToWatch": "Où regarder",
+    "watchedOff": "Déjà vu",
+    "similar": "Similaires",
     "source": "Tirer dans",
     "sourceWatchlist": "Mes envies de voir",
     "sourceCatalog": "Tout le catalogue",
-    "filters": "Filtres",
     "emptyWatchlistHint": "Aucun titre de vos envies de voir ne correspond à ces filtres.",
     "drawFromCatalog": "Tirer dans tout le catalogue",
-    "historyTitle": "Vos derniers tirages",
-    "historyCount_one": "· {{count}} titre",
-    "historyCount_other": "· {{count}} titres"
+    "historyTitle": "Derniers tirages",
+    "sourceWatchlistHint": "Tirage parmi les titres de votre liste Envie de voir",
+    "sourceCatalogHint": "Tirage dans tout le catalogue, selon vos filtres",
+    "refine": "Affiner",
+    "withoutWatched": "sans les déjà vus",
+    "typeMovie": "Film",
+    "typeSeries": "Série",
+    "availableOn": "Disponible sur",
+    "withSubscription": "inclus avec abonnement",
+    "rentOrBuy": "en location ou à l'achat"
   },
   "searchPage": {
     "resultsFor": "Résultats pour « {{query}} »",
@@ -851,6 +856,7 @@
     "runtime": "Durée",
     "minutes": "min",
     "country": "Pays",
+    "language": "Langue",
     "chip": "{{label}} : {{value}}"
   }
 }

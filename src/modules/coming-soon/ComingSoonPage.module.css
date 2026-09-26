@@ -4,13 +4,6 @@
   padding: 0 var(--gutter) 64px;
 }
 
-.windowRow {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
-}
-
 .timeline {
   display: flex;
   flex-direction: column;
@@ -22,6 +15,12 @@
   padding-top: 14px;
 }
 
+.month + .month {
+  padding-top: 26px;
+}
+
+/* En-tête de mois encadré (« OCTOBRE 2026 ») : fond opaque pour masquer
+   les lignes qui défilent dessous. */
 .monthHeading {
   position: sticky;
   top: var(--topnav-height, var(--header-height));
@@ -33,18 +32,11 @@
   text-transform: uppercase;
   color: var(--muted);
   margin: 0 0 10px;
-  padding-block: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   background: var(--bg);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.monthHeading::after {
-  content: "";
-  height: 1px;
-  flex: 1;
-  background: var(--border);
+  box-shadow: 0 -14px 0 var(--bg);
 }
 
 .item {
@@ -116,10 +108,19 @@
   white-space: nowrap;
 }
 
+/* Canal et date sur une même ligne, sous le titre. */
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 7px;
+  min-width: 0;
+}
+
 .sub {
   color: var(--muted);
   font-size: 12.5px;
-  margin-top: 3px;
 }
 
 /* Canal de sortie : « Salles » ou plateforme/diffuseur. */
@@ -128,7 +129,6 @@
   align-items: center;
   gap: 5px;
   max-width: 100%;
-  margin-top: 6px;
   padding: 2px 8px;
   border-radius: 6px;
   border: 1px solid var(--border-2);

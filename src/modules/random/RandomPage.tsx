@@ -9,22 +9,18 @@ import {
   getDetails,
   watchProvidersFromDetails,
   posterUrl,
-  formatFullDate,
 } from "../../core/api/tmdb.ts";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../core/context/RegionContext.tsx";
-import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import {
   FilterBar,
-  ProviderBadges,
   TrailerButton,
   ErrorMessage,
   PageHeader,
   Icon,
-  Chip,
 } from "../../shared/components/index.ts";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
@@ -67,6 +63,21 @@ function loadHistory(): HistoryEntry[] {
   } catch {
     return [];
   }
+}
+
+// « Disponible sur X, Y · inclus avec abonnement » : abonnement en priorité,
+// sinon location/achat. null si aucune offre connue dans la région.
+function availabilityOf(
+  providers: RegionWatchProviders | null
+): { names: string; kind: "subscription" | "rentBuy" } | null {
+  const flatrate = providers?.flatrate ?? [];
+  const rentBuy = [...(providers?.rent ?? []), ...(providers?.buy ?? [])];
+  const list = flatrate.length > 0 ? flatrate : rentBuy;
+  if (list.length === 0) {
+    return null;
+  }
+  const names = [...new Set(list.map((p) => p.provider_name))].slice(0, 2).join(", ");
+  return { names, kind: flatrate.length > 0 ? "subscription" : "rentBuy" };
 }
 
 function shuffle<T>(items: T[]): T[] {
@@ -119,8 +130,7 @@ export default function RandomPage() {
   // Par défaut « Mes envies de voir » ; tout le catalogue tant que la liste
   // est vide (visiteur, nouveau compte), sauf choix explicite.
   const source: DrawSource = chosenSource ?? (watchlist.length > 0 ? "watchlist" : "catalog");
-  const { region, regionName } = useRegion();
-  const { locale } = useLocale();
+  const { region } = useRegion();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
   const { filterExcluded } = useExcludedTitles();
@@ -244,12 +254,11 @@ export default function RandomPage() {
     }
     setStatus("loading");
     setError(null);
-    setPick(null);
-    setPickDetails(null);
     try {
       if (source === "watchlist") {
         const drawn = await drawFromWatchlist();
         if (!drawn) {
+          clearPick();
           setStatus("empty");
           return;
         }
@@ -271,6 +280,7 @@ export default function RandomPage() {
       const first = await discover(mediaType, { page: 1, ...discoverParams });
       const totalPages = Math.min(first.total_pages || 1, 500);
       if (totalPages === 0 || !first.results?.length) {
+        clearPick();
         setStatus("empty");
         return;
       }
@@ -302,9 +312,16 @@ export default function RandomPage() {
       rememberDraw(candidate, fullDetails);
       setStatus("success");
     } catch (err) {
+      clearPick();
       setError(err as Error);
       setStatus("error");
     }
+  }
+
+  function clearPick() {
+    setPick(null);
+    setPickDetails(null);
+    setProvidersResult(null);
   }
 
   const title = pick?.title || pick?.name || "";
@@ -318,9 +335,27 @@ export default function RandomPage() {
     ? posterAccentFromGenres(pick.genre_ids, `${pickType}:${pick.id}`)
     : "drama";
   const tier = pick?.vote_average != null ? ratingTier(pick.vote_average) : null;
+  const rolling = status === "loading";
+  const availability = availabilityOf(providersResult);
 
-  // Tirages précédents (le titre affiché n'y figure pas).
-  const pastDraws = history.filter((h) => !pick || h.id !== pick.id || h.mediaType !== pickType);
+  // Résumé des filtres à côté de « Affiner » : « Films · Mes plateformes ·
+  // sans les déjà vus ».
+  const selectedProvider = providers.find((p) => String(p.id) === providerId);
+  const filtersSummary = [
+    mediaType === "movie" ? t("filterBar.movies") : t("filterBar.series"),
+    genreIds.length === 1
+      ? genres.find((g) => g.id === genreIds[0])?.name
+      : genreIds.length > 1
+        ? t("filterBar.genresCount", { count: genreIds.length })
+        : null,
+    useMyPlatforms
+      ? t("filterPanel.myPlatforms")
+      : (selectedProvider?.name ?? t("filterBar.allPlatforms")),
+    yearMin || yearMax ? [yearMin, yearMax].filter(Boolean).join("–") : null,
+    source === "catalog" && excludeWatched ? t("randomPage.withoutWatched") : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   function buildLibItem() {
     if (!pick) {
@@ -344,37 +379,45 @@ export default function RandomPage() {
         lead={t("randomPage.lead")}
       />
 
-      <div className={styles.sourceRow}>
-        <span className={styles.sourceLabel} id={`${filtersId}-source`}>
-          {t("randomPage.source")}
-        </span>
-        <div className={styles.sourceChips} role="group" aria-labelledby={`${filtersId}-source`}>
-          <Chip active={source === "watchlist"} onClick={() => setChosenSource("watchlist")}>
-            <Icon name="star" size={14} filled={source === "watchlist"} />
+      <div className={styles.source}>
+        <div className={styles.sourceSwitch} role="group" aria-label={t("randomPage.source")}>
+          <button
+            type="button"
+            className={source === "watchlist" ? styles.sourceActive : ""}
+            aria-pressed={source === "watchlist"}
+            onClick={() => setChosenSource("watchlist")}
+          >
             {t("randomPage.sourceWatchlist")}
-          </Chip>
-          <Chip active={source === "catalog"} onClick={() => setChosenSource("catalog")}>
-            <Icon name="grid" size={14} />
+          </button>
+          <button
+            type="button"
+            className={source === "catalog" ? styles.sourceActive : ""}
+            aria-pressed={source === "catalog"}
+            onClick={() => setChosenSource("catalog")}
+          >
             {t("randomPage.sourceCatalog")}
-          </Chip>
+          </button>
         </div>
+        <p className={styles.sourceHint}>
+          {source === "watchlist"
+            ? t("randomPage.sourceWatchlistHint")
+            : t("randomPage.sourceCatalogHint")}
+        </p>
       </div>
 
-      <button
-        type="button"
-        className={styles.rollBtn}
-        onClick={drawRandom}
-        disabled={status === "loading" || !!yearRangeError}
-      >
-        <Icon name="shuffle" size={20} />
-        {status === "loading"
-          ? t("randomPage.rolling")
-          : pick
-            ? t("randomPage.reroll")
-            : t("randomPage.draw")}
-      </button>
-
-      <div className={styles.filtersBar}>
+      <div className={styles.drawRow}>
+        <button
+          type="button"
+          className={styles.rollBtn}
+          onClick={drawRandom}
+          disabled={rolling || !!yearRangeError}
+          aria-busy={rolling}
+        >
+          <span className={rolling ? styles.spinning : undefined}>
+            <Icon name="repeat" size={20} />
+          </span>
+          {t("randomPage.draw")}
+        </button>
         <button
           type="button"
           className={`${styles.filtersToggle} ${filtersOpen ? styles.filtersToggleOpen : ""}`}
@@ -391,9 +434,10 @@ export default function RandomPage() {
           >
             <path d="M4 6h16M7 12h10M10 18h4" />
           </svg>
-          {t("randomPage.filters")}
+          {t("randomPage.refine")}
           {activeFiltersCount > 0 && <span className={styles.count}>{activeFiltersCount}</span>}
         </button>
+        <span className={styles.filtersSummary}>{filtersSummary}</span>
       </div>
 
       <div id={`${filtersId}-filters`} className={styles.filters} hidden={!filtersOpen}>
@@ -477,21 +521,25 @@ export default function RandomPage() {
       )}
 
       {pick && (
-        <div className={styles.spotlight}>
-          <div className={styles.posterWrap}>
+        <div className={styles.spotlight} aria-busy={rolling}>
+          <div className={`${styles.posterWrap} ${rolling ? styles.fading : ""}`}>
             {pick.poster_path ? (
               <img src={posterUrl(pick.poster_path, "w342") ?? undefined} alt={title} />
             ) : (
               <div className={`${styles.posterEmpty} ${posterStyles[accentKey]}`}>{title}</div>
             )}
           </div>
-          <div>
+          <div className={`${styles.head} ${rolling ? styles.fading : ""}`}>
             <p className={styles.badge}>{t("randomPage.badge")}</p>
             <h2 className={styles.title}>{title}</h2>
             <p className={styles.meta}>
-              {date ? formatFullDate(date, locale) || date.slice(0, 4) : "—"}
+              {pickType === "movie" ? t("randomPage.typeMovie") : t("randomPage.typeSeries")}
+              {date ? ` · ${date.slice(0, 4)}` : ""}
               {pickDetails?.genres?.length
-                ? ` · ${pickDetails.genres.map((g) => g.name).join(", ")}`
+                ? ` · ${pickDetails.genres
+                    .slice(0, 3)
+                    .map((g) => g.name)
+                    .join(", ")}`
                 : ""}
               {tier && pick.vote_average != null && (
                 <>
@@ -500,7 +548,18 @@ export default function RandomPage() {
                 </>
               )}
             </p>
-            <p className={styles.overview}>{pick.overview}</p>
+          </div>
+          <div className={`${styles.body} ${rolling ? styles.fading : ""}`}>
+            {pick.overview && <p className={styles.overview}>{pick.overview}</p>}
+            {availability && (
+              <p className={styles.availability}>
+                {t("randomPage.availableOn")} <b>{availability.names}</b>
+                {" · "}
+                {availability.kind === "subscription"
+                  ? t("randomPage.withSubscription")
+                  : t("randomPage.rentOrBuy")}
+              </p>
+            )}
             <div className={styles.actions}>
               <Link to={`/media/${pickType}/${pick.id}`} className={styles.primaryBtn}>
                 {t("randomPage.viewSheet")}
@@ -508,6 +567,7 @@ export default function RandomPage() {
               <button
                 type="button"
                 className={`${styles.secondaryBtn} ${inWatchlist ? styles.onWant : ""}`}
+                aria-pressed={inWatchlist}
                 onClick={() => {
                   const item = buildLibItem();
                   if (item) {
@@ -521,6 +581,7 @@ export default function RandomPage() {
               <button
                 type="button"
                 className={`${styles.secondaryBtn} ${watched ? styles.onWatched : ""}`}
+                aria-pressed={watched}
                 onClick={() => {
                   const item = buildLibItem();
                   if (item) {
@@ -534,43 +595,46 @@ export default function RandomPage() {
               <TrailerButton videos={pickDetails?.videos?.results} />
               <Link
                 to={`/media/${pickType}/${pick.id}#recommendations`}
-                className={styles.secondaryBtn}
+                className={styles.ghostBtn}
               >
                 <Icon name="repeat" />
                 {t("randomPage.similar")}
               </Link>
             </div>
-            <h3 className={styles.whereTitle}>{t("randomPage.whereToWatch")}</h3>
-            <ProviderBadges providers={providersResult} regionName={regionName} />
           </div>
         </div>
       )}
 
-      {pastDraws.length > 0 && (
+      {history.length > 0 && (
         <section className={styles.history} aria-labelledby={`${filtersId}-history`}>
           <h2 id={`${filtersId}-history`} className={styles.historyTitle}>
-            {t("randomPage.historyTitle")}{" "}
-            <span className={styles.historyMeta}>
-              {t("randomPage.historyCount", { count: pastDraws.length })}
-            </span>
+            {t("randomPage.historyTitle")}
           </h2>
           <ul className={styles.historyList}>
-            {pastDraws.map((entry) => (
-              <li key={`${entry.mediaType}:${entry.id}`}>
-                <Link to={`/media/${entry.mediaType}/${entry.id}`} className={styles.historyItem}>
-                  <span className={styles.historyPoster}>
-                    {entry.posterPath && (
+            {history.map((entry) => {
+              const current = !!pick && entry.id === pick.id && entry.mediaType === pickType;
+              return (
+                <li key={`${entry.mediaType}:${entry.id}`}>
+                  <Link
+                    to={`/media/${entry.mediaType}/${entry.id}`}
+                    className={`${styles.historyItem} ${current ? styles.historyCurrent : ""}`}
+                    aria-current={current ? "true" : undefined}
+                    title={entry.title}
+                    aria-label={entry.title}
+                  >
+                    {entry.posterPath ? (
                       <img
                         src={posterUrl(entry.posterPath, "w154") ?? undefined}
                         alt=""
                         loading="lazy"
                       />
+                    ) : (
+                      <span className={styles.historyName}>{entry.title}</span>
                     )}
-                  </span>
-                  <span className={styles.historyName}>{entry.title}</span>
-                </Link>
-              </li>
-            ))}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

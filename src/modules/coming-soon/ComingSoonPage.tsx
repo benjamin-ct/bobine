@@ -20,9 +20,7 @@ import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx"
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import {
-  FilterBar,
-  CountryLanguageFilter,
-  Chip,
+  FilterPanel,
   ErrorMessage,
   EmptyState,
   PageHeader,
@@ -154,14 +152,17 @@ function TimelineItem({ item }: { item: MediaItem }) {
       </Link>
       <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.body}>
         <div className={styles.title}>{title}</div>
-        {channel && (
-          <span className={`${styles.channel} ${isTheatrical ? styles.channelTheaters : ""}`}>
-            {isTheatrical && <Icon name="film" size={12} />}
-            {channel}
+        <div className={styles.meta}>
+          {channel && (
+            <span className={`${styles.channel} ${isTheatrical ? styles.channelTheaters : ""}`}>
+              {isTheatrical && <Icon name="film" size={12} />}
+              {channel}
+            </span>
+          )}
+          <span className={styles.sub}>
+            {formatFullDate(date, locale) ||
+              (date ? date.slice(0, 4) : t("comingSoonPage.dateTbd"))}
           </span>
-        )}
-        <div className={styles.sub}>
-          {formatFullDate(date, locale) || (date ? date.slice(0, 4) : t("comingSoonPage.dateTbd"))}
         </div>
       </Link>
       <button
@@ -200,7 +201,7 @@ export default function ComingSoonPage() {
   const { t } = useTranslation();
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
-  const [providerId, setProviderId] = useState("");
+  const [providerIds, setProviderIds] = useState<string[]>([]);
   const [useMyPlatforms, setUseMyPlatforms] = useState(false);
   const [country, setCountry] = useState("");
   const [language, setLanguage] = useState("");
@@ -217,8 +218,8 @@ export default function ComingSoonPage() {
   const { filterExcluded } = useExcludedTitles();
   const activeProviderIds = useMyPlatforms
     ? favoriteProviderIds
-    : providerId
-      ? [providerId]
+    : providerIds.length
+      ? providerIds
       : undefined;
 
   const [allResults, setAllResults] = useState<MediaItem[]>([]);
@@ -385,38 +386,29 @@ export default function ComingSoonPage() {
         lead={t("comingSoonPage.lead")}
       />
 
-      <FilterBar
+      <FilterPanel
         mediaType={mediaType}
         setMediaType={setMediaType}
+        genres={genres}
         genreIds={genreIds}
         setGenreIds={setGenreIds}
-        genres={genres}
-        providerId={providerId}
-        setProviderId={setProviderId}
         providers={providers}
+        providerIds={providerIds}
+        setProviderIds={setProviderIds}
         favoriteProviderIds={favoriteProviderIds}
-        useFavoriteProviders={useMyPlatforms}
-        setUseFavoriteProviders={setUseMyPlatforms}
+        useMyPlatforms={useMyPlatforms}
+        setUseMyPlatforms={setUseMyPlatforms}
+        countryLanguage={{ country, setCountry, language, setLanguage }}
+        periods={{
+          label: t("comingSoonPage.windowsLabel"),
+          options: WINDOWS.map((w) => ({
+            value: w.value,
+            label: t(`comingSoonPage.windows.${w.key}`),
+          })),
+          value: windowDays,
+          onChange: setWindowDays,
+        }}
       />
-
-      <CountryLanguageFilter
-        country={country}
-        setCountry={setCountry}
-        language={language}
-        setLanguage={setLanguage}
-      />
-
-      <div className={styles.windowRow}>
-        {WINDOWS.map((w) => (
-          <Chip
-            key={w.value}
-            active={windowDays === w.value}
-            onClick={() => setWindowDays(w.value)}
-          >
-            {t(`comingSoonPage.windows.${w.key}`)}
-          </Chip>
-        ))}
-      </div>
 
       {status === "loading" && <ComingSoonSkeleton />}
       {status === "error" && <ErrorMessage error={error} />}
