@@ -219,8 +219,12 @@
   width: 40px;
   height: 40px;
   flex: none;
-  display: grid;
-  place-items: center;
+  /* justify-content/align-items plutôt que place-items : .desktopOnly et
+     .mobileOnly réécrivent display (flex / grid) et place-items ne centre pas
+     horizontalement en flex, ce qui décalait l'icône Profil. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 999px;
