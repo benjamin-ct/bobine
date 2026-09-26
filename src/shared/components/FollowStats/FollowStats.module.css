@@ -1,0 +1,57 @@
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.stat {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.stat:hover {
+  text-decoration: underline;
+}
+
+.dialog {
+  width: min(440px, calc(100% - 2 * var(--gutter)));
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  color: var(--fg);
+  overflow: auto;
+}
+
+.dialog::backdrop {
+  background: oklch(0 0 0 / 0.6);
+}
+
+.content {
+  position: relative;
+  padding: 28px 20px 20px;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: var(--muted);
+  font-size: 1.1rem;
+  padding: 6px;
+}
+
+.title {
+  font-size: 1.25rem;
+  margin: 0 0 12px;
+  padding-right: 24px;
+}
+
+.text {
+  color: var(--muted);
+}

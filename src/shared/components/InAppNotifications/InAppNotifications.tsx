@@ -6,7 +6,13 @@ import styles from "./InAppNotifications.module.css";
 
 const AUTO_DISMISS_MS = 10_000;
 const MAX_VISIBLE = 3;
-const KINDS = ["watchlistAvailable", "favoriteGenreRelease", "trendingRelease", "test"];
+const KINDS = [
+  "watchlistAvailable",
+  "favoriteGenreRelease",
+  "trendingRelease",
+  "test",
+  "newFollower",
+];
 
 interface Toast extends InAppNotification {
   id: number;
@@ -37,6 +43,11 @@ export default function InAppNotifications() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(0);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+
+  // "newFollower" : `mediaTitle` = nom de l'abonné, vide s'il n'en a pas ou
+  // si son profil est privé (voir notifyNewFollower côté Worker).
+  const fallbackTitle = (kind: InAppNotification["kind"]) =>
+    kind === "newFollower" ? t("inAppNotifications.newFollowerFallback") : "";
 
   const dismiss = useCallback((id: number) => {
     clearTimeout(timers.current.get(id));
@@ -76,7 +87,7 @@ export default function InAppNotifications() {
         .then((registration) =>
           registration.showNotification(t(`inAppNotifications.${notification.kind}.title`), {
             body: t(`inAppNotifications.${notification.kind}.body`, {
-              title: notification.mediaTitle,
+              title: notification.mediaTitle || fallbackTitle(notification.kind),
             }),
             icon: "/icon-192.png",
             badge: "/icon-192.png",
@@ -100,7 +111,9 @@ export default function InAppNotifications() {
           <Link to={toast.url} className={styles.link} onClick={() => dismiss(toast.id)}>
             <strong className={styles.title}>{t(`inAppNotifications.${toast.kind}.title`)}</strong>
             <span className={styles.body}>
-              {t(`inAppNotifications.${toast.kind}.body`, { title: toast.mediaTitle })}
+              {t(`inAppNotifications.${toast.kind}.body`, {
+                title: toast.mediaTitle || fallbackTitle(toast.kind),
+              })}
             </span>
           </Link>
           <button

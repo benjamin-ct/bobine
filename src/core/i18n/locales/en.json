@@ -39,7 +39,8 @@
     "recommendations": "Recommendations",
     "tabAccount": "Account",
     "tabPreferences": "Preferences",
-    "tabMyList": "My list"
+    "tabMyList": "My list",
+    "tabCommunity": "Community"
   },
   "providerBadges": {
     "unavailable": "Not available to stream in {{region}} right now.",
@@ -414,7 +415,12 @@
     "test": {
       "title": "Test notification 🔔",
       "body": "Received in-app: a device on your account has the app open."
-    }
+    },
+    "newFollower": {
+      "title": "New follower 👋",
+      "body": "{{title}} started following you."
+    },
+    "newFollowerFallback": "Someone"
   },
   "legal": {
     "eyebrow": "Legal information",
@@ -493,6 +499,10 @@
       "sharedLists": {
         "label": "Shared lists",
         "text": " (if you choose to share a custom list): its name, its content, your ratings for the titles in it and your display name become visible read-only to anyone who has the link — never your email address. You can stop sharing at any time from the list, which permanently invalidates the link."
+      },
+      "follows": {
+        "label": "Follows",
+        "text": ": when you follow a profile, we store that follow and its date. It is used to show follower/following counts and lists, your activity feed, and to notify the person you follow. If your profile is shared, your display name and a link to your profile appear in those lists; otherwise you only appear as a \"private profile\". A shared profile can also be found by its display name in the profile search available to signed-in members. You can unfollow a profile at any time."
       }
     },
     "why": {
@@ -637,8 +647,8 @@
   },
   "profileShare": {
     "title": "Share my profile",
-    "hintOff": "Your profile is private. Turn on sharing to get a link you can send: anyone with it will be able to see, without changing anything, what you've watched, your watchlist, your lists, your ratings and your profile picture (never your email address).",
-    "hintOn": "Your profile is visible read-only to anyone with this link. Turning sharing off permanently invalidates the link.",
+    "hintOff": "Your profile is private. Turn on sharing to get a link you can send: anyone with it will be able to see, without changing anything, what you've watched, your watchlist, your lists, your ratings and your profile picture (never your email address). A shared profile can also be found by your display name and followed by other members.",
+    "hintOn": "Your profile is visible read-only to anyone with this link, and signed-in members can find it by your display name and follow it. Turning sharing off permanently invalidates the link.",
     "linkLabel": "Profile share link",
     "share": "Share link",
     "preview": "View my public profile",
@@ -722,5 +732,34 @@
     "loadError": "Couldn't load this list.",
     "notFoundTitle": "List not found",
     "notFoundLead": "This link doesn't exist or is no longer active: the list may have been deleted, or its owner stopped sharing it."
+  },
+  "follow": {
+    "follow": "Follow",
+    "following": "Following",
+    "unfollow": "Unfollow?",
+    "error": "Couldn't update the follow.",
+    "followersCount_one": "{{count}} follower",
+    "followersCount_other": "{{count}} followers",
+    "followingCount_one": "{{count}} following",
+    "followingCount_other": "{{count}} following",
+    "followersTitle": "Followers",
+    "followingTitle": "Following",
+    "noFollowers": "Nobody follows this profile yet.",
+    "noFollowing": "Not following anyone yet.",
+    "privateProfile": "Private profile",
+    "you": "(you)",
+    "ownProfile": "This is your public profile."
+  },
+  "community": {
+    "myNetwork": "My followers and following",
+    "privateHint": "Your profile is private: you can follow other members, but nobody can find or follow you until you turn on profile sharing (Account tab).",
+    "searchLabel": "Find profiles",
+    "searchPlaceholder": "Search by display name…",
+    "noResults": "No shared profile matches.",
+    "feedTitle": "Activity feed",
+    "feedEmpty": "Nothing yet: follow profiles to see what they watch here.",
+    "feedWatched": "watched",
+    "feedRated": "rated {{rating}}/10",
+    "feedWantToSee": "wants to see"
   }
 }

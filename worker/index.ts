@@ -83,6 +83,16 @@ import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
 import { openSyncSocket, publishToUser } from "./sync.ts";
 import { randomShareSlug, SHARE_SLUG_PATTERN } from "./share-slug.ts";
+import {
+  follow,
+  unfollow,
+  getUserIdBySlug,
+  getFollowCounts,
+  getFollowers,
+  getFollowing,
+  getFeed,
+  searchProfiles,
+} from "./follows.ts";
 
 // Classe Durable Object de la synchro temps réel : doit être exportée par le
 // module principal (voir "exports" dans wrangler.jsonc).
@@ -776,11 +786,157 @@ async function handleGetPublicProfile(request: Request, env: Env, slug: string):
   if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
     return RATE_LIMIT_RESPONSE();
   }
-  const profile = SHARE_SLUG_PATTERN.test(slug) ? await getPublicProfileBySlug(env.DB, slug) : null;
+  if (!SHARE_SLUG_PATTERN.test(slug)) {
+    return json({ error: "Profil introuvable ou privé." }, 404);
+  }
+  const viewer = await getUserFromRequest(env.DB, request);
+  const profile = await getPublicProfileBySlug(env.DB, slug, viewer?.id ?? null);
   if (!profile) {
     return json({ error: "Profil introuvable ou privé." }, 404);
   }
   return json(profile);
+}
+
+// Suivre des profils (migration 0011, worker/follows.ts) -----------------
+//
+// La cible est toujours résolue par son slug public : un profil privé ne
+// peut donc pas être suivi, et aucun identifiant de compte ne transite. Le
+// suiveur, lui, n'a pas besoin d'avoir partagé son propre profil.
+async function handleFollow(
+  request: Request,
+  env: Env,
+  slug: string,
+  ctx: ExecutionContext
+): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  if (
+    !(await checkRateLimit(env.DB, `follow:user:${user.id}`, { limit: 120, windowMs: 60 * 60_000 }))
+  ) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  const targetId = SHARE_SLUG_PATTERN.test(slug) ? await getUserIdBySlug(env.DB, slug) : null;
+  if (targetId === null) {
+    return json({ error: "Profil introuvable ou privé." }, 404);
+  }
+  if (targetId === user.id) {
+    return json({ error: "Impossible de te suivre toi-même." }, 400);
+  }
+
+  if (request.method === "DELETE") {
+    await unfollow(env.DB, user.id, targetId);
+  } else if (await follow(env.DB, user.id, targetId)) {
+    ctx.waitUntil(notifyNewFollower(request, env, user, targetId));
+  }
+  const counts = await getFollowCounts(env.DB, targetId);
+  return json({ ok: true, following: request.method !== "DELETE", counts });
+}
+
+// Au plus une notification par couple (abonné, profil suivi) et par jour :
+// suivre / ne plus suivre en boucle ne doit pas spammer la personne suivie.
+async function notifyNewFollower(
+  request: Request,
+  env: Env,
+  follower: { id: number; displayName: string | null; shareSlug: string | null },
+  followedId: number
+): Promise<void> {
+  try {
+    if (
+      !(await checkRateLimit(env.DB, `follow-notify:${follower.id}:${followedId}`, {
+        limit: 1,
+        windowMs: 24 * 60 * 60_000,
+      }))
+    ) {
+      return;
+    }
+    const subscriptions = await getSubscriptionsForUser(env.DB, followedId);
+    // Abonné au profil privé : ni nom ni lien vers son profil.
+    const isPublic = follower.shareSlug !== null;
+    await notifyUser(
+      env,
+      { userId: followedId, subscriptions, syncHost: new URL(request.url).hostname },
+      {
+        kind: "newFollower",
+        mediaTitle: isPublic ? (follower.displayName ?? "") : "",
+        url: isPublic ? `/u/${follower.shareSlug}` : "/profil?tab=communaute",
+      }
+    );
+  } catch (err) {
+    logError("Notification de nouvel abonné impossible :", err);
+  }
+}
+
+// Listes publiques d'abonnés / d'abonnements d'un profil partagé. Même
+// plafond par IP que la page de profil publique.
+async function handleGetPublicFollowList(
+  request: Request,
+  env: Env,
+  slug: string,
+  kind: "followers" | "following"
+): Promise<Response> {
+  const ip = getClientIp(request);
+  if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  const targetId = SHARE_SLUG_PATTERN.test(slug) ? await getUserIdBySlug(env.DB, slug) : null;
+  if (targetId === null) {
+    return json({ error: "Profil introuvable ou privé." }, 404);
+  }
+  const viewer = await getUserFromRequest(env.DB, request);
+  const viewerId = viewer?.id ?? null;
+  const profiles =
+    kind === "followers"
+      ? await getFollowers(env.DB, targetId, viewerId)
+      : await getFollowing(env.DB, targetId, viewerId);
+  return json({ profiles });
+}
+
+// Mêmes listes pour le compte connecté, que son profil soit partagé ou non.
+async function handleGetAccountFollowList(
+  request: Request,
+  env: Env,
+  kind: "followers" | "following"
+): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const profiles =
+    kind === "followers"
+      ? await getFollowers(env.DB, user.id, user.id)
+      : await getFollowing(env.DB, user.id, user.id);
+  return json({ profiles });
+}
+
+async function handleGetFeed(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  return json({ entries: await getFeed(env.DB, user.id) });
+}
+
+// Recherche par nom affiché parmi les profils partagés, réservée aux
+// membres connectés (c'est pour trouver qui suivre) et plafonnée pour
+// qu'on ne puisse pas lister tous les profils publics à la chaîne.
+const PROFILE_SEARCH_MIN_LENGTH = 2;
+const PROFILE_SEARCH_MAX_LENGTH = 50;
+
+async function handleSearchProfiles(request: Request, env: Env, url: URL): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  if (!checkRateLimitInMemory(`profile-search:user:${user.id}`, { limit: 30, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  const query = (url.searchParams.get("q") ?? "").trim();
+  if (query.length < PROFILE_SEARCH_MIN_LENGTH || query.length > PROFILE_SEARCH_MAX_LENGTH) {
+    return json({ profiles: [] });
+  }
+  return json({ profiles: await searchProfiles(env.DB, query, user.id) });
 }
 
 // Photo de profil d'un profil partagé : Gravatar est résolu ici plutôt que
@@ -1599,6 +1755,17 @@ async function routeRequest(
   if (url.pathname === "/api/account/share" && request.method === "PUT") {
     return handleUpdateProfileShare(request, env);
   }
+  const publicFollowList = url.pathname.match(
+    /^\/api\/public-profile\/([^/]+)\/(followers|following)$/
+  );
+  if (publicFollowList && request.method === "GET") {
+    return handleGetPublicFollowList(
+      request,
+      env,
+      publicFollowList[1],
+      publicFollowList[2] as "followers" | "following"
+    );
+  }
   if (url.pathname === "/api/account/top-picks" && request.method === "GET") {
     return handleGetTopPicks(request, env);
   }
@@ -1611,6 +1778,28 @@ async function routeRequest(
   }
   if (url.pathname.startsWith("/api/public-profile/") && request.method === "GET") {
     return handleGetPublicProfile(request, env, url.pathname.slice("/api/public-profile/".length));
+  }
+  if (
+    url.pathname.startsWith("/api/follows/") &&
+    (request.method === "POST" || request.method === "DELETE")
+  ) {
+    return handleFollow(request, env, url.pathname.slice("/api/follows/".length), ctx);
+  }
+  if (
+    (url.pathname === "/api/account/followers" || url.pathname === "/api/account/following") &&
+    request.method === "GET"
+  ) {
+    return handleGetAccountFollowList(
+      request,
+      env,
+      url.pathname.endsWith("followers") ? "followers" : "following"
+    );
+  }
+  if (url.pathname === "/api/account/feed" && request.method === "GET") {
+    return handleGetFeed(request, env);
+  }
+  if (url.pathname === "/api/profiles/search" && request.method === "GET") {
+    return handleSearchProfiles(request, env, url);
   }
   if (url.pathname === "/api/library" && request.method === "GET") {
     return handleGetLibrary(request, env);

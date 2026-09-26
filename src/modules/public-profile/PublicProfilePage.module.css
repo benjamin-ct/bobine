@@ -141,3 +141,16 @@
 .homeLink:hover {
   border-color: var(--border-2);
 }
+
+.social {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 16px;
+}
+
+.selfHint {
+  color: var(--muted);
+  font-size: 13px;
+}

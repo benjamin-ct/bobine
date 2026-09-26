@@ -7,6 +7,8 @@ import {
   Loading,
   ErrorMessage,
   EmptyState,
+  FollowButton,
+  FollowStats,
   Dropdown,
 } from "../../shared/components/index.ts";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
@@ -239,6 +241,30 @@ export default function PublicProfilePage() {
   }
 
   const { profile } = state;
+
+  // Follow/unfollow : compteurs renvoyés par le serveur, appliqués tels quels.
+  function applyFollow(viewerFollows: boolean, counts: { followers: number; following: number }) {
+    setState({ status: "success", profile: { ...profile, ...counts, viewerFollows } });
+  }
+
+  // Sur son propre profil, suivre quelqu'un depuis une des listes change le
+  // compteur d'abonnements affiché : on le recharge sans repasser par l'écran
+  // de chargement.
+  function refreshOwnCounts() {
+    if (!profile.isSelf) {
+      return;
+    }
+    fetch(`/api/public-profile/${encodeURIComponent(slug)}`)
+      .then((res) => (res.ok ? (res.json() as Promise<PublicProfile>) : null))
+      .then((next) => {
+        if (next) {
+          setState({ status: "success", profile: next });
+        }
+      })
+      .catch(() => {
+        // Compteur légèrement en retard jusqu'au prochain chargement : sans gravité.
+      });
+  }
   const name = profile.displayName || t("publicProfile.anonymousName");
   const activeList = profile.customLists.find((l) => l.id === tab);
   const recent = profile.watched.slice(0, RECENT_COUNT);
@@ -271,6 +297,19 @@ export default function PublicProfilePage() {
           <ItemGrid items={top} ranked />
         </section>
       )}
+
+      <div className={styles.social}>
+        <FollowStats
+          slug={slug}
+          counts={{ followers: profile.followers, following: profile.following }}
+          onListChange={refreshOwnCounts}
+        />
+        {profile.isSelf ? (
+          <span className={styles.selfHint}>{t("follow.ownProfile")}</span>
+        ) : (
+          <FollowButton slug={slug} following={profile.viewerFollows} onChange={applyFollow} />
+        )}
+      </div>
 
       {recent.length > 0 && (
         <section className={styles.section}>
