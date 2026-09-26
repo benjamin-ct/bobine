@@ -142,7 +142,35 @@
     "saving": "Enregistrement…",
     "save": "Enregistrer",
     "logout": "Se déconnecter",
-    "saved": "✓ Modifications enregistrées"
+    "saved": "✓ Modifications enregistrées",
+    "emailChange": {
+      "edit": "Modifier",
+      "newEmail": "Nouvelle adresse e-mail",
+      "newEmailPlaceholder": "nouvelle@adresse.fr",
+      "hint": "On t'envoie un code à cette adresse pour vérifier qu'elle est bien à toi. Ton adresse actuelle reste active tant que le code n'est pas confirmé.",
+      "sendCode": "Envoyer le code",
+      "sending": "Envoi…",
+      "cancel": "Annuler",
+      "back": "Changer d'adresse",
+      "codeSent": "Code envoyé à {{email}}. Saisis-le ici (valable 15 minutes).",
+      "devCode": "Code (dev local) : {{code}}",
+      "code": "Code reçu",
+      "confirm": "Confirmer",
+      "confirming": "Vérification…",
+      "done": "✓ Adresse e-mail modifiée. Un avertissement a été envoyé à l'ancienne adresse.",
+      "errors": {
+        "invalid": "Cette adresse e-mail n'est pas valide.",
+        "same": "C'est déjà ton adresse actuelle.",
+        "taken": "Cette adresse est déjà utilisée par un autre compte.",
+        "invalid-code": "Ce code est invalide, expiré, ou déjà utilisé.",
+        "rateLimited": "Trop de tentatives. Réessaie dans quelques minutes.",
+        "rateLimitedSeconds_one": "Trop de tentatives. Réessaie dans {{count}} seconde.",
+        "rateLimitedSeconds_other": "Trop de tentatives. Réessaie dans {{count}} secondes.",
+        "rateLimitedMinutes_one": "Trop de tentatives. Réessaie dans {{count}} minute.",
+        "rateLimitedMinutes_other": "Trop de tentatives. Réessaie dans {{count}} minutes.",
+        "generic": "Impossible de modifier l'adresse pour le moment. Réessaie plus tard."
+      }
+    }
   },
   "excludedGenres": {
     "summary": "Genres à exclure",
@@ -469,7 +497,7 @@
   "privacyPolicyPage": {
     "title": "Politique de confidentialité",
     "lastUpdated": "Dernière mise à jour : {{date}}",
-    "lastUpdatedValue": "25 septembre 2026",
+    "lastUpdatedValue": "26 septembre 2026",
     "controller": {
       "title": "Responsable du traitement",
       "textBefore": "Bobine est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
@@ -478,7 +506,7 @@
       "title": "Données que nous collectons",
       "account": {
         "label": "Compte",
-        "text": " : votre adresse email (seule information demandée à l'inscription), utilisée pour la connexion par lien/code à usage unique — aucun mot de passe n'est stocké. Vous pouvez aussi renseigner un nom affiché, facultatif, visible sur votre carte de compte et synchronisé entre vos appareils."
+        "text": " : votre adresse email (seule information demandée à l'inscription), utilisée pour la connexion par lien/code à usage unique — aucun mot de passe n'est stocké. Vous pouvez la modifier depuis votre profil : la nouvelle adresse n'est enregistrée qu'après saisie d'un code envoyé à celle-ci (la demande en attente est conservée 15 minutes au plus), et un avertissement est envoyé à l'ancienne. Vous pouvez aussi renseigner un nom affiché, facultatif, visible sur votre carte de compte et synchronisé entre vos appareils."
       },
       "library": {
         "label": "Bibliothèque personnelle",
@@ -518,7 +546,7 @@
       },
       "resend": {
         "label": "Resend",
-        "text": " : envoie les emails contenant votre lien/code de connexion — reçoit votre adresse email à cette seule fin."
+        "text": " : envoie les emails contenant votre lien/code de connexion, ainsi que le code de confirmation et l'avertissement liés à un changement d'adresse — reçoit votre adresse email (ancienne et nouvelle, dans ce dernier cas) à cette seule fin."
       },
       "recaptcha": {
         "label": "Google reCAPTCHA",

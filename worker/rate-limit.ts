@@ -33,3 +33,9 @@ export function getClientIp(request: Request): string {
   // réseau — pas falsifiable par le client (contrairement à X-Forwarded-For).
   return request.headers.get("cf-connecting-ip") || "unknown";
 }
+
+// Secondes restantes avant la fin de la fenêtre fixe courante de `windowMs`
+// (voir checkRateLimit), pour dire au client combien de temps attendre.
+export function secondsUntilWindowEnd(windowMs: number): number {
+  return Math.ceil((windowMs - (Date.now() % windowMs)) / 1000);
+}

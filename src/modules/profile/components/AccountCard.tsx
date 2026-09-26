@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { gravatarUrl } from "../../../shared/lib/gravatar.ts";
+import EmailChangeForm from "./EmailChangeForm.tsx";
 import styles from "./AccountCard.module.css";
 
 function initials(name: string, fallback: string): string {
@@ -24,6 +25,8 @@ export default function AccountCard() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailChanged, setEmailChanged] = useState(false);
 
   // Réinitialise l'état d'échec quand l'e-mail change (ex. après connexion
   // avec un autre compte), sinon un précédent 404 Gravatar resterait collé
@@ -100,10 +103,36 @@ export default function AccountCard() {
               placeholder={t("accountCard.displayNamePlaceholder")}
             />
           </label>
-          <label className={styles.field}>
-            <span>{t("accountCard.email")}</span>
-            <input type="email" value={email || ""} disabled />
-          </label>
+          <div className={styles.field}>
+            <label htmlFor="account-email">{t("accountCard.email")}</label>
+            <div className={styles.inline}>
+              <input id="account-email" type="email" value={email || ""} disabled />
+              {!editingEmail && (
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={() => {
+                    setEmailChanged(false);
+                    setEditingEmail(true);
+                  }}
+                >
+                  {t("accountCard.emailChange.edit")}
+                </button>
+              )}
+            </div>
+            {editingEmail && (
+              <EmailChangeForm
+                onCancel={() => setEditingEmail(false)}
+                onDone={() => {
+                  setEditingEmail(false);
+                  setEmailChanged(true);
+                }}
+              />
+            )}
+            {emailChanged && (
+              <p className={styles.savedHint}>{t("accountCard.emailChange.done")}</p>
+            )}
+          </div>
         </div>
       </div>
       <div className={styles.actions}>

@@ -264,6 +264,170 @@ const MAGIC_LINK_EMAIL_CONTENT: Record<
   },
 };
 
+// Changement d'adresse email (voir createEmailChange) : le code part à la
+// NOUVELLE adresse, l'avertissement à l'ANCIENNE une fois le changement fait
+// — pour que le titulaire légitime s'en aperçoive si quelqu'un d'autre
+// avait accès à sa session.
+const EMAIL_CHANGE_CODE_CONTENT: Record<
+  EmailLocale,
+  { subject: string; html: (code: string) => string }
+> = {
+  fr: {
+    subject: "Confirme ta nouvelle adresse email Bobine",
+    html: (code) => `
+        <p>Pour associer cette adresse à ton compte Bobine, entre ce code dans
+        Profil → Compte (valable 15 minutes) :</p>
+        <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+        <p>Si tu n'es pas à l'origine de cette demande, ignore cet email : ton
+        adresse ne sera pas utilisée.</p>
+      `,
+  },
+  en: {
+    subject: "Confirm your new Bobine email address",
+    html: (code) => `
+        <p>To link this address to your Bobine account, enter this code in
+        Profile → Account (valid for 15 minutes):</p>
+        <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+        <p>If you didn't request this, you can safely ignore this email: your
+        address won't be used.</p>
+      `,
+  },
+};
+
+const EMAIL_CHANGED_NOTICE_CONTENT: Record<
+  EmailLocale,
+  { subject: string; html: (newEmail: string) => string }
+> = {
+  fr: {
+    subject: "L'adresse email de ton compte Bobine a changé",
+    html: (newEmail) => `
+        <p>L'adresse email de ton compte Bobine vient d'être remplacée par
+        <strong>${escapeHtml(newEmail)}</strong>. Tu ne recevras plus tes liens de
+        connexion à cette adresse-ci.</p>
+        <p>Si tu n'es pas à l'origine de ce changement, contacte-nous au plus vite
+        en répondant à cet email.</p>
+      `,
+  },
+  en: {
+    subject: "Your Bobine account email address has changed",
+    html: (newEmail) => `
+        <p>The email address of your Bobine account has just been changed to
+        <strong>${escapeHtml(newEmail)}</strong>. You won't receive sign-in links at
+        this address anymore.</p>
+        <p>If you didn't make this change, contact us as soon as possible by
+        replying to this email.</p>
+      `,
+  },
+};
+
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c
+  );
+}
+
+// Crée (ou remplace) la demande de changement d'adresse du compte et
+// renvoie le code à envoyer à la nouvelle adresse.
+export async function createEmailChange(
+  db: D1Database,
+  userId: number,
+  newEmail: string
+): Promise<string> {
+  const code = randomCode();
+  await db
+    .prepare(
+      `INSERT INTO email_changes (user_id, new_email, code, expires_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET new_email = excluded.new_email,
+         code = excluded.code, expires_at = excluded.expires_at`
+    )
+    .bind(userId, newEmail, code, Date.now() + MAGIC_LINK_TTL_MS)
+    .run();
+  return code;
+}
+
+export type EmailChangeResult =
+  | { ok: true; oldEmail: string; newEmail: string }
+  | { ok: false; reason: "invalid-code" | "taken" };
+
+// Applique le changement si `code` correspond à la demande en attente du
+// compte. Le code n'est cherché QUE parmi les demandes de `userId` (jamais
+// globalement) : impossible de valider la demande d'un autre compte. Les
+// liens de connexion encore valides envoyés à l'ancienne adresse sont
+// invalidés, sans quoi l'un d'eux recréerait un compte vide à cette adresse.
+export async function confirmEmailChange(
+  db: D1Database,
+  userId: number,
+  code: string | undefined | null
+): Promise<EmailChangeResult> {
+  const normalized = (code || "").trim().toUpperCase();
+  const pending = normalized
+    ? await db
+        .prepare("SELECT new_email, code, expires_at FROM email_changes WHERE user_id = ?")
+        .bind(userId)
+        .first<{ new_email: string; code: string; expires_at: number }>()
+    : null;
+  if (!pending || pending.code !== normalized || pending.expires_at < Date.now()) {
+    return { ok: false, reason: "invalid-code" };
+  }
+  const current = await db
+    .prepare("SELECT email FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ email: string }>();
+  if (!current) {
+    return { ok: false, reason: "invalid-code" };
+  }
+  try {
+    await db.batch([
+      db.prepare("UPDATE users SET email = ? WHERE id = ?").bind(pending.new_email, userId),
+      db.prepare("DELETE FROM email_changes WHERE user_id = ?").bind(userId),
+      db
+        .prepare("UPDATE magic_links SET used_at = ? WHERE email = ? AND used_at IS NULL")
+        .bind(Date.now(), current.email),
+    ]);
+  } catch (err) {
+    // Adresse prise entre la demande et la confirmation (l'index unique de
+    // users.email fait foi).
+    if (err instanceof Error && /UNIQUE constraint failed/i.test(err.message)) {
+      return { ok: false, reason: "taken" };
+    }
+    throw err;
+  }
+  return { ok: true, oldEmail: current.email, newEmail: pending.new_email };
+}
+
+export async function isEmailUsedByAnotherUser(
+  db: D1Database,
+  email: string,
+  userId: number
+): Promise<boolean> {
+  const row = await db
+    .prepare("SELECT id FROM users WHERE email = ?")
+    .bind(email)
+    .first<{ id: number }>();
+  return !!row && row.id !== userId;
+}
+
+export function sendEmailChangeCode(
+  env: Env,
+  newEmail: string,
+  code: string,
+  locale: EmailLocale
+): Promise<{ skipped: boolean }> {
+  const content = EMAIL_CHANGE_CODE_CONTENT[locale];
+  return sendEmail(env, newEmail, content.subject, content.html(code));
+}
+
+export function sendEmailChangedNotice(
+  env: Env,
+  oldEmail: string,
+  newEmail: string,
+  locale: EmailLocale
+): Promise<{ skipped: boolean }> {
+  const content = EMAIL_CHANGED_NOTICE_CONTENT[locale];
+  return sendEmail(env, oldEmail, content.subject, content.html(newEmail));
+}
+
 // Envoie l'email du lien magique via l'API Resend (https://resend.com).
 // Sans RESEND_API_KEY configurée (dev local), on ne bloque pas le flux :
 // on renvoie le jeton directement dans la réponse API pour pouvoir tester
@@ -277,11 +441,20 @@ export async function sendMagicLinkEmail(
   code: string,
   locale: EmailLocale
 ): Promise<{ skipped: boolean }> {
+  const content = MAGIC_LINK_EMAIL_CONTENT[locale];
+  return sendEmail(env, email, content.subject, content.html(link, code));
+}
+
+async function sendEmail(
+  env: Env,
+  to: string,
+  subject: string,
+  html: string
+): Promise<{ skipped: boolean }> {
   if (!env.RESEND_API_KEY) {
     return { skipped: true };
   }
 
-  const content = MAGIC_LINK_EMAIL_CONTENT[locale];
   const from = env.RESEND_FROM_EMAIL || "Bobine <onboarding@resend.dev>";
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -291,9 +464,9 @@ export async function sendMagicLinkEmail(
     },
     body: JSON.stringify({
       from,
-      to: [email],
-      subject: content.subject,
-      html: content.html(link, code),
+      to: [to],
+      subject,
+      html,
     }),
   });
   if (!res.ok) {

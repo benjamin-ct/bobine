@@ -22,6 +22,12 @@ interface RequestLinkResult {
   devCode?: string;
 }
 
+interface EmailChangeRequestResult {
+  ok: true;
+  email: string;
+  devCode?: string;
+}
+
 interface VerifyResult {
   ok: true;
   email: string;
@@ -47,6 +53,10 @@ interface AuthContextValue {
   // Active/désactive le partage public du profil ; désactiver invalide
   // définitivement le lien existant.
   setProfileShared: (enabled: boolean) => Promise<void>;
+  // Changement d'adresse email en deux temps (voir AccountCard) : un code
+  // est envoyé à la nouvelle adresse, puis sa saisie applique le changement.
+  requestEmailChange: (newEmail: string) => Promise<EmailChangeRequestResult>;
+  confirmEmailChange: (code: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -239,6 +249,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [t]
   );
 
+  const requestEmailChange = useCallback(
+    async (newEmail: string): Promise<EmailChangeRequestResult> => {
+      const res = await fetch("/api/account/email/request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: newEmail, locale }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(emailChangeErrorMessage(t, data, res.status));
+      }
+      return data;
+    },
+    [locale, t]
+  );
+
+  const confirmEmailChange = useCallback(
+    async (code: string): Promise<void> => {
+      const res = await fetch("/api/account/email/confirm", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...syncClientHeaders() },
+        body: JSON.stringify({ code, locale }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(emailChangeErrorMessage(t, data, res.status));
+      }
+      setEmail(data.email);
+    },
+    [locale, t]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -252,11 +294,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         updateDisplayName: updateDisplayNameCallback,
         setProfileShared,
+        requestEmailChange,
+        confirmEmailChange,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
+}
+
+// Les messages d'erreur du Worker sont en français : on les traduit côté
+// client à partir du `reason` (ou du statut HTTP) qu'il renvoie.
+function emailChangeErrorMessage(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  data: { reason?: unknown; retryAfter?: unknown },
+  status: number
+): string {
+  const { reason, retryAfter } = data;
+  if (
+    reason === "invalid" ||
+    reason === "same" ||
+    reason === "taken" ||
+    reason === "invalid-code"
+  ) {
+    return t(`accountCard.emailChange.errors.${reason}`);
+  }
+  if (status === 429) {
+    // Délai exact renvoyé par le Worker (fin de la fenêtre de limitation).
+    if (typeof retryAfter === "number" && retryAfter > 0) {
+      return retryAfter < 60
+        ? t("accountCard.emailChange.errors.rateLimitedSeconds", { count: retryAfter })
+        : t("accountCard.emailChange.errors.rateLimitedMinutes", {
+            count: Math.ceil(retryAfter / 60),
+          });
+    }
+    return t("accountCard.emailChange.errors.rateLimited");
+  }
+  return t("accountCard.emailChange.errors.generic");
 }
 
 export function useAuth(): AuthContextValue {
