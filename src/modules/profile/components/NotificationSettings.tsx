@@ -99,7 +99,7 @@ async function syncSubscriptionLocale(endpoint: string, locale: string): Promise
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ endpoint, locale }),
-  }).catch((err) => logWarn("Bobine : resynchronisation de la langue des notifs échouée.", err));
+  }).catch((err) => logWarn("Seancy : resynchronisation de la langue des notifs échouée.", err));
 }
 
 // Clé publique VAPID actuelle du serveur. Elle peut changer (rotation des
@@ -243,7 +243,7 @@ const TEST_NOTIFICATION_DELAY_S = 15;
 // qu'à valider le choix de canal sur les previews PR et en dev local, et
 // n'ont rien à faire sous les yeux des utilisateurs (l'endpoint est aussi
 // refusé côté Worker en prod).
-const PRODUCTION_HOSTNAME = "bobine.creusatbenjamin.workers.dev";
+const PRODUCTION_HOSTNAME = "seancy.creusatbenjamin.workers.dev";
 const SHOW_TEST_NOTIFICATION = window.location.hostname !== PRODUCTION_HOSTNAME;
 
 // Envoie une notification de test au compte via notifyUser (voir
@@ -348,7 +348,7 @@ export default function NotificationSettings() {
         localStorage.setItem(ENDPOINT_STORAGE_KEY, newEndpoint);
         setEndpoint(newEndpoint);
       })
-      .catch((err) => logWarn("Bobine : resynchro de l'abonnement push échouée.", err));
+      .catch((err) => logWarn("Seancy : resynchro de l'abonnement push échouée.", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -368,7 +368,7 @@ export default function NotificationSettings() {
           return;
         }
         syncSubscriptionDelta(endpoint, watchlist, watched, lastSyncedRef).catch((err) =>
-          logWarn("Bobine : resync notifications échouée.", err)
+          logWarn("Seancy : resync notifications échouée.", err)
         );
       })
     );

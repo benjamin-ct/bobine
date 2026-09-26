@@ -60,14 +60,14 @@ jobs:
         if: steps.ping.outputs.status == 'down' && steps.previous.outputs.status == 'up'
         run: |
           curl -fsS -X POST -H "Content-Type: application/json" \
-            -d '{"content": "🚨 Bobine (prod) ne répond plus (échec de /api/health). https://bobine.creusatbenjamin.workers.dev"}' \
+            -d '{"content": "🚨 Seancy (prod) ne répond plus (échec de /api/health). https://bobine.creusatbenjamin.workers.dev"}' \
             "${{ secrets.DISCORD_WEBHOOK_URL }}"
 
       - name: Notify Discord on recovery
         if: steps.ping.outputs.status == 'up' && steps.previous.outputs.status == 'down'
         run: |
           curl -fsS -X POST -H "Content-Type: application/json" \
-            -d '{"content": "✅ Bobine (prod) est de nouveau disponible."}' \
+            -d '{"content": "✅ Seancy (prod) est de nouveau disponible."}' \
             "${{ secrets.DISCORD_WEBHOOK_URL }}"
 
       - name: Write current status

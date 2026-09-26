@@ -6,6 +6,7 @@ import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
+import TicketLogo from "../TicketLogo/TicketLogo.tsx";
 import styles from "./NavBar.module.css";
 
 const MIN_QUERY_LENGTH = 2;
@@ -18,26 +19,6 @@ const NAV_LINKS = [
   { to: "/prochainement", key: "comingSoon" },
   { to: "/aleatoire", key: "random" },
 ];
-
-function ReelIcon() {
-  return (
-    <svg
-      className={styles.reel}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="6.6" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="17.4" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="6.6" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="17.4" cy="12" r="1.5" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
 
 function HamburgerIcon({ open }: { open: boolean }) {
   return open ? (
@@ -265,8 +246,8 @@ export default function NavBar() {
     <header className={styles.topnav}>
       <div className={styles.inner}>
         <Link to="/" className={styles.brand} onClick={onNavClick}>
-          <ReelIcon />
-          Bobine
+          <TicketLogo className={styles.logo} />
+          Seancy
         </Link>
 
         <nav className={styles.tabs} aria-label={t("navBar.mainNavAriaLabel")}>

@@ -12,7 +12,7 @@ import { syncClientHeaders, useLiveSyncRevision } from "../sync/liveSync.ts";
 // langue : pas de fusion, le serveur fait autorité dès qu'une valeur y est
 // enregistrée ; sinon la valeur locale actuelle (choix manuel ou repli
 // /api/region déjà résolu) est poussée comme valeur initiale du compte.
-const SYNCED_FOR_KEY = "bobine.region.syncedFor";
+const SYNCED_FOR_KEY = "seancy.region.syncedFor";
 
 export function RegionAccountSync({ children }: { children: ReactNode }): ReactNode {
   const { status, email } = useAuth();
@@ -55,7 +55,7 @@ export function RegionAccountSync({ children }: { children: ReactNode }): ReactN
           body: JSON.stringify({ region: regionRef.current }),
         }).then(() => undefined);
       })
-      .catch((err) => logWarn("Bobine : synchronisation de la région impossible.", err))
+      .catch((err) => logWarn("Seancy : synchronisation de la région impossible.", err))
       .finally(() => {
         if (!cancelled) {
           syncingRef.current = false;
@@ -86,7 +86,7 @@ export function RegionAccountSync({ children }: { children: ReactNode }): ReactN
       })
       .catch((err) =>
         logWarn(
-          "Bobine : synchronisation de la région impossible, nouvelle tentative au prochain changement.",
+          "Seancy : synchronisation de la région impossible, nouvelle tentative au prochain changement.",
           err
         )
       );

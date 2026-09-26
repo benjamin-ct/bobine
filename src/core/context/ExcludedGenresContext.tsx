@@ -19,11 +19,11 @@ import { syncClientHeaders, useLiveSyncRevision } from "../sync/liveSync.ts";
 // utilisateur connecté (voir l'effet de synchronisation plus bas), ce
 // stockage local servant alors de cache/repli hors connexion — même
 // principe que LibraryContext.
-const STORAGE_KEY = "bobine.excludedGenres.v1";
+const STORAGE_KEY = "seancy.excludedGenres.v1";
 const SYNC_DEBOUNCE_MS = 1200;
 // Mémorise, par email, si on a déjà fait la fusion initiale local ↔ serveur
 // sur CET appareil (voir l'effet de synchronisation plus bas).
-const SYNCED_FOR_KEY = "bobine.excludedGenres.syncedFor";
+const SYNCED_FOR_KEY = "seancy.excludedGenres.syncedFor";
 
 interface ExcludedGenresContextValue {
   excludedGenreIds: number[];
@@ -73,7 +73,7 @@ export function ExcludedGenresProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(excludedGenreIds));
     } catch (err) {
-      logError("Bobine : impossible de sauvegarder les genres exclus.", err);
+      logError("Seancy : impossible de sauvegarder les genres exclus.", err);
     }
   }, [excludedGenreIds]);
 
@@ -129,7 +129,7 @@ export function ExcludedGenresProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ genreIds: merged, merge: true }),
         });
       })
-      .catch((err) => logWarn("Bobine : synchronisation des genres exclus impossible.", err))
+      .catch((err) => logWarn("Seancy : synchronisation des genres exclus impossible.", err))
       .finally(() => {
         if (!cancelled) {
           syncingRef.current = false;
@@ -170,7 +170,7 @@ export function ExcludedGenresProvider({ children }: { children: ReactNode }) {
         })
         .catch((err) =>
           logWarn(
-            "Bobine : synchronisation des genres exclus impossible, nouvelle tentative au prochain changement.",
+            "Seancy : synchronisation des genres exclus impossible, nouvelle tentative au prochain changement.",
             err
           )
         );
