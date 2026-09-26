@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { Video } from "../../../core/types/tmdb.ts";
 import Icon from "../Icon/Icon.tsx";
@@ -48,26 +49,31 @@ export default function TrailerButton({ videos, compact = false }: TrailerButton
         </svg>
         <span className={styles.label}>{t("trailer.button")}</span>
       </button>
-      {open && (
-        <div className={styles.overlay} onClick={() => setOpen(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className={styles.close}
-              onClick={() => setOpen(false)}
-              title={t("common.close")}
-            >
-              <Icon name="close" />
-            </button>
-            <iframe
-              src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1`}
-              title={t("trailer.iframeTitle")}
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        </div>
-      )}
+      {/* Portail vers <body> : sur la fiche, le bouton vit dans le bloc du
+          haut (isolation, overflow, backdrop-filter) qui piégerait l'overlay
+          fixe sous le reste de la page. */}
+      {open &&
+        createPortal(
+          <div className={styles.overlay} onClick={() => setOpen(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className={styles.close}
+                onClick={() => setOpen(false)}
+                title={t("common.close")}
+              >
+                <Icon name="close" />
+              </button>
+              <iframe
+                src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1`}
+                title={t("trailer.iframeTitle")}
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   );
 }
