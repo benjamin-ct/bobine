@@ -257,15 +257,15 @@ const MAGIC_LINK_EMAIL_CONTENT: Record<
   { subject: string; html: (link: string, code: string) => string }
 > = {
   fr: {
-    subject: "Ton lien de connexion Bobine 🎬",
+    subject: "Votre lien de connexion Bobine 🎬",
     html: (link, code) => `
-        <p>Clique sur le lien ci-dessous pour te connecter à Bobine (valable 15 minutes) :</p>
+        <p>Cliquez sur le lien ci-dessous pour vous connecter à Bobine (valable 15 minutes) :</p>
         <p><a href="${link}">${link}</a></p>
-        <p>Si tu as installé Bobine sur ton écran d'accueil (iPhone/Android), le lien
-        ci-dessus risque de s'ouvrir dans ton navigateur au lieu de l'app installée.
-        Dans ce cas, ouvre plutôt l'app Bobine et entre ce code à la place :</p>
+        <p>Si vous avez installé Bobine sur votre écran d'accueil (iPhone/Android), le lien
+        ci-dessus risque de s'ouvrir dans votre navigateur au lieu de l'app installée.
+        Dans ce cas, ouvrez plutôt l'app Bobine et entrez ce code à la place :</p>
         <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-        <p>Si tu n'es pas à l'origine de cette demande, ignore cet email.</p>
+        <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
       `,
   },
   en: {
@@ -291,12 +291,12 @@ const EMAIL_CHANGE_CODE_CONTENT: Record<
   { subject: string; html: (code: string) => string }
 > = {
   fr: {
-    subject: "Confirme ta nouvelle adresse email Bobine",
+    subject: "Confirmez votre nouvelle adresse email Bobine",
     html: (code) => `
-        <p>Pour associer cette adresse à ton compte Bobine, entre ce code dans
+        <p>Pour associer cette adresse à votre compte Bobine, entrez ce code dans
         Profil → Compte (valable 15 minutes) :</p>
         <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-        <p>Si tu n'es pas à l'origine de cette demande, ignore cet email : ton
+        <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre
         adresse ne sera pas utilisée.</p>
       `,
   },
@@ -317,12 +317,12 @@ const EMAIL_CHANGED_NOTICE_CONTENT: Record<
   { subject: string; html: (newEmail: string) => string }
 > = {
   fr: {
-    subject: "L'adresse email de ton compte Bobine a changé",
+    subject: "L'adresse email de votre compte Bobine a changé",
     html: (newEmail) => `
-        <p>L'adresse email de ton compte Bobine vient d'être remplacée par
-        <strong>${escapeHtml(newEmail)}</strong>. Tu ne recevras plus tes liens de
+        <p>L'adresse email de votre compte Bobine vient d'être remplacée par
+        <strong>${escapeHtml(newEmail)}</strong>. Vous ne recevrez plus vos liens de
         connexion à cette adresse-ci.</p>
-        <p>Si tu n'es pas à l'origine de ce changement, contacte-nous au plus vite
+        <p>Si vous n'êtes pas à l'origine de ce changement, contactez-nous au plus vite
         en répondant à cet email.</p>
       `,
   },

@@ -17,7 +17,7 @@
     "terms": "CGU"
   },
   "footer": {
-    "tagline": "Découvre, suis, et retrouve tes films & séries.",
+    "tagline": "Découvrez, suivez et retrouvez vos films & séries.",
     "terms": "Conditions d'utilisation",
     "privacy": "Confidentialité"
   },
@@ -66,7 +66,7 @@
       "title": "Connexion",
       "incompleteLink": "Lien de connexion incomplet.",
       "unknownError": "Erreur inconnue.",
-      "success": "Tu es connecté·e !",
+      "success": "Vous êtes connecté·e !",
       "goToMyList": "Aller à Ma liste",
       "requestNewLink": "Redemander un lien",
       "expiredLink": "Ce lien de connexion n'est plus valide.",
@@ -81,25 +81,25 @@
   },
   "loginPage": {
     "title": "Se connecter",
-    "subtitle": "Connecte-toi pour retrouver ta liste \"envie de voir\" / \"déjà vu\" sur tous tes appareils. Pas de mot de passe : on t'envoie un lien de connexion par email.",
+    "subtitle": "Connectez-vous pour retrouver votre liste \"envie de voir\" / \"déjà vu\" sur tous vos appareils. Pas de mot de passe : on vous envoie un lien de connexion par email.",
     "unknownError": "Erreur inconnue.",
     "linkSentBefore": "Un lien de connexion a été envoyé à ",
     "linkSentAfter": ".",
-    "checkInbox": "Vérifie ta boîte mail (et tes spams) — le lien est valable 15 minutes.",
+    "checkInbox": "Vérifiez votre boîte mail (et vos spams) — le lien est valable 15 minutes.",
     "devModeLinkLabel": "Mode développement (pas d'email configuré) : ",
-    "codeLabel": "Ou entre le code reçu par email",
-    "codeHint": "Si Bobine est installée sur ton écran d'accueil, le lien risque de s'ouvrir dans le navigateur au lieu de l'app — le code, lui, fonctionne toujours ici.",
+    "codeLabel": "Ou entrez le code reçu par email",
+    "codeHint": "Si Bobine est installée sur votre écran d'accueil, le lien risque de s'ouvrir dans le navigateur au lieu de l'app — le code, lui, fonctionne toujours ici.",
     "devModeCodeLabel": "Mode développement : code {{code}}",
     "verifying": "Vérification…",
     "submitCode": "Valider le code",
     "emailLabel": "Adresse email",
-    "emailPlaceholder": "toi@exemple.com",
+    "emailPlaceholder": "vous@exemple.com",
     "sending": "Envoi…",
     "submitEmail": "Recevoir mon lien de connexion"
   },
   "membersOnly": {
     "title": "Action réservée aux membres connectés",
-    "text": "Connecte-toi pour enregistrer tes films et séries vus, ta liste d'envies, tes notes et tes listes perso. Pas de mot de passe : on t'envoie un lien de connexion par email."
+    "text": "Connectez-vous pour enregistrer vos films et séries vus, votre liste d'envies, vos notes et vos listes perso. Pas de mot de passe : on vous envoie un lien de connexion par email."
   },
   "trailer": {
     "button": "Bande-annonce",
@@ -136,11 +136,11 @@
   },
   "accountCard": {
     "title": "Compte",
-    "loginHint": "Connecte-toi pour synchroniser ta liste entre appareils.",
+    "loginHint": "Connectez-vous pour synchroniser votre liste entre appareils.",
     "login": "Connexion",
     "saveError": "Impossible d'enregistrer le nom affiché.",
     "displayName": "Nom affiché",
-    "displayNamePlaceholder": "Ton nom",
+    "displayNamePlaceholder": "Votre nom",
     "email": "Adresse e-mail",
     "saving": "Enregistrement…",
     "save": "Enregistrer",
@@ -150,12 +150,12 @@
       "edit": "Modifier",
       "newEmail": "Nouvelle adresse e-mail",
       "newEmailPlaceholder": "nouvelle@adresse.fr",
-      "hint": "On t'envoie un code à cette adresse pour vérifier qu'elle est bien à toi. Ton adresse actuelle reste active tant que le code n'est pas confirmé.",
+      "hint": "On vous envoie un code à cette adresse pour vérifier qu'elle est bien à vous. Votre adresse actuelle reste active tant que le code n'est pas confirmé.",
       "sendCode": "Envoyer le code",
       "sending": "Envoi…",
       "cancel": "Annuler",
       "back": "Changer d'adresse",
-      "codeSent": "Code envoyé à {{email}}. Saisis-le ici (valable 15 minutes).",
+      "codeSent": "Code envoyé à {{email}}. Saisissez-le ici (valable 15 minutes).",
       "devCode": "Code (dev local) : {{code}}",
       "code": "Code reçu",
       "confirm": "Confirmer",
@@ -163,20 +163,20 @@
       "done": "Adresse e-mail modifiée. Un avertissement a été envoyé à l'ancienne adresse.",
       "errors": {
         "invalid": "Cette adresse e-mail n'est pas valide.",
-        "same": "C'est déjà ton adresse actuelle.",
+        "same": "C'est déjà votre adresse actuelle.",
         "taken": "Cette adresse est déjà utilisée par un autre compte.",
         "invalid-code": "Ce code est invalide, expiré, ou déjà utilisé.",
-        "rateLimited": "Trop de tentatives. Réessaie dans quelques minutes.",
-        "rateLimitedSeconds_one": "Trop de tentatives. Réessaie dans {{count}} seconde.",
-        "rateLimitedSeconds_other": "Trop de tentatives. Réessaie dans {{count}} secondes.",
-        "rateLimitedMinutes_one": "Trop de tentatives. Réessaie dans {{count}} minute.",
-        "rateLimitedMinutes_other": "Trop de tentatives. Réessaie dans {{count}} minutes.",
-        "generic": "Impossible de modifier l'adresse pour le moment. Réessaie plus tard."
+        "rateLimited": "Trop de tentatives. Réessayez dans quelques minutes.",
+        "rateLimitedSeconds_one": "Trop de tentatives. Réessayez dans {{count}} seconde.",
+        "rateLimitedSeconds_other": "Trop de tentatives. Réessayez dans {{count}} secondes.",
+        "rateLimitedMinutes_one": "Trop de tentatives. Réessayez dans {{count}} minute.",
+        "rateLimitedMinutes_other": "Trop de tentatives. Réessayez dans {{count}} minutes.",
+        "generic": "Impossible de modifier l'adresse pour le moment. Réessayez plus tard."
       }
     },
     "username": "Pseudo",
-    "usernamePlaceholder": "ton_pseudo",
-    "usernameHint": "Unique, 3 à 15 caractères : lettres minuscules, chiffres ou « _ ». Il sert d'adresse à ton profil partagé.",
+    "usernamePlaceholder": "votre_pseudo",
+    "usernameHint": "Unique, 3 à 15 caractères : lettres minuscules, chiffres ou « _ ». Il sert d'adresse à votre profil partagé.",
     "username_checking": "Vérification de la disponibilité…",
     "username_available": "Pseudo disponible",
     "username_taken": "Ce pseudo est déjà pris.",
@@ -263,7 +263,7 @@
     "genresCount_other": "{{count}} genres",
     "allPlatforms": "Toutes les plateformes",
     "myPlatforms": "Mes plateformes",
-    "myPlatformsTitle": "Filtrer sur les plateformes que tu as cochées dans ton profil",
+    "myPlatformsTitle": "Filtrer sur les plateformes que vous avez cochées dans votre profil",
     "sortLabel": "Trier",
     "sortBy": "Trier par",
     "sortDescending": "↓ Décroissant",
@@ -315,7 +315,7 @@
     "noResults": "Aucun résultat."
   },
   "myListPage": {
-    "authBannerText": "Connecte-toi pour synchroniser cette liste entre tes appareils : elle n'a pas disparu, elle reste enregistrée sur cet appareil.",
+    "authBannerText": "Connectez-vous pour synchroniser cette liste entre vos appareils : elle n'a pas disparu, elle reste enregistrée sur cet appareil.",
     "login": "Connexion",
     "tabSeen": "Déjà vu",
     "tabWant": "Envie de voir",
@@ -324,7 +324,7 @@
     "newListPlaceholder": "Nom de la liste…",
     "create": "Créer",
     "cancel": "Annuler",
-    "emptySeen": "Tu n'as encore rien marqué comme vu.",
+    "emptySeen": "Vous n'avez encore rien marqué comme vu.",
     "emptyProgress": "Rien en cours. Marquez des épisodes comme vus pour retrouver ici vos séries entamées."
   },
   "watchlistPanel": {
@@ -418,23 +418,23 @@
   },
   "notificationSettings": {
     "unsupported": "Les notifications push ne sont pas supportées par ce navigateur.",
-    "permissionDenied": "Permission refusée. Autorise les notifications dans les réglages du navigateur pour ce site.",
+    "permissionDenied": "Permission refusée. Autorisez les notifications dans les réglages du navigateur pour ce site.",
     "syncFailed": "Synchronisation échouée ({{status}})",
     "keyFetchError": "Impossible de récupérer la clé du serveur.",
     "incompleteSubscription": "Abonnement push incomplet.",
     "disableButton": "Notifications activées — désactiver",
-    "enabledHint": "Tu seras prévenu·e quand un titre de ta liste \"Envie de voir\" arrive en streaming, pour les nouveautés dans tes genres préférés, et pour les grosses sorties du moment.",
+    "enabledHint": "Vous serez prévenu·e quand un titre de votre liste \"Envie de voir\" arrive en streaming, pour les nouveautés dans vos genres préférés, et pour les grosses sorties du moment.",
     "enabling": "Activation…",
     "enableButton": "Activer les notifications",
-    "disabledHint": "Sois prévenu·e des nouveautés même sans avoir l'app ouverte.",
+    "disabledHint": "Soyez prévenu·e des nouveautés même sans avoir l'app ouverte.",
     "testTitle": "Tester les notifications",
     "testNow": "Envoyer maintenant",
     "testDelayed": "Envoyer dans 15 s",
-    "testHint": "« Maintenant » : l'app est ouverte, la notification arrive en toast dans l'app. « Dans 15 s » : ferme l'app (ou verrouille le téléphone) sur tous tes appareils, elle arrive en notification push.",
+    "testHint": "« Maintenant » : l'app est ouverte, la notification arrive en toast dans l'app. « Dans 15 s » : fermez l'app (ou verrouillez le téléphone) sur tous vos appareils, elle arrive en notification push.",
     "testSending": "Envoi…",
-    "testSentInApp": "Envoyée dans l'app : un appareil de ton compte a l'app ouverte.",
-    "testSentPush": "Envoyée en push : aucun appareil de ton compte n'a l'app ouverte.",
-    "testScheduled": "Envoi dans {{seconds}} s : ferme l'app maintenant.",
+    "testSentInApp": "Envoyée dans l'app : un appareil de votre compte a l'app ouverte.",
+    "testSentPush": "Envoyée en push : aucun appareil de votre compte n'a l'app ouverte.",
+    "testScheduled": "Envoi dans {{seconds}} s : fermez l'app maintenant.",
     "testFailed": "Envoi impossible ({{status}})."
   },
   "inAppNotifications": {
@@ -444,7 +444,7 @@
       "body": "« {{title}} » est maintenant disponible en streaming."
     },
     "favoriteGenreRelease": {
-      "title": "Nouveauté dans tes genres préférés",
+      "title": "Nouveauté dans vos genres préférés",
       "body": "« {{title}} » vient de sortir."
     },
     "trendingRelease": {
@@ -453,11 +453,11 @@
     },
     "test": {
       "title": "Notification de test",
-      "body": "Reçue dans l'app : un appareil de ton compte a l'app ouverte."
+      "body": "Reçue dans l'app : un appareil de votre compte a l'app ouverte."
     },
     "newFollower": {
       "title": "Nouvel abonné",
-      "body": "{{title}} a commencé à te suivre."
+      "body": "{{title}} a commencé à vous suivre."
     },
     "newFollowerFallback": "Quelqu'un"
   },
@@ -685,8 +685,8 @@
   },
   "profileShare": {
     "title": "Partager mon profil",
-    "hintOff": "Ton profil est privé. Active le partage pour obtenir un lien que tu pourras envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, tes titres vus, ton envie de voir, tes listes, tes notes et ta photo de profil (jamais ton adresse e-mail). Un profil partagé peut aussi être trouvé par ton nom affiché et suivi par les autres membres.",
-    "hintOn": "Ton profil est visible en lecture seule par toute personne qui a ce lien, et les membres connectés peuvent le trouver par ton nom affiché et le suivre. Désactiver le partage le rend aussitôt inaccessible.",
+    "hintOff": "Votre profil est privé. Activez le partage pour obtenir un lien que vous pourrez envoyer : toute personne qui l'a pourra voir, sans pouvoir rien modifier, vos titres vus, votre envie de voir, vos listes, vos notes et votre photo de profil (jamais votre adresse e-mail). Un profil partagé peut aussi être trouvé par votre nom affiché et suivi par les autres membres.",
+    "hintOn": "Votre profil est visible en lecture seule par toute personne qui a ce lien, et les membres connectés peuvent le trouver par votre nom affiché et le suivre. Désactiver le partage le rend aussitôt inaccessible.",
     "linkLabel": "Lien de partage du profil",
     "share": "Partager le lien",
     "preview": "Voir mon profil public",
@@ -696,28 +696,28 @@
     "copyError": "Impossible de copier le lien.",
     "shareTitle": "Mon profil Bobine",
     "error": "Impossible de modifier le partage du profil.",
-    "usernameTip": "Astuce : choisis un pseudo dans la carte Compte pour obtenir un lien plus lisible (/u/ton_pseudo)."
+    "usernameTip": "Astuce : choisissez un pseudo dans la carte Compte pour obtenir un lien plus lisible (/u/votre_pseudo)."
   },
   "topPicks": {
     "title": "Mon Top 5",
-    "hintEmpty": "Choisis jusqu'à 5 titres parmi ceux que tu as vus, comme les films favoris sur Letterboxd. Ils s'affichent en tête de ton profil partagé. Tant que tu n'en choisis aucun, ton profil affiche tes titres vus les mieux notés.",
-    "hint": "Ce titre s'affiche en tête de ton profil partagé.",
-    "hintDrag": "Ces titres s'affichent dans cet ordre en tête de ton profil partagé. Fais glisser une affiche pour changer l'ordre.",
+    "hintEmpty": "Choisissez jusqu'à 5 titres parmi ceux que vous avez vus, comme les films favoris sur Letterboxd. Ils s'affichent en tête de votre profil partagé. Tant que vous n'en choisissez aucun, votre profil affiche vos titres vus les mieux notés.",
+    "hint": "Ce titre s'affiche en tête de votre profil partagé.",
+    "hintDrag": "Ces titres s'affichent dans cet ordre en tête de votre profil partagé. Faites glisser une affiche pour changer l'ordre.",
     "choose": "Choisir mon Top 5",
     "edit": "Modifier",
     "addAt": "Ajouter un titre en n° {{rank}}",
     "pickerTitle": "Ajouter à mon Top 5",
-    "full": "Ton Top 5 est complet : touche un titre choisi pour le retirer.",
-    "searchLabel": "Rechercher parmi tes titres vus",
-    "searchPlaceholder": "Rechercher parmi tes titres vus…",
+    "full": "Votre Top 5 est complet : touchez un titre choisi pour le retirer.",
+    "searchLabel": "Rechercher parmi vos titres vus",
+    "searchPlaceholder": "Rechercher parmi vos titres vus…",
     "noResult": "Aucun titre vu ne correspond.",
-    "noWatched": "Marque des titres comme vus pour pouvoir composer ton Top 5, affiché en tête de ton profil partagé.",
+    "noWatched": "Marquez des titres comme vus pour pouvoir composer votre Top 5, affiché en tête de votre profil partagé.",
     "remove": "Retirer du Top 5",
     "removeTitle": "Retirer {{title}} du Top 5",
-    "loadError": "Impossible de charger ton Top 5.",
-    "saveError": "Impossible d'enregistrer ton Top 5.",
-    "freeSlots_one": "1 place libre · touche un titre pour l'ajouter",
-    "freeSlots_other": "{{count}} places libres · touche un titre pour l'ajouter",
+    "loadError": "Impossible de charger votre Top 5.",
+    "saveError": "Impossible d'enregistrer votre Top 5.",
+    "freeSlots_one": "1 place libre · touchez un titre pour l'ajouter",
+    "freeSlots_other": "{{count}} places libres · touchez un titre pour l'ajouter",
     "close": "Fermer",
     "typeFilter": "Type de titre",
     "type": {
@@ -725,7 +725,7 @@
       "movie": "Films",
       "tv": "Séries"
     },
-    "seenSection": "Tes titres vus · les mieux notés d'abord",
+    "seenSection": "Vos titres vus · les mieux notés d'abord",
     "inTop": "Dans le top"
   },
   "publicProfile": {
@@ -755,9 +755,9 @@
     "shareAgain": "Partager le lien",
     "unshare": "Ne plus partager",
     "copied": "Lien copié",
-    "copyPrompt": "Copie ce lien pour partager la liste :",
+    "copyPrompt": "Copiez ce lien pour partager la liste :",
     "unshared": "Partage arrêté, l'ancien lien ne fonctionne plus",
-    "notSyncedYet": "Liste en cours de synchronisation, réessaie dans quelques secondes.",
+    "notSyncedYet": "Liste en cours de synchronisation, réessayez dans quelques secondes.",
     "error": "Impossible de partager la liste.",
     "confirmUnshare": "Arrêter le partage de « {{name}} » ? Le lien actuel ne fonctionnera plus."
   },
@@ -786,17 +786,17 @@
     "noFollowers": "Personne ne suit encore ce profil.",
     "noFollowing": "Aucun abonnement pour l'instant.",
     "privateProfile": "Profil privé",
-    "you": "(toi)",
-    "ownProfile": "C'est ton profil public."
+    "you": "(vous)",
+    "ownProfile": "C'est votre profil public."
   },
   "community": {
     "myNetwork": "Mes abonnés et abonnements",
-    "privateHint": "Ton profil est privé : tu peux suivre d'autres membres, mais personne ne peut te trouver ni te suivre tant que tu n'as pas activé le partage de ton profil (onglet Compte).",
+    "privateHint": "Votre profil est privé : vous pouvez suivre d'autres membres, mais personne ne peut vous trouver ni vous suivre tant que vous n'avez pas activé le partage de votre profil (onglet Compte).",
     "searchLabel": "Trouver des profils",
     "searchPlaceholder": "Rechercher par nom affiché…",
     "noResults": "Aucun profil partagé ne correspond.",
     "feedTitle": "Fil d'activité",
-    "feedEmpty": "Rien pour l'instant : suis des profils pour voir ici ce qu'ils regardent.",
+    "feedEmpty": "Rien pour l'instant : suivez des profils pour voir ici ce qu'ils regardent.",
     "feedWatched": "a vu",
     "feedRated": "a noté {{rating}}/10",
     "feedWantToSee": "veut voir"

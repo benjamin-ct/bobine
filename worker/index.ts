@@ -211,7 +211,7 @@ async function cachedStaticJson(
 }
 
 const RATE_LIMIT_RESPONSE = (): Response =>
-  json({ error: "Trop de requêtes. Réessaie dans quelques minutes." }, 429);
+  json({ error: "Trop de requêtes. Réessayez dans quelques minutes." }, 429);
 
 // Ces deux endpoints restent volontairement accessibles sans compte (les
 // notifications push fonctionnent pour n'importe quel visiteur, connecté ou
@@ -476,7 +476,7 @@ async function handleTestAccountNotification(
 
   const subscriptions = await getSubscriptionsForUser(env.DB, user.id);
   if (subscriptions.length === 0) {
-    return json({ error: "Aucun appareil de ton compte n'a activé les notifications." }, 404);
+    return json({ error: "Aucun appareil de votre compte n'a activé les notifications." }, 404);
   }
 
   const send = () =>
@@ -535,7 +535,7 @@ async function handleTestNotification(request: Request, env: Env): Promise<Respo
   const subscriptions = await getAllSubscriptions(env.DB);
   if (subscriptions.length === 0) {
     return json(
-      { error: "Aucun abonnement enregistré. Active d'abord les notifications dans l'app." },
+      { error: "Aucun abonnement enregistré. Activez d'abord les notifications dans l'app." },
       404
     );
   }
@@ -547,7 +547,7 @@ async function handleTestNotification(request: Request, env: Env): Promise<Respo
         subscription,
         {
           title: "Bobine 🎬",
-          body: "Ceci est une notification de test — si tu la vois, tout fonctionne !",
+          body: "Ceci est une notification de test — si vous la voyez, tout fonctionne !",
           url: "/ma-liste",
         },
         env
@@ -591,7 +591,7 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
     "request_link"
   );
   if (!recaptcha.ok) {
-    return json({ error: "Vérification anti-robot échouée. Réessaie." }, 403);
+    return json({ error: "Vérification anti-robot échouée. Réessayez." }, 403);
   }
 
   // Par email (empêche de spammer la boîte mail d'un tiers) ET par IP
@@ -628,7 +628,7 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
     // journalise côté serveur et on renvoie un message générique.
     logError("Échec de l'envoi du lien de connexion :", err);
     return json(
-      { error: "Impossible d'envoyer le lien de connexion pour le moment. Réessaie plus tard." },
+      { error: "Impossible d'envoyer le lien de connexion pour le moment. Réessayez plus tard." },
       502
     );
   }
@@ -663,7 +663,7 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
     "verify"
   );
   if (!recaptcha.ok) {
-    return json({ error: "Vérification anti-robot échouée. Réessaie." }, 403);
+    return json({ error: "Vérification anti-robot échouée. Réessayez." }, 403);
   }
 
   const email = token
@@ -759,7 +759,7 @@ async function handleRequestEmailChange(request: Request, env: Env): Promise<Res
     return json({ error: "Adresse email invalide.", reason: "invalid" }, 400);
   }
   if (newEmail === user.email) {
-    return json({ error: "C'est déjà ton adresse actuelle.", reason: "same" }, 400);
+    return json({ error: "C'est déjà votre adresse actuelle.", reason: "same" }, 400);
   }
   const locale = sanitizeEmailLocale(body?.locale);
 
@@ -804,7 +804,10 @@ async function handleRequestEmailChange(request: Request, env: Env): Promise<Res
     return json({ ok: true, email: newEmail, devCode: skipped ? code : undefined });
   } catch (err) {
     logError("Échec de l'envoi du code de changement d'adresse :", err);
-    return json({ error: "Impossible d'envoyer le code pour le moment. Réessaie plus tard." }, 502);
+    return json(
+      { error: "Impossible d'envoyer le code pour le moment. Réessayez plus tard." },
+      502
+    );
   }
 }
 
@@ -1018,7 +1021,7 @@ async function handleFollow(
     return json({ error: "Profil introuvable ou privé." }, 404);
   }
   if (targetId === user.id) {
-    return json({ error: "Impossible de te suivre toi-même." }, 400);
+    return json({ error: "Impossible de vous suivre vous-même." }, 400);
   }
 
   if (request.method === "DELETE") {
