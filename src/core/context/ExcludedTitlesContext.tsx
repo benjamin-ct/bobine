@@ -17,13 +17,13 @@ import { logError } from "../logger.ts";
 // recommandations). Même principe de stockage que ExcludedGenresContext
 // (local uniquement, pas de table serveur pour un simple réglage) : les
 // clés sont au format "mediaType:id", identique à LibraryContext.
-const STORAGE_KEY = "bobine.excludedTitles.v1";
+const STORAGE_KEY = "seancy.excludedTitles.v1";
 // Libellé lisible ("Titre (année)") capturé au moment de l'exclusion, pour
 // l'affichage dans Profil sans dépendre de la bibliothèque locale (déjà vu /
 // envie de voir) ni d'un appel réseau dédié — clé stockée séparément plutôt
 // que fusionnée dans STORAGE_KEY pour ne pas casser le format déjà persisté
 // chez les utilisateurs existants.
-const LABELS_STORAGE_KEY = "bobine.excludedTitles.labels.v1";
+const LABELS_STORAGE_KEY = "seancy.excludedTitles.labels.v1";
 
 function makeKey(mediaType: MediaType, id: number | string): string {
   return `${mediaType}:${id}`;
@@ -89,7 +89,7 @@ export function ExcludedTitlesProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(excludedTitleKeys));
     } catch (err) {
-      logError("Bobine : impossible de sauvegarder les titres exclus.", err);
+      logError("Seancy : impossible de sauvegarder les titres exclus.", err);
     }
   }, [excludedTitleKeys]);
 
@@ -97,7 +97,7 @@ export function ExcludedTitlesProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(LABELS_STORAGE_KEY, JSON.stringify(excludedTitleLabels));
     } catch (err) {
-      console.error("Bobine : impossible de sauvegarder les libellés des titres exclus.", err);
+      console.error("Seancy : impossible de sauvegarder les libellés des titres exclus.", err);
     }
   }, [excludedTitleLabels]);
 

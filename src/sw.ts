@@ -47,10 +47,10 @@ self.addEventListener("push", (event: PushEvent) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "Bobine", body: event.data ? event.data.text() : "" };
+    data = { title: "Seancy", body: event.data ? event.data.text() : "" };
   }
 
-  const title = data.title || "Bobine";
+  const title = data.title || "Seancy";
   const options: NotificationOptions = {
     body: data.body || "",
     icon: "/icon-192.png",

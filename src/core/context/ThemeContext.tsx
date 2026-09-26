@@ -9,7 +9,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 export type Theme = "dark" | "light";
 export type ThemePreference = Theme | "auto";
 
-const STORAGE_KEY = "bobine.theme";
+const STORAGE_KEY = "seancy.theme";
 
 // Couleurs de fond (voir --bg dans variables.css) dupliquées ici en dur :
 // on ne peut pas lire une custom property CSS pour alimenter un <meta>, et

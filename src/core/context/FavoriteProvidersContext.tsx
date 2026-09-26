@@ -19,11 +19,11 @@ import { syncClientHeaders, useLiveSyncRevision } from "../sync/liveSync.ts";
 // compte pour un utilisateur connecté (voir l'effet de synchronisation plus
 // bas), ce stockage local servant alors de cache/repli hors connexion —
 // même principe que LibraryContext.
-const STORAGE_KEY = "bobine.favoriteProviders.v1";
+const STORAGE_KEY = "seancy.favoriteProviders.v1";
 const SYNC_DEBOUNCE_MS = 1200;
 // Mémorise, par email, si on a déjà fait la fusion initiale local ↔ serveur
 // sur CET appareil (voir l'effet de synchronisation plus bas).
-const SYNCED_FOR_KEY = "bobine.favoriteProviders.syncedFor";
+const SYNCED_FOR_KEY = "seancy.favoriteProviders.syncedFor";
 
 interface FavoriteProvidersContextValue {
   favoriteProviderIds: number[];
@@ -73,7 +73,7 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(favoriteProviderIds));
     } catch (err) {
-      logError("Bobine : impossible de sauvegarder les plateformes favorites.", err);
+      logError("Seancy : impossible de sauvegarder les plateformes favorites.", err);
     }
   }, [favoriteProviderIds]);
 
@@ -130,7 +130,7 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
         });
       })
       .catch((err) =>
-        logWarn("Bobine : synchronisation des plateformes favorites impossible.", err)
+        logWarn("Seancy : synchronisation des plateformes favorites impossible.", err)
       )
       .finally(() => {
         if (!cancelled) {
@@ -172,7 +172,7 @@ export function FavoriteProvidersProvider({ children }: { children: ReactNode })
         })
         .catch((err) =>
           logWarn(
-            "Bobine : synchronisation des plateformes favorites impossible, nouvelle tentative au prochain changement.",
+            "Seancy : synchronisation des plateformes favorites impossible, nouvelle tentative au prochain changement.",
             err
           )
         );

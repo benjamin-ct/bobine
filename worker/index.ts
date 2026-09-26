@@ -546,7 +546,7 @@ async function handleTestNotification(request: Request, env: Env): Promise<Respo
       await sendPush(
         subscription,
         {
-          title: "Bobine 🎬",
+          title: "Seancy 🎬",
           body: "Ceci est une notification de test — si tu la vois, tout fonctionne !",
           url: "/ma-liste",
         },

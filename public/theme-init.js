@@ -1,5 +1,7 @@
 // Résout et applique le thème *avant* le premier paint, en lisant le même
-// stockage que ThemeContext.tsx (bobine.theme). Sans ça, le <style> du
+// stockage que ThemeContext.tsx (seancy.theme, ou l'ancienne clé bobine.theme
+// tant que core/lib/legacyStorageMigration.ts, chargé après ce fichier, ne
+// l'a pas encore migrée). Sans ça, le <style> du
 // loader et le <meta theme-color> d'index.html ne pouvaient se baser que sur
 // `prefers-color-scheme` (préférence système) : un choix explicite "clair"
 // stocké alors que le système est en sombre (ou l'inverse) provoquait un
@@ -12,7 +14,7 @@
 // Servi en same-origin, ce fichier passe sous 'self' sans changement de CSP.
 (function () {
   try {
-    var stored = localStorage.getItem("bobine.theme");
+    var stored = localStorage.getItem("seancy.theme") || localStorage.getItem("bobine.theme");
     var preference = stored === "light" || stored === "dark" ? stored : "auto";
     var theme =
       preference === "auto"

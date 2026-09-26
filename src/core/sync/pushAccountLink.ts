@@ -9,10 +9,10 @@ import type { AuthStatus } from "../context/AuthContext.tsx";
 
 // Endpoint de l'abonnement push de cet appareil, posé par NotificationSettings
 // à l'activation des notifications.
-export const PUSH_ENDPOINT_STORAGE_KEY = "bobine.push.endpoint";
+export const PUSH_ENDPOINT_STORAGE_KEY = "seancy.push.endpoint";
 // Dernier état de rattachement confirmé par le serveur ("1" connecté, "0"
 // anonyme) : évite un appel à chaque chargement de page quand rien n'a changé.
-const LINKED_STORAGE_KEY = "bobine.push.linkedAccount";
+const LINKED_STORAGE_KEY = "seancy.push.linkedAccount";
 
 export function usePushAccountLink(status: AuthStatus): void {
   useEffect(() => {
@@ -34,6 +34,6 @@ export function usePushAccountLink(status: AuthStatus): void {
           localStorage.setItem(LINKED_STORAGE_KEY, desired);
         }
       })
-      .catch((err) => logWarn("Bobine : rattachement des notifications au compte échoué.", err));
+      .catch((err) => logWarn("Seancy : rattachement des notifications au compte échoué.", err));
   }, [status]);
 }

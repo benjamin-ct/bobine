@@ -7,7 +7,7 @@ import i18n, { DEFAULT_LOCALE, SUPPORTED_LOCALES, type Locale } from "../i18n/i1
 // l'un l'autre (cf. carte Trello "Internationalisation de l'application").
 // Détection auto à la première visite (langue du navigateur), avec
 // possibilité de override manuel persisté ensuite.
-const STORAGE_KEY = "bobine.locale";
+const STORAGE_KEY = "seancy.locale";
 
 export function isSupportedLocale(value: string): value is Locale {
   return (SUPPORTED_LOCALES as readonly string[]).includes(value);

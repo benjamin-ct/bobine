@@ -25,26 +25,26 @@ import type {
 } from "../types/library.ts";
 import type { MediaType } from "../types/tmdb.ts";
 
-const STORAGE_KEY = "bobine.library.v1";
+const STORAGE_KEY = "seancy.library.v1";
 // Mémorise, par email, si on a déjà fait la fusion initiale local ↔ serveur
 // sur CET appareil (voir l'effet de synchronisation plus bas).
-const SYNCED_FOR_KEY = "bobine.library.syncedFor";
+const SYNCED_FOR_KEY = "seancy.library.syncedFor";
 const SYNC_DEBOUNCE_MS = 1200;
 // Listes personnalisées ("Soirée avec X", "Halloween"...) — synchronisées par
 // compte comme watched/watchlist ci-dessus (voir l'effet de synchronisation
 // plus bas), avec ce stockage local comme cache/repli hors connexion.
-const CUSTOM_LISTS_STORAGE_KEY = "bobine.customLists.v1";
+const CUSTOM_LISTS_STORAGE_KEY = "seancy.customLists.v1";
 // Mémorise, par email, si on a déjà fait la fusion initiale local ↔ serveur
 // des listes perso sur CET appareil — même rôle que SYNCED_FOR_KEY pour
 // watched/watchlist, mais distinct : les deux synchronisations sont
 // indépendantes (une première connexion peut fusionner l'une sans l'autre si
 // une seule des deux requêtes échoue).
-const CUSTOM_LISTS_SYNCED_FOR_KEY = "bobine.customLists.syncedFor";
+const CUSTOM_LISTS_SYNCED_FOR_KEY = "seancy.customLists.syncedFor";
 // NOUVEAU (repris de la maquette HTML) : ordre manuel de "Envie de voir"
 // (glisser-déposer). Stockage local uniquement — un ordre d'affichage n'a
 // pas vocation à être synchronisé entre appareils au même titre que le
 // contenu de la liste elle-même.
-const WATCHLIST_ORDER_STORAGE_KEY = "bobine.watchlistOrder.v1";
+const WATCHLIST_ORDER_STORAGE_KEY = "seancy.watchlistOrder.v1";
 
 // Delta diffusé par le serveur après un /api/library/sync d'un autre appareil
 // (voir worker/sync.ts, publishToUser dans handleLibrarySync).
@@ -127,7 +127,7 @@ function loadInitialState(): LibraryState {
     // bien d'écraser tout de suite localStorage avec cet état vide (voir
     // l'effet ci-dessous) : si les vraies données sont encore là sous une
     // forme récupérable, mieux vaut ne pas les perdre définitivement.
-    logWarn("Bobine : lecture de la bibliothèque locale impossible, on repart à vide.", err);
+    logWarn("Seancy : lecture de la bibliothèque locale impossible, on repart à vide.", err);
     return { watched: {}, watchlist: {} };
   }
 }
@@ -175,7 +175,7 @@ function loadInitialCustomLists(): CustomListMap {
     }
     return normalized;
   } catch (err) {
-    logWarn("Bobine : lecture des listes personnalisées impossible, on repart à vide.", err);
+    logWarn("Seancy : lecture des listes personnalisées impossible, on repart à vide.", err);
     return {};
   }
 }
@@ -291,7 +291,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (err) {
-      logError("Bobine : impossible de sauvegarder la bibliothèque locale.", err);
+      logError("Seancy : impossible de sauvegarder la bibliothèque locale.", err);
     }
   }, [state]);
 
@@ -303,7 +303,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(CUSTOM_LISTS_STORAGE_KEY, JSON.stringify(customLists));
     } catch (err) {
-      logError("Bobine : impossible de sauvegarder les listes personnalisées.", err);
+      logError("Seancy : impossible de sauvegarder les listes personnalisées.", err);
     }
   }, [customLists]);
 
@@ -315,7 +315,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(WATCHLIST_ORDER_STORAGE_KEY, JSON.stringify(watchlistOrder));
     } catch (err) {
-      logError("Bobine : impossible de sauvegarder l'ordre de la liste d'envies.", err);
+      logError("Seancy : impossible de sauvegarder l'ordre de la liste d'envies.", err);
     }
   }, [watchlistOrder]);
 
@@ -373,7 +373,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
             // Titre introuvable côté TMDB (supprimé du catalogue...) : on
             // laisse tomber cette entrée plutôt que de bloquer la migration
             // des autres listes/titres.
-            logWarn(`Bobine : migration impossible pour "${key}".`, err);
+            logWarn(`Seancy : migration impossible pour "${key}".`, err);
           }
         }
         if (cancelled) {
@@ -442,7 +442,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify(merged),
         });
       })
-      .catch((err) => logWarn("Bobine : synchronisation de la bibliothèque impossible.", err))
+      .catch((err) => logWarn("Seancy : synchronisation de la bibliothèque impossible.", err))
       .finally(() => {
         if (!cancelled) {
           syncingRef.current = false;
@@ -505,7 +505,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         })
         .catch((err) =>
           logWarn(
-            "Bobine : synchronisation incrémentale impossible, nouvelle tentative au prochain changement.",
+            "Seancy : synchronisation incrémentale impossible, nouvelle tentative au prochain changement.",
             err
           )
         );
@@ -553,7 +553,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         });
       })
       .catch((err) =>
-        logWarn("Bobine : synchronisation des listes personnalisées impossible.", err)
+        logWarn("Seancy : synchronisation des listes personnalisées impossible.", err)
       )
       .finally(() => {
         if (!cancelled) {
@@ -596,7 +596,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         })
         .catch((err) =>
           logWarn(
-            "Bobine : synchronisation des listes personnalisées impossible, nouvelle tentative au prochain changement.",
+            "Seancy : synchronisation des listes personnalisées impossible, nouvelle tentative au prochain changement.",
             err
           )
         );
@@ -671,7 +671,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     fetch("/api/library")
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("refresh failed"))))
       .then((remote: LibraryState) => applyRemoteLibrary(remote))
-      .catch((err) => logWarn("Bobine : actualisation de la bibliothèque impossible.", err));
+      .catch((err) => logWarn("Seancy : actualisation de la bibliothèque impossible.", err));
   });
 
   // Listes perso : pas de delta (remplacement complet côté serveur), on
@@ -696,7 +696,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         lastSyncedCustomListsJsonRef.current = JSON.stringify(remote || {});
         setCustomLists(remote || {});
       })
-      .catch((err) => logWarn("Bobine : actualisation des listes personnalisées impossible.", err));
+      .catch((err) => logWarn("Seancy : actualisation des listes personnalisées impossible.", err));
   });
 
   const toggleWatched = useCallback((item: LibraryItemInput) => {

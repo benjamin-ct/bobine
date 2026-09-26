@@ -27,10 +27,9 @@
   color: var(--fg);
 }
 
-.reel {
-  width: 18px;
-  height: 18px;
-  color: var(--accent);
+.logo {
+  width: 24px;
+  height: 16px;
 }
 
 .links {

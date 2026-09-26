@@ -1,11 +1,12 @@
-title = "gitleaks config — bobine"
+title = "gitleaks config — seancy"
 
 [extend]
 useDefault = true
 
 [allowlist]
-description = "Token Cloudflare Web Analytics — public par conception (exposé côté client), voir commentaire wrangler.jsonc"
+description = "Token Cloudflare Web Analytics — public par conception (exposé côté client), voir commentaire wrangler.jsonc ; clés localStorage « seancy.* » (ex. STORAGE_KEY = \"seancy.excludedGenres.v1\"), prises à tort pour des clés d'API par generic-api-key"
 regexTarget = "secret"
 regexes = [
   '''^d627aa22e73c4390952ff06afcc1f076$''',
+  '''^seancy\.[A-Za-z]+(\.[A-Za-z]+)*(\.v\d+)?$''',
 ]
