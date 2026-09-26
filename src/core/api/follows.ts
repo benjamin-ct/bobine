@@ -1,7 +1,8 @@
 // Client des routes "suivre des profils" du Worker (voir worker/follows.ts
 // et handleFollow dans worker/index.ts). Même origine que l'app : le cookie
 // de session part automatiquement.
-import type { FeedEntry, FollowCounts, ProfileSummary } from "../types/social.ts";
+import type { FeedEntry, FollowCounts, ProfileSummary, TitleActivity } from "../types/social.ts";
+import type { MediaType } from "../types/tmdb.ts";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
@@ -44,4 +45,11 @@ export async function searchProfiles(query: string): Promise<ProfileSummary[]> {
       `/api/profiles/search?q=${encodeURIComponent(query)}`
     )
   ).profiles;
+}
+
+/** Activité des profils suivis sur un titre (bloc « Vos abonnements »). */
+export async function getTitleActivity(mediaType: MediaType, id: number | string) {
+  return request<TitleActivity>(
+    `/api/account/title-activity?mediaType=${mediaType}&id=${encodeURIComponent(id)}`
+  );
 }

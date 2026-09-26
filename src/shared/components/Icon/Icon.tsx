@@ -93,6 +93,20 @@ const PATHS = {
       <path d="M20 20l-3.5-3.5" />
     </>
   ),
+  more: <path d="M5.5 12h.01M12 12h.01M18.5 12h.01" strokeWidth={3.2} />,
+  share: (
+    <>
+      <path d="M12 3.5v11M7.5 8 12 3.5 16.5 8" />
+      <path d="M5 12.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-6.5" />
+    </>
+  ),
+  ban: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M6 6l12 12" />
+    </>
+  ),
+  play: <path d="M8 5.5v13l10.5-6.5z" />,
   frown: (
     <>
       <circle cx="12" cy="12" r="9" />

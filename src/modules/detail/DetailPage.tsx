@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   backdropUrl,
   posterUrl,
@@ -11,9 +12,9 @@ import {
   theatricalStatusFromDate,
   getSeriesEpisodeBadge,
   formatFullDate,
+  dateLocaleTag,
 } from "../../core/api/tmdb.ts";
 import {
-  ProviderBadges,
   TrailerButton,
   MediaCard,
   PersonCard,
@@ -25,6 +26,8 @@ import {
 import EpisodeTracker from "./components/EpisodeTracker.tsx";
 import CollectionSection from "./components/CollectionSection.tsx";
 import DetailSkeleton from "./components/DetailSkeleton.tsx";
+import WhereToWatch from "./components/WhereToWatch.tsx";
+import FollowingActivity from "./components/FollowingActivity.tsx";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { regionName as countryDisplayName, useRegion } from "../../core/context/RegionContext.tsx";
 import { useLocale } from "../../core/context/LocaleContext.tsx";
@@ -32,7 +35,6 @@ import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx"
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import { useMembersOnly } from "../../core/context/MembersOnlyContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
-import { ratingTier } from "../../shared/lib/ratingTier.ts";
 import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPreviewCache.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
@@ -40,7 +42,33 @@ import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import type { MediaDetails, MediaType } from "../../core/types/tmdb.ts";
 import styles from "./DetailPage.module.css";
 
-const MAIN_CAST_COUNT = 12;
+const MAIN_CAST_COUNT = 6;
+
+// « 2 h 46 » plutôt que « 166 min » (maquette) ; les durées de moins d'une
+// heure (épisodes) restent en minutes.
+function formatRuntime(t: TFunction, minutes: number): string {
+  if (minutes < 60) {
+    return t("detailPage.runtimeMinutes", { count: minutes });
+  }
+  const m = minutes % 60;
+  return t("detailPage.runtimeHours", {
+    hours: Math.floor(minutes / 60),
+    minutes: String(m).padStart(2, "0"),
+    count: m,
+  });
+}
+
+function languageName(code: string | undefined, localeTag: string): string | null {
+  if (!code) {
+    return null;
+  }
+  try {
+    const name = new Intl.DisplayNames([localeTag], { type: "language" }).of(code);
+    return name ? name.charAt(0).toLocaleUpperCase(localeTag) + name.slice(1) : code;
+  } catch {
+    return code;
+  }
+}
 
 export default function DetailPage() {
   const { t } = useTranslation();
@@ -52,6 +80,7 @@ export default function DetailPage() {
   const [preview, setPreview] = useState<MediaPreview | null>(null);
   const [showFullCast, setShowFullCast] = useState(false);
   const [newListName, setNewListName] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
   const {
     isWatched,
     isInWatchlist,
@@ -70,7 +99,7 @@ export default function DetailPage() {
   const { excludedGenreIds } = useExcludedGenres();
   const { isExcludedTitle, toggleExcludedTitle } = useExcludedTitles();
   const { requireMember } = useMembersOnly();
-  const recommendationsRef = useRef<HTMLDivElement>(null);
+  const recommendationsRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!mediaType || !id) {
@@ -114,31 +143,41 @@ export default function DetailPage() {
     }
   }, [status]);
 
+  useEffect(() => {
+    if (!linkCopied) {
+      return;
+    }
+    const timer = setTimeout(() => setLinkCopied(false), 2500);
+    return () => clearTimeout(timer);
+  }, [linkCopied]);
+
   if (!mediaType || !id) {
     return null;
   }
 
-  const backLink = (
-    <Link
-      to="/"
-      className={styles.back}
-      onClick={(e) => {
-        // navigate(-1) déclenche un vrai retour arrière (POP), nécessaire
-        // pour que useScrollRestoration restaure la position de la liste
-        // d'origine — un <Link> classique crée une nouvelle entrée
-        // d'historique (PUSH) et ne restaure jamais rien.
-        e.preventDefault();
-        navigate(-1);
-      }}
-    >
-      {t("detailPage.back")}
-    </Link>
-  );
+  function backLink(className: string) {
+    return (
+      <Link
+        to="/"
+        className={className}
+        onClick={(e) => {
+          // navigate(-1) déclenche un vrai retour arrière (POP), nécessaire
+          // pour que useScrollRestoration restaure la position de la liste
+          // d'origine — un <Link> classique crée une nouvelle entrée
+          // d'historique (PUSH) et ne restaure jamais rien.
+          e.preventDefault();
+          navigate(-1);
+        }}
+      >
+        {t("detailPage.back")}
+      </Link>
+    );
+  }
 
   if (status === "loading") {
     return (
       <div className={styles.page}>
-        {backLink}
+        {backLink(styles.backPlain)}
         <DetailSkeleton mediaType={mediaType} id={id} preview={preview} />
       </div>
     );
@@ -146,7 +185,7 @@ export default function DetailPage() {
   if (status === "error") {
     return (
       <div className={styles.page}>
-        {backLink}
+        {backLink(styles.backPlain)}
         <ErrorMessage error={error} />
       </div>
     );
@@ -156,6 +195,7 @@ export default function DetailPage() {
   }
 
   const title = details.title || details.name || t("common.unknownTitle");
+  const originalTitle = details.original_title || details.original_name;
   const date = details.release_date || details.first_air_date;
   const providers = watchProvidersFromDetails(details, region);
   const runtime = details.runtime || details.episode_run_time?.[0];
@@ -166,14 +206,14 @@ export default function DetailPage() {
     details.genres?.map((g) => g.id),
     `${mediaType}:${id}`
   );
+  const localeTag = dateLocaleTag(locale);
 
   const theatricalDate =
     mediaType === "movie" ? getTheatricalDateFromDetails(details, region) : null;
-  // La date à côté du titre doit suivre la même source que le badge "au
-  // cinéma" juste en dessous : `details.release_date` est une date globale
-  // TMDB indépendante de la région, alors que `theatricalDate` est la sortie
-  // ciné réelle dans la région active — sans ça les deux affichaient des
-  // dates différentes pour un même film selon la région du visiteur.
+  // L'année de l'eyebrow et la date « Sortie » des infos suivent la même
+  // source que le badge "au cinéma" : `details.release_date` est une date
+  // globale TMDB indépendante de la région, alors que `theatricalDate` est
+  // la sortie ciné réelle dans la région active.
   const displayDate = theatricalDate || date;
   const theatricalStatus = theatricalStatusFromDate(theatricalDate);
   const theatricalDateFormatted = theatricalDate ? formatFullDate(theatricalDate, locale) : null;
@@ -195,17 +235,28 @@ export default function DetailPage() {
       : t("detailPage.episodeUpcoming", { date: episodeBadgeDateFormatted })
     : null;
 
+  const eyebrow = [
+    mediaType === "movie" ? t("detailPage.kindMovie") : t("detailPage.kindTv"),
+    displayDate?.slice(0, 4),
+    mediaType === "movie" && runtime
+      ? formatRuntime(t, runtime)
+      : mediaType === "tv" && details.number_of_seasons
+        ? t("detailPage.seasonsCount", { count: details.number_of_seasons })
+        : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const cast = details.credits?.cast || [];
   const visibleCast = showFullCast ? cast : cast.slice(0, MAIN_CAST_COUNT);
-  const remainingCastCount = cast.length - visibleCast.length;
 
-  type DirectorEntry = { id: number; name: string; profilePath: string | null };
+  type DirectorEntry = { id: number; name: string };
   const directors: DirectorEntry[] =
     mediaType === "movie"
       ? (details.credits?.crew || [])
           .filter((c) => c.job === "Director")
-          .map((c) => ({ id: c.id, name: c.name, profilePath: c.profile_path ?? null }))
-      : (details.created_by || []).map((c) => ({ id: c.id, name: c.name, profilePath: null }));
+          .map((c) => ({ id: c.id, name: c.name }))
+      : (details.created_by || []).map((c) => ({ id: c.id, name: c.name }));
 
   const libItem = {
     id: Number(id),
@@ -222,6 +273,8 @@ export default function DetailPage() {
   const recommendations = (details.recommendations?.results || []).filter(
     (item) => !item.genre_ids?.some((gId) => excludedGenreIds.includes(gId))
   );
+
+  const listCount = customLists.filter((list) => isInList(list.id, mediaType, id)).length;
 
   function scrollToRecommendations() {
     recommendationsRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -242,20 +295,101 @@ export default function DetailPage() {
     }
   }
 
-  const tier = details.vote_average != null ? ratingTier(details.vote_average) : null;
+  function toggleExcluded() {
+    // Écrit dans le compte comme les actions de la bibliothèque : réservé
+    // aux membres connectés (voir MembersOnlyContext).
+    if (requireMember() && mediaType && id) {
+      toggleExcludedTitle(mediaType, id, date ? `${title} (${date.slice(0, 4)})` : title);
+    }
+  }
+
+  // Feuille de partage native quand elle existe (mobile), sinon copie du
+  // lien — même logique que le partage de profil / de liste.
+  async function share() {
+    const url = `${window.location.origin}/media/${mediaType}/${id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+      } catch {
+        // Partage annulé par l'utilisateur : rien à faire.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+    } catch {
+      window.prompt(t("detailPage.copyLinkPrompt"), url);
+    }
+  }
+
+  const infoRows: { label: string; value: ReactNode }[] = [];
+  if (directors.length > 0) {
+    infoRows.push({
+      label: mediaType === "movie" ? t("detailPage.directing") : t("detailPage.createdBy"),
+      value: directors.map((d, i) => (
+        <span key={d.id}>
+          {i > 0 && ", "}
+          <Link to={`/personne/${d.id}`} className={styles.infoLink}>
+            {d.name}
+          </Link>
+        </span>
+      )),
+    });
+  }
+  if (originalTitle && originalTitle !== title) {
+    infoRows.push({ label: t("detailPage.originalTitle"), value: originalTitle });
+  }
+  if (displayDate) {
+    infoRows.push({
+      label: mediaType === "movie" ? t("detailPage.releaseDate") : t("detailPage.firstAirDate"),
+      value: formatFullDate(displayDate, locale) || displayDate,
+    });
+  }
+  if (mediaType === "tv" && details.number_of_seasons) {
+    infoRows.push({
+      label: t("detailPage.seasons"),
+      value: [
+        t("detailPage.seasonsCount", { count: details.number_of_seasons }),
+        details.number_of_episodes
+          ? t("detailPage.episodesCount", { count: details.number_of_episodes })
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    });
+  }
+  if (runtime) {
+    infoRows.push({
+      label: t("detailPage.runtime"),
+      value: `${formatRuntime(t, runtime)}${mediaType === "tv" ? t("detailPage.perEpisodeSuffix") : ""}`,
+    });
+  }
+  const language = languageName(details.original_language, localeTag);
+  if (language) {
+    infoRows.push({ label: t("detailPage.language"), value: language });
+  }
+  if (details.production_countries && details.production_countries.length > 0) {
+    infoRows.push({
+      label: t("detailPage.countries", { count: details.production_countries.length }),
+      value: details.production_countries
+        .map((c) => countryDisplayName(c.iso_3166_1, locale) || c.name)
+        .join(", "),
+    });
+  }
 
   return (
     <div className={styles.page}>
-      {backLink}
-
-      <div className={`${styles.hero} ${posterStyles[accentKey]}`}>
-        {details.backdrop_path && (
-          <div
-            className={styles.backdrop}
-            style={{ backgroundImage: `url(${backdropUrl(details.backdrop_path)})` }}
-          />
-        )}
-        <div className={styles.heroOverlay} />
+      <div className={styles.hero}>
+        <div
+          className={styles.backdrop}
+          style={
+            details.backdrop_path
+              ? { backgroundImage: `url(${backdropUrl(details.backdrop_path)})` }
+              : undefined
+          }
+        />
+        {backLink(styles.back)}
         <div className={styles.heroInner}>
           <div className={styles.posterWrap}>
             {details.poster_path ? (
@@ -270,50 +404,41 @@ export default function DetailPage() {
               </div>
             )}
           </div>
-          <div className={styles.info}>
-            <h1 className={styles.title}>
-              {title}{" "}
-              {displayDate && (
-                <span className={styles.year}>
-                  ({formatFullDate(displayDate, locale) || displayDate.slice(0, 4)})
-                </span>
-              )}
-            </h1>
-            <p className={styles.meta}>
-              {details.genres?.map((g) => g.name).join(" · ")}
-              {mediaType === "tv" && details.number_of_seasons
-                ? ` · ${t("detailPage.seasonsCount", { count: details.number_of_seasons })}`
-                : ""}
-              {mediaType === "tv" && details.number_of_episodes
-                ? ` · ${t("detailPage.episodesCount", { count: details.number_of_episodes })}`
-                : ""}
-              {runtime
-                ? ` · ${t("detailPage.runtimeMinutes", { count: runtime })}${mediaType === "tv" ? t("detailPage.perEpisodeSuffix") : ""}`
-                : ""}
-              {details.production_countries && details.production_countries.length > 0
-                ? ` · ${details.production_countries
-                    .map((c) => countryDisplayName(c.iso_3166_1, locale) || c.name)
-                    .join(", ")}`
-                : ""}
-              {details.vote_average && tier ? (
-                <span
-                  className={`${styles.score} ${styles[`s-${tier.cls}`]}`}
-                  title={
-                    details.vote_count
-                      ? t("detailPage.votesCount", {
-                          count: details.vote_count,
-                          formattedCount: details.vote_count.toLocaleString("fr-FR"),
-                        })
-                      : undefined
-                  }
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17.3 5.8 20.9l1.6-6.8L2.2 8.9l6.9-.6z" />
-                  </svg>
-                  {details.vote_average.toFixed(1)}
-                </span>
-              ) : null}
-            </p>
+
+          <div className={styles.heading}>
+            {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+            <h1 className={styles.title}>{title}</h1>
+            {details.genres && details.genres.length > 0 && (
+              <ul className={styles.genres}>
+                {details.genres.map((g) => (
+                  <li key={g.id}>{g.name}</li>
+                ))}
+              </ul>
+            )}
+            {details.vote_average ? (
+              <p className={styles.score}>
+                <Icon name="star" filled />
+                <b>
+                  {details.vote_average.toLocaleString(localeTag, {
+                    maximumFractionDigits: 1,
+                    minimumFractionDigits: 1,
+                  })}
+                </b>
+                <span className={styles.scoreOutOf}>/10</span>
+                {details.vote_count ? (
+                  <span className={styles.scoreVotes}>
+                    ·{" "}
+                    {t("detailPage.votesCount", {
+                      count: details.vote_count,
+                      formattedCount: details.vote_count.toLocaleString(localeTag),
+                    })}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+
+          <div className={styles.details}>
             {theatricalMessage && (
               <p className={styles.statusPill}>
                 <Icon name={theatricalStatus === "upcoming" ? "calendar" : "film"} />{" "}
@@ -331,27 +456,31 @@ export default function DetailPage() {
             <div className={styles.actions}>
               <button
                 type="button"
-                className={`${styles.actionBtn} ${watched ? styles.actionBtnOn : ""}`}
-                onClick={() => toggleWatched(libItem)}
-                aria-pressed={watched}
-              >
-                <Icon name="check" strokeWidth={watched ? 3 : 2} />
-                {watched ? t("detailPage.watchedOn") : t("detailPage.watchedOff")}
-              </button>
-              <button
-                type="button"
-                className={`${styles.actionBtnSecondary} ${inWatchlist ? styles.actionBtnSecondaryOn : ""}`}
+                className={`${styles.actionBtn} ${inWatchlist ? styles.wantOn : ""}`}
                 onClick={() => toggleWatchlist(libItem)}
                 aria-pressed={inWatchlist}
               >
                 <Icon name="star" filled={inWatchlist} />
                 {inWatchlist ? t("detailPage.wantToWatchOn") : t("detailPage.wantToWatchOff")}
               </button>
-              <TrailerButton videos={details.videos?.results} />
+              <button
+                type="button"
+                className={`${styles.actionBtn} ${watched ? styles.watchedOn : ""}`}
+                onClick={() => toggleWatched(libItem)}
+                aria-pressed={watched}
+              >
+                <Icon name="check" strokeWidth={watched ? 3 : 2} />
+                {watched ? t("detailPage.watchedOn") : t("detailPage.watchedOff")}
+              </button>
               <Dropdown
-                label={t("detailPage.addTo")}
+                label={
+                  listCount > 0
+                    ? t("detailPage.inLists", { count: listCount })
+                    : t("detailPage.addToList")
+                }
                 pill
-                active={customLists.some((list) => isInList(list.id, mediaType, id))}
+                active={listCount > 0}
+                className={styles.listDropdown}
               >
                 <div className={dropdownStyles.head}>{t("detailPage.addToListHeading")}</div>
                 {customLists.length === 0 && (
@@ -397,82 +526,97 @@ export default function DetailPage() {
                   </button>
                 </div>
               </Dropdown>
-              {recommendations.length > 0 && (
-                <button type="button" className={styles.ghostBtn} onClick={scrollToRecommendations}>
-                  <Icon name="repeat" />
-                  {t("detailPage.similar")}
-                </button>
-              )}
-              <button
-                type="button"
-                className={`${styles.ghostBtn} ${excluded ? styles.ghostBtnOn : ""}`}
-                // Écrit dans le compte comme les actions de la bibliothèque :
-                // réservé aux membres connectés (voir MembersOnlyContext).
-                onClick={() =>
-                  requireMember() &&
-                  toggleExcludedTitle(
-                    mediaType,
-                    id,
-                    date ? `${title} (${date.slice(0, 4)})` : title
-                  )
-                }
-                title={t("detailPage.excludeTitleHint")}
+              <TrailerButton videos={details.videos?.results} />
+              <Dropdown
+                label={<Icon name="more" size={20} />}
+                ariaLabel={t("detailPage.moreActions")}
+                caret={false}
+                closeOnSelect
+                align="right"
+                pill
+                className={styles.moreDropdown}
               >
-                {excluded ? t("detailPage.excludedReinclude") : t("detailPage.excludeTitle")}
-              </button>
+                <button type="button" className={dropdownStyles.option} onClick={share}>
+                  <Icon name="share" />
+                  {t("detailPage.share")}
+                </button>
+                {recommendations.length > 0 && (
+                  <button
+                    type="button"
+                    className={dropdownStyles.option}
+                    onClick={scrollToRecommendations}
+                  >
+                    <Icon name="repeat" />
+                    {t("detailPage.similar")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={dropdownStyles.option}
+                  onClick={toggleExcluded}
+                  title={t("detailPage.excludeTitleHint")}
+                >
+                  <Icon name="ban" />
+                  {excluded ? t("detailPage.reinclude") : t("detailPage.excludeTitle")}
+                </button>
+              </Dropdown>
             </div>
 
+            {linkCopied && (
+              <p className={styles.copied} role="status">
+                <Icon name="check" strokeWidth={3} /> {t("detailPage.linkCopied")}
+              </p>
+            )}
+
+            {excluded && (
+              <div className={styles.excludedBanner}>
+                <Icon name="ban" />
+                <span>{t("detailPage.excludedBanner")}</span>
+                <button type="button" onClick={toggleExcluded}>
+                  {t("detailPage.reinclude")}
+                </button>
+              </div>
+            )}
+
             {watched && (
-              <RatingStars
-                value={getRating(mediaType, id)}
-                onRate={(r) => rateWatched(mediaType, id, r)}
-              />
+              <div className={styles.yourRating}>
+                <RatingStars
+                  value={getRating(mediaType, id)}
+                  onRate={(r) => rateWatched(mediaType, id, r)}
+                  clearable
+                />
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      <section className={styles.section}>
-        <h2>
-          {t("detailPage.whereToWatch")}
-          {regionName ? ` · ${regionName}` : ""}
-        </h2>
-        <ProviderBadges providers={providers} regionName={regionName} />
-      </section>
+      <div className={styles.body}>
+        <div className={styles.main}>
+          <WhereToWatch providers={providers} regionName={regionName} />
 
-      {mediaType === "tv" && details.seasons && details.seasons.length > 0 && (
-        <EpisodeTracker item={libItem} seasons={details.seasons} />
-      )}
-
-      {(directors.length > 0 || cast.length > 0) && (
-        <section className={styles.section}>
-          {directors.length > 0 && (
-            <>
-              <h3>
-                {mediaType === "movie" ? t("detailPage.directing") : t("detailPage.createdBy")}
-              </h3>
-              <div className={gridStyles.personGrid}>
-                {directors.map((person) => (
-                  <PersonCard
-                    key={person.id}
-                    id={person.id}
-                    name={person.name}
-                    profilePath={person.profilePath}
-                    role={
-                      mediaType === "movie"
-                        ? t("detailPage.directorRole")
-                        : t("detailPage.creatorRole")
-                    }
-                  />
-                ))}
-              </div>
-            </>
+          {mediaType === "tv" && details.seasons && details.seasons.length > 0 && (
+            <EpisodeTracker item={libItem} seasons={details.seasons} />
           )}
 
           {cast.length > 0 && (
-            <>
-              <h3 style={{ marginTop: 32 }}>{t("detailPage.mainCast")}</h3>
-              <div className={gridStyles.personGrid}>
+            <section className={styles.section}>
+              <div className={styles.sectionHead}>
+                <h2>{t("detailPage.mainCast")}</h2>
+                {cast.length > MAIN_CAST_COUNT && (
+                  <button
+                    type="button"
+                    className={styles.textBtn}
+                    onClick={() => setShowFullCast((v) => !v)}
+                    aria-expanded={showFullCast}
+                  >
+                    {showFullCast
+                      ? t("detailPage.showLessCast")
+                      : t("detailPage.showFullCast", { count: cast.length })}
+                  </button>
+                )}
+              </div>
+              <div className={styles.castGrid}>
                 {visibleCast.map((member) => (
                   <PersonCard
                     key={member.credit_id || `${member.id}-${member.character}`}
@@ -483,32 +627,40 @@ export default function DetailPage() {
                   />
                 ))}
               </div>
-              {remainingCastCount > 0 && (
-                <div className={gridStyles.loadMore}>
-                  <button
-                    type="button"
-                    className={styles.ghostBtn}
-                    onClick={() => setShowFullCast(true)}
-                  >
-                    {t("detailPage.showFullCast", { count: remainingCastCount })}
-                  </button>
-                </div>
-              )}
-            </>
+            </section>
           )}
-        </section>
-      )}
 
-      {mediaType === "movie" && details.belongs_to_collection && (
-        <CollectionSection
-          collectionId={details.belongs_to_collection.id}
-          currentMovieId={Number(id)}
-        />
-      )}
+          {mediaType === "movie" && details.belongs_to_collection && (
+            <CollectionSection
+              collectionId={details.belongs_to_collection.id}
+              currentMovieId={Number(id)}
+            />
+          )}
+        </div>
+
+        <aside className={styles.aside}>
+          <FollowingActivity mediaType={mediaType} id={id} />
+          {infoRows.length > 0 && (
+            <section className={styles.infoCard}>
+              <h2>{t("detailPage.infos")}</h2>
+              <dl className={styles.infoList}>
+                {infoRows.map((row) => (
+                  <div key={row.label} className={styles.infoRow}>
+                    <dt>{row.label}</dt>
+                    <dd>{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+        </aside>
+      </div>
 
       {recommendations.length > 0 && (
         <section className={styles.section} ref={recommendationsRef}>
-          <h3>{t("detailPage.ifYouLiked", { title })}</h3>
+          <div className={styles.sectionHead}>
+            <h2>{t("detailPage.ifYouLiked", { title })}</h2>
+          </div>
           <div className={gridStyles.grid}>
             {recommendations.slice(0, 12).map((item) => (
               <MediaCard

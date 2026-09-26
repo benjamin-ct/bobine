@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getCollection } from "../../../core/api/tmdb.ts";
+import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { MediaCard } from "../../../shared/components/index.ts";
 import type { CollectionDetails } from "../../../core/types/tmdb.ts";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
@@ -22,6 +23,7 @@ export default function CollectionSection({
   currentMovieId,
 }: CollectionSectionProps) {
   const { t } = useTranslation();
+  const { isWatched } = useLibrary();
   const [collection, setCollection] = useState<CollectionDetails | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
@@ -50,14 +52,16 @@ export default function CollectionSection({
     return null;
   }
 
+  const watchedCount = collection.parts.filter((p) => isWatched("movie", p.id)).length;
+
   return (
     <section className={styles.section}>
-      <h3>
-        {t("collection.heading")} <span className={styles.name}>{collection.name}</span>{" "}
-        <span className={styles.count}>
-          · {t("collection.filmsCount", { count: collection.parts.length })}
-        </span>
-      </h3>
+      <h2 className={styles.title}>
+        {t("collection.heading")} <span className={styles.name}>{collection.name}</span>
+      </h2>
+      <p className={styles.count}>
+        {t("collection.watchedCount", { watched: watchedCount, count: collection.parts.length })}
+      </p>
       <div className={gridStyles.grid}>
         {otherParts.map((part) => (
           <MediaCard key={part.id} item={{ ...part, mediaType: "movie" }} />

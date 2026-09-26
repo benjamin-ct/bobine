@@ -9,7 +9,12 @@
 //   public.
 import { decodeHtmlEntities } from "./validate.ts";
 import type { LibraryItem } from "../src/core/types/library.ts";
-import type { FeedEntry, FollowCounts, ProfileSummary } from "../src/core/types/social.ts";
+import type {
+  FeedEntry,
+  FollowCounts,
+  ProfileSummary,
+  TitleActivity,
+} from "../src/core/types/social.ts";
 
 export const FEED_LIMIT = 60;
 const LIST_LIMIT = 500;
@@ -174,4 +179,48 @@ export async function getFeed(db: D1Database, userId: number): Promise<FeedEntry
       },
     };
   });
+}
+
+// Bloc « Vos abonnements » de la fiche : ce que les profils suivis (encore
+// partagés) ont fait d'un titre précis — vu (avec leur note) ou envie de
+// voir. `following` sert au client pour masquer le bloc quand on ne suit
+// personne (et seulement dans ce cas).
+export async function getTitleActivity(
+  db: D1Database,
+  userId: number,
+  mediaType: string,
+  tmdbId: number
+): Promise<TitleActivity> {
+  const [counts, { results }] = await Promise.all([
+    getFollowCounts(db, userId),
+    db
+      .prepare(
+        `SELECT users.share_slug, users.display_name, library_items.status, library_items.data
+         FROM follows
+         JOIN users ON users.id = follows.followed_id AND users.share_slug IS NOT NULL
+         JOIN library_items ON library_items.user_id = users.id
+           AND library_items.media_type = ? AND library_items.tmdb_id = ?
+         WHERE follows.follower_id = ?
+         ORDER BY library_items.status = 'watched' DESC, library_items.updated_at DESC
+         LIMIT ${LIST_LIMIT}`
+      )
+      .bind(mediaType, tmdbId, userId)
+      .all<{
+        share_slug: string;
+        display_name: string | null;
+        status: "watched" | "watchlist";
+        data: string;
+      }>(),
+  ]);
+  return {
+    following: counts.following,
+    entries: results.map((row) => {
+      const { rating } = JSON.parse(row.data) as LibraryItem;
+      return {
+        profile: { slug: row.share_slug, displayName: row.display_name },
+        status: row.status,
+        rating: row.status === "watched" && typeof rating === "number" ? rating : null,
+      };
+    }),
+  };
 }

@@ -1,13 +1,23 @@
 .section {
-  margin-top: 48px;
+  margin-top: 36px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .name {
-  color: var(--accent-ink);
+  color: var(--gold);
 }
 
+/* « 1 vu sur 2 » : petites capitales mono, comme les en-têtes de période. */
 .count {
-  color: var(--muted);
-  font-weight: 400;
-  font-size: 0.85em;
+  margin: 6px 0 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--subtle);
 }

@@ -8,13 +8,15 @@ const VALUES = Array.from({ length: 10 }, (_, i) => i + 1);
 interface RatingStarsProps {
   value: number | null;
   onRate: (value: number | null) => void;
+  /** Ajoute un bouton « Effacer » quand une note est donnée (fiche détail). */
+  clearable?: boolean;
 }
 
 // Notation 0-10 avec aperçu au survol (chaque étoile montre son propre
 // libellé pendant le survol, puis revient à la note choisie) et badge dont
 // l'aspect (couleur/taille) suit le palier — repris de la maquette HTML,
 // remplace l'ancien RatingInput (étoiles Unicode statiques).
-export default function RatingStars({ value, onRate }: RatingStarsProps) {
+export default function RatingStars({ value, onRate, clearable = false }: RatingStarsProps) {
   const { t } = useTranslation();
   const [hovered, setHovered] = useState<number | null>(null);
   const displayValue = hovered ?? value ?? 0;
@@ -56,6 +58,11 @@ export default function RatingStars({ value, onRate }: RatingStarsProps) {
           <span className={styles.dot} />
           {t(ratingTier(value).labelKey)}
         </span>
+      )}
+      {clearable && value != null && (
+        <button type="button" className={styles.clear} onClick={() => onRate(null)}>
+          {t("ratingStars.clear")}
+        </button>
       )}
     </div>
   );

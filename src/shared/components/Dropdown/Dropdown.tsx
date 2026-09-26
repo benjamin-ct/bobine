@@ -16,6 +16,13 @@ interface DropdownProps {
   /** Grise le déclencheur et empêche l'ouverture (ex. Plateformes quand
    * « Seulement mes plateformes » est activé dans FilterPanel). */
   disabled?: boolean;
+  /** Masque la flèche (ex. menu « ⋯ » de la fiche, déjà explicite). */
+  caret?: boolean;
+  /** Referme le panneau au clic sur l'un de ses boutons (menu d'actions),
+   * au lieu de le laisser ouvert (sélection multiple à cases à cocher). */
+  closeOnSelect?: boolean;
+  /** Libellé accessible quand `label` n'est qu'une icône. */
+  ariaLabel?: string;
   className?: string;
   children: ReactNode;
 }
@@ -42,6 +49,9 @@ export default function Dropdown({
   align = "left",
   pill = false,
   disabled = false,
+  caret = true,
+  closeOnSelect = false,
+  ariaLabel,
   className,
   children,
 }: DropdownProps) {
@@ -126,18 +136,22 @@ export default function Dropdown({
         disabled={disabled}
         aria-haspopup="true"
         aria-expanded={open}
+        aria-label={ariaLabel}
+        title={ariaLabel}
       >
         {label}
-        <svg
-          className={`${styles.caret} ${open ? styles.caretOpen : ""}`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden="true"
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        {caret && (
+          <svg
+            className={`${styles.caret} ${open ? styles.caretOpen : ""}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        )}
       </button>
       {open &&
         position &&
@@ -145,6 +159,15 @@ export default function Dropdown({
           <div
             ref={panelRef}
             className={styles.panel}
+            onClick={
+              closeOnSelect
+                ? (e) => {
+                    if ((e.target as HTMLElement).closest("button")) {
+                      setOpen(false);
+                    }
+                  }
+                : undefined
+            }
             style={{
               top: position.top,
               bottom: position.bottom,

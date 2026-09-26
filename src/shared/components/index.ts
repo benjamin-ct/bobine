@@ -8,7 +8,6 @@ export { Loading, ErrorMessage, EmptyState } from "./StateMessage/StateMessage.t
 export { default as DonutChart } from "./DonutChart/DonutChart.tsx";
 export type { DonutSegment } from "./DonutChart/DonutChart.tsx";
 export { default as RatingStars } from "./RatingStars/RatingStars.tsx";
-export { default as ProviderBadges } from "./ProviderBadges/ProviderBadges.tsx";
 export { default as TrailerButton } from "./TrailerButton/TrailerButton.tsx";
 export { default as ScrollToTop } from "./ScrollToTop/ScrollToTop.tsx";
 export { default as RecaptchaBadge } from "./RecaptchaBadge/RecaptchaBadge.tsx";
