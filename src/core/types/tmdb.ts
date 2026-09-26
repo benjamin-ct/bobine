@@ -196,6 +196,8 @@ export interface MediaDetails extends MediaSummary {
   last_episode_to_air?: EpisodeAirInfo | null;
   status?: string; // "Returning Series" | "Ended" | "Canceled" | ...
   production_countries?: ProductionCountry[];
+  original_title?: string; // films
+  original_name?: string; // séries
 }
 
 export interface WatchProviderEntry {

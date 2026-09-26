@@ -28,3 +28,18 @@ export interface FeedEntry {
   status: "watched" | "watchlist";
   item: LibraryItem;
 }
+
+/** Ce que les profils suivis ont fait d'un titre donné (fiche détail, bloc
+ * « Vos abonnements ») : `following` = nombre de profils suivis, pour
+ * distinguer « ne suit personne » (bloc masqué) de « personne ne l'a vu ». */
+export interface TitleActivity {
+  following: number;
+  entries: {
+    profile: { slug: string; displayName: string | null };
+    status: "watched" | "watchlist";
+    /** Note sur 10, seulement pour un titre vu et noté. */
+    rating: number | null;
+    /** Dernière mise à jour (ms) : « il y a 3 jours ». */
+    updatedAt: number;
+  }[];
+}

@@ -38,6 +38,15 @@
   color: var(--accent);
 }
 
+.disabled .star {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.disabled .star:hover svg {
+  transform: none;
+}
+
 .s-low .star.lit {
   color: color-mix(in oklch, var(--accent) 55%, var(--muted));
 }
@@ -98,4 +107,18 @@
   color: var(--on-gold);
   background: var(--gold);
   border-color: color-mix(in oklch, var(--gold) 65%, oklch(0 0 0));
+}
+
+.clear {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.clear:hover {
+  color: var(--fg);
+  border-color: var(--border-2);
 }

@@ -59,6 +59,7 @@ const PATHS = {
   arrowDown: <path d="M12 5v14M6 13l6 6 6-6" />,
   arrowLeft: <path d="M19 12H5M11 6l-6 6 6 6" />,
   arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
+  list: <path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" />,
   grip: <path d="M4 7h16M4 12h16M4 17h16" />,
   grid: (
     <>
@@ -93,6 +94,20 @@ const PATHS = {
       <path d="M20 20l-3.5-3.5" />
     </>
   ),
+  more: <path d="M5.5 12h.01M12 12h.01M18.5 12h.01" strokeWidth={3.2} />,
+  share: (
+    <>
+      <path d="M12 3.5v11M7.5 8 12 3.5 16.5 8" />
+      <path d="M5 12.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-6.5" />
+    </>
+  ),
+  ban: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M6 6l12 12" />
+    </>
+  ),
+  play: <path d="M8 5.5v13l10.5-6.5z" />,
   frown: (
     <>
       <circle cx="12" cy="12" r="9" />

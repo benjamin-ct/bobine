@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState } from "react";
-import type { FocusEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,16 +15,18 @@ import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContex
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import {
-  FilterBar,
+  FilterPanel,
+  EMPTY_ADVANCED_FILTERS,
+  getAdvancedFiltersRangeError,
   TrailerButton,
   ErrorMessage,
   PageHeader,
   Icon,
 } from "../../shared/components/index.ts";
+import type { AdvancedFiltersState } from "../../shared/components/index.ts";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import { ratingTier } from "../../shared/lib/ratingTier.ts";
-import { clampNumericValue, isRangeInverted } from "../../shared/lib/numericRangeFilter.ts";
 import type { LibraryItem } from "../../core/types/library.ts";
 import type {
   Genre,
@@ -38,9 +39,6 @@ import type { WatchProviderOption } from "../../core/api/tmdb.ts";
 import styles from "./RandomPage.module.css";
 
 const MAX_ATTEMPTS = 6;
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_MIN = 1900;
-const YEAR_MAX = CURRENT_YEAR + 5;
 
 type DrawSource = "watchlist" | "catalog";
 
@@ -105,17 +103,17 @@ export default function RandomPage() {
   const { t } = useTranslation();
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
-  const [providerId, setProviderId] = useState("");
+  const [providerIds, setProviderIds] = useState<string[]>([]);
   const [useMyPlatforms, setUseMyPlatforms] = useState(false);
-  const [yearMin, setYearMin] = useState("");
-  const [yearMax, setYearMax] = useState("");
+  // Seule l'année de sortie est proposée parmi les filtres avancés.
+  const [advanced, setAdvanced] = useState<AdvancedFiltersState>(EMPTY_ADVANCED_FILTERS);
+  const { yearMin, yearMax } = advanced;
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
   const [excludeWatched, setExcludeWatched] = useState(true);
   const [chosenSource, setChosenSource] = useState<DrawSource | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
-  const filtersId = useId();
+  const historyId = useId();
 
   const [pick, setPick] = useState<MediaItem | null>(null);
   const [pickDetails, setPickDetails] = useState<MediaDetails | null>(null);
@@ -135,21 +133,8 @@ export default function RandomPage() {
   const { excludedGenreIds } = useExcludedGenres();
   const { filterExcluded } = useExcludedTitles();
 
-  const yearRangeError = isRangeInverted(yearMin, yearMax)
-    ? t("advancedFilters.yearRangeError")
-    : null;
-
-  // Plafonne la valeur saisie une fois le champ quitté (pas à chaque frappe,
-  // ce qui empêcherait de taper un nombre à plusieurs chiffres dès que sa
-  // valeur intermédiaire sort des bornes, ex. "2" < 1900).
-  function clampYearOnBlur(setter: (value: string) => void) {
-    return (e: FocusEvent<HTMLInputElement>) => {
-      const clamped = clampNumericValue(e.target.value, YEAR_MIN, YEAR_MAX);
-      if (clamped !== e.target.value) {
-        setter(clamped);
-      }
-    };
-  }
+  const yearRangeErrorKey = getAdvancedFiltersRangeError(advanced);
+  const yearRangeError = yearRangeErrorKey ? t(yearRangeErrorKey) : null;
 
   useEffect(() => {
     setGenreIds([]);
@@ -168,16 +153,7 @@ export default function RandomPage() {
     };
   }, [mediaType, region]);
 
-  const activeProviderIds = useMyPlatforms
-    ? favoriteProviderIds.map(String)
-    : providerId
-      ? [providerId]
-      : [];
-  const activeFiltersCount =
-    (genreIds.length > 0 ? 1 : 0) +
-    (activeProviderIds.length > 0 ? 1 : 0) +
-    (yearMin || yearMax ? 1 : 0) +
-    (source === "catalog" && !excludeWatched ? 1 : 0);
+  const activeProviderIds = useMyPlatforms ? favoriteProviderIds.map(String) : providerIds;
 
   function rememberDraw(item: MediaItem, details: MediaDetails) {
     const entry: HistoryEntry = {
@@ -272,7 +248,7 @@ export default function RandomPage() {
       const discoverParams = {
         genreId: genreIds,
         excludeGenreIds: excludedGenreIds,
-        providerIds: useMyPlatforms ? favoriteProviderIds : providerId ? [providerId] : undefined,
+        providerIds: activeProviderIds.length > 0 ? activeProviderIds : undefined,
         region,
         yearMin: yearMin ? Number(yearMin) : undefined,
         yearMax: yearMax ? Number(yearMax) : undefined,
@@ -352,25 +328,6 @@ export default function RandomPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Résumé des filtres à côté de « Affiner » : « Films · Mes plateformes ·
-  // sans les déjà vus ».
-  const selectedProvider = providers.find((p) => String(p.id) === providerId);
-  const filtersSummary = [
-    mediaType === "movie" ? t("filterBar.movies") : t("filterBar.series"),
-    genreIds.length === 1
-      ? genres.find((g) => g.id === genreIds[0])?.name
-      : genreIds.length > 1
-        ? t("filterBar.genresCount", { count: genreIds.length })
-        : null,
-    useMyPlatforms
-      ? t("filterPanel.myPlatforms")
-      : (selectedProvider?.name ?? t("filterBar.allPlatforms")),
-    yearMin || yearMax ? [yearMin, yearMax].filter(Boolean).join("–") : null,
-    source === "catalog" && excludeWatched ? t("randomPage.withoutWatched") : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
   function buildLibItem() {
     if (!pick) {
       return null;
@@ -419,6 +376,39 @@ export default function RandomPage() {
         </p>
       </div>
 
+      {/* Mêmes filtres, dans la même disposition, que Découvrir, Nouveautés
+          et Prochainement : bascule Films/Séries, bouton « Filtres », puces
+          des filtres actifs et grille de champs titrés. */}
+      <FilterPanel
+        mediaType={mediaType}
+        setMediaType={setMediaType}
+        genres={genres}
+        genreIds={genreIds}
+        setGenreIds={setGenreIds}
+        providers={providers}
+        providerIds={providerIds}
+        setProviderIds={setProviderIds}
+        favoriteProviderIds={favoriteProviderIds}
+        useMyPlatforms={useMyPlatforms}
+        setUseMyPlatforms={setUseMyPlatforms}
+        advanced={advanced}
+        setAdvanced={setAdvanced}
+        advancedFields={["year"]}
+        switches={
+          source === "catalog"
+            ? [
+                {
+                  key: "without-watched",
+                  label: t("randomPage.watchedFilter"),
+                  text: t("randomPage.withoutWatched"),
+                  checked: excludeWatched,
+                  onChange: setExcludeWatched,
+                },
+              ]
+            : []
+        }
+      />
+
       <div className={styles.drawRow}>
         <button
           type="button"
@@ -432,80 +422,6 @@ export default function RandomPage() {
           </span>
           {t("randomPage.draw")}
         </button>
-        <button
-          type="button"
-          className={`${styles.filtersToggle} ${filtersOpen ? styles.filtersToggleOpen : ""}`}
-          aria-expanded={filtersOpen}
-          aria-controls={`${filtersId}-filters`}
-          onClick={() => setFiltersOpen((o) => !o)}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path d="M4 6h16M7 12h10M10 18h4" />
-          </svg>
-          {t("randomPage.refine")}
-          {activeFiltersCount > 0 && <span className={styles.count}>{activeFiltersCount}</span>}
-        </button>
-        <span className={styles.filtersSummary}>{filtersSummary}</span>
-      </div>
-
-      <div id={`${filtersId}-filters`} className={styles.filters} hidden={!filtersOpen}>
-        <FilterBar
-          mediaType={mediaType}
-          setMediaType={setMediaType}
-          genreIds={genreIds}
-          setGenreIds={setGenreIds}
-          genres={genres}
-          providerId={providerId}
-          setProviderId={setProviderId}
-          providers={providers}
-          favoriteProviderIds={favoriteProviderIds}
-          useFavoriteProviders={useMyPlatforms}
-          setUseFavoriteProviders={setUseMyPlatforms}
-        />
-
-        <div className={styles.yearFilter}>
-          <label>{t("randomPage.releaseYear")}</label>
-          <div className={styles.range}>
-            <input
-              type="number"
-              inputMode="numeric"
-              placeholder={t("advancedFilters.min")}
-              min={YEAR_MIN}
-              max={YEAR_MAX}
-              value={yearMin}
-              onChange={(e) => setYearMin(e.target.value)}
-              onBlur={clampYearOnBlur(setYearMin)}
-            />
-            <span>–</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              placeholder={t("advancedFilters.max")}
-              min={YEAR_MIN}
-              max={YEAR_MAX}
-              value={yearMax}
-              onChange={(e) => setYearMax(e.target.value)}
-              onBlur={clampYearOnBlur(setYearMax)}
-            />
-          </div>
-        </div>
-
-        {source === "catalog" && (
-          <label className={styles.checkboxLine}>
-            <input
-              type="checkbox"
-              checked={excludeWatched}
-              onChange={(e) => setExcludeWatched(e.target.checked)}
-            />
-            {t("randomPage.excludeWatched")}
-          </label>
-        )}
       </div>
 
       {yearRangeError && (
@@ -626,8 +542,8 @@ export default function RandomPage() {
       )}
 
       {history.length > 0 && (
-        <section className={styles.history} aria-labelledby={`${filtersId}-history`}>
-          <h2 id={`${filtersId}-history`} className={styles.historyTitle}>
+        <section className={styles.history} aria-labelledby={`${historyId}-history`}>
+          <h2 id={`${historyId}-history`} className={styles.historyTitle}>
             {t("randomPage.historyTitle")}
           </h2>
           <ul className={styles.historyList}>

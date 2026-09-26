@@ -4,80 +4,164 @@
   padding: 0 var(--gutter) 64px;
 }
 
-.back {
+/* Retour hors du grand bloc (chargement, erreur). */
+.backPlain {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   color: var(--muted);
   font-size: 14px;
   font-weight: 500;
-  padding: 20px 0 0;
+  padding: 20px 0 16px;
 }
 
-.back:hover {
-  color: var(--accent-ink);
+.backPlain:hover {
+  color: var(--fg);
 }
 
+/* ─── Grand bloc du haut ────────────────────────────────────────────────
+   Backdrop TMDB assombri par un dégradé, 36 px sous la bande pellicule de
+   l'en-tête, puis un halo teinté selon le genre (comme la maquette : indigo
+   en haut à droite, violet en bas à droite pour la SF). Sur desktop, le
+   bloc a la largeur du reste de la page. */
 .hero {
   position: relative;
-  margin-top: 16px;
+  isolation: isolate;
+  margin-top: 36px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  border: 1px solid var(--border);
-  isolation: isolate;
-}
-
-.hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  opacity: 0.35;
+  background: var(--surface);
 }
 
 .backdrop {
   position: absolute;
   inset: 0;
   z-index: -1;
+  background-color: var(--surface);
   background-size: cover;
   background-position: center 20%;
-  opacity: 0.55;
 }
 
-.heroOverlay {
+.backdrop::after {
+  content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    105deg,
-    color-mix(in oklch, var(--bg) 82%, transparent) 30%,
-    color-mix(in oklch, var(--bg) 35%, transparent) 100%
-  );
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--bg) 94%, transparent) 0%,
+      color-mix(in oklch, var(--bg) 82%, transparent) 42%,
+      color-mix(in oklch, var(--bg) 45%, transparent) 100%
+    ),
+    linear-gradient(0deg, color-mix(in oklch, var(--bg) 70%, transparent), transparent 55%);
+}
+
+/* Halo du genre, par-dessus le backdrop assombri : la couleur reste
+   visible à droite et s'efface vers le texte à gauche. */
+.halo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 70% 90% at 85% 0%,
+      color-mix(in oklch, var(--halo-1) 55%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 80% at 90% 100%,
+      color-mix(in oklch, var(--halo-2) 75%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 70% at 30% 100%,
+      color-mix(in oklch, var(--halo-2) 35%, transparent),
+      transparent 70%
+    );
+}
+
+.halo_scifi {
+  --halo-1: var(--g-scifi-1);
+  --halo-2: var(--g-scifi-2);
+}
+.halo_drama {
+  --halo-1: var(--g-drama-1);
+  --halo-2: var(--g-drama-2);
+}
+.halo_thriller {
+  --halo-1: var(--g-thril-1);
+  --halo-2: var(--g-thril-2);
+}
+.halo_horror {
+  --halo-1: var(--g-horr-1);
+  --halo-2: var(--g-horr-2);
+}
+.halo_animation {
+  --halo-1: var(--g-anim-1);
+  --halo-2: var(--g-anim-2);
+}
+.halo_romance {
+  --halo-1: var(--g-roman-1);
+  --halo-2: var(--g-roman-2);
+}
+.halo_comedy {
+  --halo-1: var(--g-com-1);
+  --halo-2: var(--g-com-2);
+}
+.halo_adventure {
+  --halo-1: var(--g-adv-1);
+  --halo-2: var(--g-adv-2);
+}
+
+/* Desktop : pilule au-dessus de l'affiche, de la même largeur. */
+.back {
+  grid-area: back;
+  justify-self: stretch;
+  margin-bottom: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: color-mix(in oklch, var(--bg) 55%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.back:hover {
+  background: color-mix(in oklch, var(--bg) 80%, transparent);
 }
 
 .heroInner {
-  position: relative;
-  z-index: 1;
   display: grid;
-  grid-template-columns: 232px 1fr;
-  gap: 34px;
-  padding: clamp(24px, 3.4vw, 40px);
-}
-
-@media (max-width: 780px) {
-  .heroInner {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-rows: auto auto auto 1fr;
+  grid-template-areas:
+    "back ."
+    "poster heading"
+    "poster meta"
+    "poster details";
+  column-gap: 44px;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: 28px clamp(24px, 3.4vw, 40px) 44px;
 }
 
 .posterWrap {
-  max-width: 232px;
+  grid-area: poster;
 }
 
 .poster {
   aspect-ratio: 2 / 3;
   border-radius: var(--radius);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-2);
   box-shadow: var(--shadow-lift);
   width: 100%;
   display: block;
@@ -95,64 +179,83 @@
   line-height: 0.95;
 }
 
-.info {
+.heading {
+  grid-area: heading;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.meta {
+  grid-area: meta;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 18px;
+}
+
+.details {
+  grid-area: details;
   min-width: 0;
 }
 
 .title {
-  font-family: var(--font-poster);
-  font-weight: 400;
-  text-transform: uppercase;
-  font-size: clamp(32px, 4.4vw, 54px);
-  line-height: 0.9;
-  letter-spacing: 0.012em;
+  margin-top: 12px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(34px, 4.2vw, 56px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
 }
 
-.year {
-  color: var(--muted);
-  font-weight: 400;
-}
-
-.meta {
+.genres {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  margin-top: 12px;
-  color: var(--muted);
-  font-size: 14px;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.genres li {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: color-mix(in oklch, var(--surface-3) 70%, transparent);
+  color: var(--fg);
+  font-size: 12.5px;
+  font-weight: 500;
 }
 
 .score {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-weight: 800;
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 15px;
 }
 
 .score svg {
-  width: 13px;
-  height: 13px;
-  fill: currentColor;
+  align-self: center;
+  color: var(--gold);
+  font-size: 16px;
+  margin-right: 2px;
 }
 
-.s-low {
+.score b {
+  font-weight: 800;
+}
+
+.scoreOutOf {
   color: var(--muted);
-  background: var(--surface-2);
-  border-color: var(--border);
+  font-size: 13px;
 }
-.s-mid {
-  color: var(--accent-ink);
-  background: var(--accent-soft);
-  border-color: color-mix(in oklch, var(--accent) 34%, transparent);
-}
-.s-high {
-  color: var(--on-gold);
-  background: var(--gold);
-  border-color: color-mix(in oklch, var(--gold) 70%, oklch(0 0 0));
+
+.scoreVotes {
+  color: var(--subtle);
+  font-size: 13px;
+  margin-left: 2px;
 }
 
 .statusPill {
@@ -160,102 +263,79 @@
   align-items: center;
   gap: 7px;
   margin-top: 16px;
-  padding: 7px 13px;
+  margin-right: 8px;
+  padding: 6px 12px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
-  color: var(--accent-ink);
+  background: var(--gold-soft);
+  border: 1px solid color-mix(in oklch, var(--gold) 40%, transparent);
+  color: var(--fg);
   font-size: 13px;
   font-weight: 600;
 }
 
 .overview {
   margin-top: 18px;
-  max-width: 62ch;
+  max-width: 64ch;
   color: color-mix(in oklch, var(--fg) 88%, var(--muted));
   font-size: 15.5px;
 }
 
+/* Actions : Envie de voir, Vu, listes, bande-annonce, puis le menu ⋯. Toutes
+   à la hauteur de la pilule commune (--pill-*), comme TrailerButton et le
+   déclencheur Dropdown en variant `pill`. */
 .actions {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
   gap: 10px;
   margin-top: 22px;
 }
 
-/* Seuil volontairement plus large que celui du hero ci-dessus : 4 colonnes
-   ne laissent pas assez de place pour le texte des boutons en paysage
-   mobile (~800-930px), qui finissait par passer sur plusieurs lignes et,
-   combiné à leur `border-radius` en pilule, les faisait paraître ronds. */
-@media (max-width: 960px) {
-  .actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* Ces deux boutons partagent la pilule "action principale" avec
-   TrailerButton et le déclencheur "Ajouter à…" (Dropdown en variant
-   `pill`) — padding/taille/graisse viennent des tokens communs
-   --pill-* (voir variables.css) pour que les 4 restent identiques. */
-.actionBtn,
-.actionBtnSecondary {
+.actionBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: var(--pill-padding);
   border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: var(--surface);
+  color: var(--fg);
   font-size: var(--pill-font-size);
   font-weight: var(--pill-font-weight);
   white-space: nowrap;
 }
 
-.actionBtn {
-  border: 1px solid var(--border-2);
-  background: var(--surface);
-  color: var(--fg);
-}
-
-.actionBtnOn {
-  background: var(--ok);
-  color: var(--on-ok);
-  border-color: var(--ok);
-}
-
-.actionBtnSecondary {
-  border: 1px solid var(--border-2);
-  background: var(--surface);
-  color: var(--fg);
-}
-
-.actionBtnSecondaryOn {
-  border-color: var(--accent);
-  color: var(--on-accent);
-  background: var(--accent);
-}
-
-.ghostBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 11px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.ghostBtn:hover {
-  color: var(--fg);
-  border-color: var(--border-2);
+.actionBtn:hover {
   background: var(--surface-2);
 }
 
-.ghostBtnOn {
-  color: var(--accent-ink);
+/* « Dans vos envies » : corail, la couleur des actions. */
+.wantOn,
+.wantOn:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* « Déjà vu » : teal. */
+.watchedOn,
+.watchedOn:hover {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: var(--on-ok);
+}
+
+.listDropdown {
+  flex: none;
+}
+
+.moreDropdown {
+  flex: none;
+}
+
+.moreDropdown > button {
+  padding-inline: 13px;
 }
 
 .emptyHint {
@@ -295,14 +375,379 @@
   font-weight: 600;
 }
 
+.copied {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  color: var(--ok-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Bandeau « exclu des suggestions » avec le bouton « Réintégrer ». */
+.excludedBanner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 10px 12px 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-2);
+  background: color-mix(in oklch, var(--surface-3) 80%, transparent);
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.excludedBanner span {
+  flex: 1;
+  min-width: 12em;
+}
+
+.excludedBanner button {
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.excludedBanner button:hover {
+  background: var(--surface-2);
+}
+
+/* Votre note : toujours visible (noter marque le titre comme vu). */
+.yourRating {
+  max-width: 540px;
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.yourRating > div {
+  margin-block: 8px 0;
+}
+
+.yourRatingHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.yourRatingHead :global(.eyebrow) {
+  color: var(--muted);
+}
+
+.yourRatingValue {
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.yourRatingDash {
+  width: 12px;
+  height: 2px;
+  background: currentColor;
+}
+
+/* ─── Sous le bloc : 2 colonnes sur desktop ─────────────────────────── */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
+  align-items: start;
+  margin-top: 28px;
+}
+
+.main {
+  min-width: 0;
+}
+
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: calc(var(--header-height) + 16px);
+}
+
 .section {
-  padding-block: clamp(28px, 4vw, 44px);
+  padding-top: 36px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .section h2,
-.section h3 {
+.infoCard h2 {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
-  margin-bottom: 16px;
+}
+
+.textBtn {
+  flex: none;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.textBtn:hover {
+  color: var(--fg);
+}
+
+.castGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.infoCard {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.infoCard h2 {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+
+.infoList {
+  margin: 0;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.infoRow:first-child {
+  border-top: 0;
+}
+
+.infoRow dt {
+  flex: none;
+  color: var(--subtle);
+}
+
+.infoRow dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--fg);
+  text-align: right;
+}
+
+.infoLink {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--border-2);
+  text-underline-offset: 3px;
+}
+
+.infoLink:hover {
+  text-decoration-color: currentColor;
+}
+
+@media (max-width: 1080px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+
+  .castGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .aside {
+    position: static;
+  }
+}
+
+/* ─── Mobile : image pleine largeur sous l'en-tête, affiche qui la
+   chevauche, titre à côté de l'affiche puis le reste en pleine largeur. */
+@media (max-width: 720px) {
+  .hero {
+    margin: 0 calc(-1 * var(--gutter));
+    border: 0;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
+  }
+
+  .backdrop {
+    position: relative;
+    z-index: 0;
+    aspect-ratio: 16 / 9;
+  }
+
+  .backdrop::after {
+    background: linear-gradient(0deg, var(--bg) 0%, transparent 60%);
+  }
+
+  /* Mobile : le halo teinte le haut de l'image et s'efface avant le titre,
+     qui chevauche le bas de l'image. */
+  .halo {
+    z-index: 0;
+    bottom: auto;
+    aspect-ratio: 16 / 9;
+    background:
+      radial-gradient(
+        ellipse 90% 80% at 80% 10%,
+        color-mix(in oklch, var(--halo-1) 55%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 80% 70% at 90% 90%,
+        color-mix(in oklch, var(--halo-2) 60%, transparent),
+        transparent 70%
+      );
+    mask-image: linear-gradient(0deg, transparent 40%, #000 80%);
+  }
+
+  /* Mobile : petite pilule en haut à gauche, sur l'image. */
+  .back {
+    position: absolute;
+    top: 12px;
+    left: var(--gutter);
+    z-index: 2;
+    margin: 0;
+    padding: 7px 14px;
+  }
+
+  /* Pas de position ici : .back se place par rapport à .hero. */
+  .heroInner {
+    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "poster heading"
+      "meta meta"
+      "details details";
+    column-gap: 16px;
+    padding: 0 var(--gutter);
+  }
+
+  .posterWrap {
+    position: relative;
+    z-index: 1;
+    margin-top: -72px;
+  }
+
+  .heading {
+    align-self: end;
+    padding-top: 0;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  /* Genres puis note TMDB sur la ligne suivante. */
+  .meta {
+    margin-top: 16px;
+    gap: 12px;
+  }
+
+  .score {
+    flex-basis: 100%;
+  }
+
+  /* Envie / Vu sur une ligne, puis listes (largeur restante), bande-annonce
+     et ⋯ en boutons ronds. */
+  .actions {
+    gap: 8px;
+  }
+
+  .actions > * {
+    min-width: 0;
+  }
+
+  .actionBtn {
+    flex: 1 1 40%;
+    padding-inline: 12px;
+  }
+
+  .listDropdown {
+    flex: 1;
+  }
+
+  .listDropdown > button {
+    width: 100%;
+  }
+
+  .yourRating {
+    max-width: none;
+    margin-top: 18px;
+    padding: 14px 16px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+
+  /* Une seule colonne, dans l'ordre de la maquette : Où le voir, Vos
+     abonnements, casting, saga, Infos. */
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 24px;
+  }
+
+  .main,
+  .aside {
+    display: contents;
+  }
+
+  .main > * {
+    order: 3;
+  }
+
+  .main > :first-child {
+    order: 1;
+  }
+
+  .aside > * {
+    order: 2;
+    margin-top: 28px;
+  }
+
+  .aside > .infoCard {
+    order: 4;
+  }
+
+  /* Casting : rangée qui défile horizontalement. */
+  .castGrid {
+    display: flex;
+    gap: 14px;
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .castGrid > * {
+    flex: none;
+    width: 96px;
+  }
 }

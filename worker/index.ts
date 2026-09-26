@@ -99,6 +99,7 @@ import {
   getFollowers,
   getFollowing,
   getFeed,
+  getTitleActivity,
   searchProfiles,
 } from "./follows.ts";
 import {
@@ -1183,6 +1184,25 @@ async function handleGetFeed(request: Request, env: Env): Promise<Response> {
   return json({ entries: await getFeed(env.DB, user.id) });
 }
 
+// Bloc « Vos abonnements » de la fiche détail : qui, parmi les profils
+// suivis, a vu (et noté) ou veut voir ce titre.
+async function handleGetTitleActivity(request: Request, env: Env, url: URL): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const mediaType = url.searchParams.get("mediaType");
+  const tmdbId = Number(url.searchParams.get("id"));
+  if (
+    (mediaType !== "movie" && mediaType !== "tv") ||
+    !Number.isSafeInteger(tmdbId) ||
+    tmdbId <= 0
+  ) {
+    return json({ error: "Titre invalide." }, 400);
+  }
+  return json(await getTitleActivity(env.DB, user.id, mediaType, tmdbId));
+}
+
 // Recherche par nom affiché parmi les profils partagés, réservée aux
 // membres connectés (c'est pour trouver qui suivre) et plafonnée pour
 // qu'on ne puisse pas lister tous les profils publics à la chaîne.
@@ -2083,6 +2103,9 @@ async function routeRequest(
   }
   if (url.pathname === "/api/account/feed" && request.method === "GET") {
     return handleGetFeed(request, env);
+  }
+  if (url.pathname === "/api/account/title-activity" && request.method === "GET") {
+    return handleGetTitleActivity(request, env, url);
   }
   if (url.pathname === "/api/profiles/search" && request.method === "GET") {
     return handleSearchProfiles(request, env, url);

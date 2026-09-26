@@ -21,6 +21,17 @@
   height: 16px;
 }
 
+@media (max-width: 720px) {
+  .compact {
+    padding-inline: 0;
+    aspect-ratio: 1;
+  }
+
+  .compact .label {
+    display: none;
+  }
+}
+
 .trigger:hover {
   border-color: var(--accent);
   background: var(--surface-2);
