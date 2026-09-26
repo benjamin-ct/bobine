@@ -171,10 +171,44 @@
   border-color: var(--border-2);
 }
 
+/* Actif : corail, comme sur la maquette (rappel posé / envie de voir). */
 .bellOn {
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.want {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.want:hover {
   color: var(--fg);
-  border-color: var(--selected-border);
-  background: var(--selected-bg);
+  border-color: var(--border-2);
+}
+
+.wantOn {
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.wantOn svg {
+  fill: currentColor;
 }
 
 @media (max-width: 640px) {
@@ -186,8 +220,11 @@
   .thumb {
     display: none;
   }
-  .bell {
+  .actions {
     grid-column: 1 / -1;
+  }
+  .bell {
+    flex: 1;
     justify-content: center;
   }
 }

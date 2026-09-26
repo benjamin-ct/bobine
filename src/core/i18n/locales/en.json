@@ -233,12 +233,13 @@
     "lead": "Upcoming releases, in theaters and streaming. Turn on the bell to get notified on release day.",
     "unknownTitle": "Unknown title",
     "dateTbd": "Date to be confirmed",
-    "notifyTitle": "Get notified on release (adds to Want to watch)",
+    "notifyTitle": "Get notified on release day and when it arrives on a streaming service",
     "notified": "Notified",
     "notifyMe": "Notify me",
     "emptyState": "No releases scheduled for this period with these filters.",
     "theaters": "Theaters",
-    "windowsLabel": "Period"
+    "windowsLabel": "Period",
+    "wantToWatch": "Want to watch"
   },
   "newReleasesPage": {
     "windows": {
@@ -486,6 +487,14 @@
       "title": "New follower",
       "body": "{{title}} started following you."
     },
+    "reminderReleased": {
+      "title": "Release day",
+      "body": "\"{{title}}\" is out today."
+    },
+    "reminderAvailable": {
+      "title": "Now streaming",
+      "body": "\"{{title}}\" just arrived on a streaming service."
+    },
     "newFollowerFallback": "Someone"
   },
   "legal": {
@@ -569,6 +578,10 @@
       "follows": {
         "label": "Follows",
         "text": ": when you follow a profile, we store that follow and its date. It is used to show follower/following counts and lists, your activity feed, and to notify the person you follow. If your profile is shared, your display name and a link to your profile appear in those lists; otherwise you only appear as a \"private profile\". A shared profile can also be found by its display name in the profile search available to signed-in members. You can unfollow a profile at any time."
+      },
+      "reminders": {
+        "label": "“Notify me” reminders",
+        "text": ": when you turn on the bell for an upcoming title, we store on your account that title (identifier, name, poster, release date), the date of the reminder and the streaming services already known for it. They are only used to notify you on release day and when the title arrives on a streaming service. Turning the bell off deletes the reminder."
       },
       "sharedProfile": {
         "label": "Shared profile and username",

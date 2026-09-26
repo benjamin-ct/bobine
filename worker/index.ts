@@ -79,6 +79,7 @@ import {
   sanitizeCustomListsPayload,
   sanitizeDisplayName,
   sanitizeIdList,
+  sanitizeReminder,
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
 import { getTheatricalIndex } from "./tmdb.ts";
@@ -100,6 +101,13 @@ import {
   getFeed,
   searchProfiles,
 } from "./follows.ts";
+import {
+  MAX_REMINDERS,
+  addReminder,
+  countReminders,
+  getRemindersForUser,
+  removeReminder,
+} from "./reminders.ts";
 
 // Classe Durable Object de la synchro temps réel : doit être exportée par le
 // module principal (voir "exports" dans wrangler.jsonc).
@@ -979,6 +987,64 @@ async function handlePutTopPicks(request: Request, env: Env): Promise<Response> 
   const topPicks = keys.filter((key) => library.watched[key]);
   await setTopPicks(env.DB, user.id, topPicks);
   return json({ ok: true, topPicks });
+}
+
+// Rappels « Me prévenir » (migration 0014, worker/reminders.ts) ----------
+async function handleGetReminders(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  return json({ reminders: await getRemindersForUser(env.DB, user.id) });
+}
+
+async function handlePutReminder(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  if (
+    !(await checkRateLimit(env.DB, `reminders:user:${user.id}`, {
+      limit: 300,
+      windowMs: 60 * 60_000,
+    }))
+  ) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const reminder = sanitizeReminder(body);
+  if (!reminder) {
+    return json({ error: "Rappel invalide." }, 400);
+  }
+  if ((await countReminders(env.DB, user.id)) >= MAX_REMINDERS) {
+    return json({ error: "Trop de rappels." }, 400);
+  }
+  await addReminder(env.DB, user.id, reminder, new URL(request.url).hostname);
+  return json({ ok: true });
+}
+
+async function handleDeleteReminder(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const [key] = sanitizeKeyList([body?.key], 1);
+  if (!key) {
+    return json({ error: 'Paramètre "key" invalide.' }, 400);
+  }
+  await removeReminder(env.DB, user.id, key.mediaType, key.id);
+  return json({ ok: true });
 }
 
 // Accessible sans compte (c'est tout l'intérêt d'un lien de partage), mais
@@ -1976,6 +2042,15 @@ async function routeRequest(
       publicFollowList[1],
       publicFollowList[2] as "followers" | "following"
     );
+  }
+  if (url.pathname === "/api/reminders" && request.method === "GET") {
+    return handleGetReminders(request, env);
+  }
+  if (url.pathname === "/api/reminders" && request.method === "PUT") {
+    return handlePutReminder(request, env);
+  }
+  if (url.pathname === "/api/reminders" && request.method === "DELETE") {
+    return handleDeleteReminder(request, env);
   }
   if (url.pathname === "/api/account/top-picks" && request.method === "GET") {
     return handleGetTopPicks(request, env);

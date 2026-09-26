@@ -9,6 +9,7 @@ import App from "./App.tsx";
 import { AuthProvider } from "./core/context/AuthContext.tsx";
 import { LibraryProvider } from "./core/context/LibraryContext.tsx";
 import { MembersOnlyProvider } from "./core/context/MembersOnlyContext.tsx";
+import { RemindersProvider } from "./core/context/RemindersContext.tsx";
 import { RegionProvider, loadStoredRegion } from "./core/context/RegionContext.tsx";
 import { RegionAccountSync } from "./core/context/RegionAccountSync.tsx";
 import { DEFAULT_REGION } from "./core/api/releaseBadge.ts";
@@ -107,7 +108,9 @@ createRoot(rootElement).render(
                       <ExcludedTitlesProvider>
                         <MembersOnlyProvider>
                           <LibraryProvider>
-                            <App />
+                            <RemindersProvider>
+                              <App />
+                            </RemindersProvider>
                           </LibraryProvider>
                         </MembersOnlyProvider>
                       </ExcludedTitlesProvider>

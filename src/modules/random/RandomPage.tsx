@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { FocusEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -338,6 +338,20 @@ export default function RandomPage() {
   const rolling = status === "loading";
   const availability = availabilityOf(providersResult);
 
+  // Un titre est déjà tiré à l'arrivée sur la page, avec la source et les
+  // filtres par défaut (même tirage que le bouton « Tirer un titre »). La
+  // bibliothèque vient du localStorage : « Mes envies de voir » est donc
+  // déjà connue à ce moment-là.
+  const initialDrawDone = useRef(false);
+  useEffect(() => {
+    if (initialDrawDone.current) {
+      return;
+    }
+    initialDrawDone.current = true;
+    void drawRandom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Résumé des filtres à côté de « Affiner » : « Films · Mes plateformes ·
   // sans les déjà vus ».
   const selectedProvider = providers.find((p) => String(p.id) === providerId);
@@ -518,6 +532,12 @@ export default function RandomPage() {
             {t("randomPage.drawFromCatalog")}
           </button>
         </p>
+      )}
+
+      {!pick && rolling && (
+        <div className={styles.spotlight} aria-busy="true">
+          <div className={`${styles.posterWrap} ${styles.fading}`} />
+        </div>
       )}
 
       {pick && (

@@ -30,7 +30,13 @@ export interface SyncEvent {
 
 // Doit rester aligné avec NotificationKind/AppNotification (worker/notify.ts).
 export type NotificationKind =
-  "watchlistAvailable" | "favoriteGenreRelease" | "trendingRelease" | "test" | "newFollower";
+  | "watchlistAvailable"
+  | "favoriteGenreRelease"
+  | "trendingRelease"
+  | "test"
+  | "newFollower"
+  | "reminderReleased"
+  | "reminderAvailable";
 
 export interface InAppNotification {
   kind: NotificationKind;

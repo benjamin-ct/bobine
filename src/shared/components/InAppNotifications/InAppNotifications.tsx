@@ -12,6 +12,8 @@ const KINDS = [
   "trendingRelease",
   "test",
   "newFollower",
+  "reminderReleased",
+  "reminderAvailable",
 ];
 
 interface Toast extends InAppNotification {

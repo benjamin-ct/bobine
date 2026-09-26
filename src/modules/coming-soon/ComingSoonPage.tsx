@@ -19,6 +19,7 @@ import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContex
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
+import { useReminders } from "../../core/context/RemindersContext.tsx";
 import {
   FilterPanel,
   ErrorMessage,
@@ -106,6 +107,7 @@ const THEATRICAL_LABEL = "Cinéma";
 function TimelineItem({ item }: { item: MediaItem }) {
   const { t } = useTranslation();
   const { isInWatchlist, toggleWatchlist } = useLibrary();
+  const { hasReminder, toggleReminder } = useReminders();
   const { locale } = useLocale();
   const { region, getTheatricalStatus } = useRegion();
   const rowRef = useRef<HTMLDivElement>(null);
@@ -128,7 +130,10 @@ function TimelineItem({ item }: { item: MediaItem }) {
   const channel = isTheatrical ? t("comingSoonPage.theaters") : release?.label;
   const title = item.title || item.name || t("comingSoonPage.unknownTitle");
   const date = item.release_date || item.first_air_date;
-  const notifying = isInWatchlist(item.mediaType, item.id);
+  // Rappel et envie de voir sont indépendants : l'un n'implique pas l'autre.
+  const notifying = hasReminder(item.mediaType, item.id);
+  const wanted = isInWatchlist(item.mediaType, item.id);
+  const posterPath = item.poster_path ?? null;
   const accentKey = posterAccentFromGenres(item.genre_ids, `${item.mediaType}:${item.id}`);
 
   return (
@@ -165,34 +170,39 @@ function TimelineItem({ item }: { item: MediaItem }) {
           </span>
         </div>
       </Link>
-      <button
-        type="button"
-        className={`${styles.bell} ${notifying ? styles.bellOn : ""}`}
-        aria-pressed={notifying}
-        title={t("comingSoonPage.notifyTitle")}
-        onClick={() =>
-          toggleWatchlist({
-            id: item.id,
-            mediaType: item.mediaType,
-            title,
-            posterPath: item.poster_path ?? null,
-            date,
-            genreIds: item.genre_ids || [],
-          })
-        }
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden="true"
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={`${styles.bell} ${notifying ? styles.bellOn : ""}`}
+          aria-pressed={notifying}
+          title={t("comingSoonPage.notifyTitle")}
+          onClick={() =>
+            toggleReminder({ id: item.id, mediaType: item.mediaType, title, posterPath, date })
+          }
         >
-          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8" />
-          <path d="M10 21a2 2 0 0 0 4 0" />
-        </svg>
-        <span>{notifying ? t("comingSoonPage.notified") : t("comingSoonPage.notifyMe")}</span>
-      </button>
+          <Icon name="bell" size={14} />
+          <span>{notifying ? t("comingSoonPage.notified") : t("comingSoonPage.notifyMe")}</span>
+        </button>
+        <button
+          type="button"
+          className={`${styles.want} ${wanted ? styles.wantOn : ""}`}
+          aria-pressed={wanted}
+          aria-label={t("comingSoonPage.wantToWatch")}
+          title={t("comingSoonPage.wantToWatch")}
+          onClick={() =>
+            toggleWatchlist({
+              id: item.id,
+              mediaType: item.mediaType,
+              title,
+              posterPath,
+              date,
+              genreIds: item.genre_ids || [],
+            })
+          }
+        >
+          <Icon name="star" size={15} />
+        </button>
+      </div>
     </div>
   );
 }

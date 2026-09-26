@@ -22,8 +22,16 @@ import type { Env, SubscriptionRow } from "./types.ts";
 // "newFollower" : quelqu'un vient de suivre le profil — `mediaTitle` porte
 // alors le nom affiché de l'abonné (vide s'il n'en a pas ou si son profil
 // est privé).
+// "reminderReleased" / "reminderAvailable" : rappels « Me prévenir » (voir
+// worker/scheduled.ts, checkReminders).
 export type NotificationKind =
-  "watchlistAvailable" | "favoriteGenreRelease" | "trendingRelease" | "test" | "newFollower";
+  | "watchlistAvailable"
+  | "favoriteGenreRelease"
+  | "trendingRelease"
+  | "test"
+  | "newFollower"
+  | "reminderReleased"
+  | "reminderAvailable";
 
 export interface AppNotification {
   kind: NotificationKind;
@@ -74,6 +82,14 @@ const PUSH_CONTENT: Record<
       title: "Seancy : nouvel abonné 👋",
       body: `${name || "Quelqu'un"} a commencé à vous suivre.`,
     }),
+    reminderReleased: (title) => ({
+      title: "Seancy : c'est le jour J 🎟️",
+      body: `« ${title} » sort aujourd'hui.`,
+    }),
+    reminderAvailable: (title) => ({
+      title: "Seancy : disponible en streaming 🎬",
+      body: `« ${title} » vient d'arriver sur une plateforme.`,
+    }),
   },
   en: {
     watchlistAvailable: (title) => ({
@@ -95,6 +111,14 @@ const PUSH_CONTENT: Record<
     newFollower: (name) => ({
       title: "Seancy: new follower 👋",
       body: `${name || "Someone"} started following you.`,
+    }),
+    reminderReleased: (title) => ({
+      title: "Seancy: release day 🎟️",
+      body: `"${title}" is out today.`,
+    }),
+    reminderAvailable: (title) => ({
+      title: "Seancy: now streaming 🎬",
+      body: `"${title}" just arrived on a streaming service.`,
     }),
   },
 };
