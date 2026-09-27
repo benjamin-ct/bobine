@@ -18,6 +18,28 @@ const keyOf = (item: { mediaType: string; id: number }) => `${item.mediaType}:${
 
 const RANK_CLASS = ["rank1", "rank2", "rank3", "rankOutline", "rankOutline"] as const;
 
+// Dernier top connu, gardé sur l'appareil : le panneau s'affiche tout de suite
+// au lieu d'apparaître après la requête et de décaler toute la page. Effacé à
+// la déconnexion (voir core/lib/accountStorage.ts).
+const CACHE_KEY = "seancy.topPicks.v1";
+
+function readCachedPicks(): string[] | null {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(CACHE_KEY) ?? "null");
+    return Array.isArray(value) ? value.filter((key) => typeof key === "string") : null;
+  } catch {
+    return null;
+  }
+}
+
+function cachePicks(picks: string[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(picks));
+  } catch {
+    // Stockage indisponible (navigation privée...) : pas de cache.
+  }
+}
+
 // Top 5 du profil partagé choisi à la main parmi ses titres vus (seuls les
 // titres vus peuvent être notés, donc « vus ou notés » = vus). Sans choix, la
 // page publique garde le calcul automatique (titres vus les mieux notés).
@@ -35,7 +57,7 @@ export default function TopPicksPanel() {
   const { t } = useTranslation();
   const { watched } = useLibrary();
   const { shareSlug, username } = useAuth();
-  const [picks, setPicks] = useState<string[] | null>(null);
+  const [picks, setPicks] = useState<string[] | null>(readCachedPicks);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [focusKey, setFocusKey] = useState<string | null>(null);
@@ -48,11 +70,12 @@ export default function TopPicksPanel() {
       .then((data: { topPicks?: string[] }) => {
         if (!cancelled) {
           setPicks(data.topPicks ?? []);
+          cachePicks(data.topPicks ?? []);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setPicks([]);
+          setPicks((current) => current ?? []);
           setError(t("topPicks.loadError"));
         }
       });
@@ -96,6 +119,7 @@ export default function TopPicksPanel() {
       if (!res.ok) {
         throw new Error();
       }
+      cachePicks(next);
     } catch {
       setPicks(previous);
       setError(t("topPicks.saveError"));
@@ -151,24 +175,30 @@ export default function TopPicksPanel() {
     };
   }
 
-  if (picks === null) {
-    return null;
-  }
-
+  // Premier chargement sans cache : cases vides inertes, à la taille finale,
+  // pour que la page ne saute pas quand le top arrive.
+  const loading = picks === null;
   const free = MAX_PICKS - chosen.length;
   const emptySlots = Array.from({ length: free }, (_, i) => chosen.length + i);
   const profilePath = shareSlug ? `/u/${username ?? shareSlug}` : null;
   const canDrag = chosen.length > 1;
 
   return (
-    <section ref={panelRef} className={styles.panel} aria-labelledby="top-picks-title">
+    <section
+      ref={panelRef}
+      className={styles.panel}
+      aria-labelledby="top-picks-title"
+      aria-busy={loading}
+    >
       <div className={styles.head}>
         <div>
           <h2 id="top-picks-title" className={styles.title}>
             {t("topPicks.title")}
-            <span className={styles.counter}>
-              {t("topPicks.counter", { count: chosen.length, max: MAX_PICKS })}
-            </span>
+            {!loading && (
+              <span className={styles.counter}>
+                {t("topPicks.counter", { count: chosen.length, max: MAX_PICKS })}
+              </span>
+            )}
           </h2>
           <p className={styles.subtitle}>{t("topPicks.subtitle")}</p>
         </div>
@@ -256,29 +286,38 @@ export default function TopPicksPanel() {
               );
             })}
             {emptySlots.map((index) => (
-              <li key={`empty-${index}`} className={`${styles.slot} ${styles.emptySlot}`}>
+              <li
+                key={`empty-${index}`}
+                className={`${styles.slot} ${styles.emptySlot} ${loading ? styles.loadingSlot : ""}`}
+              >
                 <span className={`${styles.rank} ${styles.rankOutline}`} aria-hidden>
                   {index + 1}
                 </span>
-                <button
-                  type="button"
-                  className={styles.addCard}
-                  onClick={() => setPickerOpen(true)}
-                  aria-label={t("topPicks.addAt", { rank: index + 1 })}
-                >
-                  <span className={styles.plus} aria-hidden>
-                    +
-                  </span>
-                  {t("topPicks.add")}
-                </button>
+                {loading ? (
+                  <span className={`${styles.addCard} ${styles.loadingCard}`} aria-hidden />
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.addCard}
+                    onClick={() => setPickerOpen(true)}
+                    aria-label={t("topPicks.addAt", { rank: index + 1 })}
+                  >
+                    <span className={styles.plus} aria-hidden>
+                      +
+                    </span>
+                    {t("topPicks.add")}
+                  </button>
+                )}
                 <div className={styles.meta}>
-                  <span className={styles.slotSub}>{t("topPicks.freeSlot")}</span>
+                  <span className={styles.slotSub}>
+                    {loading ? "\u00a0" : t("topPicks.freeSlot")}
+                  </span>
                 </div>
               </li>
             ))}
           </ol>
 
-          {free > 0 && (
+          {free > 0 && !loading && (
             <button type="button" className={styles.addRow} onClick={() => setPickerOpen(true)}>
               <span className={styles.plus} aria-hidden>
                 +
