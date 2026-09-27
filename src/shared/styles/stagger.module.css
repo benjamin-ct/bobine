@@ -47,6 +47,11 @@
   animation: none;
 }
 
+/* Retour sur une page déjà vue (App.tsx) : les cartes sont affichées d'emblée. */
+:global(main[data-restored]) .item {
+  animation: none;
+}
+
 @keyframes in {
   from {
     opacity: 0;

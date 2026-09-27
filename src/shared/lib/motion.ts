@@ -66,8 +66,9 @@ export function fadeIn(el: Element | null | undefined): void {
 // la fiche ; « Retour » fait le chemin inverse. Le navigateur photographie
 // l'avant et l'après, et anime entre les deux l'élément qui porte le même
 // `view-transition-name` des deux côtés. L'affiche de la fiche le porte en
-// CSS (global.css, [data-morph-poster]) : elle passe du squelette à la fiche
-// chargée pendant la transition, un nom posé en inline serait perdu. Côté
+// CSS (global.css, [data-morph-poster]), celle du squelette non : l'affiche
+// du squelette n'est ni à la même place ni à la même taille, et la fiche
+// qui la remplace en pleine animation la faisait sauter. Côté
 // cartes, le nom n'est posé que le temps de la transition, en inline : il
 // doit être unique dans la page, alors qu'une grille compte des dizaines
 // d'affiches. Navigateur sans View Transitions ou « réduire les
@@ -119,12 +120,20 @@ export function morphPoster(
     others.forEach((el) => (el.style.viewTransitionName = ""));
     go();
     // La navigation de React Router est asynchrone (startTransition, ou
-    // popstate pour un retour) : on attend que la nouvelle page affiche
-    // l'affiche cible, 600 ms au plus. setTimeout et non
-    // requestAnimationFrame, suspendu pendant la capture.
+    // popstate pour un retour), et la fiche attend sa requête /movie ou /tv :
+    // on attend que la nouvelle page affiche l'affiche cible, 600 ms au plus.
+    // Passé ce délai, l'ancienne affiche se fond avec le reste de la page.
+    // setTimeout et non requestAnimationFrame, suspendu pendant la capture.
     const start = performance.now();
     while (!(target = findTarget()) && performance.now() - start < 600) {
       await wait(16);
+    }
+    // Image pas encore décodée : l'affiche arriverait vide puis apparaîtrait
+    // en pleine animation (clignotement). Elle est en cache (même URL que la
+    // carte), le décodage est court.
+    const img = target?.querySelector("img");
+    if (img && typeof img.decode === "function") {
+      await Promise.race([img.decode().catch(() => undefined), wait(150)]);
     }
     // Laisse passer les effets de la nouvelle page (remise en haut du
     // défilement) avant la photo de l'après.

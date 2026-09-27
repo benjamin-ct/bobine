@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useLayoutEffect, useRef, useState } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import {
   NavBar,
   ScrollToTop,
@@ -27,8 +27,10 @@ import { fadeIn, isPosterTransitionRunning } from "./shared/lib/motion.ts";
 
 export default function App() {
   const { pathname } = useLocation();
+  const navigationType = useNavigationType();
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   // Fondu court à chaque changement de page (pas au premier affichage,
   // couvert par le splash, ni quand seuls les paramètres changent : onglets
@@ -39,18 +41,26 @@ export default function App() {
       firstRender.current = false;
       return;
     }
+    setHasNavigated(true);
     // Transition d'affiche en cours : elle fait déjà son propre fondu.
     if (!isPosterTransitionRunning()) {
       fadeIn(mainRef.current);
     }
   }, [pathname]);
 
+  // Page retrouvée par un retour (bouton « Retour », geste ou navigateur) :
+  // les affiches ne rejouent pas leur arrivée en cascade (stagger.module.css).
+  // Elles doivent être déjà en place, notamment pour que l'affiche de la fiche
+  // regagne sa carte (motion.ts, morphPoster). Le premier affichage est aussi
+  // un « POP » pour React Router : il garde sa cascade.
+  const restored = navigationType === "POP" && hasNavigated;
+
   return (
     <>
       <ScrollToTop />
       <RecaptchaBadge />
       <NavBar />
-      <main ref={mainRef}>
+      <main ref={mainRef} data-restored={restored || undefined}>
         <Routes>
           <Route path="/" element={<Discover />} />
           <Route path="/nouveautes" element={<NewReleases />} />

@@ -34,7 +34,7 @@ export default function DetailSkeleton({ mediaType, id, preview }: DetailSkeleto
       <div className={`${pageStyles.hero} ${styles.hero} ${posterStyles[accentKey]}`}>
         <div className={pageStyles.heroOverlay} />
         <div className={pageStyles.heroInner}>
-          <div className={pageStyles.posterWrap} data-morph-poster>
+          <div className={pageStyles.posterWrap}>
             {preview?.posterPath ? (
               <img
                 src={posterUrl(preview.posterPath, "w342") ?? undefined}
