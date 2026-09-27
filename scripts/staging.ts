@@ -13,8 +13,8 @@
 //
 // Commandes :
 //   copy-db : exporte la base de prod, recrée la base de staging à partir de
-//             cet export (sans ses lignes orphelines, voir
-//             orphanCleanupSql) puis neutralise les abonnements push (voir
+//             cet export (remis dans l'ordre des clés étrangères, voir
+//             buildImportSql) puis neutralise les abonnements push (voir
 //             NEUTRALIZE_PUSH_SQL).
 //   config  : génère wrangler.staging.generated.jsonc (Worker bobine-staging
 //             branché sur la base de staging) et y applique les migrations
@@ -81,25 +81,6 @@ function createDatabase(name: string): string {
   return match[1];
 }
 
-// `wrangler d1 export` écrit chaque table suivie de ses données, dans
-// l'ordre de création des tables : `subscriptions` (migration 0001) et ses
-// lignes arrivent avant `users`, alors qu'une de ses colonnes y fait
-// référence (migration 0008). À l'import, insérer une ligne dont la table
-// parente n'existe pas encore échoue avec "no such table: main.users",
-// même avec defer_foreign_keys. On crée donc tout le schéma avant d'insérer
-// les données (ordre relatif conservé), les clés étrangères n'étant vérifiées
-// qu'à la fin grâce au defer_foreign_keys de l'export. Chaque INSERT tient sur
-// une ligne : l'export encode les retours à la ligne des chaînes
-// (replace(..., '\n', char(10))).
-function schemaFirst(dump: string): string {
-  const schema: string[] = [];
-  const data: string[] = [];
-  for (const line of dump.split("\n")) {
-    (line.startsWith("INSERT INTO ") ? data : schema).push(line);
-  }
-  return [...schema, ...data].join("\n");
-}
-
 interface ForeignKeyRow {
   id: number;
   table: string;
@@ -112,88 +93,220 @@ function quoteIdent(name: string): string {
   return `"${name.replaceAll('"', '""')}"`;
 }
 
-// La prod contient des lignes orphelines (qui pointent vers un compte ou un
-// abonnement supprimé), sans doute héritées d'avant la mise en place des
-// migrations, quand les clés étrangères n'étaient pas vérifiées. D1 les
-// garde telles quelles, mais les vérifie à l'import : toute la copie échouait
-// avec "FOREIGN KEY constraint failed" (ou {"D1_RESET_DO":true} : D1
-// annule l'import qui laisse des contraintes violées). On ajoute donc à la fin de l'import,
-// avant le COMMIT implicite (clés étrangères différées par l'export), de quoi
-// les réparer comme l'aurait fait la suppression du parent : SET NULL si la
-// clé est déclarée ON DELETE SET NULL, suppression de la ligne sinon.
-// Le dump est rejoué dans une base SQLite en mémoire pour lire les clés
-// étrangères du schéma et compter les lignes réparées (affichées dans le log).
-function orphanCleanupSql(dump: string): string {
-  const db = new DatabaseSync(":memory:");
-  try {
-    // Chargé sans vérification (les lignes orphelines ne passeraient pas),
-    // puis vérification activée pour que les suppressions ci-dessous
-    // déclenchent les mêmes ON DELETE CASCADE / SET NULL qu'en D1.
-    db.exec("PRAGMA foreign_keys = OFF;");
-    db.exec(dump);
-    db.exec("PRAGMA foreign_keys = ON;");
-    const tables = db
+function listTables(db: DatabaseSync): string[] {
+  return (
+    db
       .prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY rowid"
       )
-      .all() as { name: string }[];
-    const statements: string[] = [];
-    for (const { name: table } of tables) {
-      const rows = db
-        .prepare(`SELECT * FROM pragma_foreign_key_list(?)`)
-        .all(table) as unknown as ForeignKeyRow[];
-      const foreignKeys = new Map<number, ForeignKeyRow[]>();
-      for (const row of rows) {
-        foreignKeys.set(row.id, [...(foreignKeys.get(row.id) ?? []), row]);
+      .all() as { name: string }[]
+  ).map((t) => t.name);
+}
+
+function foreignKeysOf(db: DatabaseSync, table: string): ForeignKeyRow[][] {
+  const rows = db
+    .prepare("SELECT * FROM pragma_foreign_key_list(?)")
+    .all(table) as unknown as ForeignKeyRow[];
+  const foreignKeys = new Map<number, ForeignKeyRow[]>();
+  for (const row of rows) {
+    foreignKeys.set(row.id, [...(foreignKeys.get(row.id) ?? []), row]);
+  }
+  return [...foreignKeys.values()];
+}
+
+// La prod contient peut-être des lignes orphelines (qui pointent vers un
+// compte ou un abonnement supprimé), héritées d'avant la mise en place des
+// migrations, quand les clés étrangères n'étaient pas vérifiées. D1 les garde
+// telles quelles mais les refuse à l'import. On les répare dans la base en
+// mémoire comme l'aurait fait la suppression du parent : SET NULL si la clé
+// est déclarée ON DELETE SET NULL, suppression de la ligne sinon.
+function repairOrphans(db: DatabaseSync): void {
+  for (const table of listTables(db)) {
+    for (const columns of foreignKeysOf(db, table)) {
+      const parent = columns[0].table;
+      // `to` vaut NULL quand la clé vise la clé primaire du parent.
+      const parentPrimaryKey = (
+        db
+          .prepare("SELECT name FROM pragma_table_info(?) WHERE pk > 0 ORDER BY pk")
+          .all(parent) as { name: string }[]
+      ).map((c) => c.name);
+      const parentColumns = columns.map((c, i) => c.to ?? parentPrimaryKey[i] ?? "rowid");
+      const orphan =
+        columns.map((c) => `${quoteIdent(c.from)} IS NOT NULL`).join(" AND ") +
+        ` AND NOT EXISTS (SELECT 1 FROM ${quoteIdent(parent)} AS p WHERE ` +
+        columns
+          .map(
+            (c, i) =>
+              `p.${quoteIdent(parentColumns[i])} = ${quoteIdent(table)}.${quoteIdent(c.from)}`
+          )
+          .join(" AND ") +
+        ")";
+      const { count } = db
+        .prepare(`SELECT count(*) AS count FROM ${quoteIdent(table)} WHERE ${orphan}`)
+        .get() as { count: number };
+      if (count === 0) {
+        continue;
       }
-      for (const columns of foreignKeys.values()) {
-        const parent = columns[0].table;
-        // `to` vaut NULL quand la clé vise la clé primaire du parent.
-        const parentPrimaryKey = (
-          db
-            .prepare("SELECT name FROM pragma_table_info(?) WHERE pk > 0 ORDER BY pk")
-            .all(parent) as { name: string }[]
-        ).map((c) => c.name);
-        const parentColumns = columns.map((c, i) => c.to ?? parentPrimaryKey[i] ?? "rowid");
-        const orphan =
-          columns.map((c) => `${quoteIdent(c.from)} IS NOT NULL`).join(" AND ") +
-          ` AND NOT EXISTS (SELECT 1 FROM ${quoteIdent(parent)} AS p WHERE ` +
-          columns
-            .map(
-              (c, i) =>
-                `p.${quoteIdent(parentColumns[i])} = ${quoteIdent(table)}.${quoteIdent(c.from)}`
-            )
-            .join(" AND ") +
-          ")";
-        const { count } = db
-          .prepare(`SELECT count(*) AS count FROM ${quoteIdent(table)} WHERE ${orphan}`)
-          .get() as { count: number };
-        if (count === 0) {
-          continue;
-        }
-        const setNull = columns[0].on_delete === "SET NULL";
-        console.log(
-          `  ${count} ligne(s) orpheline(s) dans ${table} (${columns.map((c) => c.from).join(", ")} → ${parent}) : ${setNull ? "clé mise à NULL" : "supprimée(s)"}`
-        );
-        statements.push(
-          setNull
-            ? `UPDATE ${quoteIdent(table)} SET ${columns.map((c) => `${quoteIdent(c.from)} = NULL`).join(", ")} WHERE ${orphan};`
-            : `DELETE FROM ${quoteIdent(table)} WHERE ${orphan};`
-        );
-        // Rejoué localement pour que les comptes suivants (et la vérification
-        // finale) tiennent compte des réparations déjà faites.
-        db.exec(statements[statements.length - 1]);
-      }
-    }
-    const remaining = db.prepare("PRAGMA foreign_key_check").all();
-    if (remaining.length > 0) {
-      throw new Error(
-        `Lignes orphelines impossibles à réparer : ${JSON.stringify(remaining.slice(0, 10))}`
+      const setNull = columns[0].on_delete === "SET NULL";
+      console.log(
+        `  ${count} ligne(s) orpheline(s) dans ${table} (${columns.map((c) => c.from).join(", ")} → ${parent}) : ${setNull ? "clé mise à NULL" : "supprimée(s)"}`
+      );
+      db.exec(
+        setNull
+          ? `UPDATE ${quoteIdent(table)} SET ${columns.map((c) => `${quoteIdent(c.from)} = NULL`).join(", ")} WHERE ${orphan};`
+          : `DELETE FROM ${quoteIdent(table)} WHERE ${orphan};`
       );
     }
-    return statements.join("\n");
+  }
+  const remaining = db.prepare("PRAGMA foreign_key_check").all();
+  if (remaining.length > 0) {
+    throw new Error(
+      `Lignes orphelines impossibles à réparer : ${JSON.stringify(remaining.slice(0, 10))}`
+    );
+  }
+}
+
+// Tables triées pour que chaque table parente soit remplie avant les tables
+// qui y font référence (ex. `users` avant `subscriptions`, `sessions`...).
+function parentsFirst(db: DatabaseSync): string[] {
+  const tables = listTables(db);
+  const ordered: string[] = [];
+  const visiting = new Set<string>();
+  const visit = (table: string): void => {
+    if (ordered.includes(table)) {
+      return;
+    }
+    if (visiting.has(table)) {
+      throw new Error(`Cycle de clés étrangères autour de la table '${table}'.`);
+    }
+    visiting.add(table);
+    for (const columns of foreignKeysOf(db, table)) {
+      if (columns[0].table !== table) {
+        visit(columns[0].table);
+      }
+    }
+    visiting.delete(table);
+    ordered.push(table);
+  };
+  tables.forEach(visit);
+  return ordered;
+}
+
+function sqlLiteral(value: unknown): string {
+  if (value === null) {
+    return "NULL";
+  }
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+  if (typeof value === "number") {
+    // Colonne REAL : garder une valeur réelle (1.0, pas 1).
+    if (!Number.isFinite(value)) {
+      return value > 0 ? "9e999" : value < 0 ? "-9e999" : "NULL";
+    }
+    return Number.isInteger(value) ? value.toFixed(1) : String(value);
+  }
+  if (typeof value === "string") {
+    // Une ligne par INSERT, comme l'export : retours à la ligne encodés.
+    return `'${value
+      .replaceAll("'", "''")
+      .replaceAll("\r", "'||char(13)||'")
+      .replaceAll("\n", "'||char(10)||'")}'`;
+  }
+  if (value instanceof Uint8Array) {
+    return `X'${Buffer.from(value).toString("hex")}'`;
+  }
+  throw new Error(`Valeur SQL inattendue : ${String(value)}`);
+}
+
+function insertStatements(db: DatabaseSync, table: string): string[] {
+  const columns = (
+    db.prepare("SELECT name FROM pragma_table_info(?) ORDER BY cid").all(table) as {
+      name: string;
+    }[]
+  ).map((c) => c.name);
+  const select = db.prepare(
+    `SELECT ${columns.map(quoteIdent).join(", ")} FROM ${quoteIdent(table)} ORDER BY rowid`
+  );
+  select.setReadBigInts(true);
+  const header = `INSERT INTO ${quoteIdent(table)} (${columns.map(quoteIdent).join(",")}) VALUES(`;
+  return select
+    .all()
+    .map((row) => header + columns.map((c) => sqlLiteral(row[c])).join(",") + ");");
+}
+
+function tableContent(db: DatabaseSync, table: string): string {
+  const select = db.prepare(`SELECT * FROM ${quoteIdent(table)} ORDER BY rowid`);
+  select.setReadBigInts(true);
+  return JSON.stringify(select.all(), (_key, value: unknown) =>
+    typeof value === "bigint"
+      ? `${value}n`
+      : value instanceof Uint8Array
+        ? Buffer.from(value).toString("hex")
+        : value
+  );
+}
+
+// Construit le fichier d'import de la copie à partir de l'export de prod.
+//
+// `wrangler d1 export` écrit chaque table suivie de ses données, dans l'ordre
+// de création des tables : `subscriptions` (migration 0001) et ses lignes
+// arrivent avant `users`, alors que sa colonne `user_id` y fait référence
+// (migration 0008). Le `PRAGMA defer_foreign_keys` de l'export ne suffit pas
+// sur D1 distant : l'import y vérifie les clés étrangères au fil de l'eau et
+// annule tout ("FOREIGN KEY constraint failed" ou {"D1_RESET_DO":true}),
+// alors qu'en local (miniflare) l'import passe.
+//
+// On rejoue donc l'export dans une base SQLite en mémoire, on y répare les
+// éventuelles lignes orphelines, puis on écrit : le schéma, les données table
+// par table en commençant par les tables parentes, et enfin sqlite_sequence.
+// Le résultat est rejoué dans une seconde base en mémoire avec les clés
+// étrangères vérifiées ligne par ligne et comparé à la source : si l'import
+// devait échouer sur D1, il échoue ici avec un message lisible.
+function buildImportSql(dump: string): string {
+  const source = new DatabaseSync(":memory:");
+  const check = new DatabaseSync(":memory:");
+  try {
+    // Chargé sans vérification (d'éventuelles lignes orphelines ne
+    // passeraient pas), puis vérification activée pour que les réparations
+    // déclenchent les mêmes ON DELETE CASCADE / SET NULL qu'en D1.
+    source.exec("PRAGMA foreign_keys = OFF;");
+    source.exec(dump);
+    source.exec("PRAGMA foreign_keys = ON;");
+    repairOrphans(source);
+
+    // Schéma : tout ce qui n'est pas une donnée, dans l'ordre de l'export.
+    // Chaque INSERT de l'export tient sur une ligne (retours à la ligne des
+    // chaînes encodés avec char(10)).
+    const schema = dump
+      .split("\n")
+      .filter(
+        (line) => !line.startsWith("INSERT INTO ") && line !== "DELETE FROM sqlite_sequence;"
+      );
+    const data = parentsFirst(source).flatMap((table) => insertStatements(source, table));
+    const hasSequence =
+      source
+        .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'sqlite_sequence'")
+        .get() !== undefined;
+    // Remis à la fin : les INSERT ci-dessus font avancer les compteurs
+    // AUTOINCREMENT, qu'on remplace par les valeurs de la prod.
+    const sequence = hasSequence
+      ? ["DELETE FROM sqlite_sequence;", ...insertStatements(source, "sqlite_sequence")]
+      : [];
+    const importSql = [...schema, ...data, ...sequence].join("\n") + "\n";
+
+    check.exec("PRAGMA foreign_keys = ON;");
+    check.exec(importSql.replace(/^PRAGMA defer_foreign_keys=TRUE;$/m, ""));
+    for (const table of [...listTables(source), ...(hasSequence ? ["sqlite_sequence"] : [])]) {
+      if (tableContent(check, table) !== tableContent(source, table)) {
+        throw new Error(`La copie de la table '${table}' ne correspond pas à l'export.`);
+      }
+    }
+    console.log(`  ${data.length} ligne(s) prêtes à importer.`);
+    return importSql;
   } finally {
-    db.close();
+    source.close();
+    check.close();
   }
 }
 
@@ -207,6 +320,12 @@ function copyDb(): void {
     console.log(`Export de la base de prod '${PROD_DATABASE_NAME}'...`);
     wrangler(["d1", "export", PROD_DATABASE_NAME, "--remote", "--output", dumpPath]);
 
+    // Préparé avant de supprimer l'ancienne copie : si ça échoue, le
+    // staging actuel reste en place.
+    console.log("Préparation de l'import (tables parentes d'abord)...");
+    const importPath = join(workDir, "import.sql");
+    writeFileSync(importPath, buildImportSql(readFileSync(dumpPath, "utf8")));
+
     // Base recréée de zéro à chaque copie : plus simple et plus sûr que de
     // vider table par table (schéma éventuellement en avance/en retard).
     if (findDatabase(STAGING_DATABASE_NAME)) {
@@ -216,11 +335,6 @@ function copyDb(): void {
     console.log(`Création de la base '${STAGING_DATABASE_NAME}'...`);
     createDatabase(STAGING_DATABASE_NAME);
 
-    const importPath = join(workDir, "import.sql");
-    const dump = readFileSync(dumpPath, "utf8");
-    console.log("Recherche des lignes orphelines...");
-    const cleanup = orphanCleanupSql(dump);
-    writeFileSync(importPath, schemaFirst(dump) + "\n" + cleanup + "\n");
     console.log("Import de la copie...");
     wrangler(["d1", "execute", STAGING_DATABASE_NAME, "--remote", "--yes", "--file", importPath]);
 
