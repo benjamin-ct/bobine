@@ -386,81 +386,85 @@ export default function FilterPanel({
     </div>
   );
 
+  const filtersButton = (
+    <button
+      type="button"
+      className={`${styles.filtersBtn} ${open ? styles.filtersBtnOpen : ""} ${periods ? styles.filtersBtnEnd : ""}`}
+      onClick={() => setOpen((o) => !o)}
+      aria-expanded={open}
+      aria-controls={panelId}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <path d="M4 6h16M7 12h10M10 18h4" />
+      </svg>
+      {t("filterPanel.filters")}
+      {active.length > 0 && (
+        <span
+          className={styles.count}
+          aria-label={t("filterPanel.activeCount", { count: active.length })}
+        >
+          {active.length}
+        </span>
+      )}
+    </button>
+  );
+
+  const activeChips = (
+    <ul className={styles.chips} aria-label={t("filterPanel.activeFilters")}>
+      {active.map((f) => (
+        <li key={f.key}>
+          <button
+            type="button"
+            className={styles.chip}
+            onClick={f.remove}
+            aria-label={t("filterPanel.removeFilter", { label: f.label })}
+          >
+            {f.label}
+            <Icon name="close" size={14} />
+          </button>
+        </li>
+      ))}
+      <li>
+        <button type="button" className={styles.reset} onClick={resetAll}>
+          {t("filterPanel.reset")}
+        </button>
+      </li>
+    </ul>
+  );
+
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
         {periods ? (
-          <div className={styles.toolbarRow}>
-            {segmented}
-            <div className={styles.periods} role="group" aria-label={periods.label}>
-              {periods.options.map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  className={`${styles.period} ${periods.value === o.value ? styles.periodActive : ""}`}
-                  aria-pressed={periods.value === o.value}
-                  onClick={() => periods.onChange(o.value)}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          segmented
-        )}
-
-        <div className={periods ? styles.toolbarRow : styles.contents}>
-          <button
-            type="button"
-            className={`${styles.filtersBtn} ${open ? styles.filtersBtnOpen : ""}`}
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            aria-controls={panelId}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path d="M4 6h16M7 12h10M10 18h4" />
-            </svg>
-            {t("filterPanel.filters")}
-            {active.length > 0 && (
-              <span
-                className={styles.count}
-                aria-label={t("filterPanel.activeCount", { count: active.length })}
-              >
-                {active.length}
-              </span>
-            )}
-          </button>
-
-          {active.length > 0 && (
-            <ul className={styles.chips} aria-label={t("filterPanel.activeFilters")}>
-              {active.map((f) => (
-                <li key={f.key}>
+          <>
+            {/* Films/Séries, période et « Filtres » (tout à droite) sur une
+                ligne ; les puces des filtres actifs sur la suivante. */}
+            <div className={styles.toolbarRow}>
+              {segmented}
+              <div className={styles.periods} role="group" aria-label={periods.label}>
+                {periods.options.map((o) => (
                   <button
+                    key={o.value}
                     type="button"
-                    className={styles.chip}
-                    onClick={f.remove}
-                    aria-label={t("filterPanel.removeFilter", { label: f.label })}
+                    className={`${styles.period} ${periods.value === o.value ? styles.periodActive : ""}`}
+                    aria-pressed={periods.value === o.value}
+                    onClick={() => periods.onChange(o.value)}
                   >
-                    {f.label}
-                    <Icon name="close" size={14} />
+                    {o.label}
                   </button>
-                </li>
-              ))}
-              <li>
-                <button type="button" className={styles.reset} onClick={resetAll}>
-                  {t("filterPanel.reset")}
-                </button>
-              </li>
-            </ul>
-          )}
-        </div>
+                ))}
+              </div>
+              {filtersButton}
+            </div>
+            {active.length > 0 && <div className={styles.toolbarRow}>{activeChips}</div>}
+          </>
+        ) : (
+          <>
+            {segmented}
+            {filtersButton}
+            {active.length > 0 && activeChips}
+          </>
+        )}
       </div>
 
       {open && (
