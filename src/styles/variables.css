@@ -60,10 +60,12 @@
   --vignette-side: 110px;
   --vignette-top: 60px; /* sous l'en-tête */
   --header-height: 72px; /* hauteur approximative de .topnav (NavBar) */
-  /* Barre d'onglets mobile (NavBar, sous 860px) : hauteur hors encoche, et
-     place totale qu'elle occupe en bas de l'écran (0 sur desktop). Les
-     éléments fixés en bas (bouton « remonter »…) se décalent d'autant. */
-  --tabbar-height: 58px;
+  /* Barre d'onglets mobile (NavBar, sous 860px) : hauteur de la pilule,
+     écart minimal avec le bas de l'écran, et place totale qu'elle occupe en
+     bas de l'écran (0 sur desktop). Les éléments fixés en bas (bouton
+     « remonter »…) se décalent d'autant. */
+  --tabbar-height: 62px;
+  --tabbar-gap: 12px;
   --tabbar-offset: 0px;
   --vignette-bottom: 90px;
 

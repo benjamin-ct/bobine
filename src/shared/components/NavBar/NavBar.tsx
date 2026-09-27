@@ -1,4 +1,4 @@
-import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Link, matchPath, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
@@ -242,6 +242,26 @@ export default function NavBar() {
     }
   }
 
+  const tabbarLinks = [
+    ...NAV_LINKS.map((link) => ({ ...link, label: t(`navBar.tabLinks.${link.key}`) })),
+    ...(authenticated
+      ? [
+          {
+            to: "/profil",
+            key: "profile",
+            icon: "user" as IconName,
+            end: false,
+            label: t("navBar.profileTitle"),
+          },
+        ]
+      : []),
+  ];
+  // Même règle de correspondance que NavLink, pour placer la pastille active
+  // (-1 hors onglet : fiche, recherche…, la pastille est alors masquée).
+  const activeTabIndex = tabbarLinks.findIndex((link) =>
+    matchPath({ path: link.to, end: link.end ?? false }, pathname)
+  );
+
   function onNavClick() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -355,35 +375,36 @@ export default function NavBar() {
         <div className="perfStrip perfStripTop" aria-hidden="true" />
       </header>
 
-      {/* Barre d'onglets mobile (masquée au-delà de 860px). « Ma liste » n'y
-          figure pas : elle vit dans Profil. */}
-      <nav className={styles.tabbar} aria-label={t("navBar.tabBarAriaLabel")}>
-        {NAV_LINKS.map((link) => (
+      {/* Barre d'onglets mobile (masquée au-delà de 860px) : pilule flottante
+          en verre dépoli, icônes seules (libellé en aria-label/title). La
+          pastille de l'onglet actif glisse d'un onglet à l'autre. « Ma liste »
+          n'y figure pas : elle vit dans Profil. */}
+      <nav
+        className={styles.tabbar}
+        aria-label={t("navBar.tabBarAriaLabel")}
+        style={
+          {
+            "--tab-count": tabbarLinks.length,
+            "--tab-index": activeTabIndex,
+          } as React.CSSProperties
+        }
+      >
+        {activeTabIndex >= 0 && <span className={styles.tabbarIndicator} aria-hidden="true" />}
+        {tabbarLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
             end={link.end}
             onClick={onNavClick}
+            aria-label={link.label}
+            title={link.label}
             className={({ isActive }) =>
               `${styles.tabbarItem} ${isActive ? styles.tabbarItemActive : ""}`
             }
           >
-            <Icon name={link.icon} size={22} strokeWidth={1.8} />
-            <span>{t(`navBar.tabLinks.${link.key}`)}</span>
+            <Icon name={link.icon} size={24} strokeWidth={1.9} />
           </NavLink>
         ))}
-        {authenticated && (
-          <NavLink
-            to="/profil"
-            onClick={onNavClick}
-            className={({ isActive }) =>
-              `${styles.tabbarItem} ${isActive ? styles.tabbarItemActive : ""}`
-            }
-          >
-            <Icon name="user" size={22} strokeWidth={1.8} />
-            <span>{t("navBar.profileTitle")}</span>
-          </NavLink>
-        )}
       </nav>
     </>
   );
