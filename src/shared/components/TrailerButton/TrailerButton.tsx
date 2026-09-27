@@ -7,11 +7,11 @@ import styles from "./TrailerButton.module.css";
 
 interface TrailerButtonProps {
   videos: Video[] | undefined;
-  /** Sur mobile, n'affiche que l'icône ▷ (rangée d'actions de la fiche). */
-  compact?: boolean;
+  /** Placement dans la rangée d'actions de l'appelant (ex. fiche détail). */
+  className?: string;
 }
 
-export default function TrailerButton({ videos, compact = false }: TrailerButtonProps) {
+export default function TrailerButton({ videos, className = "" }: TrailerButtonProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -40,9 +40,8 @@ export default function TrailerButton({ videos, compact = false }: TrailerButton
     <>
       <button
         type="button"
-        className={`${styles.trigger} ${compact ? styles.compact : ""}`}
+        className={`${styles.trigger} ${className}`}
         onClick={() => setOpen(true)}
-        aria-label={compact ? t("trailer.button") : undefined}
       >
         <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
           <path d="M8 5v14l11-7z" />

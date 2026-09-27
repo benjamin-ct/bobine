@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
 import { getDetails, getSeasonDetails } from "../../core/api/tmdb.ts";
 import { isStrictlyFutureDate } from "../../core/api/releaseBadge.ts";
-import type { LibraryItem } from "../../core/types/library.ts";
+import type { EpisodeRef, LibraryItem } from "../../core/types/library.ts";
 
-export interface EpisodeRef {
-  seasonNumber: number;
-  episodeNumber: number;
-}
+export type { EpisodeRef };
 
 /** Série à reprendre, avec le prochain épisode à voir une fois résolu via
  * TMDB (`undefined` tant que la vérification n'a pas abouti, ou si TMDB est

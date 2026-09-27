@@ -1,132 +1,368 @@
+/* Bloc « Épisodes » de la fiche série : même carte que « Où le voir ». */
 .tracker {
-  margin-top: 48px;
-}
-
-.total {
-  color: var(--muted);
-  font-weight: 400;
-  font-size: 0.9em;
-}
-
-.seasonList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.seasonGroup {
+  padding: 22px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  overflow: hidden;
 }
 
-.seasonHeader {
+/* Avant « Où le voir » dans la colonne principale. */
+.tracker {
+  margin-bottom: 24px;
+}
+
+.title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 16px;
+}
+
+/* « 13 / 19 vus » */
+.total {
+  color: var(--subtle);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+/* ─── À voir ensuite ─────────────────────────────────────────────────── */
+.upNext {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 14px 16px;
-  font-size: 1rem;
-  font-weight: 600;
-  text-align: left;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  background: var(--bg);
 }
 
-.seasonName {
+.upNextText {
   flex: 1;
   min-width: 0;
+}
+
+.upNextEyebrow {
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.upNextTitle {
+  font-size: 15px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.seasonCount {
-  color: var(--muted);
-  font-weight: 500;
-  font-size: 0.9rem;
-  flex-shrink: 0;
+.upNextTitle b {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
 }
 
-.seasonCountDone {
+.upNextName {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.upNextMeta {
+  margin-top: 4px;
+  color: var(--subtle);
+  font-size: 13px;
+}
+
+/* Gros bouton « ✓ Vu » : teal, comme dans « Séries en cours ». */
+.upNextBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--ok);
+  color: var(--on-ok);
+  font-size: 15px;
+  font-weight: 700;
+  transition: filter 0.15s ease;
+}
+
+.upNextBtn:hover {
+  filter: brightness(1.08);
+}
+
+/* ─── Onglets de saison ──────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 12px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tab:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.tabOn,
+.tabOn:hover:not(:disabled) {
+  border-color: var(--selected-border);
+  background: var(--selected-bg);
+}
+
+.tabCount {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* Saison annoncée : en pointillé. */
+.tabAnnounced {
+  border-style: dashed;
+  background: transparent;
+  color: var(--subtle);
+  font-weight: 400;
+}
+
+.tab:disabled {
+  cursor: default;
+}
+
+/* ─── Liste des épisodes ─────────────────────────────────────────────── */
+.episodeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.episode {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+/* Prochain épisode mis en avant (Surface 2). */
+.episodeNext {
+  border-color: var(--border-2);
+  background: var(--surface-2);
+}
+
+/* Pastille ronde de 40 px : vide, ou teal pleine quand l'épisode est vu. */
+.dot {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid var(--border-2);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.dot:hover {
+  border-color: var(--ok);
+}
+
+.dotOn,
+.dotOn:hover {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: var(--on-ok);
+}
+
+.epNumber {
+  flex: none;
+  width: 28px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.epText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.epTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.epMeta {
+  color: var(--subtle);
+  font-size: 12.5px;
+}
+
+.epMetaOn {
   color: var(--ok-ink);
 }
 
-.chevron {
-  color: var(--muted);
-  font-size: 0.75rem;
-  flex-shrink: 0;
+/* Badges existants « Vient de sortir » / « Prochainement ». */
+.badge {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 600;
 }
 
-.seasonBody {
-  padding: 0 16px 16px;
-  border-top: 1px solid var(--border);
+.badgeNew {
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+}
+
+.upToHere {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.upToHere:hover {
+  color: var(--fg);
+  background: var(--surface-2);
+}
+
+.seasonActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  margin-top: 16px;
+}
+
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.listCount {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.collapseBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.collapseBtn:hover {
+  color: var(--fg);
+}
+
+.seasonActions .collapseBtn {
+  margin-right: auto;
+}
+
+.seasonBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.seasonBtn:hover {
+  background: var(--surface-2);
 }
 
 .loading {
   color: var(--muted);
-  margin: 12px 0 0;
+  font-size: 14px;
+  padding: 8px 0;
 }
 
-.markAll {
-  margin: 14px 0 4px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  font-size: 13px;
-  font-weight: 600;
-}
+@media (max-width: 720px) {
+  .tracker {
+    padding: 18px 16px;
+  }
 
-.episodeList {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
+  /* Mobile : le bouton « ✓ Vu » passe sous le texte, pleine largeur. */
+  .upNext {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-.episodeRow {
-  border-top: 1px solid var(--border);
-}
+  .upNextBtn {
+    width: 100%;
+  }
 
-.episodeRow:first-child {
-  border-top: none;
-}
+  .tab:not(.tabAnnounced) {
+    flex: 1;
+    justify-content: center;
+  }
 
-.episodeRow label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  cursor: pointer;
-}
+  .tabAnnounced {
+    flex-basis: 100%;
+    justify-content: center;
+  }
 
-.episodeRow input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  accent-color: var(--control);
-}
+  .episode {
+    gap: 10px;
+    padding-inline: 4px;
+  }
 
-.epNumber {
-  color: var(--accent-ink);
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 0.9rem;
-  flex-shrink: 0;
-}
-
-.epTitle {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.epDate {
-  color: var(--muted);
-  font-size: 0.8rem;
-  flex-shrink: 0;
+  .seasonActions {
+    justify-content: center;
+  }
 }

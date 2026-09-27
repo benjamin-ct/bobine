@@ -102,7 +102,7 @@ export default function FollowingActivity({ mediaType, id }: { mediaType: MediaT
         <p className={styles.empty}>{t("detailPage.followingEmpty")}</p>
       ) : (
         <ul className={styles.list}>
-          {activity.entries.map(({ profile, status: entryStatus, rating, updatedAt }) => {
+          {activity.entries.map(({ profile, status: entryStatus, rating, updatedAt, progress }) => {
             const name = profile.displayName || t("detailPage.followingUnnamed");
             const when = timeAgo(updatedAt, i18n.language);
             return (
@@ -121,7 +121,12 @@ export default function FollowingActivity({ mediaType, id }: { mediaType: MediaT
                           ]
                             .filter(Boolean)
                             .join(" · ")
-                        : t("detailPage.followingWants")}
+                        : progress
+                          ? t("detailPage.followingInProgress", {
+                              season: progress.seasonNumber,
+                              episode: progress.episodeNumber,
+                            })
+                          : t("detailPage.followingWants")}
                     </span>
                   </span>
                   {rating != null && (

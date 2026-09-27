@@ -330,6 +330,22 @@
   flex: none;
 }
 
+/* Libellés tronqués (…) plutôt que débordant sur le bouton voisin quand la
+   place manque (mobile). */
+.btnLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions svg {
+  flex: none;
+}
+
+.labelShort {
+  display: none;
+}
+
 .moreDropdown {
   flex: none;
 }
@@ -673,8 +689,11 @@
     flex-basis: 100%;
   }
 
-  /* Envie / Vu sur une ligne, puis listes (largeur restante), bande-annonce
-     et ⋯ en boutons ronds. */
+  /* Envie de voir · Listes · ⋯ sur une ligne, puis « Vu » / « Marquer la
+     série comme vue » et « ▷ Bande-annonce » avec son libellé (l'icône
+     seule était trop petite) : côte à côte s'ils tiennent, sinon chacun
+     sur sa ligne en pleine largeur. Base de 35 % sur Envie de voir et
+     Listes : elles remplissent la 1re ligne, « Vu » ne peut pas s'y glisser. */
   .actions {
     gap: 8px;
   }
@@ -684,12 +703,27 @@
   }
 
   .actionBtn {
-    flex: 1 1 40%;
+    flex: 1 1 35%;
     padding-inline: 12px;
   }
 
+  .watchedBtn,
+  .trailerBtn {
+    order: 1;
+    flex: 1 0 auto;
+    max-width: 100%;
+  }
+
   .listDropdown {
-    flex: 1;
+    flex: 1 1 35%;
+  }
+
+  .labelLong {
+    display: none;
+  }
+
+  .labelShort {
+    display: inline;
   }
 
   .listDropdown > button {
@@ -706,12 +740,21 @@
   }
 
   /* Une seule colonne, dans l'ordre de la maquette : Où le voir, Vos
-     abonnements, casting, saga, Infos. */
+     abonnements, casting, saga, Infos. stretch : avec le `start` du
+     desktop, chaque bloc prenait la largeur de son contenu : la rangée du
+     casting, plus large que l'écran, élargissait sa section et poussait
+     « Tout le casting » hors écran, à droite. */
   .body {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 0;
     margin-top: 24px;
+  }
+
+  .main > *,
+  .aside > * {
+    min-width: 0;
   }
 
   .main,
@@ -749,5 +792,21 @@
   .castGrid > * {
     flex: none;
     width: 96px;
+  }
+
+  /* « Tout le casting » : grille qui passe à la ligne. Dans la rangée
+     horizontale, les acteurs ajoutés arrivaient hors écran, à droite, et le
+     bouton semblait ne rien faire. */
+  .castGridAll {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    row-gap: 18px;
+    margin-inline: 0;
+    padding-inline: 0;
+    overflow: visible;
+  }
+
+  .castGridAll > * {
+    width: auto;
   }
 }
