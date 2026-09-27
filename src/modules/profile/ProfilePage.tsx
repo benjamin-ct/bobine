@@ -13,6 +13,7 @@ import ExcludedTitlesSettings from "./components/ExcludedTitlesSettings.tsx";
 import RegionSettings from "./components/RegionSettings.tsx";
 import LanguageSettings from "./components/LanguageSettings.tsx";
 import ThemeSettings from "./components/ThemeSettings.tsx";
+import { SettingsGroup, SettingsRow } from "./components/SettingsGroup.tsx";
 import styles from "./ProfilePage.module.css";
 
 type Tab = "compte" | "preferences" | "ma-liste" | "communaute";
@@ -90,37 +91,38 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Notifications et Recommandations quittent l'onglet Compte (nouvelle DA
-          7/10 : Compte ne garde que l'identité et le profil public) ; leur
-          refonte visuelle viendra avec la nouvelle DA 8/10. */}
+      {/* Nouvelle DA 8/10 : tout ce qui décrit le comportement de l'app
+          (recommandations, notifications, affichage), présenté en groupes et
+          en lignes comme l'onglet Compte. */}
       {tab === "preferences" && (
-        <>
-          <section className={styles.section}>
-            <h2>{t("profile.recommendations")}</h2>
-            <div className={styles.discGrid}>
-              <FavoriteProvidersSettings />
-              <ExcludedGenresSettings />
-              <ExcludedTitlesSettings />
-            </div>
-          </section>
+        <div className={styles.settings}>
+          <SettingsGroup
+            title={t("profile.recommendations")}
+            description={t("profile.recommendationsLead")}
+          >
+            <FavoriteProvidersSettings />
+            <ExcludedGenresSettings />
+            <ExcludedTitlesSettings />
+          </SettingsGroup>
 
-          <section className={styles.section}>
-            <h2>{t("profile.notifications")}</h2>
-            <div className={styles.ticket}>
-              <p className={styles.hint}>{t("profile.notificationsHint")}</p>
+          <SettingsGroup
+            title={t("profile.notifications")}
+            description={t("profile.notificationsLead")}
+          >
+            <SettingsRow
+              label={t("profile.notifications")}
+              description={t("profile.notificationsHint")}
+            >
               <NotificationSettings />
-            </div>
-          </section>
+            </SettingsRow>
+          </SettingsGroup>
 
-          <section className={styles.section}>
-            <h2>{t("profile.display")}</h2>
-            <div className={styles.discGrid}>
-              <LanguageSettings />
-              <RegionSettings />
-              <ThemeSettings />
-            </div>
-          </section>
-        </>
+          <SettingsGroup title={t("profile.display")} description={t("profile.displayLead")}>
+            <LanguageSettings />
+            <RegionSettings />
+            <ThemeSettings />
+          </SettingsGroup>
+        </div>
       )}
 
       {tab === "communaute" && (

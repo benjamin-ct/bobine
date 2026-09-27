@@ -35,13 +35,16 @@
     "title": "Profil",
     "lead": "Votre compte et vos préférences, réunis au même endroit.",
     "notifications": "Notifications",
-    "notificationsHint": "Prévenu·e quand un titre « envie de voir » arrive en streaming, pour vos genres préférés et les grosses sorties.",
+    "notificationsHint": "Soyez prévenu·e quand un titre de vos envies arrive sur une plateforme, pour vos genres préférés et les grosses sorties.",
     "recommendations": "Recommandations",
     "display": "Affichage",
     "tabAccount": "Compte",
     "tabPreferences": "Préférences",
     "tabMyList": "Ma liste",
-    "tabCommunity": "Communauté"
+    "tabCommunity": "Communauté",
+    "recommendationsLead": "Ce que Seancy vous propose, et ce qu'il doit laisser de côté.",
+    "notificationsLead": "Quand et pourquoi Seancy vous prévient.",
+    "displayLead": "Langue, région et apparence."
   },
   "providerBadges": {
     "unavailable": "Non disponible en streaming en {{region}} pour le moment.",
@@ -204,7 +207,7 @@
     "description": "Ces genres ne seront jamais suggérés, où que ce soit dans Seancy.",
     "loading": "Chargement des genres…",
     "error": "Impossible de charger la liste des genres.",
-    "searchPlaceholder": "Rechercher un genre…"
+    "toggleHint": "touchez un genre pour l'exclure ou le réintégrer"
   },
   "navBar": {
     "mainNavAriaLabel": "Navigation principale",
@@ -426,8 +429,11 @@
   },
   "regionSettings": {
     "title": "Région",
-    "description": "Le pays utilisé pour « Où regarder », les plateformes et les dates de sortie. Un choix ici reste actif même en VPN ou en déplacement ; sans choix, votre région est détectée automatiquement.",
-    "loadError": "Impossible de charger la liste des pays."
+    "description": "Le pays utilisé pour « Où regarder », les plateformes et les dates de sortie.",
+    "loadError": "Impossible de charger la liste des pays.",
+    "automatic": "Automatique · {{country}}",
+    "automaticHint": "Détectée d'après votre connexion. Choisissez un pays pour le garder même en voyage ou en VPN.",
+    "manualHint": "Ce pays reste actif même en voyage ou en VPN."
   },
   "themeSettings": {
     "title": "Thème",
@@ -440,7 +446,7 @@
     "title": "Mes plateformes",
     "activeCount_one": "{{count}} active",
     "activeCount_other": "{{count}} actives",
-    "description": "Cochez les services que vous avez pour filtrer « disponible chez moi » en un clic.",
+    "description": "Cochez vos services pour filtrer « disponible chez moi » en un clic.",
     "loadError": "Impossible de charger la liste des plateformes.",
     "searchPlaceholder": "Rechercher une plateforme…"
   },
@@ -448,10 +454,12 @@
     "title": "Titres exclus",
     "excludedCount_one": "{{count}} exclu",
     "excludedCount_other": "{{count}} exclus",
-    "description": "Ces titres n'apparaîtront plus dans vos suggestions. Ajoutez-en depuis le bouton « Exclure ce titre » sur la fiche d'un film ou d'une série.",
+    "description": "Ils n'apparaissent plus dans vos suggestions. Excluez un titre depuis sa fiche.",
     "empty": "Aucun titre exclu pour l'instant.",
-    "reincludeTitle": "Réintégrer ce titre",
-    "unknownTitle": "Titre #{{id}}"
+    "unknownTitle": "Titre #{{id}}",
+    "reinclude": "Réintégrer",
+    "typeMovie": "Film",
+    "typeTv": "Série"
   },
   "notificationSettings": {
     "unsupported": "Les notifications push ne sont pas supportées par ce navigateur.",
@@ -459,20 +467,17 @@
     "syncFailed": "Synchronisation échouée ({{status}})",
     "keyFetchError": "Impossible de récupérer la clé du serveur.",
     "incompleteSubscription": "Abonnement push incomplet.",
-    "disableButton": "Notifications activées — désactiver",
-    "enabledHint": "Vous serez prévenu·e quand un titre de votre liste \"Envie de voir\" arrive en streaming, pour les nouveautés dans vos genres préférés, et pour les grosses sorties du moment.",
     "enabling": "Activation…",
-    "enableButton": "Activer les notifications",
-    "disabledHint": "Soyez prévenu·e des nouveautés même sans avoir l'app ouverte.",
-    "testTitle": "Tester les notifications",
-    "testNow": "Envoyer maintenant",
+    "testNow": "Envoyer une notification de test",
     "testDelayed": "Envoyer dans 15 s",
-    "testHint": "« Maintenant » : l'app est ouverte, la notification arrive en toast dans l'app. « Dans 15 s » : fermez l'app (ou verrouillez le téléphone) sur tous vos appareils, elle arrive en notification push.",
     "testSending": "Envoi…",
     "testSentInApp": "Envoyée dans l'app : un appareil de votre compte a l'app ouverte.",
     "testSentPush": "Envoyée en push : aucun appareil de votre compte n'a l'app ouverte.",
     "testScheduled": "Envoi dans {{seconds}} s : fermez l'app maintenant.",
-    "testFailed": "Envoi impossible ({{status}})."
+    "testFailed": "Envoi impossible ({{status}}).",
+    "pushLabel": "Notifications push",
+    "testNowHint": "Arrive dans quelques secondes sur cet appareil.",
+    "testDelayedHint": "Fermez l'app sur tous vos appareils : elle arrive en notification push."
   },
   "inAppNotifications": {
     "dismiss": "Fermer la notification",

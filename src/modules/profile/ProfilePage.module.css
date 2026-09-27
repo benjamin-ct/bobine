@@ -41,22 +41,6 @@
   padding-block: clamp(20px, 3vw, 32px) 16px;
 }
 
-.ticket {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  box-shadow: var(--shadow);
-  height: 100%;
-}
-
-.hint {
-  margin: 10px 0 16px;
-  max-width: 46ch;
-  color: var(--muted);
-  font-size: 14px;
-}
-
 .section {
   padding-block: clamp(28px, 4vw, 44px);
 }
@@ -65,31 +49,4 @@
   font-size: 20px;
   font-weight: 700;
   margin-bottom: 16px;
-}
-
-.discGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-@media (min-width: 861px) {
-  .discGrid {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-
-  .discGrid > * {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-
-  /* Seuls les panneaux ouverts s'étirent à la hauteur du plus grand voisin
-     ouvert (contenu variable : texte d'intro et barre de recherche ne font
-     pas la même hauteur d'un panneau à l'autre) — un panneau fermé garde sa
-     hauteur naturelle (juste l'en-tête) pour ne pas réafficher le rectangle
-     vide corrigé par align-items: flex-start. */
-  .discGrid > details[open] {
-    align-self: stretch;
-  }
 }

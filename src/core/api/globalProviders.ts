@@ -14,6 +14,7 @@
 export interface ProviderOption {
   id: number;
   name: string;
+  logoPath?: string | null;
 }
 
 const GLOBAL_PROVIDER_NAMES: Record<number, string> = {
