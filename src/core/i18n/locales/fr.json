@@ -761,7 +761,10 @@
     "tvStatusPlanned": "Annoncée",
     "tvStatusEnded": "Terminée",
     "tvStatusCanceled": "Annulée",
-    "followingInProgress": "En cours · S{{season}} É{{episode}}"
+    "followingInProgress": "En cours · S{{season}} É{{episode}}",
+    "castShown": "{{shown}} sur {{total}}",
+    "showMoreCast_one": "Voir le suivant",
+    "showMoreCast_other": "Voir les {{count}} suivants"
   },
   "personPage": {
     "back": "← Retour",

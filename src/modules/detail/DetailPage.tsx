@@ -45,6 +45,11 @@ import type { CastMember, MediaDetails, MediaType } from "../../core/types/tmdb.
 import styles from "./DetailPage.module.css";
 
 const MAIN_CAST_COUNT = 6;
+// Certaines séries ont des milliers d'entrées de casting : TMDB les renvoie
+// d'un bloc (pas de pagination des crédits), mais en afficher des milliers
+// d'un coup fige la page. On les révèle par lots, multiple de 6 et de 4
+// pour garder des rangées complètes quelle que soit la grille.
+const CAST_BATCH = 48;
 
 // Statut TMDB d'une série (« Returning Series », « Ended »…) → clé i18n.
 const TV_STATUS_KEYS: Record<string, string> = {
@@ -90,7 +95,7 @@ export default function DetailPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<Error | null>(null);
   const [preview, setPreview] = useState<MediaPreview | null>(null);
-  const [showFullCast, setShowFullCast] = useState(false);
+  const [castLimit, setCastLimit] = useState(MAIN_CAST_COUNT);
   const [newListName, setNewListName] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
   const [markingSeries, setMarkingSeries] = useState(false);
@@ -122,7 +127,7 @@ export default function DetailPage() {
     }
     let cancelled = false;
     setStatus("loading");
-    setShowFullCast(false);
+    setCastLimit(MAIN_CAST_COUNT);
     setPreview(getMediaPreview(mediaType, id));
     getDetails(mediaType, id)
       .then((d) => {
@@ -281,7 +286,9 @@ export default function DetailPage() {
         profile_path: member.profile_path,
       }))
     : details.credits?.cast || [];
-  const visibleCast = showFullCast ? cast : cast.slice(0, MAIN_CAST_COUNT);
+  const castExpanded = castLimit > MAIN_CAST_COUNT;
+  const visibleCast = cast.slice(0, castLimit);
+  const castRemaining = cast.length - visibleCast.length;
 
   type DirectorEntry = { id: number; name: string };
   const directors: DirectorEntry[] =
@@ -725,16 +732,18 @@ export default function DetailPage() {
                   <button
                     type="button"
                     className={styles.textBtn}
-                    onClick={() => setShowFullCast((v) => !v)}
-                    aria-expanded={showFullCast}
+                    onClick={() =>
+                      setCastLimit(castExpanded ? MAIN_CAST_COUNT : MAIN_CAST_COUNT + CAST_BATCH)
+                    }
+                    aria-expanded={castExpanded}
                   >
-                    {showFullCast
+                    {castExpanded
                       ? t("detailPage.showLessCast")
                       : t("detailPage.showFullCast", { count: cast.length })}
                   </button>
                 )}
               </div>
-              <div className={`${styles.castGrid} ${showFullCast ? styles.castGridAll : ""}`}>
+              <div className={`${styles.castGrid} ${castExpanded ? styles.castGridAll : ""}`}>
                 {visibleCast.map((member) => (
                   <PersonCard
                     key={member.credit_id || `${member.id}-${member.character}`}
@@ -745,6 +754,20 @@ export default function DetailPage() {
                   />
                 ))}
               </div>
+              {castExpanded && castRemaining > 0 && (
+                <div className={styles.castMore}>
+                  <span className={styles.castMoreCount}>
+                    {t("detailPage.castShown", { shown: visibleCast.length, total: cast.length })}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.castMoreBtn}
+                    onClick={() => setCastLimit((limit) => limit + CAST_BATCH)}
+                  >
+                    {t("detailPage.showMoreCast", { count: Math.min(CAST_BATCH, castRemaining) })}
+                  </button>
+                </div>
+              )}
             </section>
           )}
 
