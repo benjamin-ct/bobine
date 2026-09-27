@@ -237,9 +237,14 @@ export default function ComingSoonPage() {
   const [fetchedPages, setFetchedPages] = useState(0);
   const [tmdbTotalPages, setTmdbTotalPages] = useState(0);
 
-  useEffect(() => {
-    setGenreIds([]);
-  }, [mediaType]);
+  // Les genres d'un type ne valent pas pour l'autre : on les vide dans le
+  // même rendu que le changement de type (et pas dans un effet), sinon le
+  // lot part une fois avec l'ancien filtre puis une seconde fois après le
+  // reset — deux chargements successifs, d'où le clignotement Films/Séries.
+  const changeMediaType = useCallback((next: MediaType) => {
+    setMediaType(next);
+    setGenreIds((prev) => (prev.length ? [] : prev));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -297,12 +302,14 @@ export default function ComingSoonPage() {
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
-    setRevealCount(REVEAL_SIZE);
     fetchBatch(1, [], [])
       .then(({ merged, totalPages, newFetchedPages }) => {
         if (cancelled) {
           return;
         }
+        // Remis à zéro ici et pas au lancement : la chronologie précédente
+        // reste affichée en entier pendant le rechargement (voir refreshing).
+        setRevealCount(REVEAL_SIZE);
         setAllResults(merged);
         setTmdbTotalPages(totalPages);
         setFetchedPages(newFetchedPages);
@@ -348,6 +355,10 @@ export default function ComingSoonPage() {
 
   const hasMore = revealCount < allResults.length || fetchedPages < tmdbTotalPages;
   const visibleResults = allResults.slice(0, revealCount);
+  // Rechargement après un changement de filtre : on garde la chronologie
+  // précédente à l'écran (atténuée) plutôt que de la remplacer par le
+  // squelette, qui fait sauter toute la page le temps de la requête.
+  const refreshing = status === "loading" && visibleResults.length > 0;
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -398,7 +409,7 @@ export default function ComingSoonPage() {
 
       <FilterPanel
         mediaType={mediaType}
-        setMediaType={setMediaType}
+        setMediaType={changeMediaType}
         genres={genres}
         genreIds={genreIds}
         setGenreIds={setGenreIds}
@@ -420,14 +431,14 @@ export default function ComingSoonPage() {
         }}
       />
 
-      {status === "loading" && <ComingSoonSkeleton />}
+      {status === "loading" && !refreshing && <ComingSoonSkeleton />}
       {status === "error" && <ErrorMessage error={error} />}
       {status === "success" && visibleResults.length === 0 && (
         <EmptyState label={t("comingSoonPage.emptyState")} />
       )}
 
-      {status === "success" && visibleResults.length > 0 && (
-        <>
+      {(status === "success" || refreshing) && visibleResults.length > 0 && (
+        <div className={refreshing ? gridStyles.refreshing : undefined} aria-busy={refreshing}>
           <div className={styles.timeline}>
             {months.map((month) => (
               <section key={month.label} className={styles.month}>
@@ -443,7 +454,7 @@ export default function ComingSoonPage() {
               {loadingMore && <span>{t("common.loading")}</span>}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

@@ -102,23 +102,20 @@ export default function NewReleasesPage() {
       ? providerIds
       : undefined;
 
-  // Ignore le premier montage : sinon `setGenreIds([])` y crée un nouveau
-  // tableau vide (référence différente de l'état initial), ce qui redéclenche
-  // l'effet discover() juste après le premier appel — deux appels API
-  // identiques à l'ouverture de la page pour rien.
-  const isFirstMediaTypeRender = useRef(true);
-  useEffect(() => {
-    if (isFirstMediaTypeRender.current) {
-      isFirstMediaTypeRender.current = false;
-      return;
-    }
-    setGenreIds([]);
-    setPage(1);
-  }, [mediaType]);
+  // Les genres d'un type ne valent pas pour l'autre : on les vide dans le
+  // même rendu que le changement de type (et pas dans un effet), sinon
+  // discover() part une fois avec l'ancien filtre puis une seconde fois après
+  // le reset — deux chargements successifs, d'où le clignotement Films/Séries.
+  // Tableau conservé tel quel s'il est déjà vide, pour ne pas changer sa
+  // référence (qui redéclencherait aussi l'appel).
+  const changeMediaType = useCallback((next: MediaType) => {
+    setMediaType(next);
+    setGenreIds((prev) => (prev.length ? [] : prev));
+  }, []);
 
   useEffect(() => {
     setPage(1);
-  }, [genreIds, providerIds, useMyPlatforms, country, language, windowDays]);
+  }, [mediaType, genreIds, providerIds, useMyPlatforms, country, language, windowDays]);
 
   useEffect(() => {
     let cancelled = false;
@@ -259,6 +256,10 @@ export default function NewReleasesPage() {
   useScrollRestoration(status === "success", results.length);
 
   const groups = useMemo(() => groupByPeriod(results, windowDays), [results, windowDays]);
+  // Rechargement après un changement de filtre : on garde les résultats
+  // précédents à l'écran (atténués) plutôt que de les remplacer par le
+  // squelette, qui fait sauter toute la page le temps de la requête.
+  const refreshing = status === "loading" && results.length > 0;
 
   return (
     <div className={styles.page}>
@@ -271,7 +272,7 @@ export default function NewReleasesPage() {
 
       <FilterPanel
         mediaType={mediaType}
-        setMediaType={setMediaType}
+        setMediaType={changeMediaType}
         genres={genres}
         genreIds={genreIds}
         setGenreIds={setGenreIds}
@@ -293,7 +294,7 @@ export default function NewReleasesPage() {
         }}
       />
 
-      {status === "loading" && (
+      {status === "loading" && !refreshing && (
         <div className={gridStyles.grid}>
           {Array.from({ length: GRID_SKELETON_COUNT }, (_, i) => (
             <MediaCardSkeleton key={i} />
@@ -305,8 +306,8 @@ export default function NewReleasesPage() {
         <EmptyState label={t("newReleasesPage.emptyState")} />
       )}
 
-      {status === "success" && results.length > 0 && (
-        <>
+      {(status === "success" || refreshing) && results.length > 0 && (
+        <div className={refreshing ? gridStyles.refreshing : undefined} aria-busy={refreshing}>
           {groups.map(([key, items]) => (
             <section key={key} className={styles.period} aria-labelledby={`period-${key}`}>
               <h2 id={`period-${key}`} className={styles.periodTitle}>
@@ -327,7 +328,7 @@ export default function NewReleasesPage() {
               {loadingMore && <span>{t("common.loading")}</span>}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
