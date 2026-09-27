@@ -61,6 +61,10 @@ const PATHS = {
   arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
   list: <path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" />,
   grip: <path d="M4 7h16M4 12h16M4 17h16" />,
+  // Poignée « ⋮⋮ » de glisser-déposer.
+  dragHandle: (
+    <path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01" strokeWidth={3.2} />
+  ),
   grid: (
     <>
       <rect x="4" y="4" width="6.5" height="6.5" rx="1" />

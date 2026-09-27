@@ -1,31 +1,136 @@
-.tools {
+/* En-tête de liste perso : couverture en éventail, nom, compteurs, statut
+   de partage, puis tri / affichage / Partager / menu ⋯. */
+.header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 18px 22px;
+  margin-bottom: 14px;
 }
 
-.hint {
+.cover {
+  position: relative;
+  flex-shrink: 0;
+  width: 112px;
+  height: 92px;
+}
+
+.coverCard,
+.coverEmpty {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 56px;
+  aspect-ratio: 2 / 3;
+  margin-left: -28px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  box-shadow: 0 6px 16px oklch(0 0 0 / 0.35);
+  transform-origin: 50% 100%;
+}
+
+.coverCard img,
+.coverCard > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coverEmpty {
+  display: grid;
+  place-items: center;
   color: var(--muted);
-  font-size: 13px;
+  border-style: dashed;
+  box-shadow: none;
 }
 
-.spacer {
-  flex: 1 1 auto;
+/* 1re affiche au premier plan, les suivantes en éventail derrière. */
+.coverCard:nth-child(1) {
+  z-index: 3;
 }
 
-.ghostBtn {
-  padding: 8px 12px;
+.cover2 .coverCard:nth-child(1) {
+  transform: translateX(-12px) rotate(-6deg);
+}
+
+.cover2 .coverCard:nth-child(2) {
+  z-index: 2;
+  transform: translateX(12px) rotate(6deg);
+}
+
+.cover3 .coverCard:nth-child(2) {
+  z-index: 2;
+  transform: translateX(-26px) rotate(-11deg);
+}
+
+.cover3 .coverCard:nth-child(3) {
+  z-index: 1;
+  transform: translateX(26px) rotate(11deg);
+}
+
+.headerBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.listName {
+  margin: 0;
+  font-size: var(--fs-h2);
+  overflow-wrap: anywhere;
+}
+
+.listMeta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 4px 10px;
   border-radius: 999px;
+  border: 1px solid var(--border);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
-.ghostBtn:hover {
-  color: var(--fg);
-  background: var(--surface-2);
+.statusShared {
+  border-color: color-mix(in oklch, var(--ok) 45%, transparent);
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.shareBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.shareBtn:hover {
+  background: var(--accent-strong);
 }
 
 .renameForm {
@@ -51,9 +156,10 @@
 }
 
 .dragHint {
+  margin: 0 0 16px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--muted);
+  color: var(--subtle);
 }
 
 .draggable {
@@ -162,12 +268,27 @@
   box-shadow: 0 3px 0 var(--accent);
 }
 
-.okHint {
-  color: var(--ok-ink);
-  font-size: 13px;
-}
+@media (max-width: 860px) {
+  .header {
+    gap: 14px 16px;
+  }
 
-.errorHint {
-  color: var(--accent-ink);
-  font-size: 13px;
+  .cover {
+    width: 92px;
+    height: 76px;
+  }
+
+  .coverCard,
+  .coverEmpty {
+    width: 46px;
+    margin-left: -23px;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .shareBtn {
+    margin-left: auto;
+  }
 }

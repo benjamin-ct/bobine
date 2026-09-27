@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
 import { useAuth } from "../../core/context/AuthContext.tsx";
-import { ContinueWatchingRow, EmptyState } from "../../shared/components/index.ts";
+import { ContinueWatchingRow, EmptyState, Icon } from "../../shared/components/index.ts";
 import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
 import StatsPanel from "./components/StatsPanel.tsx";
 import WatchlistPanel from "./components/WatchlistPanel.tsx";
@@ -43,6 +43,42 @@ export default function MyListContent() {
       { replace: true }
     );
   }
+  // Listes partagées (id de liste → slug du lien public) : icône de lien sur
+  // l'onglet et statut dans l'en-tête de la liste.
+  const [shares, setShares] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (authStatus !== "authenticated") {
+      setShares({});
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/list-shares")
+      .then((res): Promise<Record<string, string>> | Record<string, string> =>
+        res.ok ? res.json() : {}
+      )
+      .then((data) => {
+        if (!cancelled) {
+          setShares(data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus]);
+
+  function setShare(listId: string, slug: string | null) {
+    setShares((prev) => {
+      const next = { ...prev };
+      if (slug) {
+        next[listId] = slug;
+      } else {
+        delete next[listId];
+      }
+      return next;
+    });
+  }
+
   const [creating, setCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
 
@@ -72,22 +108,27 @@ export default function MyListContent() {
       )}
 
       {/* Top 5 du profil partagé : enregistré sur le compte, donc connecté uniquement. */}
-      {authStatus === "authenticated" && <TopPicksPanel />}
+      {authStatus === "authenticated" && (
+        <>
+          <TopPicksPanel />
+          <hr className={styles.divider} />
+        </>
+      )}
 
       <div className={styles.tabs} role="tablist">
-        <button
-          type="button"
-          className={`${styles.tab} ${tab === "seen" ? styles.tabActive : ""}`}
-          onClick={() => setTab("seen")}
-        >
-          {t("myListPage.tabSeen")} <span className={styles.count}>{watched.length}</span>
-        </button>
         <button
           type="button"
           className={`${styles.tab} ${tab === "want" ? styles.tabActive : ""}`}
           onClick={() => setTab("want")}
         >
           {t("myListPage.tabWant")} <span className={styles.count}>{watchlist.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`${styles.tab} ${tab === "seen" ? styles.tabActive : ""}`}
+          onClick={() => setTab("seen")}
+        >
+          {t("myListPage.tabSeen")} <span className={styles.count}>{watched.length}</span>
         </button>
         <button
           type="button"
@@ -104,7 +145,9 @@ export default function MyListContent() {
             className={`${styles.tab} ${tab === list.id ? styles.tabActive : ""}`}
             onClick={() => setTab(list.id)}
           >
+            {shares[list.id] && <Icon name="link" className={styles.sharedIcon} />}
             {list.name} <span className={styles.count}>{list.items.length}</span>
+            {shares[list.id] && <span className={styles.srOnly}>{t("myListPage.sharedTab")}</span>}
           </button>
         ))}
         <button type="button" className={styles.newTab} onClick={() => setCreating((v) => !v)}>
@@ -152,7 +195,13 @@ export default function MyListContent() {
         ))}
 
       {activeCustomList && (
-        <CustomListPanel list={activeCustomList} onDeleted={() => setTab("want")} />
+        <CustomListPanel
+          list={activeCustomList}
+          onDeleted={() => setTab("want")}
+          canShare={authStatus === "authenticated"}
+          shareSlug={shares[activeCustomList.id] ?? null}
+          onShareChange={(slug) => setShare(activeCustomList.id, slug)}
+        />
       )}
     </div>
   );

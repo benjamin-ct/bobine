@@ -1,0 +1,273 @@
+.dialog {
+  width: min(520px, calc(100% - 2 * var(--gutter)));
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  color: var(--fg);
+}
+
+.dialog::backdrop {
+  background: oklch(0 0 0 / 0.6);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+}
+
+.sheetGrabber {
+  display: none;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.closeBtn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--fg);
+  font-size: 13px;
+}
+
+.sectionTitle {
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.visibleList {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.visibleList li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.visibleList :global(svg) {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  color: var(--subtle);
+  font-size: 13px;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.dangerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.primaryBtn {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.primaryBtn:hover {
+  background: var(--accent-strong);
+}
+
+.secondaryBtn {
+  border: 1px solid var(--border-2);
+  color: var(--fg);
+}
+
+.secondaryBtn:hover {
+  background: var(--surface-3);
+}
+
+.dangerBtn {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.primaryBtn:disabled,
+.secondaryBtn:disabled,
+.dangerBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.linkField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 5px 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.linkField input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  text-overflow: ellipsis;
+}
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.linkField + .hint {
+  margin: 8px 0 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.stopZone {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.stopBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  color: var(--accent-ink);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.confirm {
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in oklch, var(--accent) 45%, transparent);
+  background: var(--accent-soft);
+}
+
+.confirmText {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.confirmActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.stoppedNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.error {
+  margin: 12px 0 0;
+  color: var(--accent-ink);
+  font-size: 13px;
+}
+
+/* Feuille du bas sur mobile. */
+@media (max-width: 860px) {
+  .dialog {
+    width: 100%;
+    max-width: none;
+    margin: auto 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom: 0;
+  }
+
+  .content {
+    padding: 10px 18px calc(22px + env(safe-area-inset-bottom));
+  }
+
+  .sheetGrabber {
+    display: block;
+    align-self: center;
+    width: 40px;
+    height: 4px;
+    margin-bottom: 14px;
+    border-radius: 999px;
+    background: var(--border-2);
+  }
+
+  .actions > * {
+    flex: 1;
+  }
+
+  .primaryBtn {
+    width: 100%;
+  }
+}

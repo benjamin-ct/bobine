@@ -82,6 +82,11 @@
   --medal-outline: rgba(255, 255, 255, 0.7);
   --medal-outline-bg: rgba(9, 22, 43, 0.6);
   --medal-outline-ink: #f5f8ff;
+  /* grands chiffres du top 5 de Ma liste : 1 à 3 pleins, 4 et 5 en contour */
+  --top-rank-1: oklch(0.83 0.13 84);
+  --top-rank-2: #cdd5e0;
+  --top-rank-3: #c98a58;
+  --top-rank-outline: rgba(245, 248, 255, 0.6);
   --data-1: oklch(0.54 0.15 26); /* films, dataviz */
   --data-2: var(--gold); /* séries, dataviz */
 
@@ -185,6 +190,10 @@
   --medal-2-ink: oklch(0.24 0.02 250);
   --medal-3: oklch(0.7 0.1 50);
   --medal-3-ink: oklch(0.2 0.04 45);
+  --top-rank-1: oklch(0.74 0.14 80);
+  --top-rank-2: oklch(0.7 0.02 250);
+  --top-rank-3: #b87545;
+  --top-rank-outline: oklch(0.45 0.03 260 / 0.6);
 
   --data-1: oklch(0.5 0.16 26);
   --data-2: var(--gold);
