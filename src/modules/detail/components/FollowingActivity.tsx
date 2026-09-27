@@ -8,6 +8,7 @@ import type { MediaType } from "../../../core/types/tmdb.ts";
 import { Icon } from "../../../shared/components/index.ts";
 import { posterAccentFromSeed } from "../../../shared/lib/posterAccent.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
+import { timeAgo } from "../../../shared/lib/timeAgo.ts";
 import styles from "./FollowingActivity.module.css";
 
 function initials(name: string): string {
@@ -18,32 +19,6 @@ function initials(name: string): string {
     .slice(0, 2)
     .join("")
     .toUpperCase();
-}
-
-// « il y a 3 jours » (maquette) ; null si la date manque ou est dans le futur.
-function timeAgo(ms: number | undefined, locale: string): string | null {
-  if (!ms) {
-    return null;
-  }
-  const seconds = (ms - Date.now()) / 1000;
-  if (seconds > 60) {
-    return null;
-  }
-  const units: [Intl.RelativeTimeFormatUnit, number][] = [
-    ["year", 31536000],
-    ["month", 2592000],
-    ["week", 604800],
-    ["day", 86400],
-    ["hour", 3600],
-    ["minute", 60],
-  ];
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  for (const [unit, size] of units) {
-    if (Math.abs(seconds) >= size) {
-      return rtf.format(Math.round(seconds / size), unit);
-    }
-  }
-  return rtf.format(0, "minute");
 }
 
 // Même source que la page de profil public (/api/public-profile/:slug/avatar,

@@ -55,6 +55,13 @@ interface MediaCardProps {
    * pas casser le memo). */
   yearGenre?: boolean;
   genreName?: string;
+  /** Opt-in (profil et liste publics) : note du propriétaire de la page, en
+   * pastille dorée en haut à droite de l'affiche. Les pastilles Envie / Vu,
+   * elles, restent celles du visiteur. */
+  ownerRating?: number | null;
+  /** Opt-in (liste publique, tri « Ordre de X ») : numéro « 01 », « 02 »…
+   * à la place du badge Film / Série. */
+  position?: number;
 }
 
 // `memo` : les grilles (Découvrir, Nouveautés, Ma liste...) affichent des
@@ -69,6 +76,8 @@ function MediaCard({
   rank,
   yearGenre = false,
   genreName,
+  ownerRating,
+  position,
 }: MediaCardProps) {
   const { t } = useTranslation();
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
@@ -256,9 +265,23 @@ function MediaCard({
               {rank}
             </span>
           )}
-          <span className={styles.type}>
-            {mediaType === "movie" ? t("mediaCard.movie") : t("mediaCard.series")}
-          </span>
+          {position != null ? (
+            <span className={styles.type} aria-label={t("mediaCard.position", { position })}>
+              {String(position).padStart(2, "0")}
+            </span>
+          ) : (
+            <span className={styles.type}>
+              {mediaType === "movie" ? t("mediaCard.movie") : t("mediaCard.series")}
+            </span>
+          )}
+          {ownerRating != null && (
+            <span
+              className={styles.ownerRating}
+              aria-label={t("mediaCard.ownerRating", { rating: ownerRating })}
+            >
+              <Icon name="star" size={11} filled /> {ownerRating}
+            </span>
+          )}
           {showEpisodeBadge ? (
             episodeBadgeLabel && (
               <span

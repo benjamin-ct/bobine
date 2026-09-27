@@ -2,7 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
-import { MediaCard, Dropdown, EmptyState, Icon } from "../../../shared/components/index.ts";
+import {
+  MediaCard,
+  Dropdown,
+  EmptyState,
+  Icon,
+  ListCover,
+} from "../../../shared/components/index.ts";
 import dropdownStyles from "../../../shared/components/Dropdown/Dropdown.module.css";
 import { libraryItemToMediaItem } from "../../../shared/lib/libraryItem.ts";
 import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
@@ -38,8 +44,6 @@ function makeKey(item: LibraryItem): string {
   return `${item.mediaType}:${item.id}`;
 }
 
-const COVER_SIZE = 3;
-
 export default function CustomListPanel({
   list,
   onDeleted,
@@ -57,7 +61,6 @@ export default function CustomListPanel({
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const items = getListItems(list.id);
   const ratedCount = items.filter((item) => getRating(item.mediaType, item.id) != null).length;
-  const cover = items.slice(0, COVER_SIZE);
 
   function handleDelete() {
     if (window.confirm(t("customListPanel.confirmDelete", { name: list.name }))) {
@@ -110,27 +113,7 @@ export default function CustomListPanel({
     <div>
       <div className={styles.header}>
         {/* Couverture en éventail : les 3 premières affiches de la liste. */}
-        <div className={`${styles.cover} ${styles[`cover${cover.length}`]}`} aria-hidden>
-          {cover.length === 0 ? (
-            <span className={styles.coverEmpty}>
-              <Icon name="list" size={26} />
-            </span>
-          ) : (
-            cover.map((item) => {
-              const key = makeKey(item);
-              const src = posterUrl(item.posterPath, "w185");
-              return (
-                <span key={key} className={styles.coverCard}>
-                  {src ? (
-                    <img src={src} alt="" />
-                  ) : (
-                    <span className={posterStyles[posterAccentFromGenres(item.genreIds, key)]} />
-                  )}
-                </span>
-              );
-            })
-          )}
-        </div>
+        <ListCover items={items} />
 
         <div className={styles.headerBody}>
           {renaming ? (

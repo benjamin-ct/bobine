@@ -9,18 +9,21 @@ import {
   EmptyState,
   FollowButton,
   FollowStats,
-  Dropdown,
   Icon,
+  ListCover,
+  ReadOnlyBanner,
 } from "../../shared/components/index.ts";
-import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
 import { getGenres } from "../../core/api/tmdb.ts";
+import { useAuth } from "../../core/context/AuthContext.tsx";
+import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { libraryItemToMediaItem } from "../../shared/lib/libraryItem.ts";
-import { ratingTier } from "../../shared/lib/ratingTier.ts";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
-import type { LibraryItem, PublicProfile } from "../../core/types/library.ts";
+import type { CustomList, LibraryItem, PublicProfile } from "../../core/types/library.ts";
+import PublicTopPicks from "./components/PublicTopPicks.tsx";
 import styles from "./PublicProfilePage.module.css";
 
-type Tab = "seen" | "want" | string; // string = id de liste personnalisée
+type Tab = "seen" | "want" | "lists";
+type TypeFilter = "all" | "movie" | "tv";
 
 type State =
   | { status: "loading" }
@@ -28,33 +31,13 @@ type State =
   | { status: "not-found" }
   | { status: "error"; error: Error };
 
-const RECENT_COUNT = 6;
 const TOP_COUNT = 5;
-
-// « Date de visionnage » = dernier passage en « vu » (updatedAt), l'ordre
-// déjà renvoyé par le worker.
-type SortMode = "recent" | "rating" | "title" | "year";
-const SORTS: Array<{ id: SortMode; labelKey: string }> = [
-  { id: "recent", labelKey: "publicProfile.sortRecent" },
-  { id: "rating", labelKey: "publicProfile.sortRating" },
-  { id: "title", labelKey: "publicProfile.sortTitle" },
-  { id: "year", labelKey: "publicProfile.sortYear" },
+const TYPE_FILTERS: Array<{ id: TypeFilter; labelKey: string }> = [
+  { id: "all", labelKey: "publicProfile.filterAll" },
+  { id: "movie", labelKey: "publicProfile.filterMovies" },
+  { id: "tv", labelKey: "publicProfile.filterSeries" },
 ];
-
-function sortItems(items: LibraryItem[], mode: SortMode): LibraryItem[] {
-  if (mode === "recent") {
-    return items;
-  }
-  return [...items].sort((a, b) => {
-    if (mode === "title") {
-      return a.title.localeCompare(b.title, "fr");
-    }
-    if (mode === "year") {
-      return (b.date || "").localeCompare(a.date || "");
-    }
-    return (b.rating ?? -1) - (a.rating ?? -1);
-  });
-}
+const CONFIRMATION_MS = 3500;
 
 function initials(name: string): string {
   return name
@@ -90,43 +73,48 @@ function ProfileAvatar({ slug, name }: { slug: string; name: string }) {
   );
 }
 
-function ItemGrid({ items, ranked = false }: { items: LibraryItem[]; ranked?: boolean }) {
-  const { t } = useTranslation();
+function ItemGrid({
+  items,
+  genreNames,
+}: {
+  items: LibraryItem[];
+  genreNames: Record<number, string>;
+}) {
   return (
     <div className={gridStyles.grid}>
-      {items.map((item, index) => (
-        <div key={`${item.mediaType}:${item.id}`}>
-          <MediaCard item={libraryItemToMediaItem(item)} rank={ranked ? index + 1 : undefined} />
-          {item.rating != null && (
-            <p className={styles.meta}>
-              <span
-                className={`${styles.rating} ${styles[`rating-${ratingTier(item.rating).cls}`]}`}
-              >
-                <Icon name="star" filled /> {t("publicProfile.rating", { rating: item.rating })}
-              </span>
-            </p>
-          )}
-        </div>
+      {items.map((item) => (
+        <MediaCard
+          key={`${item.mediaType}:${item.id}`}
+          item={libraryItemToMediaItem(item)}
+          ownerRating={item.rating}
+          yearGenre
+          genreName={(item.genreIds ?? []).map((id) => genreNames[id]).find(Boolean)}
+        />
       ))}
     </div>
   );
 }
 
 // Profil d'un autre membre, partagé en lecture seule via /u/<slug> ou
-// /u/<pseudo> (voir ProfileShareCard) : accessible sans compte. Les cartes restent les
-// MediaCard habituelles — leurs boutons « vu »/« envie de voir » agissent
+// /u/<pseudo> (voir ProfileShareCard) : accessible sans compte. Les cartes
+// restent les MediaCard habituelles — la pastille dorée en haut porte la
+// note du propriétaire, les boutons « vu »/« envie de voir » du bas agissent
 // sur la bibliothèque du visiteur, jamais sur celle du profil consulté.
 export default function PublicProfilePage() {
   const { t } = useTranslation();
+  const { locale } = useLocale();
+  const { status: authStatus } = useAuth();
   const { slug = "" } = useParams();
   const [state, setState] = useState<State>({ status: "loading" });
   const [tab, setTab] = useState<Tab>("seen");
-  const [sortMode, setSortMode] = useState<SortMode>("recent");
-  const [genreFilter, setGenreFilter] = useState<number | null>(null);
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [openListId, setOpenListId] = useState<string | null>(null);
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
 
-  // Noms des genres pour le filtre des titres vus (les items ne portent que
-  // les ids TMDB). En cas d'échec, le filtre reste simplement masqué.
+  // Noms des genres pour « année · genre » sous les affiches (les items ne
+  // portent que les ids TMDB). En cas d'échec, seule l'année s'affiche.
   useEffect(() => {
     let cancelled = false;
     Promise.all([getGenres("movie"), getGenres("tv")])
@@ -146,48 +134,52 @@ export default function PublicProfilePage() {
     };
   }, []);
 
-  const watched = state.status === "success" ? state.profile.watched : null;
-
-  // Genres présents parmi les titres vus, du plus fréquent au moins fréquent.
-  const watchedGenres = useMemo(() => {
-    const counts = new Map<number, number>();
-    for (const item of watched ?? []) {
-      for (const id of item.genreIds || []) {
-        counts.set(id, (counts.get(id) || 0) + 1);
-      }
+  useEffect(() => {
+    if (!confirmation) {
+      return;
     }
-    return [...counts.entries()]
-      .filter(([id]) => genreMap[id])
-      .sort((a, b) => b[1] - a[1] || genreMap[a[0]].localeCompare(genreMap[b[0]], "fr"))
-      .map(([id, count]) => ({ id, name: genreMap[id], count }));
-  }, [watched, genreMap]);
+    const timer = setTimeout(() => setConfirmation(null), CONFIRMATION_MS);
+    return () => clearTimeout(timer);
+  }, [confirmation]);
 
-  const topPicks = state.status === "success" ? state.profile.topPicks : null;
+  useEffect(() => {
+    if (!linkCopied) {
+      return;
+    }
+    const timer = setTimeout(() => setLinkCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [linkCopied]);
 
-  // Top : celui choisi à la main par le propriétaire (façon « films
-  // favoris » de Letterboxd, voir TopPicksPanel dans Ma liste), sinon les titres vus les
-  // mieux notés — à égalité de note, les plus récemment vus passent devant.
+  const profile = state.status === "success" ? state.profile : null;
+
+  // Top 5 choisi à la main par le propriétaire (voir TopPicksPanel dans Ma
+  // liste) ; section masquée s'il n'en a pas défini.
   const top = useMemo(() => {
-    if (topPicks?.length) {
-      const byKey = new Map((watched ?? []).map((item) => [`${item.mediaType}:${item.id}`, item]));
-      return topPicks.flatMap((key) => byKey.get(key) ?? []).slice(0, TOP_COUNT);
+    if (!profile?.topPicks.length) {
+      return [];
     }
-    return (watched ?? [])
-      .filter((item) => item.rating != null)
-      .sort(
-        (a, b) =>
-          (b.rating ?? 0) - (a.rating ?? 0) ||
-          (b.updatedAt || b.addedAt || 0) - (a.updatedAt || a.addedAt || 0)
-      )
-      .slice(0, TOP_COUNT);
-  }, [watched, topPicks]);
+    const byKey = new Map(profile.watched.map((item) => [`${item.mediaType}:${item.id}`, item]));
+    return profile.topPicks.flatMap((key) => byKey.get(key) ?? []).slice(0, TOP_COUNT);
+  }, [profile]);
+
+  const averageRating = useMemo(() => {
+    const ratings = (profile?.watched ?? [])
+      .map((item) => item.rating)
+      .filter((rating): rating is number => rating != null);
+    if (ratings.length === 0) {
+      return null;
+    }
+    return (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toLocaleString(locale, {
+      maximumFractionDigits: 1,
+    });
+  }, [profile, locale]);
 
   useEffect(() => {
     let cancelled = false;
     setState({ status: "loading" });
     setTab("seen");
-    setSortMode("recent");
-    setGenreFilter(null);
+    setTypeFilter("all");
+    setOpenListId(null);
     fetch(`/api/public-profile/${encodeURIComponent(slug)}`)
       .then(async (res) => {
         if (res.status === 404) {
@@ -226,7 +218,7 @@ export default function PublicProfilePage() {
       </div>
     );
   }
-  if (state.status === "not-found") {
+  if (state.status === "not-found" || !profile) {
     return (
       <div className={styles.page}>
         <PageHeader
@@ -241,18 +233,27 @@ export default function PublicProfilePage() {
     );
   }
 
-  const { profile } = state;
+  const loggedIn = authStatus === "authenticated";
+  const name = profile.displayName || t("publicProfile.anonymousName");
 
   // Follow/unfollow : compteurs renvoyés par le serveur, appliqués tels quels.
   function applyFollow(viewerFollows: boolean, counts: { followers: number; following: number }) {
+    if (!profile) {
+      return;
+    }
     setState({ status: "success", profile: { ...profile, ...counts, viewerFollows } });
+    setConfirmation(
+      viewerFollows
+        ? t("publicProfile.followConfirmed", { name })
+        : t("publicProfile.unfollowConfirmed", { name })
+    );
   }
 
   // Sur son propre profil, suivre quelqu'un depuis une des listes change le
   // compteur d'abonnements affiché : on le recharge sans repasser par l'écran
   // de chargement.
   function refreshOwnCounts() {
-    if (!profile.isSelf) {
+    if (!profile?.isSelf) {
       return;
     }
     fetch(`/api/public-profile/${encodeURIComponent(slug)}`)
@@ -266,169 +267,263 @@ export default function PublicProfilePage() {
         // Compteur légèrement en retard jusqu'au prochain chargement : sans gravité.
       });
   }
-  const name = profile.displayName || t("publicProfile.anonymousName");
-  const activeList = profile.customLists.find((l) => l.id === tab);
-  const recent = profile.watched.slice(0, RECENT_COUNT);
-  const activeGenre = watchedGenres.find((g) => g.id === genreFilter) ?? null;
-  const seen = sortItems(
-    activeGenre
-      ? profile.watched.filter((item) => item.genreIds?.includes(activeGenre.id))
-      : profile.watched,
-    sortMode
+
+  // Feuille de partage native quand elle existe (mobile), sinon copie du
+  // lien — même logique que le partage de fiche / de liste.
+  async function shareProfile() {
+    if (!profile) {
+      return;
+    }
+    const url = `${window.location.origin}/u/${profile.username ?? profile.shareSlug}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: name, url });
+      } catch {
+        // Partage annulé par l'utilisateur : rien à faire.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+    } catch {
+      // Presse-papiers indisponible : l'adresse reste dans la barre du navigateur.
+    }
+  }
+
+  const byType = (items: LibraryItem[]) =>
+    typeFilter === "all" ? items : items.filter((item) => item.mediaType === typeFilter);
+  const openList: CustomList | undefined =
+    tab === "lists" ? profile.customLists.find((l) => l.id === openListId) : undefined;
+  const { followedBy } = profile;
+  const followedByOthers = followedBy.total - followedBy.profiles.length;
+  const followedByNames = followedBy.profiles.map(
+    (p) => p.displayName || t("publicProfile.anonymousName")
+  );
+
+  const stats = [
+    { value: profile.watched.length, label: t("publicProfile.statWatched") },
+    { value: profile.watchlist.length, label: t("publicProfile.statWant") },
+    { value: profile.customLists.length, label: t("publicProfile.statLists") },
+    { value: averageRating ?? "—", label: t("publicProfile.statAverage"), star: true },
+  ];
+
+  const tabs: Array<{ id: Tab; label: string; count: number }> = [
+    { id: "seen", label: t("publicProfile.tabSeen"), count: profile.watched.length },
+    { id: "want", label: t("publicProfile.tabWant"), count: profile.watchlist.length },
+    { id: "lists", label: t("publicProfile.tabLists"), count: profile.customLists.length },
+  ];
+
+  const shareButton = (
+    <button
+      type="button"
+      className={`${styles.shareBtn} ${loggedIn ? styles.shareBtnIcon : ""}`}
+      onClick={() => void shareProfile()}
+      aria-label={t("publicProfile.share")}
+      title={t("publicProfile.share")}
+    >
+      <Icon name={linkCopied ? "check" : "share"} size={16} />
+      <span className={styles.shareLabel}>
+        {linkCopied ? t("publicProfile.linkCopied") : t("publicProfile.share")}
+      </span>
+    </button>
   );
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <ProfileAvatar slug={profile.shareSlug} name={name} />
-        <PageHeader
-          eyebrow={
-            profile.username
-              ? `${t("publicProfile.eyebrow")} · @${profile.username}`
-              : t("publicProfile.eyebrow")
-          }
-          title={name}
-          lead={t("publicProfile.lead", {
-            watched: profile.watched.length,
-            watchlist: profile.watchlist.length,
-            lists: profile.customLists.length,
-          })}
-        />
-      </div>
-
-      {top.length > 0 && (
-        <section className={styles.section}>
-          <h2>{t("publicProfile.top", { count: top.length })}</h2>
-          <ItemGrid items={top} ranked />
-        </section>
+      {!loggedIn && authStatus !== "loading" && (
+        <ReadOnlyBanner>{t("publicProfile.readOnly", { name })}</ReadOnlyBanner>
       )}
 
-      <div className={styles.social}>
-        <FollowStats
-          slug={profile.shareSlug}
-          counts={{ followers: profile.followers, following: profile.following }}
-          onListChange={refreshOwnCounts}
-        />
-        {profile.isSelf ? (
-          <span className={styles.selfHint}>{t("follow.ownProfile")}</span>
-        ) : (
-          <FollowButton
-            slug={profile.shareSlug}
-            following={profile.viewerFollows}
-            onChange={applyFollow}
-          />
+      <header className={styles.header}>
+        <ProfileAvatar slug={profile.shareSlug} name={name} />
+        <div className={styles.identity}>
+          <p className={styles.eyebrow}>
+            {loggedIn ? t("publicProfile.eyebrowMember") : t("publicProfile.eyebrow")}
+          </p>
+          <div className={styles.nameRow}>
+            <h1 className={styles.name}>{name}</h1>
+            {profile.username && <span className={styles.handle}>@{profile.username}</span>}
+            {profile.followsViewer && (
+              <span className={styles.followsYou}>{t("publicProfile.followsYou")}</span>
+            )}
+          </div>
+          {loggedIn && (
+            <FollowStats
+              slug={profile.shareSlug}
+              name={name}
+              counts={{ followers: profile.followers, following: profile.following }}
+              onListChange={refreshOwnCounts}
+            />
+          )}
+          {loggedIn && followedBy.total > 0 && (
+            <p className={styles.followedBy}>
+              <span className={styles.miniAvatars} aria-hidden>
+                {followedByNames.map((n, i) => (
+                  <span key={followedBy.profiles[i].slug} className={styles.miniAvatar}>
+                    {initials(n).charAt(0)}
+                  </span>
+                ))}
+              </span>
+              <span>
+                {followedByOthers > 0
+                  ? t("publicProfile.followedByMore", {
+                      names: followedByNames.join(", "),
+                      count: followedByOthers,
+                    })
+                  : t("publicProfile.followedBy", {
+                      names: new Intl.ListFormat(locale, { type: "conjunction" }).format(
+                        followedByNames
+                      ),
+                      count: followedBy.total,
+                    })}
+              </span>
+            </p>
+          )}
+        </div>
+        <div className={`${styles.actions} ${loggedIn ? "" : styles.actionsSolo}`}>
+          {loggedIn &&
+            (profile.isSelf ? (
+              <span className={styles.selfHint}>{t("follow.ownProfile")}</span>
+            ) : (
+              <FollowButton
+                slug={profile.shareSlug}
+                following={profile.viewerFollows}
+                onChange={applyFollow}
+              />
+            ))}
+          {shareButton}
+        </div>
+      </header>
+
+      {confirmation && (
+        <p className={styles.confirmation} role="status">
+          <Icon name="check" size={16} /> {confirmation}
+        </p>
+      )}
+
+      <ul className={styles.stats}>
+        {stats.map((stat) => (
+          <li key={stat.label} className={styles.stat}>
+            <span className={styles.statValue}>
+              {stat.star && (
+                <span className={styles.statStar}>
+                  <Icon name="star" size={14} filled />
+                </span>
+              )}
+              {stat.value}
+            </span>
+            <span className={styles.statLabel}>{stat.label}</span>
+          </li>
+        ))}
+      </ul>
+
+      {top.length > 0 && <PublicTopPicks items={top} ownerName={name} genreNames={genreMap} />}
+
+      <div className={styles.toolbar}>
+        <div className={styles.segmented} role="tablist">
+          {tabs.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              className={`${styles.segment} ${tab === item.id ? styles.segmentActive : ""}`}
+              onClick={() => {
+                setTab(item.id);
+                setOpenListId(null);
+              }}
+            >
+              {item.label} <span className={styles.count}>{item.count}</span>
+            </button>
+          ))}
+        </div>
+        {(tab !== "lists" || openList) && (
+          <>
+            <p className={styles.legend}>
+              <Icon name="star" size={12} filled /> {t("publicProfile.legendOwner", { name })} ·{" "}
+              <Icon name="star" size={12} /> <Icon name="check" size={12} />{" "}
+              {t("publicProfile.legendVisitor")}
+            </p>
+            <div
+              className={styles.segmented}
+              role="group"
+              aria-label={t("publicProfile.typeFilter")}
+            >
+              {TYPE_FILTERS.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  aria-pressed={typeFilter === filter.id}
+                  className={`${styles.segment} ${typeFilter === filter.id ? styles.segmentActive : ""}`}
+                  onClick={() => setTypeFilter(filter.id)}
+                >
+                  {t(filter.labelKey)}
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
-      {recent.length > 0 && (
-        <section className={styles.section}>
-          <h2>{t("publicProfile.recent")}</h2>
-          <ItemGrid items={recent} />
-        </section>
-      )}
-
-      <div className={styles.tabs} role="tablist">
-        <button
-          type="button"
-          className={`${styles.tab} ${tab === "seen" ? styles.tabActive : ""}`}
-          onClick={() => setTab("seen")}
-        >
-          {t("myListPage.tabSeen")} <span className={styles.count}>{profile.watched.length}</span>
-        </button>
-        <button
-          type="button"
-          className={`${styles.tab} ${tab === "want" ? styles.tabActive : ""}`}
-          onClick={() => setTab("want")}
-        >
-          {t("myListPage.tabWant")} <span className={styles.count}>{profile.watchlist.length}</span>
-        </button>
-        {profile.customLists.map((list) => (
-          <button
-            key={list.id}
-            type="button"
-            className={`${styles.tab} ${tab === list.id ? styles.tabActive : ""}`}
-            onClick={() => setTab(list.id)}
-          >
-            {list.name} <span className={styles.count}>{list.items.length}</span>
-          </button>
-        ))}
-      </div>
-
       {tab === "seen" &&
-        (profile.watched.length === 0 ? (
+        (byType(profile.watched).length === 0 ? (
           <EmptyState label={t("publicProfile.emptySeen")} />
         ) : (
-          <>
-            <div className={styles.tools}>
-              {watchedGenres.length > 0 && (
-                <Dropdown
-                  label={
-                    <>
-                      {t("publicProfile.genreLabel")}&nbsp;:{" "}
-                      {activeGenre ? activeGenre.name : t("publicProfile.genreAll")}
-                    </>
-                  }
-                  active={activeGenre != null}
-                >
-                  <div className={dropdownStyles.head}>{t("publicProfile.genreLabel")}</div>
-                  <button
-                    type="button"
-                    className={`${dropdownStyles.option} ${activeGenre == null ? dropdownStyles.optionOn : ""}`}
-                    onClick={() => setGenreFilter(null)}
-                  >
-                    <span className={dropdownStyles.radio} /> {t("publicProfile.genreAll")}
-                  </button>
-                  {watchedGenres.map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      className={`${dropdownStyles.option} ${activeGenre?.id === g.id ? dropdownStyles.optionOn : ""}`}
-                      onClick={() => setGenreFilter(g.id)}
-                    >
-                      <span className={dropdownStyles.radio} /> {g.name}{" "}
-                      <span className={styles.count}>{g.count}</span>
-                    </button>
-                  ))}
-                </Dropdown>
-              )}
-              <Dropdown
-                label={
-                  <>
-                    {t("publicProfile.sortLabel")}&nbsp;:{" "}
-                    {t(SORTS.find((s) => s.id === sortMode)?.labelKey ?? "")}
-                  </>
-                }
-              >
-                <div className={dropdownStyles.head}>{t("publicProfile.sortBy")}</div>
-                {SORTS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`${dropdownStyles.option} ${sortMode === s.id ? dropdownStyles.optionOn : ""}`}
-                    onClick={() => setSortMode(s.id)}
-                  >
-                    <span className={dropdownStyles.radio} /> {t(s.labelKey)}
-                  </button>
-                ))}
-              </Dropdown>
-            </div>
-            <ItemGrid items={seen} />
-          </>
+          <ItemGrid items={byType(profile.watched)} genreNames={genreMap} />
         ))}
 
       {tab === "want" &&
-        (profile.watchlist.length === 0 ? (
+        (byType(profile.watchlist).length === 0 ? (
           <EmptyState label={t("publicProfile.emptyWant")} />
         ) : (
-          <ItemGrid items={profile.watchlist} />
+          <ItemGrid items={byType(profile.watchlist)} genreNames={genreMap} />
         ))}
 
-      {activeList &&
-        (activeList.items.length === 0 ? (
-          <EmptyState label={t("publicProfile.emptyList")} />
+      {tab === "lists" &&
+        !openList &&
+        (profile.customLists.length === 0 ? (
+          <EmptyState label={t("publicProfile.emptyLists")} />
         ) : (
-          <ItemGrid items={activeList.items} />
+          <ul className={styles.lists}>
+            {profile.customLists.map((list) => (
+              <li key={list.id}>
+                <button
+                  type="button"
+                  className={styles.listCard}
+                  onClick={() => setOpenListId(list.id)}
+                >
+                  <ListCover items={list.items} />
+                  <span className={styles.listBody}>
+                    <span className={styles.listName}>{list.name}</span>
+                    <span className={styles.listCount}>
+                      {t("publicProfile.listCount", { count: list.items.length })}
+                    </span>
+                  </span>
+                  <Icon name="arrowRight" size={18} />
+                </button>
+              </li>
+            ))}
+          </ul>
         ))}
+
+      {openList && (
+        <section aria-labelledby="public-list-title">
+          <div className={styles.listHead}>
+            <button type="button" className={styles.backBtn} onClick={() => setOpenListId(null)}>
+              <Icon name="arrowLeft" size={16} /> {t("publicProfile.backToLists")}
+            </button>
+            <h2 id="public-list-title" className={styles.listTitle}>
+              {openList.name}
+            </h2>
+          </div>
+          {byType(openList.items).length === 0 ? (
+            <EmptyState label={t("publicProfile.emptyList")} />
+          ) : (
+            <ItemGrid items={byType(openList.items)} genreNames={genreMap} />
+          )}
+        </section>
+      )}
     </div>
   );
 }

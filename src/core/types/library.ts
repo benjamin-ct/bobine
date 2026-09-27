@@ -77,6 +77,11 @@ export interface PublicProfile {
   following: number;
   /** Relation avec le visiteur, s'il est connecté (sinon `false`). */
   viewerFollows: boolean;
+  /** Ce profil suit le visiteur connecté (badge « Vous suit »). */
+  followsViewer: boolean;
+  /** Profils suivis par le visiteur qui suivent aussi ce profil (« Suivie
+   * par Tom, Inès et N autres… ») : les premiers seulement + le total. */
+  followedBy: { profiles: { slug: string; displayName: string | null }[]; total: number };
   isSelf: boolean;
 }
 
@@ -88,6 +93,10 @@ export interface PublicProfile {
 export interface PublicList {
   name: string;
   ownerName: string | null;
+  /** Pseudo (ou slug) du profil public du propriétaire, `null` s'il est privé. */
+  ownerHandle: string | null;
+  /** Dernier ajout dans la liste (ou sa création), en ms. */
+  updatedAt: number;
   items: LibraryItem[];
   ownListId?: string;
 }
