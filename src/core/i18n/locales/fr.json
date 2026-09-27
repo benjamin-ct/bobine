@@ -302,6 +302,7 @@
     "typeAriaLabel": "Type",
     "movies": "Films",
     "series": "Séries",
+    "allTypes": "Les deux",
     "filterByGenre": "Filtrer par genre",
     "allGenres": "Tous les genres",
     "genresCount_one": "{{count}} genre",
