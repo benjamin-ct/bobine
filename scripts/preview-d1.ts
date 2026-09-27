@@ -4,8 +4,7 @@
 //
 // Le plan D1 gratuit limite le compte à 10 bases au total (voir
 // developers.cloudflare.com/d1/platform/limits) ; une est réservée à la prod
-// (`bobine-notifications`) et une au staging (`bobine-staging`, voir
-// scripts/staging.ts), donc au plus MAX_PREVIEW_DATABASES previews
+// (`bobine-notifications`), donc au plus MAX_PREVIEW_DATABASES previews
 // peuvent coexister. Au-delà, `provision` patiente qu'une place se libère
 // (fermeture/merge d'une autre PR) plutôt que d'échouer immédiatement, comme
 // demandé sur le ticket.
@@ -25,7 +24,7 @@ const SOURCE_CONFIG_PATH = "wrangler.jsonc";
 const PREVIEW_CONFIG_PATH = "wrangler.preview.generated.jsonc";
 const PROD_DATABASE_NAME = "bobine-notifications";
 const PREVIEW_DATABASE_PREFIX = "bobine-preview-pr-";
-const MAX_PREVIEW_DATABASES = 8; // 10 max du plan gratuit, moins la prod et le staging
+const MAX_PREVIEW_DATABASES = 9; // 10 max du plan gratuit, moins la base de prod
 const POLL_INTERVAL_SECONDS = 30;
 const MAX_WAIT_MINUTES = 15;
 // Nom du binding (voir worker/types.ts, Env) sous lequel chaque classe
