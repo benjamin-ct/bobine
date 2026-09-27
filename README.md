@@ -128,6 +128,17 @@ Pour tester la configuration localement sans rien déployer : `npm run build && 
 
 Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.dev.vars` (jamais commité), puis `npx wrangler d1 migrations apply bobine-notifications --local && npx wrangler dev`.
 
+### Environnement de test (staging)
+
+Un Worker séparé, `bobine-staging` (https://bobine-staging.creusatbenjamin.workers.dev), permet à d'autres personnes de tester l'app sur des données réalistes sans toucher à la prod. Il est déployé par le workflow **Staging** (`.github/workflows/staging.yml`, lancement manuel depuis l'onglet Actions, sur la branche de son choix) :
+
+- **Copie de la base** (case cochée par défaut) : la base de prod est exportée, recopiée dans une base D1 `bobine-staging` recréée de zéro, puis anonymisée (`scripts/staging.ts`) : sessions, liens de connexion, changements d'adresse et compteurs anti-abus sont effacés, les abonnements push sont neutralisés, et chaque compte reçoit l'adresse fictive `testeur-<id>@exemple.test`. Recopier écrase tout ce qui a été fait sur le staging depuis la copie précédente.
+- **Connexion avec des adresses fictives** : le Worker de staging n'a pas de `RESEND_API_KEY`, donc aucun email n'est envoyé : le lien et le code de connexion s'affichent directement à l'écran. N'importe quelle adresse (ex. `alice@exemple.test`) crée un compte de test, et `testeur-<id>@exemple.test` permet de se connecter sur un compte copié depuis la prod.
+- Pas de tâche planifiée (aucune notification envoyée), ni Web Analytics ni reCAPTCHA. Les boutons de notification de test du profil sont affichés comme sur les previews.
+- La base de staging occupe une des 10 bases D1 du plan gratuit : les previews PR en ont donc 8 au plus (`scripts/preview-d1.ts`).
+
+**Avant le premier lancement**, le jeton `CLOUDFLARE_API_TOKEN` des secrets GitHub doit avoir le droit D1 **Edit** (déjà le cas pour les previews PR). Après le premier déploiement, configure les secrets du Worker `bobine-staging` (dashboard → Workers & Pages → `bobine-staging` → **Settings → Variables and Secrets**) : `TMDB_API_KEY` (obligatoire), et éventuellement `VAPID_PRIVATE_KEY` (même valeur que la prod, pour tester le Web Push). Ne **pas** y ajouter `RESEND_API_KEY` ni `RECAPTCHA_SECRET_KEY`, sinon la connexion par adresse fictive ne marche plus. Pour réserver l'accès aux testeurs, place `bobine-staging.creusatbenjamin.workers.dev` derrière Cloudflare Access, comme les previews.
+
 ## Observabilité
 
 - **Erreurs** (client + Worker) : [Sentry](https://sentry.io), via le secret Cloudflare `SENTRY_DSN` ci-dessus. Le

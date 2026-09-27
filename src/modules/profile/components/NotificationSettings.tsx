@@ -240,13 +240,14 @@ const TEST_NOTIFICATION_DELAY_S = 15;
 
 // Les boutons de test ne servent qu'à valider le choix de canal sur les
 // previews PR (`<slug>-bobine.creusatbenjamin.workers.dev`, voir
-// worker/sentry.ts) et en dev local, et n'ont rien à faire sous les yeux des
+// worker/sentry.ts), sur le staging (scripts/staging.ts) et en dev local, et n'ont rien à faire sous les yeux des
 // utilisateurs (l'endpoint est aussi refusé côté Worker en prod). Liste
 // blanche plutôt que comparaison au domaine de prod : ce dernier avait
 // divergé (renommage Seancy) et les boutons s'affichaient en prod.
 const SHOW_TEST_NOTIFICATION =
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1" ||
+  window.location.hostname === "bobine-staging.creusatbenjamin.workers.dev" ||
   window.location.hostname.endsWith("-bobine.creusatbenjamin.workers.dev");
 
 // Envoie une notification de test au compte via notifyUser (voir
