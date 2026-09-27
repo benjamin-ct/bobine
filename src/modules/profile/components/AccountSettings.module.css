@@ -411,6 +411,21 @@
   color: var(--muted);
 }
 
+.visibilitySummary {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.visibilitySummary > svg {
+  flex: none;
+  margin-top: 2px;
+}
+
 .visibility {
   margin-top: 16px;
   padding: 4px 18px 16px;
@@ -475,5 +490,15 @@
 
   .saveBarActions > * {
     flex: 1;
+  }
+
+  .shareActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .linkField .primaryBtn {
+    min-height: 40px;
+    padding: 0 16px;
   }
 }

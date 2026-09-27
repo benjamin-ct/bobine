@@ -149,7 +149,7 @@ export default function PublicProfileSettings() {
                 {copied ? t("profileShare.copied") : t("profileShare.copy")}
               </button>
             </div>
-            <div className={styles.inline}>
+            <div className={`${styles.inline} ${styles.shareActions}`}>
               <button type="button" className={styles.secondaryBtn} onClick={share}>
                 <Icon name="share" size={15} /> {t("profileShare.share")}
               </button>
@@ -175,9 +175,12 @@ export default function PublicProfileSettings() {
               </div>
               <span className={styles.previewTag}>{t("accountCard.preview")}</span>
             </div>
-            <p className={styles.subtleHint}>
-              <Icon name="eye" size={15} /> <span>{t("profileShare.visibleSummary")}</span>{" "}
-              <span className={styles.subtle}>{t("profileShare.hiddenSummary")}</span>
+            <p className={styles.visibilitySummary}>
+              <Icon name="eye" size={15} />
+              <span>
+                {t("profileShare.visibleSummary")}{" "}
+                <span className={styles.subtle}>{t("profileShare.hiddenSummary")}</span>
+              </span>
             </p>
           </>
         ) : (
