@@ -67,11 +67,46 @@ export async function getFollowCounts(db: D1Database, userId: number): Promise<F
   return { followers: row?.followers ?? 0, following: row?.following ?? 0 };
 }
 
+// « Suivie par Tom, Inès et N autres personnes que vous suivez » : parmi les
+// profils suivis par le visiteur (encore partagés), ceux qui suivent aussi
+// `userId`. Les premiers noms seulement, plus le total.
+const FOLLOWED_BY_PREVIEW = 3;
+
+export async function getFollowedByViewerFollowing(
+  db: D1Database,
+  userId: number,
+  viewerId: number
+): Promise<{ profiles: { slug: string; displayName: string | null }[]; total: number }> {
+  const from = `FROM follows mine
+       JOIN follows theirs ON theirs.follower_id = mine.followed_id AND theirs.followed_id = ?1
+       JOIN users ON users.id = mine.followed_id AND users.share_slug IS NOT NULL
+       WHERE mine.follower_id = ?2 AND mine.followed_id <> ?1`;
+  const [{ results }, count] = await Promise.all([
+    db
+      .prepare(
+        `SELECT users.share_slug, users.display_name ${from}
+         ORDER BY theirs.created_at DESC LIMIT ${FOLLOWED_BY_PREVIEW}`
+      )
+      .bind(userId, viewerId)
+      .all<{ share_slug: string; display_name: string | null }>(),
+    db
+      .prepare(`SELECT COUNT(*) AS total ${from}`)
+      .bind(userId, viewerId)
+      .first<{ total: number }>(),
+  ]);
+  return {
+    profiles: results.map((row) => ({ slug: row.share_slug, displayName: row.display_name })),
+    total: count?.total ?? 0,
+  };
+}
+
 interface SummaryRow {
   id: number;
   share_slug: string | null;
   display_name: string | null;
   viewer_follows: number;
+  watched_count: number;
+  common_count: number;
 }
 
 function toSummary(row: SummaryRow, viewerId: number | null): ProfileSummary {
@@ -81,6 +116,9 @@ function toSummary(row: SummaryRow, viewerId: number | null): ProfileSummary {
     displayName: isPublic ? row.display_name : null,
     viewerFollows: row.viewer_follows === 1,
     isSelf: row.id === viewerId,
+    // Un profil privé n'expose rien de sa bibliothèque, pas même un compteur.
+    watchedCount: isPublic ? row.watched_count : null,
+    commonCount: isPublic && viewerId !== null && row.id !== viewerId ? row.common_count : null,
   };
 }
 
@@ -89,6 +127,15 @@ function toSummary(row: SummaryRow, viewerId: number | null): ProfileSummary {
 // bouton Suivre/Suivi dans la liste.
 const VIEWER_FOLLOWS = `EXISTS (SELECT 1 FROM follows v WHERE v.follower_id = ?2 AND v.followed_id = users.id)`;
 
+// « N vus · N en commun avec vous » (modale « Réseau de X ») : titres vus du
+// profil, et ceux que le visiteur (id -1 s'il n'est pas connecté) a vus aussi.
+const WATCHED_COUNTS = `(SELECT COUNT(*) FROM library_items w
+    WHERE w.user_id = users.id AND w.status = 'watched') AS watched_count,
+  (SELECT COUNT(*) FROM library_items w
+    JOIN library_items c ON c.user_id = ?2 AND c.status = 'watched'
+      AND c.media_type = w.media_type AND c.tmdb_id = w.tmdb_id
+    WHERE w.user_id = users.id AND w.status = 'watched') AS common_count`;
+
 export async function getFollowers(
   db: D1Database,
   userId: number,
@@ -96,7 +143,8 @@ export async function getFollowers(
 ): Promise<ProfileSummary[]> {
   const { results } = await db
     .prepare(
-      `SELECT users.id, users.share_slug, users.display_name, ${VIEWER_FOLLOWS} AS viewer_follows
+      `SELECT users.id, users.share_slug, users.display_name, ${VIEWER_FOLLOWS} AS viewer_follows,
+              ${WATCHED_COUNTS}
        FROM follows JOIN users ON users.id = follows.follower_id
        WHERE follows.followed_id = ?1
        ORDER BY follows.created_at DESC LIMIT ${LIST_LIMIT}`
@@ -113,7 +161,8 @@ export async function getFollowing(
 ): Promise<ProfileSummary[]> {
   const { results } = await db
     .prepare(
-      `SELECT users.id, users.share_slug, users.display_name, ${VIEWER_FOLLOWS} AS viewer_follows
+      `SELECT users.id, users.share_slug, users.display_name, ${VIEWER_FOLLOWS} AS viewer_follows,
+              ${WATCHED_COUNTS}
        FROM follows JOIN users ON users.id = follows.followed_id
        WHERE follows.follower_id = ?1 AND users.share_slug IS NOT NULL
        ORDER BY follows.created_at DESC LIMIT ${LIST_LIMIT}`
@@ -134,7 +183,8 @@ export async function searchProfiles(
   const pattern = `%${query.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   const { results } = await db
     .prepare(
-      `SELECT users.id, users.share_slug, users.display_name, ${VIEWER_FOLLOWS} AS viewer_follows
+      `SELECT users.id, users.share_slug, users.display_name, ${VIEWER_FOLLOWS} AS viewer_follows,
+              ${WATCHED_COUNTS}
        FROM users
        WHERE users.share_slug IS NOT NULL AND users.id <> ?2
          AND users.display_name LIKE ?1 ESCAPE '\\'

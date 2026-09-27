@@ -1,7 +1,7 @@
 // Petites fonctions d'accès à D1. Pas d'ORM : le schéma est simple (voir
 // migrations/) et les requêtes préparées suffisent largement.
 import { decodeHtmlEntities } from "./validate.ts";
-import { getFollowCounts, isFollowing } from "./follows.ts";
+import { getFollowCounts, getFollowedByViewerFollowing, isFollowing } from "./follows.ts";
 import { SHARE_SLUG_PATTERN, USERNAME_PATTERN } from "./share-slug.ts";
 import type {
   CleanCustomListMap,
@@ -440,12 +440,16 @@ export async function getPublicProfile(
   if (!user) {
     return null;
   }
-  const [library, customLists, counts, viewerFollows] = await Promise.all([
-    getLibraryForUser(db, user.id),
-    getCustomListsForUser(db, user.id),
-    getFollowCounts(db, user.id),
-    viewerId !== null && viewerId !== user.id ? isFollowing(db, viewerId, user.id) : false,
-  ]);
+  const other = viewerId !== null && viewerId !== user.id ? viewerId : null;
+  const [library, customLists, counts, viewerFollows, followsViewer, followedBy] =
+    await Promise.all([
+      getLibraryForUser(db, user.id),
+      getCustomListsForUser(db, user.id),
+      getFollowCounts(db, user.id),
+      other !== null ? isFollowing(db, other, user.id) : false,
+      other !== null ? isFollowing(db, user.id, other) : false,
+      other !== null ? getFollowedByViewerFollowing(db, user.id, other) : null,
+    ]);
   // Les items des listes perso sont des copies figées au moment de l'ajout :
   // on y reporte la note portée par l'item « vu », comme sur une liste
   // partagée seule (getPublicListBySlug).
@@ -469,6 +473,8 @@ export async function getPublicProfile(
       .map((list) => ({ ...list, items: list.items.map(toPublicItem).map(withRating) })),
     ...counts,
     viewerFollows,
+    followsViewer,
+    followedBy: followedBy ?? { profiles: [], total: 0 },
     isSelf: viewerId === user.id,
   };
 }
@@ -812,14 +818,23 @@ export async function getPublicListBySlug(
 ): Promise<PublicList | null> {
   const share = await db
     .prepare(
-      `SELECT list_shares.user_id, list_shares.list_id, custom_lists.name, users.display_name
+      `SELECT list_shares.user_id, list_shares.list_id, custom_lists.name, custom_lists.created_at,
+              users.display_name, users.share_slug, users.username
        FROM list_shares
        JOIN custom_lists ON custom_lists.user_id = list_shares.user_id AND custom_lists.id = list_shares.list_id
        JOIN users ON users.id = list_shares.user_id
        WHERE list_shares.slug = ?`
     )
     .bind(slug)
-    .first<{ user_id: number; list_id: string; name: string; display_name: string | null }>();
+    .first<{
+      user_id: number;
+      list_id: string;
+      name: string;
+      created_at: number;
+      display_name: string | null;
+      share_slug: string | null;
+      username: string | null;
+    }>();
   if (!share) {
     return null;
   }
@@ -850,6 +865,10 @@ export async function getPublicListBySlug(
   return {
     name: share.name,
     ownerName: share.display_name,
+    // Lien « Par X » vers le profil, seulement s'il est lui-même partagé.
+    ownerHandle: share.share_slug ? (share.username ?? share.share_slug) : null,
+    // Pas de date de modification en base : le dernier ajout fait foi.
+    updatedAt: items.reduce((last, item) => Math.max(last, item.addedAt || 0), share.created_at),
     items,
     ...(viewerUserId === share.user_id ? { ownListId: share.list_id } : {}),
   };

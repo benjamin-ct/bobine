@@ -8,69 +8,6 @@
   margin-bottom: 14px;
 }
 
-.cover {
-  position: relative;
-  flex-shrink: 0;
-  width: 112px;
-  height: 92px;
-}
-
-.coverCard,
-.coverEmpty {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 56px;
-  aspect-ratio: 2 / 3;
-  margin-left: -28px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--border-2);
-  background: var(--surface-2);
-  box-shadow: 0 6px 16px oklch(0 0 0 / 0.35);
-  transform-origin: 50% 100%;
-}
-
-.coverCard img,
-.coverCard > span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.coverEmpty {
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  border-style: dashed;
-  box-shadow: none;
-}
-
-/* 1re affiche au premier plan, les suivantes en éventail derrière. */
-.coverCard:nth-child(1) {
-  z-index: 3;
-}
-
-.cover2 .coverCard:nth-child(1) {
-  transform: translateX(-12px) rotate(-6deg);
-}
-
-.cover2 .coverCard:nth-child(2) {
-  z-index: 2;
-  transform: translateX(12px) rotate(6deg);
-}
-
-.cover3 .coverCard:nth-child(2) {
-  z-index: 2;
-  transform: translateX(-26px) rotate(-11deg);
-}
-
-.cover3 .coverCard:nth-child(3) {
-  z-index: 1;
-  transform: translateX(26px) rotate(11deg);
-}
-
 .headerBody {
   display: flex;
   flex-direction: column;
@@ -318,17 +255,6 @@
     position: absolute;
     top: 0;
     right: 0;
-  }
-
-  .cover {
-    width: 92px;
-    height: 76px;
-  }
-
-  .coverCard,
-  .coverEmpty {
-    width: 46px;
-    margin-left: -23px;
   }
 
   .headerActions {
