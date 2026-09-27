@@ -14,8 +14,8 @@
   gap: 10px;
 }
 
-/* Avec des puces de période : deux lignes pleine largeur (Films/Séries +
-   période, puis « Filtres » + puces actives). Sans : une seule ligne. */
+/* Films/Séries (et période), « Filtres » calé à droite, puis les puces
+   actives sur une deuxième ligne. */
 .toolbarRow {
   display: flex;
   flex-wrap: wrap;
@@ -24,38 +24,38 @@
   width: 100%;
 }
 
-.contents {
-  display: contents;
-}
-
+/* Même gabarit que la bascule Films/Séries juste à côté (.segmented) :
+   même hauteur de groupe et de boutons, même pastille active. */
 .periods {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  position: relative;
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
 }
 
 .period {
-  min-height: calc(var(--bar-h) - 8px);
+  min-height: calc(var(--bar-h) - 10px);
   padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
   font-size: 14px;
-  font-weight: 500;
-  color: var(--fg);
+  font-weight: 600;
+  color: var(--muted);
   white-space: nowrap;
+  position: relative;
+  transition: color 0.2s ease;
 }
 
 .period:hover {
-  border-color: var(--border-2);
-  background: var(--surface-2);
+  color: var(--fg);
 }
 
+/* Fond de la période active : pastille glissante (SlidingIndicator). */
 .periodActive,
 .periodActive:hover {
-  border-color: var(--selected-border);
-  background: var(--selected-bg);
-  font-weight: 600;
+  color: var(--fg);
 }
 
 .segmented {
@@ -86,6 +86,7 @@
 }
 
 .filtersBtn {
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -330,6 +331,12 @@
 @media (max-width: 860px) {
   .toolbar {
     --bar-h: 50px;
+  }
+
+  /* Films/Séries et « Filtres » sur la première ligne, période en dessous
+     (les trois ne tiennent pas sur une ligne). */
+  .periods {
+    order: 1;
   }
 
   .backdrop {
