@@ -53,3 +53,19 @@
   color: var(--muted);
   font-size: 13px;
 }
+
+/* Résultats précédents gardés à l'écran pendant le rechargement qui suit un
+   changement de filtre (ex. Films → Séries), au lieu de les remplacer par un
+   squelette qui fait clignoter toute la page. Atténuation retardée : une
+   réponse rapide (cache) remplace la liste sans aucun changement visible. */
+.refreshing {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 0.2s ease 0.15s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refreshing {
+    transition: none;
+  }
+}
