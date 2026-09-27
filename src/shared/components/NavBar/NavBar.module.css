@@ -45,6 +45,7 @@
 }
 
 .tabs {
+  position: relative;
   display: flex;
   flex-wrap: nowrap;
   gap: 4px;
@@ -52,6 +53,7 @@
 }
 
 .tab {
+  position: relative;
   padding: 8px 14px;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -70,12 +72,11 @@
 }
 
 /* Page active : Surface 3 (le corail est réservé aux actions, voir
-   variables.css). */
+   variables.css), portée par la pastille glissante (SlidingIndicator). */
 .tabActive,
 .tabActive:hover {
   color: var(--fg);
-  background: var(--selected-bg);
-  border-color: var(--selected-border);
+  background: transparent;
 }
 
 /* Large tant qu'il y a de la place (le texte d'aide tient en entier), puis

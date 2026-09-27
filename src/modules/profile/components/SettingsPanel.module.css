@@ -314,6 +314,7 @@
 /* --- Affichage ----------------------------------------------------------- */
 
 .segmented {
+  position: relative;
   display: inline-flex;
   gap: 2px;
   padding: 4px;
@@ -323,15 +324,17 @@
 }
 
 .segmented button {
+  position: relative;
   padding: 9px 20px;
   border-radius: 999px;
   font-weight: 600;
   font-size: 15px;
   color: var(--muted);
+  transition: color 0.2s ease;
 }
 
+/* Fond de la langue active : pastille glissante (SlidingIndicator). */
 .segmented .segActive {
-  background: var(--selected-bg);
   color: var(--fg);
 }
 

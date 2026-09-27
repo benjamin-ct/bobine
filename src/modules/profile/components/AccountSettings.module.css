@@ -92,6 +92,15 @@
   object-fit: cover;
 }
 
+/* Choix / suppression de la photo, juste sous l'aperçu. */
+.avatarActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
 .previewText {
   display: flex;
   flex-direction: column;

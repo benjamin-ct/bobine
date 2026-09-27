@@ -8,6 +8,7 @@ import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
 import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
 import TicketLogo from "../TicketLogo/TicketLogo.tsx";
 import Icon, { type IconName } from "../Icon/Icon.tsx";
+import SlidingIndicator from "../SlidingIndicator/SlidingIndicator.tsx";
 import styles from "./NavBar.module.css";
 
 const MIN_QUERY_LENGTH = 2;
@@ -279,6 +280,7 @@ export default function NavBar() {
             className={`${styles.tabs} ${styles.desktopOnly}`}
             aria-label={t("navBar.mainNavAriaLabel")}
           >
+            <SlidingIndicator activeKey={pathname} />
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.to}

@@ -22,6 +22,7 @@ import {
   ErrorMessage,
   PageHeader,
   Icon,
+  SlidingIndicator,
 } from "../../shared/components/index.ts";
 import type { AdvancedFiltersState } from "../../shared/components/index.ts";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
@@ -352,6 +353,7 @@ export default function RandomPage() {
 
       <div className={styles.source}>
         <div className={styles.sourceSwitch} role="group" aria-label={t("randomPage.source")}>
+          <SlidingIndicator activeKey={source} />
           <button
             type="button"
             className={source === "watchlist" ? styles.sourceActive : ""}

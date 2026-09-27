@@ -22,6 +22,10 @@
   font-weight: 600;
   font-size: 15px;
   color: var(--muted);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .tab:hover {
@@ -41,8 +45,10 @@
   padding-block: clamp(20px, 3vw, 32px) 16px;
 }
 
+/* Même espace sous les onglets que .settings : le contenu démarre à la même
+   hauteur quel que soit l'onglet. */
 .section {
-  padding-block: clamp(28px, 4vw, 44px);
+  padding-block: clamp(20px, 3vw, 32px) clamp(28px, 4vw, 44px);
 }
 
 .section h2 {
