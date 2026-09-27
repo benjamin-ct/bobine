@@ -90,6 +90,15 @@ import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
 import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
 import { openSyncSocket, publishToUser } from "./sync.ts";
+import {
+  AVATAR_MAX_BYTES,
+  deleteAvatar,
+  getAvatar,
+  getAvatarVersion,
+  getSharedProfileAvatar,
+  saveAvatar,
+  sniffAvatarType,
+} from "./avatars.ts";
 import { randomShareSlug, normalizeUsername, SHARE_SLUG_PATTERN } from "./share-slug.ts";
 import {
   follow,
@@ -710,6 +719,7 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
       displayName: user.displayName,
       shareSlug: user.shareSlug,
       username: user.username,
+      avatarVersion: await getAvatarVersion(env.DB, user.id),
     },
     200,
     { "set-cookie": [sessionCookieHeader(request, sessionToken), authHintCookieHeader(request)] }
@@ -726,7 +736,68 @@ async function handleMe(request: Request, env: Env): Promise<Response> {
     displayName: user.displayName,
     shareSlug: user.shareSlug,
     username: user.username,
+    avatarVersion: await getAvatarVersion(env.DB, user.id),
   });
+}
+
+// Photo de profil personnelle (ticket « Ajouter son propre avatar ») --------
+//
+// Même garde IDOR que le reste : le compte vient uniquement du cookie. Le
+// client ajoute la version à l'URL (?v=<updated_at>), d'où un cache long :
+// une nouvelle photo change l'URL.
+async function handleGetOwnAvatar(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const avatar = await getAvatar(env.DB, user.id);
+  if (!avatar) {
+    return new Response(null, { status: 404, headers: { "cache-control": "private, no-store" } });
+  }
+  return new Response(avatar.data, {
+    headers: {
+      "content-type": avatar.contentType,
+      "cache-control": "private, max-age=31536000, immutable",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+// Corps = l'image elle-même (déjà recadrée en 256 px par le navigateur), pas
+// du JSON. Le format réel est vérifié sur les octets (voir worker/avatars.ts).
+async function handlePutAvatar(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  if (!checkRateLimitInMemory(`avatar:user:${user.id}`, { limit: 20, windowMs: 60_000 })) {
+    return RATE_LIMIT_RESPONSE();
+  }
+  if (Number(request.headers.get("content-length") ?? 0) > AVATAR_MAX_BYTES) {
+    return json({ error: "Image trop lourde.", reason: "too-large" }, 413);
+  }
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.length > AVATAR_MAX_BYTES) {
+    return json({ error: "Image trop lourde.", reason: "too-large" }, 413);
+  }
+  const contentType = sniffAvatarType(bytes);
+  if (!contentType) {
+    return json({ error: "Format d'image non pris en charge.", reason: "invalid" }, 400);
+  }
+  const avatarVersion = await saveAvatar(env.DB, user.id, contentType, bytes);
+  // Les autres appareils rechargent /api/auth/me, qui porte la version.
+  publishToUser(request, user.id, { type: "display-name" });
+  return json({ ok: true, avatarVersion });
+}
+
+async function handleDeleteAvatar(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  await deleteAvatar(env.DB, user.id);
+  publishToUser(request, user.id, { type: "display-name" });
+  return json({ ok: true, avatarVersion: null });
 }
 
 // Nom affiché (ticket #45) : mis à jour uniquement sur un save manuel côté
@@ -1235,11 +1306,12 @@ async function handleSearchProfiles(request: Request, env: Env, url: URL): Promi
   return json({ profiles: await searchProfiles(env.DB, query, user.id) });
 }
 
-// Photo de profil d'un profil partagé : Gravatar est résolu ici plutôt que
+// Photo de profil d'un profil partagé : la photo personnelle du compte si
+// elle existe, sinon Gravatar, résolu ici plutôt que
 // dans le navigateur, car l'URL Gravatar contient le MD5 de l'email — un
 // hash qui se retrouve facilement par dictionnaire et révélerait l'adresse
 // que la page publique promet de ne jamais exposer. 404 si le profil est
-// privé ou si le compte n'a pas de Gravatar (la page affiche alors ses
+// privé ou si le compte n'a ni photo ni Gravatar (la page affiche alors ses
 // initiales).
 async function handleGetPublicProfileAvatar(
   request: Request,
@@ -1250,7 +1322,22 @@ async function handleGetPublicProfileAvatar(
   if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
     return RATE_LIMIT_RESPONSE();
   }
-  const email = SHARE_SLUG_PATTERN.test(slug) ? await getSharedProfileEmail(env.DB, slug) : null;
+  if (!SHARE_SLUG_PATTERN.test(slug)) {
+    return json({ error: "Profil introuvable ou privé." }, 404);
+  }
+  // Photo personnelle d'abord (cache court, pour qu'un changement se voie
+  // vite), Gravatar ensuite.
+  const custom = await getSharedProfileAvatar(env.DB, slug);
+  if (custom) {
+    return new Response(custom.data, {
+      headers: {
+        "content-type": custom.contentType,
+        "cache-control": "public, max-age=300",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  }
+  const email = await getSharedProfileEmail(env.DB, slug);
   if (!email) {
     return json({ error: "Profil introuvable ou privé." }, 404);
   }
@@ -2059,6 +2146,15 @@ async function routeRequest(
   }
   if (url.pathname === "/api/account/username/availability" && request.method === "GET") {
     return handleUsernameAvailability(request, env);
+  }
+  if (url.pathname === "/api/account/avatar" && request.method === "GET") {
+    return handleGetOwnAvatar(request, env);
+  }
+  if (url.pathname === "/api/account/avatar" && request.method === "PUT") {
+    return handlePutAvatar(request, env);
+  }
+  if (url.pathname === "/api/account/avatar" && request.method === "DELETE") {
+    return handleDeleteAvatar(request, env);
   }
   if (url.pathname === "/api/account/share" && request.method === "PUT") {
     return handleUpdateProfileShare(request, env);

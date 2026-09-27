@@ -47,6 +47,9 @@ interface AuthContextValue {
   // choisi. Quand il existe, le lien de partage du profil devient
   // /u/<pseudo> au lieu de /u/<shareSlug>.
   username: string | null;
+  // Version (date de mise à jour) de la photo de profil personnelle, `null`
+  // sans photo : l'avatar retombe alors sur Gravatar, puis sur l'initiale.
+  avatarVersion: number | null;
   requestLink: (email: string) => Promise<RequestLinkResult>;
   verify: (token: string) => Promise<VerifyResult>;
   verifyCode: (code: string) => Promise<VerifyResult>;
@@ -66,6 +69,9 @@ interface AuthContextValue {
   updateUsername: (username: string) => Promise<void>;
   // Vérification indicative pendant la saisie (le PUT refait la vérification).
   checkUsername: (username: string, signal?: AbortSignal) => Promise<UsernameCheck>;
+  // Remplace ou supprime la photo de profil personnelle.
+  uploadAvatar: (image: Blob) => Promise<void>;
+  removeAvatar: () => Promise<void>;
 }
 
 export interface UsernameCheck {
@@ -99,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [avatarVersion, setAvatarVersion] = useState<number | null>(null);
 
   // `verify()` (consommation du jeton sur /auth/verify) et `refresh()` (la
   // vérification passive "suis-je déjà connecté" au montage) peuvent
@@ -124,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setDisplayName(null);
       setShareSlug(null);
       setUsername(null);
+      setAvatarVersion(null);
       setStatus("anonymous");
       return Promise.resolve();
     }
@@ -137,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: string | null;
           shareSlug: string | null;
           username: string | null;
+          avatarVersion: number | null;
         }>;
       })
       .then((data) => {
@@ -144,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDisplayName(data.displayName ?? null);
         setShareSlug(data.shareSlug ?? null);
         setUsername(data.username ?? null);
+        setAvatarVersion(data.avatarVersion ?? null);
         setStatus("authenticated");
         pinnedRef.current = true;
       })
@@ -155,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDisplayName(null);
         setShareSlug(null);
         setUsername(null);
+        setAvatarVersion(null);
         setStatus("anonymous");
       });
   }, []);
@@ -217,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setDisplayName(data.displayName ?? null);
       setShareSlug(data.shareSlug ?? null);
       setUsername(data.username ?? null);
+      setAvatarVersion(data.avatarVersion ?? null);
       setStatus("authenticated");
       return data;
     },
@@ -279,6 +291,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [t]
   );
+
+  // Photo de profil personnelle : `image` est déjà recadrée et compressée
+  // (voir shared/lib/avatarImage.ts), elle part telle quelle en corps.
+  const uploadAvatar = useCallback(
+    async (image: Blob): Promise<void> => {
+      const res = await fetch("/api/account/avatar", {
+        method: "PUT",
+        headers: { "content-type": image.type || "image/jpeg", ...syncClientHeaders() },
+        body: image,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          res.status === 413 ? t("auth.avatarTooLarge") : data.error || t("auth.avatarError")
+        );
+      }
+      setAvatarVersion(data.avatarVersion ?? null);
+    },
+    [t]
+  );
+
+  const removeAvatar = useCallback(async (): Promise<void> => {
+    const res = await fetch("/api/account/avatar", {
+      method: "DELETE",
+      headers: syncClientHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(t("auth.avatarError"));
+    }
+    setAvatarVersion(null);
+  }, [t]);
 
   const requestEmailChange = useCallback(
     async (newEmail: string): Promise<EmailChangeRequestResult> => {
@@ -356,6 +399,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayName,
         shareSlug,
         username,
+        avatarVersion,
         requestLink,
         verify,
         verifyCode,
@@ -366,6 +410,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         confirmEmailChange,
         updateUsername,
         checkUsername,
+        uploadAvatar,
+        removeAvatar,
       }}
     >
       {children}

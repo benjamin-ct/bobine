@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { gravatarUrl } from "../../../shared/lib/gravatar.ts";
+import { prepareAvatarImage } from "../../../shared/lib/avatarImage.ts";
 import { Icon } from "../../../shared/components/index.ts";
 import EmailChangeForm from "./EmailChangeForm.tsx";
 import { SettingsGroup, SettingsRow } from "./SettingsGroup.tsx";
@@ -18,29 +19,126 @@ function normalizeUsername(value: string): string {
 
 type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid" | "error";
 
-/** Initiale affichée dans l'avatar quand il n'y a pas de photo Gravatar. */
+/** Initiale affichée dans l'avatar quand il n'y a aucune photo. */
 function initial(name: string, fallback: string): string {
   return (name.trim() || fallback).charAt(0).toUpperCase() || "?";
 }
 
-/** Avatar du compte : photo Gravatar si elle existe, sinon l'initiale. */
+/**
+ * Avatar du compte : photo personnelle si elle existe, sinon photo Gravatar,
+ * sinon l'initiale. Chaque image qui ne se charge pas (404 Gravatar, photo
+ * supprimée depuis un autre appareil) laisse la place à la suivante.
+ */
 export function AccountAvatar({ name, className }: { name: string; className: string }) {
-  const { email } = useAuth();
-  const [failed, setFailed] = useState(false);
-  // Réinitialise l'état d'échec quand l'e-mail change (ex. après connexion
-  // avec un autre compte), sinon un précédent 404 Gravatar resterait collé
-  // au nouvel utilisateur.
+  const { email, avatarVersion } = useAuth();
+  const sources = useMemo(
+    () =>
+      [
+        avatarVersion !== null ? `/api/account/avatar?v=${avatarVersion}` : null,
+        email ? gravatarUrl(email) : null,
+      ].filter((url): url is string => url !== null),
+    [email, avatarVersion]
+  );
+  const [failedCount, setFailedCount] = useState(0);
+  // Repart de la première source quand elles changent (nouvelle photo,
+  // connexion avec un autre compte), sinon un précédent échec resterait
+  // collé.
   useEffect(() => {
-    setFailed(false);
-  }, [email]);
-  const url = useMemo(() => (email ? gravatarUrl(email) : null), [email]);
+    setFailedCount(0);
+  }, [sources]);
+  const url = sources[failedCount];
   return (
     <div className={className} aria-hidden="true">
-      {url && !failed ? (
-        <img className={styles.avatarImg} src={url} alt="" onError={() => setFailed(true)} />
+      {url ? (
+        <img
+          key={url}
+          className={styles.avatarImg}
+          src={url}
+          alt=""
+          onError={() => setFailedCount((n) => n + 1)}
+        />
       ) : (
         initial(name, email || "?")
       )}
+    </div>
+  );
+}
+
+// Choix / suppression de la photo personnelle, sous l'aperçu de l'identité.
+// Enregistrée tout de suite (pas via la barre « Enregistrer » du nom et du
+// pseudo) : il n'y a rien à annuler une fois la photo choisie.
+function AvatarActions() {
+  const { t } = useTranslation();
+  const { avatarVersion, uploadAvatar, removeAvatar } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("auth.avatarError"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Permet de rechoisir le même fichier juste après.
+    e.target.value = "";
+    if (!file) {
+      return;
+    }
+    run(async () => {
+      let image: Blob;
+      try {
+        image = await prepareAvatarImage(file);
+      } catch {
+        throw new Error(t("accountCard.avatarUnreadable"));
+      }
+      await uploadAvatar(image);
+    });
+  }
+
+  return (
+    <div className={styles.avatarActions}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={onFileChange}
+        aria-label={t("accountCard.avatarChoose")}
+      />
+      <button
+        type="button"
+        className={styles.secondaryBtn}
+        onClick={() => inputRef.current?.click()}
+        disabled={busy}
+      >
+        {busy
+          ? t("accountCard.saving")
+          : avatarVersion !== null
+            ? t("accountCard.avatarChange")
+            : t("accountCard.avatarChoose")}
+      </button>
+      {avatarVersion !== null && (
+        <button
+          type="button"
+          className={styles.ghostBtn}
+          onClick={() => run(removeAvatar)}
+          disabled={busy}
+        >
+          {t("accountCard.avatarRemove")}
+        </button>
+      )}
+      <small className={error ? styles.errorHint : styles.mutedHint} aria-live="polite">
+        {error ?? t("accountCard.avatarHint")}
+      </small>
     </div>
   );
 }
@@ -180,6 +278,7 @@ export default function AccountSettings() {
           </div>
           <span className={styles.previewTag}>{t("accountCard.preview")}</span>
         </div>
+        <AvatarActions />
 
         <div className={styles.identityFields}>
           <label className={styles.field}>
