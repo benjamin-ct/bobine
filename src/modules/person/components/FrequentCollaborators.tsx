@@ -31,9 +31,15 @@ const MAX_RESULTS = 7;
 export default function FrequentCollaborators({
   personId,
   credits,
+  sectionClassName,
+  headClassName,
 }: {
   personId: number;
   credits: CreditRef[];
+  /** Classes de section et d'en-tête de la page hôte (même gabarit que ses
+   * autres sections). */
+  sectionClassName?: string;
+  headClassName?: string;
 }) {
   const { t } = useTranslation();
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
@@ -89,8 +95,10 @@ export default function FrequentCollaborators({
   }
 
   return (
-    <section style={{ marginTop: 48 }}>
-      <h3 style={{ marginBottom: 16 }}>{t("frequentCollaborators.title")}</h3>
+    <section className={sectionClassName}>
+      <div className={headClassName}>
+        <h2>{t("frequentCollaborators.title")}</h2>
+      </div>
       {status === "loading" ? (
         <p style={{ color: "var(--muted)" }}>{t("frequentCollaborators.searching")}</p>
       ) : (

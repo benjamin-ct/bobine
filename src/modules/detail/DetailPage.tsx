@@ -742,7 +742,11 @@ export default function DetailPage() {
             />
           )}
 
-          <WhereToWatch providers={providers} regionName={regionName} />
+          <WhereToWatch
+            providers={providers}
+            regionName={regionName}
+            className={styles.whereToWatch}
+          />
 
           {cast.length > 0 && (
             <section className={styles.section}>
