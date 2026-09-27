@@ -105,6 +105,49 @@
   height: 16px;
 }
 
+/* Bascule à trois choix (Films / Séries / Les deux, page Aléatoire) sur un
+   téléphone étroit : la ligne ne tient pas avec « Filtres » en toutes
+   lettres, qui passait seul à la ligne. On resserre la bascule et
+   « Filtres » devient un bouton icône (libellé gardé pour les lecteurs
+   d'écran, pastille du nombre de filtres toujours visible). */
+@media (max-width: 480px) {
+  .toolbarRowCompact {
+    flex-wrap: nowrap;
+  }
+
+  .toolbarRowCompact .segmented button {
+    padding: 0 14px;
+    white-space: nowrap;
+  }
+
+  .toolbarRowCompact .filtersBtn {
+    flex-shrink: 0;
+    justify-content: center;
+    min-width: var(--bar-h);
+    padding: 0 14px;
+  }
+
+  .toolbarRowCompact .filtersLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 359px) {
+  .toolbarRowCompact .segmented button {
+    padding: 0 10px;
+  }
+
+  .toolbarRowCompact .filtersBtn {
+    padding: 0 10px;
+  }
+}
+
 .filtersBtn:hover {
   border-color: var(--border-2);
   background: var(--surface-2);
