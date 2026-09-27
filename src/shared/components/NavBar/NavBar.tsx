@@ -245,7 +245,15 @@ export default function NavBar() {
   const tabbarLinks = [
     ...NAV_LINKS.map((link) => ({ ...link, label: t(`navBar.tabLinks.${link.key}`) })),
     ...(authenticated
-      ? [{ to: "/profil", key: "profile", icon: "user" as IconName, end: false, label: t("navBar.profileTitle") }]
+      ? [
+          {
+            to: "/profil",
+            key: "profile",
+            icon: "user" as IconName,
+            end: false,
+            label: t("navBar.profileTitle"),
+          },
+        ]
       : []),
   ];
   // Même règle de correspondance que NavLink, pour placer la pastille active
