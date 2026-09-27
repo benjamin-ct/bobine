@@ -15,12 +15,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 16px;
+  padding: 11px 20px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--muted);
 }
 
@@ -37,24 +37,8 @@
   border-color: var(--selected-border);
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 20px;
-}
-
-.span6 {
-  grid-column: span 6;
-}
-
-.span12 {
-  grid-column: span 12;
-}
-
-@media (max-width: 860px) {
-  .span6 {
-    grid-column: span 12;
-  }
+.settings {
+  padding-block: clamp(20px, 3vw, 32px) 16px;
 }
 
 .ticket {
@@ -64,14 +48,6 @@
   padding: 24px;
   box-shadow: var(--shadow);
   height: 100%;
-}
-
-.k {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
 }
 
 .hint {
