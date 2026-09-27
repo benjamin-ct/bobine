@@ -65,11 +65,14 @@ body {
   flex: 1;
 }
 
-/* Barre d'onglets mobile fixée en bas (NavBar) : on réserve sa hauteur pour
-   que le pied de page et la fin des listes ne passent pas dessous. */
+/* Barre d'onglets mobile flottante en bas (NavBar) : on réserve sa hauteur
+   et son écart (même calcul que son « bottom ») pour que le pied de page et
+   la fin des listes ne restent pas dessous. */
 @media (max-width: 860px) {
   :root {
-    --tabbar-offset: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+    --tabbar-offset: calc(
+      var(--tabbar-height) + max(var(--tabbar-gap), env(safe-area-inset-bottom)) + 8px
+    );
   }
   body {
     padding-bottom: var(--tabbar-offset);

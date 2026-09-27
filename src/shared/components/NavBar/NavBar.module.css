@@ -318,8 +318,10 @@
   min-width: 0;
 }
 
-/* Barre d'onglets mobile, fixée en bas. Sa hauteur (hors encoche) est
-   --tabbar-height : <body> réserve la même place en bas (global.css). */
+/* Barre d'onglets mobile : pilule flottante en bas, façon « Liquid Glass »
+   (iOS 26). Sa hauteur est --tabbar-height et elle flotte à --tabbar-gap du
+   bas (ou au-dessus de l'indicateur d'accueil) : <body> réserve la même
+   place en bas (global.css). */
 .tabbar {
   display: none;
 }
@@ -348,39 +350,94 @@
   }
 
   .tabbar {
+    --tabbar-pad: 6px;
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: max(var(--tabbar-gap), env(safe-area-inset-bottom));
     z-index: 40;
     display: flex;
-    padding-bottom: env(safe-area-inset-bottom);
-    background: var(--header-bg);
-    border-top: 1px solid var(--border);
-    box-shadow: 0 -2px 6px -3px oklch(0 0 0 / 0.25);
+    max-width: 480px;
+    height: var(--tabbar-height);
+    margin-inline: auto;
+    padding: var(--tabbar-pad);
+    border-radius: 999px;
+    /* Verre dépoli : fond translucide + flou/saturation de ce qui passe
+       dessous, liseré clair et reflet en haut, ombre portée douce. */
+    background: color-mix(in oklab, var(--header-bg) 62%, transparent);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid oklch(1 0 0 / 0.14);
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.16),
+      inset 0 -1px 0 oklch(0 0 0 / 0.12),
+      0 10px 30px -8px oklch(0 0 0 / 0.45);
+  }
+  /* Sans backdrop-filter, un fond translucide rendrait les icônes illisibles
+     sur une affiche claire : on repasse presque opaque. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .tabbar {
+      background: color-mix(in oklab, var(--header-bg) 94%, transparent);
+    }
+  }
+  /* Pastille de l'onglet actif : glisse d'un onglet à l'autre (--tab-index
+     et --tab-count posés par NavBar.tsx). */
+  .tabbarIndicator {
+    position: absolute;
+    top: var(--tabbar-pad);
+    bottom: var(--tabbar-pad);
+    left: var(--tabbar-pad);
+    width: calc((100% - 2 * var(--tabbar-pad)) / var(--tab-count));
+    transform: translateX(calc(100% * var(--tab-index)));
+    border-radius: 999px;
+    background: oklch(1 0 0 / 0.13);
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.14),
+      0 1px 4px oklch(0 0 0 / 0.18);
+    transition: transform 0.38s cubic-bezier(0.34, 1.36, 0.64, 1);
+    pointer-events: none;
   }
   .tabbarItem {
+    position: relative;
     flex: 1 1 0;
     min-width: 0;
-    min-height: max(44px, var(--tabbar-height));
+    min-height: 44px;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    border-radius: 999px;
     color: var(--muted);
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.1;
-    transition: color 0.18s ease;
+    transition:
+      color 0.18s ease,
+      transform 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
   }
-  .tabbarItem span {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .tabbarItem:active {
+    transform: scale(0.92);
   }
   .tabbarItemActive {
-    color: var(--accent-ink);
+    color: var(--fg);
+  }
+}
+
+/* Thème clair : verre blanc laiteux, pastille sombre discrète. */
+@media (max-width: 860px) {
+  [data-theme="light"] .tabbar {
+    background: color-mix(in oklab, var(--surface) 66%, transparent);
+    border-color: oklch(1 0 0 / 0.7);
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.8),
+      0 10px 30px -10px oklch(0 0 0 / 0.25);
+  }
+  [data-theme="light"] .tabbarIndicator {
+    background: oklch(0 0 0 / 0.07);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabbarIndicator,
+  .tabbarItem {
+    transition: none;
   }
 }
