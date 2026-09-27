@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getWatchProvidersList } from "../../../core/api/tmdb.ts";
+import { getWatchProvidersList, logoUrl } from "../../../core/api/tmdb.ts";
 import { withGlobalProviders } from "../../../core/api/globalProviders.ts";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useFavoriteProviders } from "../../../core/context/FavoriteProvidersContext.tsx";
-import { Disclosure } from "../../../shared/components/index.ts";
+import { Icon } from "../../../shared/components/index.ts";
 import type { WatchProviderOption } from "../../../core/api/tmdb.ts";
+import { SettingsRow } from "./SettingsGroup.tsx";
 import styles from "./SettingsPanel.module.css";
 
 // Réglage "Mes plateformes" : cocher une fois les quelques services qu'on a
@@ -17,9 +18,8 @@ export default function FavoriteProvidersSettings() {
   const { region } = useRegion();
   const { favoriteProviderIds, toggleFavoriteProvider } = useFavoriteProviders();
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [query, setQuery] = useState("");
-  const [loaded, setLoaded] = useState(false);
 
   // `status` n'est délibérément PAS une dépendance : ce `setStatus("loading")`
   // synchrone changerait `status` et redéclencherait l'effet immédiatement
@@ -28,9 +28,6 @@ export default function FavoriteProvidersSettings() {
   // le composant reste alors bloqué sur "Chargement…" pour toujours, la
   // requête d'origine se terminant plus tard sur un `cancelled` déjà vrai.
   useEffect(() => {
-    if (!loaded) {
-      return;
-    }
     let cancelled = false;
     setStatus("loading");
     Promise.all([getWatchProvidersList("movie", region), getWatchProvidersList("tv", region)])
@@ -52,7 +49,7 @@ export default function FavoriteProvidersSettings() {
     return () => {
       cancelled = true;
     };
-  }, [loaded, region]);
+  }, [region]);
 
   const trimmedQuery = query.trim().toLowerCase();
   const visibleProviders = trimmedQuery
@@ -60,38 +57,54 @@ export default function FavoriteProvidersSettings() {
     : providers;
 
   return (
-    <Disclosure
-      summary={t("favoriteProvidersSettings.title")}
-      meta={t("favoriteProvidersSettings.activeCount", { count: favoriteProviderIds.length })}
-      defaultOpen={false}
-      onToggle={(open) => open && setLoaded(true)}
+    <SettingsRow
+      label={t("favoriteProvidersSettings.title")}
+      description={t("favoriteProvidersSettings.description")}
     >
-      <p>{t("favoriteProvidersSettings.description")}</p>
-      {status === "loading" && <p>{t("common.loading")}</p>}
-      {status === "error" && <p>{t("favoriteProvidersSettings.loadError")}</p>}
+      <span className={styles.meta}>
+        {t("favoriteProvidersSettings.activeCount", { count: favoriteProviderIds.length })}
+      </span>
+      {status === "loading" && <p className={styles.status}>{t("common.loading")}</p>}
+      {status === "error" && (
+        <p className={styles.error}>{t("favoriteProvidersSettings.loadError")}</p>
+      )}
       {status === "success" && (
         <>
-          <input
-            type="search"
-            className={styles.search}
-            placeholder={t("favoriteProvidersSettings.searchPlaceholder")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className={styles.grid}>
-            {visibleProviders.map((p) => (
-              <label key={p.id} className={styles.item}>
-                <input
-                  type="checkbox"
-                  checked={favoriteProviderIds.includes(p.id)}
-                  onChange={() => toggleFavoriteProvider(p.id)}
-                />
-                {p.name}
-              </label>
-            ))}
+          <label className={styles.search}>
+            <Icon name="search" size={16} />
+            <input
+              type="search"
+              placeholder={t("favoriteProvidersSettings.searchPlaceholder")}
+              aria-label={t("favoriteProvidersSettings.searchPlaceholder")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <div className={styles.providerGrid}>
+            {visibleProviders.map((p) => {
+              const checked = favoriteProviderIds.includes(p.id);
+              const logo = logoUrl(p.logoPath, "w92");
+              return (
+                <label
+                  key={p.id}
+                  className={`${styles.provider} ${checked ? styles.providerOn : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={checked}
+                    onChange={() => toggleFavoriteProvider(p.id)}
+                  />
+                  <span className={styles.providerLogo} aria-hidden="true">
+                    {logo ? <img src={logo} alt="" loading="lazy" /> : p.name.charAt(0)}
+                  </span>
+                  <span>{p.name}</span>
+                </label>
+              );
+            })}
           </div>
         </>
       )}
-    </Disclosure>
+    </SettingsRow>
   );
 }

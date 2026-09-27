@@ -536,6 +536,7 @@ const MAIN_PROVIDER_IDS = new Set<number>([
 export interface WatchProviderOption {
   id: number;
   name: string;
+  logoPath?: string | null;
 }
 
 // Renvoie les plateformes de streaming "principales" disponibles dans la
@@ -557,5 +558,5 @@ export async function getWatchProvidersList(
     .sort(
       (a, b) => (a.display_priorities?.[region] ?? 999) - (b.display_priorities?.[region] ?? 999)
     )
-    .map((p) => ({ id: p.provider_id, name: p.provider_name }));
+    .map((p) => ({ id: p.provider_id, name: p.provider_name, logoPath: p.logo_path }));
 }

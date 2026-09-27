@@ -1,54 +1,72 @@
-/* Styles partagés par les panneaux de réglages du profil (plateformes,
-   genres exclus, titres exclus) — un seul fichier plutôt que dupliqué. */
-.search {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--fg);
-  margin: 10px 0 12px;
-}
+/* Onglet Préférences (nouvelle DA 8/10) : contrôles des lignes des groupes
+   « Recommandations », « Notifications » et « Affichage » — un seul fichier
+   plutôt que dupliqué entre les réglages. */
 
-.select {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--fg);
-  margin: 10px 0 0;
-}
-
-.segmented {
-  display: inline-flex;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 4px;
-  gap: 2px;
-  margin: 10px 0 0;
-}
-
-.segmented button {
-  padding: 7px 16px;
-  border-radius: 999px;
-  font-size: 13.5px;
-  font-weight: 600;
+.meta {
+  display: block;
+  margin-bottom: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--muted);
 }
 
-.segActive {
-  background: var(--selected-bg);
-  color: var(--fg) !important;
-  box-shadow: inset 0 0 0 1px var(--selected-border);
+.status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
 }
 
-.grid {
+.error {
+  margin: 10px 0 0;
+  color: var(--accent-ink);
+  font-size: 13.5px;
+}
+
+.emptyHint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* --- Mes plateformes ----------------------------------------------------- */
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 16px;
+  margin-bottom: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  color: var(--muted);
+}
+
+.search:focus-within {
+  border-color: var(--control);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  font-size: 15px;
+}
+
+.search input:focus {
+  outline: none;
+}
+
+.providerGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  max-height: 320px;
+  max-height: 420px;
   overflow-y: auto;
   /* Sans ça, une fois cette liste scrollée jusqu'à son bord, le geste de
      scroll (molette/trackpad/tactile) continue dans la page : sur
@@ -58,64 +76,423 @@
   overscroll-behavior: contain;
 }
 
-.item {
+.provider {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  color: var(--fg);
+  gap: 12px;
+  min-width: 0;
+  padding: 9px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 15px;
+  cursor: pointer;
 }
 
-.item:hover {
-  background: var(--surface-2);
+.provider:hover {
+  border-color: var(--border-2);
 }
 
-.item input {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+.providerOn {
+  background: var(--selected-bg);
+  border-color: var(--selected-border);
+}
+
+.provider > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkbox {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
   accent-color: var(--control);
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 8px;
-  margin-top: 12px;
-  max-height: 320px;
-  overflow-y: auto;
-  /* Voir .grid ci-dessus : même correctif, même raison (liste capée en
-     hauteur dans le panneau « Titres exclus »). */
-  overscroll-behavior: contain;
+.providerLogo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: var(--surface-3);
+  color: var(--fg);
+  font-weight: 800;
+  font-size: 13px;
 }
 
-.chipX {
+.providerLogo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --- Genres à exclure ---------------------------------------------------- */
+
+.genreGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.genreCheckbox {
+  accent-color: var(--accent);
+}
+
+.genreExcluded {
+  border-color: color-mix(in oklch, var(--accent) 55%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.genreExcluded > span:last-child {
+  text-decoration: line-through;
+}
+
+/* --- Titres exclus ------------------------------------------------------- */
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-block: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.titleRow:last-child {
+  border-bottom: 0;
+}
+
+.thumb {
+  flex: none;
+  width: 40px;
+  height: 58px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: linear-gradient(150deg, var(--g-drama-1), var(--g-com-2));
+}
+
+.titleText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.titleText strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15.5px;
+}
+
+.titleText span {
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+/* --- Boutons ------------------------------------------------------------- */
+
+.btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 13px;
+  justify-content: center;
+  gap: 8px;
+  flex: none;
+  min-height: 42px;
+  padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid var(--accent);
-  color: var(--accent-ink);
-  background: var(--accent-soft);
-  font-size: 13px;
+  border: 1px solid var(--border-2);
+  background: var(--bg);
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 14.5px;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* --- Notifications ------------------------------------------------------- */
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-weight: 700;
+  font-size: 15.5px;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--border-2);
+  transition: background 0.15s ease;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--on-control);
+  transition: transform 0.15s ease;
+}
+
+.switchOn {
+  background: var(--control);
+}
+
+.switchOn::after {
+  transform: translateX(22px);
+}
+
+.switch:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.testActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 18px;
+}
+
+.testActions .hint {
+  margin: 0;
+}
+
+/* --- Affichage ----------------------------------------------------------- */
+
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.segmented button {
+  padding: 9px 20px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.segmented .segActive {
+  background: var(--selected-bg);
+  color: var(--fg);
+}
+
+.selectWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 480px;
+  color: var(--muted);
+}
+
+.selectWrap > svg {
+  position: absolute;
+  pointer-events: none;
+}
+
+.selectWrap > svg:first-child {
+  left: 16px;
+}
+
+.selectWrap > svg:last-child {
+  right: 16px;
+}
+
+.select {
+  width: 100%;
+  height: 46px;
+  padding: 0 44px;
+  appearance: none;
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  color: var(--fg);
+  font-size: 15.5px;
   font-weight: 600;
 }
 
-.chipX svg {
-  width: 13px;
-  height: 13px;
-  opacity: 0.8;
+.select:focus-visible {
+  outline: none;
+  border-color: var(--control);
 }
 
-.chipX:hover svg {
-  opacity: 1;
+.selectWrap + .hint {
+  max-width: 480px;
 }
 
-.emptyHint {
-  color: var(--muted);
-  font-size: 13px;
-  font-style: italic;
+.themes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 150px));
+  gap: 12px;
+}
+
+.themeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  text-align: left;
+}
+
+.themeCard:hover {
+  border-color: var(--border-2);
+}
+
+.themeOn {
+  border-color: var(--control);
+  box-shadow: 0 0 0 1px var(--control);
+}
+
+.themePreview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 64px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: #0d1a33;
+}
+
+.themePreview > span {
+  height: 5px;
+  width: 55%;
+  border-radius: 999px;
+  background: #f4efe6;
+}
+
+.themePreview > span:last-child {
+  display: flex;
+  gap: 5px;
+  width: auto;
+  height: 22px;
+  margin-top: auto;
+  background: none;
+}
+
+.themePreview > span:last-child::before,
+.themePreview > span:last-child::after {
+  content: "";
+  width: 22px;
+  border-radius: 4px;
+  background: #c8373a;
+}
+
+.themePreview > span:last-child::after {
+  background: #1a3560;
+}
+
+.themePreview[data-theme="light"] {
+  background: #f4efe6;
+}
+
+.themePreview[data-theme="light"] > span:first-child {
+  background: #1b2233;
+}
+
+.themePreview[data-theme="light"] > span:last-child::after {
+  background: #e3dccf;
+}
+
+.themePreview[data-theme="auto"] {
+  background: linear-gradient(90deg, #0d1a33 50%, #f4efe6 50%);
+}
+
+.themePreview[data-theme="auto"] > span:first-child {
+  background: #8e9bb8;
+}
+
+.themeLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 4px;
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+.radio {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid var(--border-2);
+}
+
+.themeOn .radio {
+  border: 5px solid var(--control);
+}
+
+@media (max-width: 860px) {
+  .providerGrid,
+  .genreGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Retour de review : en une colonne, la trentaine de genres fait une
+     liste interminable sur mobile — même bloc scrollable que les
+     plateformes (voir le commentaire d'overscroll-behavior plus haut). */
+  .genreGrid {
+    max-height: 420px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .segmented {
+    display: flex;
+  }
+
+  .segmented button {
+    flex: 1;
+  }
+
+  .themes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
 }

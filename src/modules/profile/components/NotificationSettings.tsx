@@ -8,8 +8,7 @@ import { logWarn } from "../../../core/logger.ts";
 import { PUSH_ENDPOINT_STORAGE_KEY as ENDPOINT_STORAGE_KEY } from "../../../core/sync/pushAccountLink.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
-import { Icon } from "../../../shared/components/index.ts";
-import styles from "./NotificationSettings.module.css";
+import styles from "./SettingsPanel.module.css";
 
 const TOP_GENRES_FOR_NOTIFICATIONS = 8;
 
@@ -296,12 +295,14 @@ function TestNotification() {
   }
 
   return (
-    <div className={styles.test}>
-      <p className={styles.testTitle}>{t("notificationSettings.testTitle")}</p>
+    <>
       <div className={styles.testActions}>
         <button type="button" className={styles.btn} onClick={() => send(0)} disabled={sending}>
           {sending ? t("notificationSettings.testSending") : t("notificationSettings.testNow")}
         </button>
+        <span className={styles.hint}>{t("notificationSettings.testNowHint")}</span>
+      </div>
+      <div className={styles.testActions}>
         <button
           type="button"
           className={styles.btn}
@@ -310,14 +311,14 @@ function TestNotification() {
         >
           {t("notificationSettings.testDelayed")}
         </button>
+        <span className={styles.hint}>{t("notificationSettings.testDelayedHint")}</span>
       </div>
-      <p className={styles.hint}>{t("notificationSettings.testHint")}</p>
       {message && (
         <p className={styles.hint} role="status">
           {message}
         </p>
       )}
-    </div>
+    </>
   );
 }
 
@@ -445,41 +446,33 @@ export default function NotificationSettings() {
     }
   }
 
+  const enabled = endpoint !== null;
+
   return (
     <div>
-      {endpoint ? (
-        <>
-          <button
-            type="button"
-            className={styles.btnOn}
-            onClick={disable}
-            disabled={status === "working"}
-          >
-            <Icon name="bell" /> {t("notificationSettings.disableButton")}
-          </button>
-          <p className={styles.hint}>{t("notificationSettings.enabledHint")}</p>
-          {SHOW_TEST_NOTIFICATION && authStatus === "authenticated" && <TestNotification />}
-        </>
-      ) : (
-        <>
-          <button
-            type="button"
-            className={styles.btn}
-            onClick={enable}
-            disabled={status === "working"}
-          >
-            {status === "working" ? (
-              t("notificationSettings.enabling")
-            ) : (
-              <>
-                <Icon name="bellOff" /> {t("notificationSettings.enableButton")}
-              </>
-            )}
-          </button>
-          <p className={styles.hint}>{t("notificationSettings.disabledHint")}</p>
-        </>
+      <div className={styles.switchRow}>
+        <span id="push-switch-label">{t("notificationSettings.pushLabel")}</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          aria-labelledby="push-switch-label"
+          className={`${styles.switch} ${enabled ? styles.switchOn : ""}`}
+          onClick={enabled ? disable : enable}
+          disabled={status === "working"}
+        />
+      </div>
+      {status === "working" && !enabled && (
+        <p className={styles.hint} role="status">
+          {t("notificationSettings.enabling")}
+        </p>
       )}
-      {error && <p className={styles.error}>{error}</p>}
+      {enabled && SHOW_TEST_NOTIFICATION && authStatus === "authenticated" && <TestNotification />}
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

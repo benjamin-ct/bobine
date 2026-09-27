@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { SUPPORTED_LOCALES, type Locale } from "../../../core/i18n/i18n.ts";
+import { SUPPORTED_LOCALES } from "../../../core/i18n/i18n.ts";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
-import { Disclosure } from "../../../shared/components/index.ts";
+import { SettingsRow } from "./SettingsGroup.tsx";
 import styles from "./SettingsPanel.module.css";
 
 // Réglage "Langue" : déplacé du bouton bascule de la NavBar vers le profil
@@ -14,19 +14,25 @@ export default function LanguageSettings() {
   const { locale, setLocale } = useLocale();
 
   return (
-    <Disclosure summary={t("languageSettings.title")} meta={t(`languageSettings.${locale}`)}>
-      <p>{t("languageSettings.description")}</p>
-      <select
-        className={styles.select}
-        value={locale}
-        onChange={(e) => setLocale(e.target.value as Locale)}
-      >
+    <SettingsRow
+      label={t("languageSettings.title")}
+      description={t("languageSettings.description")}
+    >
+      <div className={styles.segmented} role="radiogroup" aria-label={t("languageSettings.title")}>
         {SUPPORTED_LOCALES.map((code) => (
-          <option key={code} value={code}>
+          <button
+            key={code}
+            type="button"
+            role="radio"
+            aria-checked={locale === code}
+            lang={code}
+            className={locale === code ? styles.segActive : ""}
+            onClick={() => setLocale(code)}
+          >
             {t(`languageSettings.${code}`)}
-          </option>
+          </button>
         ))}
-      </select>
-    </Disclosure>
+      </div>
+    </SettingsRow>
   );
 }
