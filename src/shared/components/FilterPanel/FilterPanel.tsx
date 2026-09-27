@@ -409,13 +409,62 @@ export default function FilterPanel({
     </div>
   );
 
+  const filtersButton = (
+    <button
+      type="button"
+      className={`${styles.filtersBtn} ${open ? styles.filtersBtnOpen : ""}`}
+      onClick={() => setOpen((o) => !o)}
+      aria-expanded={open}
+      aria-controls={panelId}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <path d="M4 6h16M7 12h10M10 18h4" />
+      </svg>
+      {t("filterPanel.filters")}
+      {active.length > 0 && (
+        <span
+          className={styles.count}
+          aria-label={t("filterPanel.activeCount", { count: active.length })}
+        >
+          {active.length}
+        </span>
+      )}
+    </button>
+  );
+
+  const activeChips = (
+    <ul className={styles.chips} aria-label={t("filterPanel.activeFilters")}>
+      {active.map((f) => (
+        <li key={f.key}>
+          <button
+            type="button"
+            className={styles.chip}
+            onClick={f.remove}
+            aria-label={t("filterPanel.removeFilter", { label: f.label })}
+          >
+            {f.label}
+            <Icon name="close" size={14} />
+          </button>
+        </li>
+      ))}
+      <li>
+        <button type="button" className={styles.reset} onClick={resetAll}>
+          {t("filterPanel.reset")}
+        </button>
+      </li>
+    </ul>
+  );
+
   return (
     <div className={styles.wrap}>
+      {/* Films/Séries (et période), puis « Filtres » calé à droite, sur une
+          ligne ; les puces des filtres actifs sur la suivante. */}
       <div className={styles.toolbar}>
-        {periods ? (
-          <div className={styles.toolbarRow}>
-            {segmented}
+        <div className={styles.toolbarRow}>
+          {segmented}
+          {periods && (
             <div className={styles.periods} role="group" aria-label={periods.label}>
+              <SlidingIndicator activeKey={periods.value} />
               {periods.options.map((o) => (
                 <button
                   key={o.value}
@@ -428,62 +477,10 @@ export default function FilterPanel({
                 </button>
               ))}
             </div>
-          </div>
-        ) : (
-          segmented
-        )}
-
-        <div className={periods ? styles.toolbarRow : styles.contents}>
-          <button
-            type="button"
-            className={`${styles.filtersBtn} ${open ? styles.filtersBtnOpen : ""}`}
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            aria-controls={panelId}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path d="M4 6h16M7 12h10M10 18h4" />
-            </svg>
-            {t("filterPanel.filters")}
-            {active.length > 0 && (
-              <span
-                className={styles.count}
-                aria-label={t("filterPanel.activeCount", { count: active.length })}
-              >
-                {active.length}
-              </span>
-            )}
-          </button>
-
-          {active.length > 0 && (
-            <ul className={styles.chips} aria-label={t("filterPanel.activeFilters")}>
-              {active.map((f) => (
-                <li key={f.key}>
-                  <button
-                    type="button"
-                    className={styles.chip}
-                    onClick={f.remove}
-                    aria-label={t("filterPanel.removeFilter", { label: f.label })}
-                  >
-                    {f.label}
-                    <Icon name="close" size={14} />
-                  </button>
-                </li>
-              ))}
-              <li>
-                <button type="button" className={styles.reset} onClick={resetAll}>
-                  {t("filterPanel.reset")}
-                </button>
-              </li>
-            </ul>
           )}
+          {filtersButton}
         </div>
+        {active.length > 0 && <div className={styles.toolbarRow}>{activeChips}</div>}
       </div>
 
       {open && (
