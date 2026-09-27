@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -39,8 +39,19 @@ import type { WatchProviderOption } from "../../core/api/tmdb.ts";
 import styles from "./RandomPage.module.css";
 
 const MAX_ATTEMPTS = 6;
+// Défilement d'affiches pendant un tirage : une affiche toutes les 90 ms,
+// parmi au plus REEL_MAX affiches déjà connues (historique, envies de voir).
+const REEL_INTERVAL_MS = 90;
+const REEL_MAX = 30;
 
 type DrawSource = "watchlist" | "catalog";
+// « Les deux » : chaque tirage choisit au hasard entre films et séries.
+type TypeChoice = MediaType | "all";
+
+interface Drawn {
+  item: MediaItem;
+  details: MediaDetails;
+}
 
 // Historique des tirages : propre à l'onglet (sessionStorage), les plus
 // récents en premier.
@@ -87,6 +98,22 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
+// Affiche qui défile pendant le tirage (null hors tirage ou sans affiches).
+function useReelPoster(rolling: boolean, posterPaths: string[]): string | null {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    if (!rolling || posterPaths.length < 2) {
+      return;
+    }
+    const timer = setInterval(() => setIndex((i) => i + 1), REEL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [rolling, posterPaths]);
+  if (!rolling || posterPaths.length === 0) {
+    return null;
+  }
+  return posterPaths[index % posterPaths.length];
+}
+
 function hasAnyProvider(providers: RegionWatchProviders | null, ids: string[]): boolean {
   if (!providers) {
     return false;
@@ -101,17 +128,20 @@ function hasAnyProvider(providers: RegionWatchProviders | null, ids: string[]): 
 
 export default function RandomPage() {
   const { t } = useTranslation();
-  const [mediaType, setMediaType] = useState<MediaType>("movie");
+  const [typeChoice, setTypeChoice] = useState<TypeChoice>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerIds, setProviderIds] = useState<string[]>([]);
   const [useMyPlatforms, setUseMyPlatforms] = useState(false);
   // Seule l'année de sortie est proposée parmi les filtres avancés.
   const [advanced, setAdvanced] = useState<AdvancedFiltersState>(EMPTY_ADVANCED_FILTERS);
   const { yearMin, yearMax } = advanced;
-  const [genres, setGenres] = useState<Genre[]>([]);
+  const [genresByType, setGenresByType] = useState<Partial<Record<MediaType, Genre[]>>>({});
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
   const [excludeWatched, setExcludeWatched] = useState(true);
   const [chosenSource, setChosenSource] = useState<DrawSource | null>(null);
+  // Incrémenté à chaque tirage réussi : relance l'animation d'apparition,
+  // même quand le même titre ressort.
+  const [drawCount, setDrawCount] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
   const historyId = useId();
 
@@ -136,22 +166,56 @@ export default function RandomPage() {
   const yearRangeErrorKey = getAdvancedFiltersRangeError(advanced);
   const yearRangeError = yearRangeErrorKey ? t(yearRangeErrorKey) : null;
 
+  const drawTypes: MediaType[] = useMemo(
+    () => (typeChoice === "all" ? ["movie", "tv"] : [typeChoice]),
+    [typeChoice]
+  );
+
   useEffect(() => {
     setGenreIds([]);
-  }, [mediaType]);
+  }, [typeChoice]);
 
   useEffect(() => {
     let cancelled = false;
-    getGenres(mediaType)
-      .then((data) => !cancelled && setGenres(data.genres || []))
-      .catch(() => !cancelled && setGenres([]));
-    getWatchProvidersList(mediaType, region)
-      .then((list) => !cancelled && setProviders(list))
-      .catch(() => !cancelled && setProviders([]));
+    Promise.all(
+      drawTypes.map((type) =>
+        getGenres(type)
+          .then((data) => [type, data.genres || []] as const)
+          .catch(() => [type, []] as const)
+      )
+    ).then((entries) => !cancelled && setGenresByType(Object.fromEntries(entries)));
+    Promise.all(drawTypes.map((type) => getWatchProvidersList(type, region).catch(() => []))).then(
+      (lists) => {
+        if (!cancelled) {
+          const byId = new Map(lists.flat().map((p) => [p.id, p]));
+          setProviders([...byId.values()]);
+        }
+      }
+    );
     return () => {
       cancelled = true;
     };
-  }, [mediaType, region]);
+  }, [drawTypes, region]);
+
+  // Films et séries n'ont pas tout à fait les mêmes genres TMDB (« Action »
+  // côté films, « Action & Aventure » côté séries) : en « Les deux », on
+  // propose l'union des deux listes.
+  const genres = useMemo(() => {
+    const lists = Object.values(genresByType);
+    const byId = new Map(lists.flat().map((g) => [g.id, g]));
+    const merged = [...byId.values()];
+    return lists.length > 1 ? merged.sort((a, b) => a.name.localeCompare(b.name)) : merged;
+  }, [genresByType]);
+
+  /** Genres choisis qui existent pour ce type ; null si aucun n'existe. */
+  function genreIdsFor(type: MediaType): number[] | null {
+    if (genreIds.length === 0) {
+      return [];
+    }
+    const known = new Set((genresByType[type] ?? []).map((g) => g.id));
+    const ids = genreIds.filter((id) => known.has(id));
+    return ids.length > 0 ? ids : null;
+  }
 
   const activeProviderIds = useMyPlatforms ? favoriteProviderIds.map(String) : providerIds;
 
@@ -179,11 +243,11 @@ export default function RandomPage() {
   // Tirage dans « Mes envies de voir » : mêmes filtres que pour le catalogue
   // (type, genres, années), les plateformes étant vérifiées sur la fiche du
   // titre (disponibilités dans la région), faute d'information dans la liste.
-  async function drawFromWatchlist(): Promise<{ item: MediaItem; details: MediaDetails } | null> {
+  async function drawFromWatchlist(): Promise<Drawn | null> {
     const min = yearMin ? Number(yearMin) : null;
     const max = yearMax ? Number(yearMax) : null;
     let pool = watchlist.filter((entry: LibraryItem) => {
-      if (entry.mediaType !== mediaType) {
+      if (!drawTypes.includes(entry.mediaType)) {
         return false;
       }
       if (genreIds.length > 0 && !genreIds.some((g) => entry.genreIds?.includes(g))) {
@@ -221,6 +285,49 @@ export default function RandomPage() {
     return null;
   }
 
+  // Tirage dans tout le catalogue d'un type (films ou séries).
+  async function drawFromCatalog(type: MediaType): Promise<Drawn | null> {
+    const typeGenreIds = genreIdsFor(type);
+    if (typeGenreIds === null) {
+      return null;
+    }
+    const discoverParams = {
+      genreId: typeGenreIds,
+      excludeGenreIds: excludedGenreIds,
+      providerIds: activeProviderIds.length > 0 ? activeProviderIds : undefined,
+      region,
+      yearMin: yearMin ? Number(yearMin) : undefined,
+      yearMax: yearMax ? Number(yearMax) : undefined,
+    };
+    const first = await discover(type, { page: 1, ...discoverParams });
+    const totalPages = Math.min(first.total_pages || 1, 500);
+    if (totalPages === 0 || !first.results?.length) {
+      return null;
+    }
+
+    let candidate: MediaItem | null = null;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS && !candidate; attempt++) {
+      const page = Math.max(1, Math.floor(Math.random() * Math.min(totalPages, 100)) + 1);
+      const data = page === 1 ? first : await discover(type, { page, ...discoverParams });
+      let pool = filterExcluded(data.results, type);
+      if (excludeWatched) {
+        pool = pool.filter((item) => !watchedIds.has(`${type}:${item.id}`));
+      }
+      if (pool.length > 0) {
+        candidate = { ...pool[Math.floor(Math.random() * pool.length)], mediaType: type };
+      }
+    }
+
+    if (!candidate) {
+      candidate = {
+        ...first.results[Math.floor(Math.random() * first.results.length)],
+        mediaType: type,
+      };
+    }
+
+    return { item: candidate, details: await getDetails(type, candidate.id) };
+  }
+
   async function drawRandom() {
     if (yearRangeError) {
       // Plage min/max incohérente : on n'appelle pas l'API, qui retomberait
@@ -231,61 +338,29 @@ export default function RandomPage() {
     setStatus("loading");
     setError(null);
     try {
+      let drawn: Drawn | null = null;
       if (source === "watchlist") {
-        const drawn = await drawFromWatchlist();
-        if (!drawn) {
-          clearPick();
-          setStatus("empty");
-          return;
+        drawn = await drawFromWatchlist();
+      } else {
+        // « Les deux » : type tiré au hasard, l'autre en repli s'il ne donne
+        // rien avec ces filtres.
+        for (const type of shuffle(drawTypes)) {
+          drawn = await drawFromCatalog(type);
+          if (drawn) {
+            break;
+          }
         }
-        setPick(drawn.item);
-        setPickDetails(drawn.details);
-        setProvidersResult(watchProvidersFromDetails(drawn.details, region));
-        rememberDraw(drawn.item, drawn.details);
-        setStatus("success");
-        return;
       }
-      const discoverParams = {
-        genreId: genreIds,
-        excludeGenreIds: excludedGenreIds,
-        providerIds: activeProviderIds.length > 0 ? activeProviderIds : undefined,
-        region,
-        yearMin: yearMin ? Number(yearMin) : undefined,
-        yearMax: yearMax ? Number(yearMax) : undefined,
-      };
-      const first = await discover(mediaType, { page: 1, ...discoverParams });
-      const totalPages = Math.min(first.total_pages || 1, 500);
-      if (totalPages === 0 || !first.results?.length) {
+      if (!drawn) {
         clearPick();
         setStatus("empty");
         return;
       }
-
-      let candidate: MediaItem | null = null;
-      for (let attempt = 0; attempt < MAX_ATTEMPTS && !candidate; attempt++) {
-        const page = Math.max(1, Math.floor(Math.random() * Math.min(totalPages, 100)) + 1);
-        const data = page === 1 ? first : await discover(mediaType, { page, ...discoverParams });
-        let pool = filterExcluded(data.results, mediaType);
-        if (excludeWatched) {
-          pool = pool.filter((item) => !watchedIds.has(`${mediaType}:${item.id}`));
-        }
-        if (pool.length > 0) {
-          candidate = { ...pool[Math.floor(Math.random() * pool.length)], mediaType };
-        }
-      }
-
-      if (!candidate) {
-        candidate = {
-          ...first.results[Math.floor(Math.random() * first.results.length)],
-          mediaType,
-        };
-      }
-
-      const fullDetails = await getDetails(mediaType, candidate.id);
-      setPick(candidate);
-      setPickDetails(fullDetails);
-      setProvidersResult(watchProvidersFromDetails(fullDetails, region));
-      rememberDraw(candidate, fullDetails);
+      setPick(drawn.item);
+      setPickDetails(drawn.details);
+      setProvidersResult(watchProvidersFromDetails(drawn.details, region));
+      rememberDraw(drawn.item, drawn.details);
+      setDrawCount((count) => count + 1);
       setStatus("success");
     } catch (err) {
       clearPick();
@@ -304,7 +379,7 @@ export default function RandomPage() {
   const date = pick?.release_date || pick?.first_air_date;
   // Type du titre tiré (et non le filtre Films/Séries, qui peut avoir changé
   // depuis le tirage).
-  const pickType = pick?.mediaType ?? mediaType;
+  const pickType = pick?.mediaType ?? drawTypes[0];
   const watched = pick ? isWatched(pickType, pick.id) : false;
   const inWatchlist = pick ? isInWatchlist(pickType, pick.id) : false;
   const accentKey = pick
@@ -313,6 +388,14 @@ export default function RandomPage() {
   const tier = pick?.vote_average != null ? ratingTier(pick.vote_average) : null;
   const rolling = status === "loading";
   const availability = availabilityOf(providersResult);
+
+  // Affiches déjà connues (historique, envies de voir) qui défilent pendant
+  // le tirage, façon machine à sous.
+  const reelPosters = useMemo(() => {
+    const paths = [...history.map((h) => h.posterPath), ...watchlist.map((w) => w.posterPath)];
+    return shuffle([...new Set(paths.filter((p): p is string => !!p))]).slice(0, REEL_MAX);
+  }, [history, watchlist]);
+  const reelPoster = useReelPoster(rolling, reelPosters);
 
   // Un titre est déjà tiré à l'arrivée sur la page, avec la source et les
   // filtres par défaut (même tirage que le bouton « Tirer un titre »). La
@@ -380,8 +463,9 @@ export default function RandomPage() {
           et Prochainement : bascule Films/Séries, bouton « Filtres », puces
           des filtres actifs et grille de champs titrés. */}
       <FilterPanel
-        mediaType={mediaType}
-        setMediaType={setMediaType}
+        mediaType={typeChoice === "all" ? "movie" : typeChoice}
+        setMediaType={setTypeChoice}
+        allTypes={{ active: typeChoice === "all", onSelect: () => setTypeChoice("all") }}
         genres={genres}
         genreIds={genreIds}
         setGenreIds={setGenreIds}
@@ -452,14 +536,24 @@ export default function RandomPage() {
 
       {!pick && rolling && (
         <div className={styles.spotlight} aria-busy="true">
-          <div className={`${styles.posterWrap} ${styles.fading}`} />
+          {reelPoster ? (
+            <div className={`${styles.posterWrap} ${styles.reel}`}>
+              <img src={posterUrl(reelPoster, "w154") ?? undefined} alt="" />
+            </div>
+          ) : (
+            <div className={`${styles.posterWrap} ${styles.fading}`} />
+          )}
         </div>
       )}
 
       {pick && (
-        <div className={styles.spotlight} aria-busy={rolling}>
-          <div className={`${styles.posterWrap} ${rolling ? styles.fading : ""}`}>
-            {pick.poster_path ? (
+        <div key={drawCount} className={`${styles.spotlight} ${styles.reveal}`} aria-busy={rolling}>
+          <div
+            className={`${styles.posterWrap} ${rolling ? (reelPoster ? styles.reel : styles.fading) : ""}`}
+          >
+            {reelPoster ? (
+              <img src={posterUrl(reelPoster, "w154") ?? undefined} alt="" />
+            ) : pick.poster_path ? (
               <img src={posterUrl(pick.poster_path, "w342") ?? undefined} alt={title} />
             ) : (
               <div className={`${styles.posterEmpty} ${posterStyles[accentKey]}`}>{title}</div>

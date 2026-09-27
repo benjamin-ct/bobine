@@ -416,3 +416,67 @@
 .filters > :last-child {
   margin-bottom: 0;
 }
+
+/* Tirage : les affiches défilent en tremblant, puis le titre tiré apparaît
+   (l'affiche pivote, le texte remonte). Remplissage « backwards » et non
+   « both » : l'animation terminée ne doit pas masquer le fondu d'un tirage
+   suivant. Sélecteur renforcé pour passer devant .reveal .posterWrap. */
+.spotlight .posterWrap.reel {
+  animation: reelShake 0.18s ease-in-out infinite alternate;
+}
+
+.reel img {
+  filter: blur(1px) saturate(1.15);
+}
+
+@keyframes reelShake {
+  from {
+    transform: translateY(-3px) rotate(-1.5deg);
+  }
+  to {
+    transform: translateY(3px) rotate(1.5deg);
+  }
+}
+
+.reveal .posterWrap {
+  animation: posterReveal 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
+}
+
+.reveal .head {
+  animation: riseIn 0.4s ease-out 0.15s backwards;
+}
+
+.reveal .body {
+  animation: riseIn 0.4s ease-out 0.25s backwards;
+}
+
+@keyframes posterReveal {
+  from {
+    opacity: 0;
+    transform: perspective(800px) rotateY(-80deg) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight .posterWrap.reel,
+  .reveal .posterWrap,
+  .reveal .head,
+  .reveal .body {
+    animation: none;
+  }
+}

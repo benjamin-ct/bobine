@@ -66,6 +66,14 @@ interface FilterPanelProps {
   /** Puces de période (« 7 jours », « 30 jours », « 3 mois »), à côté de la
    * bascule Films/Séries ; « Filtres » passe alors sur la ligne suivante. */
   periods?: PeriodOptions;
+  /** Troisième choix « Les deux » dans la bascule Films/Séries (Aléatoire).
+   * Quand il est actif, ni Films ni Séries ne sont marqués. */
+  allTypes?: AllTypesOption;
+}
+
+interface AllTypesOption {
+  active: boolean;
+  onSelect: () => void;
 }
 
 interface CountryLanguageState {
@@ -134,6 +142,7 @@ export default function FilterPanel({
   switches = [],
   countryLanguage,
   periods,
+  allTypes,
 }: FilterPanelProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
@@ -365,24 +374,36 @@ export default function FilterPanel({
           t("filterPanel.platformsCount", { count: 1 })
         : t("filterPanel.platformsCount", { count: providerIds.length });
 
+  const movieActive = !allTypes?.active && mediaType === "movie";
+  const tvActive = !allTypes?.active && mediaType === "tv";
   const segmented = (
     <div className={styles.segmented} role="group" aria-label={t("filterBar.typeAriaLabel")}>
       <button
         type="button"
-        className={mediaType === "movie" ? styles.segActive : ""}
-        aria-pressed={mediaType === "movie"}
+        className={movieActive ? styles.segActive : ""}
+        aria-pressed={movieActive}
         onClick={() => setMediaType("movie")}
       >
         {t("filterBar.movies")}
       </button>
       <button
         type="button"
-        className={mediaType === "tv" ? styles.segActive : ""}
-        aria-pressed={mediaType === "tv"}
+        className={tvActive ? styles.segActive : ""}
+        aria-pressed={tvActive}
         onClick={() => setMediaType("tv")}
       >
         {t("filterBar.series")}
       </button>
+      {allTypes && (
+        <button
+          type="button"
+          className={allTypes.active ? styles.segActive : ""}
+          aria-pressed={allTypes.active}
+          onClick={allTypes.onSelect}
+        >
+          {t("filterBar.allTypes")}
+        </button>
+      )}
     </div>
   );
 
