@@ -621,8 +621,43 @@
 }
 
 @media (max-width: 860px) {
+  /* Une seule colonne (tablette et mobile), dans l'ordre : suivi des
+     épisodes, Où le voir, activité des abonnements, Infos, puis casting et
+     saga. Infos passe avant les longues listes au lieu de tomber tout en
+     bas. stretch : avec le `start` du desktop, chaque bloc prenait la
+     largeur de son contenu : la rangée du casting, plus large que l'écran,
+     élargissait sa section et poussait « Tout le casting » hors écran, à
+     droite. */
   .body {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 24px;
+  }
+
+  .main > *,
+  .aside > * {
+    min-width: 0;
+  }
+
+  .main,
+  .aside {
+    display: contents;
+  }
+
+  .main > * {
+    order: 3;
+  }
+
+  .main > :first-child,
+  .main > .whereToWatch {
+    order: 1;
+  }
+
+  .aside > * {
+    order: 2;
+    margin-top: 28px;
   }
 
   .aside {
@@ -766,46 +801,6 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--surface);
-  }
-
-  /* Une seule colonne, dans l'ordre de la maquette : Où le voir, Vos
-     abonnements, casting, saga, Infos. stretch : avec le `start` du
-     desktop, chaque bloc prenait la largeur de son contenu : la rangée du
-     casting, plus large que l'écran, élargissait sa section et poussait
-     « Tout le casting » hors écran, à droite. */
-  .body {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    margin-top: 24px;
-  }
-
-  .main > *,
-  .aside > * {
-    min-width: 0;
-  }
-
-  .main,
-  .aside {
-    display: contents;
-  }
-
-  .main > * {
-    order: 3;
-  }
-
-  .main > :first-child {
-    order: 1;
-  }
-
-  .aside > * {
-    order: 2;
-    margin-top: 28px;
-  }
-
-  .aside > .infoCard {
-    order: 4;
   }
 
   /* Casting : grille de 4 colonnes, sans défilement horizontal. Les 8

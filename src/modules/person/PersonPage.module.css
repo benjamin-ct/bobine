@@ -59,19 +59,12 @@
   }
 }
 
-/* Sur une seule colonne, la carte « Infos » passe avant la filmographie
-   au lieu de tomber tout en bas après des dizaines d'affiches. */
+/* Une seule colonne : DetailPage.module.css aplatit .main et .aside
+   (display: contents) et place la carte « Infos » après le premier bloc
+   (order: 2). Ici, elle passe tout en tête, avant la filmographie. Double
+   classe pour passer devant `.aside > *`. */
 @media (max-width: 860px) {
-  .asideFirst {
-    order: -1;
-  }
-}
-
-/* Mobile : DetailPage.module.css aplatit .main et .aside (display: contents)
-   et renvoie la carte « Infos » en dernier (order: 4). Triple classe pour
-   passer devant `.aside > .infoCard`. */
-@media (max-width: 720px) {
-  .asideFirst.asideFirst.asideFirst > * {
+  .asideFirst.asideFirst > * {
     order: 0;
   }
 }
