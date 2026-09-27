@@ -78,13 +78,17 @@
   border-color: var(--selected-border);
 }
 
+/* Large tant qu'il y a de la place (le texte d'aide tient en entier), puis
+   rétrécit avant que les onglets ne débordent sur les écrans étroits. */
 .search {
   position: relative;
-  flex: 0 0 auto;
-  width: 240px;
+  flex: 0 1 340px;
+  min-width: 180px;
 }
 
 .search form {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
