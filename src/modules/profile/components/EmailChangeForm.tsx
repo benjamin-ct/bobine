@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
-import styles from "./AccountCard.module.css";
+import styles from "./AccountSettings.module.css";
 
 // Changement d'adresse email depuis la carte Compte, en deux étapes : saisie
 // de la nouvelle adresse (un code y est envoyé), puis saisie de ce code. Tant
@@ -68,10 +68,10 @@ export default function EmailChangeForm({
         </label>
         <p className={styles.hint}>{t("accountCard.emailChange.hint")}</p>
         <div className={styles.inline}>
-          <button type="submit" className={styles.saveBtn} disabled={busy || !newEmail.trim()}>
+          <button type="submit" className={styles.primaryBtn} disabled={busy || !newEmail.trim()}>
             {busy ? t("accountCard.emailChange.sending") : t("accountCard.emailChange.sendCode")}
           </button>
-          <button type="button" className={styles.logoutBtn} onClick={onCancel}>
+          <button type="button" className={styles.ghostBtn} onClick={onCancel}>
             {t("accountCard.emailChange.cancel")}
           </button>
         </div>
@@ -100,12 +100,12 @@ export default function EmailChangeForm({
         />
       </label>
       <div className={styles.inline}>
-        <button type="submit" className={styles.saveBtn} disabled={busy || !code.trim()}>
+        <button type="submit" className={styles.primaryBtn} disabled={busy || !code.trim()}>
           {busy ? t("accountCard.emailChange.confirming") : t("accountCard.emailChange.confirm")}
         </button>
         <button
           type="button"
-          className={styles.logoutBtn}
+          className={styles.ghostBtn}
           onClick={() => {
             setSentTo(null);
             setError(null);
@@ -113,7 +113,7 @@ export default function EmailChangeForm({
         >
           {t("accountCard.emailChange.back")}
         </button>
-        <button type="button" className={styles.logoutBtn} onClick={onCancel}>
+        <button type="button" className={styles.ghostBtn} onClick={onCancel}>
           {t("accountCard.emailChange.cancel")}
         </button>
       </div>

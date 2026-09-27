@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import { PageHeader, Loading } from "../../shared/components/index.ts";
 import { useAuth } from "../../core/context/AuthContext.tsx";
 import MyListContent from "../my-list/index.ts";
-import AccountCard from "./components/AccountCard.tsx";
-import ProfileShareCard from "./components/ProfileShareCard.tsx";
+import AccountSettings from "./components/AccountSettings.tsx";
+import PublicProfileSettings from "./components/PublicProfileSettings.tsx";
 import CommunityPanel from "./components/CommunityPanel.tsx";
 import NotificationSettings from "./components/NotificationSettings.tsx";
 import FavoriteProvidersSettings from "./components/FavoriteProvidersSettings.tsx";
@@ -84,23 +84,17 @@ export default function ProfilePage() {
       </div>
 
       {tab === "compte" && (
-        <>
-          <div className={styles.grid}>
-            <div className={styles.span6}>
-              <AccountCard />
-            </div>
-            <div className={styles.span6}>
-              <div className={styles.ticket}>
-                <span className={styles.k}>{t("profile.notifications")}</span>
-                <p className={styles.hint}>{t("profile.notificationsHint")}</p>
-                <NotificationSettings />
-              </div>
-            </div>
-            <div className={styles.span12}>
-              <ProfileShareCard />
-            </div>
-          </div>
+        <div className={styles.settings}>
+          <AccountSettings />
+          <PublicProfileSettings />
+        </div>
+      )}
 
+      {/* Notifications et Recommandations quittent l'onglet Compte (nouvelle DA
+          7/10 : Compte ne garde que l'identité et le profil public) ; leur
+          refonte visuelle viendra avec la nouvelle DA 8/10. */}
+      {tab === "preferences" && (
+        <>
           <section className={styles.section}>
             <h2>{t("profile.recommendations")}</h2>
             <div className={styles.discGrid}>
@@ -109,18 +103,24 @@ export default function ProfilePage() {
               <ExcludedTitlesSettings />
             </div>
           </section>
-        </>
-      )}
 
-      {tab === "preferences" && (
-        <section className={styles.section}>
-          <h2>{t("profile.tabPreferences")}</h2>
-          <div className={styles.discGrid}>
-            <LanguageSettings />
-            <RegionSettings />
-            <ThemeSettings />
-          </div>
-        </section>
+          <section className={styles.section}>
+            <h2>{t("profile.notifications")}</h2>
+            <div className={styles.ticket}>
+              <p className={styles.hint}>{t("profile.notificationsHint")}</p>
+              <NotificationSettings />
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <h2>{t("profile.display")}</h2>
+            <div className={styles.discGrid}>
+              <LanguageSettings />
+              <RegionSettings />
+              <ThemeSettings />
+            </div>
+          </section>
+        </>
       )}
 
       {tab === "communaute" && (
