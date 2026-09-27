@@ -1025,7 +1025,8 @@
   },
   "tonightPick": {
     "eyebrow": "Pour vous ce soir",
-    "seeDetails": "Voir la fiche"
+    "seeDetails": "Voir la fiche",
+    "another": "Autre suggestion"
   },
   "filterPanel": {
     "filters": "Filtres",
