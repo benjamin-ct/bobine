@@ -1,5 +1,4 @@
 .panel {
-  margin-top: 24px;
   padding: 26px 26px 22px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -273,6 +272,13 @@
   background: var(--accent-soft);
 }
 
+/* Case vide pendant le premier chargement (voir TopPicksPanel.tsx). */
+.loadingCard,
+.loadingCard:hover {
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+
 .plus {
   font-size: 1.8rem;
   font-weight: 300;
@@ -413,6 +419,11 @@
 
   .emptySlot {
     display: none;
+  }
+
+  /* Pendant le premier chargement, les cases gardent la place des lignes. */
+  .emptySlot.loadingSlot {
+    display: grid;
   }
 
   .addRow {

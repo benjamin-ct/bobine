@@ -41,8 +41,10 @@
   padding-block: clamp(20px, 3vw, 32px) 16px;
 }
 
+/* Même espace sous les onglets que .settings : le contenu démarre à la même
+   hauteur quel que soit l'onglet. */
 .section {
-  padding-block: clamp(28px, 4vw, 44px);
+  padding-block: clamp(20px, 3vw, 32px) clamp(28px, 4vw, 44px);
 }
 
 .section h2 {

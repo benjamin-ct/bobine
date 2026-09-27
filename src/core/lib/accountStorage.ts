@@ -16,6 +16,7 @@ const ACCOUNT_DATA_KEYS = [
   "seancy.excludedTitles.labels.v1",
   "seancy.excludedGenres.v1",
   "seancy.favoriteProviders.v1",
+  "seancy.topPicks.v1",
 ];
 
 const SYNCED_FOR_KEYS = [
