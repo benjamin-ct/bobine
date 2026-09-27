@@ -47,6 +47,48 @@ alertes avec les notifications de fin de pipeline Trello.
    new issue is created") > action "Send a notification via a webhook" > URL =
    `https://<host-du-listener>:29000/sentry-webhook?secret=<SENTRY_WEBHOOK_SECRET>`.
 
+## Vérification visuelle par Claude (navigateur headless)
+
+L'image `bobine-repo` embarque Chromium (via Playwright) et un script `bobine-screenshot` :
+Claude peut capturer une page en desktop (1440×900) et en mobile (iPhone 13), puis lire le PNG
+pour vérifier son travail. Deux cibles possibles :
+
+- **La preview de la PR** (`https://<branche>-bobine.creusatbenjamin.workers.dev`), avec sa
+  base D1 de preview et les vraies données TMDB. Elle est protégée par Cloudflare Access : il faut
+  un **jeton de service** (étapes 1 et 2 ci-dessous).
+- **Un serveur local** `wrangler dev` lancé dans le conteneur, avec une D1 locale remplie de
+  données de test. Il faut une clé TMDB pour avoir de vraies affiches et fiches (étape 3).
+
+Étapes manuelles (une seule fois) :
+
+1. Cloudflare Zero Trust > **Access > Service Auth > Service Tokens** > _Create Service Token_
+   (ex. `claude-screenshots`, durée « Non-expiring » ou 1 an). Copier le _Client ID_ et le
+   _Client Secret_ (le secret n'est affiché qu'une fois) dans `.env` :
+   `CF_ACCESS_CLIENT_ID=…` et `CF_ACCESS_CLIENT_SECRET=…`.
+2. Zero Trust > **Access > Applications** > l'application qui protège les previews
+   (`*-bobine.creusatbenjamin.workers.dev`) > _Policies_ > _Add a policy_ : **Action =
+   Service Auth**, _Include_ > **Service Token** = le jeton créé en 1. Enregistrer. (Une policy
+   « Allow » ne suffit pas : un jeton de service n'est accepté que par une policy « Service
+   Auth ».)
+3. (Optionnel, pour le serveur local) Renseigner `TMDB_API_KEY=…` dans `.env` (clé API TMDB
+   v3, la même que le secret du Worker convient).
+4. Reconstruire l'image (le Dockerfile a changé, d'où le `--build`) et recréer les services :
+
+   ```bash
+   docker-compose -f docker-compose-bobine.yml up -d --build --force-recreate bobine-repo webhook-listener
+   ```
+
+5. Vérifier :
+
+   ```bash
+   docker exec -u claudeuser bobine-repo bobine-screenshot https://example.com /tmp/test.png
+   # Preview (après les étapes 1-2) : doit afficher « HTTP 200 » et l'URL de la preview,
+   # pas une page cloudflareaccess.com.
+   docker exec -u claudeuser bobine-repo bobine-screenshot https://<une-preview>-bobine.creusatbenjamin.workers.dev /tmp/preview.png
+   ```
+
+Sans les étapes 1-2, les captures fonctionnent quand même, mais uniquement sur le serveur local.
+
 ## Déploiement initial sur le serveur
 
 ```bash

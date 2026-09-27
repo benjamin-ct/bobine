@@ -24,6 +24,8 @@ services:
     container_name: bobine-repo
     command: sleep infinity
     user: claudeuser
+    # Chromium (bobine-screenshot) plante avec les 64 Mo de /dev/shm par défaut.
+    shm_size: "1gb"
     volumes:
       - ../../:/workspace
       - ./ssh-keys:/home/claudeuser/.ssh
@@ -42,6 +44,12 @@ services:
       - SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
       - SENTRY_ORG_SLUG=${SENTRY_ORG_SLUG}
       - SENTRY_PROJECT_SLUG=${SENTRY_PROJECT_SLUG}
+      # Jeton de service Cloudflare Access : captures des previews de PR
+      # (voir README, « Vérification visuelle »). Optionnels.
+      - CF_ACCESS_CLIENT_ID=${CF_ACCESS_CLIENT_ID:-}
+      - CF_ACCESS_CLIENT_SECRET=${CF_ACCESS_CLIENT_SECRET:-}
+      # Clé TMDB pour `wrangler dev` en local (sinon les pages restent vides). Optionnelle.
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-opus-5-5}
     restart: unless-stopped
 
