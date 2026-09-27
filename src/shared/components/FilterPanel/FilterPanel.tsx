@@ -391,7 +391,7 @@ export default function FilterPanel({
   const filtersButton = (
     <button
       type="button"
-      className={`${styles.filtersBtn} ${open ? styles.filtersBtnOpen : ""} ${periods ? styles.filtersBtnEnd : ""}`}
+      className={`${styles.filtersBtn} ${open ? styles.filtersBtnOpen : ""}`}
       onClick={() => setOpen((o) => !o)}
       aria-expanded={open}
       aria-controls={panelId}
@@ -436,37 +436,30 @@ export default function FilterPanel({
 
   return (
     <div className={styles.wrap}>
+      {/* Films/Séries (et période), puis « Filtres » calé à droite, sur une
+          ligne ; les puces des filtres actifs sur la suivante. */}
       <div className={styles.toolbar}>
-        {periods ? (
-          <>
-            {/* Films/Séries, période et « Filtres » (tout à droite) sur une
-                ligne ; les puces des filtres actifs sur la suivante. */}
-            <div className={styles.toolbarRow}>
-              {segmented}
-              <div className={styles.periods} role="group" aria-label={periods.label}>
-                {periods.options.map((o) => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    className={`${styles.period} ${periods.value === o.value ? styles.periodActive : ""}`}
-                    aria-pressed={periods.value === o.value}
-                    onClick={() => periods.onChange(o.value)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-              {filtersButton}
+        <div className={styles.toolbarRow}>
+          {segmented}
+          {periods && (
+            <div className={styles.periods} role="group" aria-label={periods.label}>
+              <SlidingIndicator activeKey={periods.value} />
+              {periods.options.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  className={`${styles.period} ${periods.value === o.value ? styles.periodActive : ""}`}
+                  aria-pressed={periods.value === o.value}
+                  onClick={() => periods.onChange(o.value)}
+                >
+                  {o.label}
+                </button>
+              ))}
             </div>
-            {active.length > 0 && <div className={styles.toolbarRow}>{activeChips}</div>}
-          </>
-        ) : (
-          <>
-            {segmented}
-            {filtersButton}
-            {active.length > 0 && activeChips}
-          </>
-        )}
+          )}
+          {filtersButton}
+        </div>
+        {active.length > 0 && <div className={styles.toolbarRow}>{activeChips}</div>}
       </div>
 
       {open && (
