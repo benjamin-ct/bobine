@@ -23,7 +23,7 @@ import SharedList from "./modules/shared-list/index.ts";
 import { LoginPage, VerifyAuthPage, MembersOnlyDialog } from "./modules/auth/index.ts";
 import { TermsPage, PrivacyPolicyPage } from "./modules/legal/index.ts";
 import NotFound from "./modules/not-found/index.ts";
-import { fadeIn } from "./shared/lib/motion.ts";
+import { fadeIn, isPosterTransitionRunning } from "./shared/lib/motion.ts";
 
 export default function App() {
   const { pathname } = useLocation();
@@ -39,7 +39,10 @@ export default function App() {
       firstRender.current = false;
       return;
     }
-    fadeIn(mainRef.current);
+    // Transition d'affiche en cours : elle fait déjà son propre fondu.
+    if (!isPosterTransitionRunning()) {
+      fadeIn(mainRef.current);
+    }
   }, [pathname]);
 
   return (

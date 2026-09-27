@@ -5,8 +5,8 @@
    la 18e) arrivent sans animation, pour ne pas ralentir le défilement. */
 .item {
   --stagger: 0;
-  animation: in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-  animation-delay: calc(var(--stagger) * 35ms);
+  animation: in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--stagger) * 60ms);
 }
 
 .item:nth-child(n + 2) {
@@ -50,7 +50,7 @@
 @keyframes in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(28px) scale(0.94);
   }
 }
 

@@ -227,6 +227,29 @@ h4 {
   }
 }
 
+/* Affiche qui s'agrandit vers la fiche (shared/lib/motion.ts, morphPoster) :
+   le reste de la page se fond pendant que l'affiche glisse et grandit. */
+[data-morph-poster] {
+  view-transition-name: media-poster;
+}
+
+::view-transition-group(media-poster) {
+  animation-duration: 0.45s;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+::view-transition-old(media-poster),
+::view-transition-new(media-poster) {
+  height: 100%;
+  object-fit: cover;
+  animation-duration: 0.45s;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+}
+
 /* « Réduire les animations » (réglage système) : coupe toutes les
    animations et transitions du site d'un coup, y compris celles qui n'ont
    pas leur propre @media. Durée quasi nulle plutôt que `none` pour que les

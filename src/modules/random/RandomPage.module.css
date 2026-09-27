@@ -441,7 +441,7 @@
 }
 
 .reveal .posterWrap {
-  animation: posterReveal 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
+  animation: posterReveal 0.75s ease-out backwards;
 }
 
 .reveal .head {
@@ -452,10 +452,21 @@
   animation: riseIn 0.4s ease-out 0.25s backwards;
 }
 
+/* L'affiche pivote en tombant, puis rebondit en se posant. */
 @keyframes posterReveal {
   from {
     opacity: 0;
-    transform: perspective(800px) rotateY(-80deg) scale(0.9);
+    transform: perspective(800px) translateY(-70px) rotateY(-80deg) scale(0.9);
+  }
+  55% {
+    opacity: 1;
+    transform: perspective(800px) translateY(10px) rotateY(0) scale(1.02);
+  }
+  75% {
+    transform: translateY(-6px);
+  }
+  90% {
+    transform: translateY(2px);
   }
   to {
     opacity: 1;
@@ -466,7 +477,7 @@
 @keyframes riseIn {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;

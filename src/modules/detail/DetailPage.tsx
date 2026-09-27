@@ -37,7 +37,7 @@ import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx"
 import { useMembersOnly } from "../../core/context/MembersOnlyContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import { STAR_LABEL_KEYS } from "../../shared/lib/ratingTier.ts";
-import { pop } from "../../shared/lib/motion.ts";
+import { findCardPoster, findDetailPoster, morphPoster, pop } from "../../shared/lib/motion.ts";
 import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPreviewCache.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
@@ -206,8 +206,17 @@ export default function DetailPage() {
           // pour que useScrollRestoration restaure la position de la liste
           // d'origine — un <Link> classique crée une nouvelle entrée
           // d'historique (PUSH) et ne restaure jamais rien.
+          // L'affiche revient à sa place dans la liste si la carte y est visible.
           e.preventDefault();
-          navigate(-1);
+          if (
+            !morphPoster(
+              findDetailPoster(),
+              () => navigate(-1),
+              () => findCardPoster(`${mediaType}:${id}`)
+            )
+          ) {
+            navigate(-1);
+          }
         }}
       >
         {t("detailPage.back")}
@@ -492,7 +501,7 @@ export default function DetailPage() {
         <div className={`${styles.halo} ${styles[`halo_${accentKey}`]}`} aria-hidden="true" />
         <div className={styles.heroInner}>
           {backLink(styles.back)}
-          <div className={styles.posterWrap}>
+          <div className={styles.posterWrap} data-morph-poster>
             {details.poster_path ? (
               <img
                 src={posterUrl(details.poster_path, "w342") ?? undefined}

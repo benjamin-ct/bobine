@@ -30,11 +30,12 @@ export function pop(el: Element | null | undefined, delay = 0): void {
   play(
     el,
     [
-      { transform: "scale(1)" },
-      { transform: "scale(1.35)", offset: 0.4 },
-      { transform: "scale(1)" },
+      { transform: "scale(1) rotate(0)" },
+      { transform: "scale(1.7) rotate(-12deg)", offset: 0.35 },
+      { transform: "scale(0.9) rotate(4deg)", offset: 0.7 },
+      { transform: "scale(1) rotate(0)" },
     ],
-    { duration: 320, delay, easing: EASE_OUT_BACK }
+    { duration: 480, delay, easing: EASE_OUT_BACK }
   );
 }
 
@@ -43,13 +44,13 @@ export function light(el: Element | null | undefined, delay = 0): void {
   play(
     el,
     [
-      { opacity: 0.35, transform: "scale(0.7)" },
-      { opacity: 1, transform: "scale(1.3)", offset: 0.55 },
+      { opacity: 0.25, transform: "scale(0.4)" },
+      { opacity: 1, transform: "scale(1.6)", offset: 0.55 },
       { opacity: 1, transform: "scale(1)" },
     ],
     // « backwards » : l'étoile reste éteinte pendant son délai, sinon elles
     // s'allumeraient toutes d'un coup avant de rebondir l'une après l'autre.
-    { duration: 260, delay, easing: "ease-out", fill: "backwards" }
+    { duration: 420, delay, easing: "ease-out", fill: "backwards" }
   );
 }
 
@@ -57,5 +58,103 @@ export function light(el: Element | null | undefined, delay = 0): void {
  * transform sur <main> rattacherait à lui, le temps de l'animation, les
  * éléments `position: fixed` de la page (panneau Filtres, dialogues). */
 export function fadeIn(el: Element | null | undefined): void {
-  play(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: "ease-out" });
+  play(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 380, easing: "ease-out" });
+}
+
+// ─── Affiche qui s'agrandit vers la fiche (View Transitions) ───────────────
+// Au clic sur une carte, son affiche glisse et grandit jusqu'à sa place sur
+// la fiche ; « Retour » fait le chemin inverse. Le navigateur photographie
+// l'avant et l'après, et anime entre les deux l'élément qui porte le même
+// `view-transition-name` des deux côtés. L'affiche de la fiche le porte en
+// CSS (global.css, [data-morph-poster]) : elle passe du squelette à la fiche
+// chargée pendant la transition, un nom posé en inline serait perdu. Côté
+// cartes, le nom n'est posé que le temps de la transition, en inline : il
+// doit être unique dans la page, alors qu'une grille compte des dizaines
+// d'affiches. Navigateur sans View Transitions ou « réduire les
+// animations » : navigation normale.
+
+const POSTER_TRANSITION_NAME = "media-poster";
+let posterTransitionRunning = false;
+
+/** Vrai pendant une transition d'affiche (le fondu de page s'efface alors). */
+export function isPosterTransitionRunning(): boolean {
+  return posterTransitionRunning;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Lance `go` (la navigation) dans une transition qui fait passer l'affiche
+ * `from` à l'élément renvoyé par `findTarget` une fois la nouvelle page
+ * affichée. Renvoie false sans rien faire si la transition n'est pas
+ * possible : l'appelant navigue alors normalement.
+ */
+export function morphPoster(
+  from: HTMLElement | null,
+  go: () => void,
+  findTarget: () => HTMLElement | null
+): boolean {
+  if (
+    !from ||
+    typeof document === "undefined" ||
+    typeof document.startViewTransition !== "function" ||
+    prefersReducedMotion()
+  ) {
+    return false;
+  }
+  let target: HTMLElement | null = null;
+  // Fiche → autre fiche (saga, recommandations) : l'affiche de la fiche
+  // actuelle porte déjà le nom ; deux noms identiques annuleraient tout.
+  const others = Array.from(document.querySelectorAll<HTMLElement>("[data-morph-poster]")).filter(
+    (el) => el !== from
+  );
+  others.forEach((el) => (el.style.viewTransitionName = "none"));
+  from.style.viewTransitionName = POSTER_TRANSITION_NAME;
+  posterTransitionRunning = true;
+  const transition = document.startViewTransition(async () => {
+    from.style.viewTransitionName = "";
+    // React peut réutiliser le même nœud pour la nouvelle fiche.
+    others.forEach((el) => (el.style.viewTransitionName = ""));
+    go();
+    // La navigation de React Router est asynchrone (startTransition, ou
+    // popstate pour un retour) : on attend que la nouvelle page affiche
+    // l'affiche cible, 600 ms au plus. setTimeout et non
+    // requestAnimationFrame, suspendu pendant la capture.
+    const start = performance.now();
+    while (!(target = findTarget()) && performance.now() - start < 600) {
+      await wait(16);
+    }
+    // Laisse passer les effets de la nouvelle page (remise en haut du
+    // défilement) avant la photo de l'après.
+    await wait(16);
+    if (target && !target.hasAttribute("data-morph-poster")) {
+      target.style.viewTransitionName = POSTER_TRANSITION_NAME;
+    }
+  });
+  transition.finished.finally(() => {
+    posterTransitionRunning = false;
+    if (target) {
+      target.style.viewTransitionName = "";
+    }
+  });
+  return true;
+}
+
+/** Affiche de la fiche ouverte (DetailPage ou son squelette). */
+export function findDetailPoster(): HTMLElement | null {
+  return document.querySelector<HTMLElement>("[data-morph-poster]");
+}
+
+/** Affiche de la carte `key` (« movie:123 ») visible à l'écran, pour le retour. */
+export function findCardPoster(key: string): HTMLElement | null {
+  const cards = document.querySelectorAll<HTMLElement>(`[data-morph-card="${key}"]`);
+  for (const card of cards) {
+    const r = card.getBoundingClientRect();
+    if (r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth) {
+      return card;
+    }
+  }
+  return null;
 }

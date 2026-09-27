@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
+import { isPosterTransitionRunning } from "../lib/motion.ts";
 
 // Position de scroll mémorisée par entrée d'historique (clé unique fournie
 // par React Router), en mémoire pour la durée de la session : permet de
@@ -60,11 +61,13 @@ export function useScrollRestoration(ready: boolean, versionKey: number | string
     // animation par-dessus la précédente à chaque nouveau lot, d'où les saccades
     // observées auparavant. Seule la dernière étape, une fois la cible atteignable,
     // est animée (behavior explicite : le CSS global `scroll-behavior: smooth`
-    // ne s'applique qu'en son absence).
+    // ne s'applique qu'en son absence). Pendant un retour avec l'affiche qui
+    // regagne sa carte (motion.ts, morphPoster), instantané aussi : l'écran
+    // est figé le temps de la capture, et la carte doit déjà être à sa place.
     window.scrollTo({
       top: Math.min(target, Math.max(maxScroll, 0)),
       left: 0,
-      behavior: isFinalStep ? "smooth" : "instant",
+      behavior: isFinalStep && !isPosterTransitionRunning() ? "smooth" : "instant",
     });
     if (isFinalStep) {
       restoringRef.current = false;

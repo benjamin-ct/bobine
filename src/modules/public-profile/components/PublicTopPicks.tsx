@@ -6,6 +6,7 @@ import { Icon, MediaCard } from "../../../shared/components/index.ts";
 import { libraryItemToMediaItem } from "../../../shared/lib/libraryItem.ts";
 import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
+import staggerStyles from "../../../shared/styles/stagger.module.css";
 import cardStyles from "../../../shared/components/MediaCard/MediaCard.module.css";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import styles from "./PublicTopPicks.module.css";
@@ -83,7 +84,7 @@ export default function PublicTopPicks({ items, ownerName, genreNames }: Props) 
 
       <ol className={styles.row}>
         {items.map((item, index) => (
-          <li key={makeKey(item)} className={styles.slot}>
+          <li key={makeKey(item)} className={`${styles.slot} ${staggerStyles.item}`}>
             <span
               className={`${styles.rank} ${styles[RANK_CLASS[index]]}`}
               aria-label={t("mediaCard.rank", { rank: index + 1 })}

@@ -43,7 +43,7 @@ export default function RatingStars({
     if (next != null) {
       Array.from(starsRef.current?.children ?? [])
         .slice(0, next)
-        .forEach((star, i) => light(star, i * 30));
+        .forEach((star, i) => light(star, i * 60));
     }
   };
 
