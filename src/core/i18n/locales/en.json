@@ -81,7 +81,9 @@
     "updateShareError": "Couldn't update profile sharing.",
     "usernameTaken": "This username is already taken.",
     "usernameInvalid": "Invalid username: 3 to 15 characters, lowercase letters, digits or “_”.",
-    "updateUsernameError": "Couldn't save the username."
+    "updateUsernameError": "Couldn't save the username.",
+    "avatarError": "Couldn't save your profile photo.",
+    "avatarTooLarge": "This image is too large, even once resized."
   },
   "loginPage": {
     "title": "Sign in",
@@ -198,7 +200,18 @@
     "emailHint": "Used to sign in. Nobody else sees it.",
     "emailPrivate": "Never shown publicly",
     "session": "Session",
-    "sessionHint": "Sign out of Seancy on this device."
+    "sessionHint": "Sign out of Seancy on this device.",
+    "avatarChoose": "Add a photo",
+    "avatarChange": "Change photo",
+    "avatarRemove": "Remove photo",
+    "avatarHint": "Without a photo, Seancy shows your Gravatar, or else your initial.",
+    "avatarUnreadable": "Couldn't read this image. Try a JPEG or PNG file.",
+    "avatarCropTitle": "Crop your photo",
+    "avatarCropHint": "Drag the photo to move it, pinch or use the slider to zoom.",
+    "avatarCropPreview": "Crop preview. Arrow keys to move, + and − to zoom.",
+    "avatarCropZoom": "Zoom",
+    "avatarCropCancel": "Cancel",
+    "avatarCropConfirm": "Confirm"
   },
   "excludedGenres": {
     "summary": "Genres to exclude",
@@ -569,7 +582,7 @@
   "privacyPolicyPage": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated: {{date}}",
-    "lastUpdatedValue": "September 26, 2026",
+    "lastUpdatedValue": "September 27, 2026",
     "controller": {
       "title": "Data controller",
       "textBefore": "Seancy is a personal project, with no commercial structure, operated from France. The data processing described below is therefore governed by French law and the GDPR. There isn't a dedicated public contact address yet: in the meantime, you can reach us "
@@ -578,11 +591,11 @@
       "title": "Data we collect",
       "account": {
         "label": "Account",
-        "text": ": your email address (the only information requested at sign-up), used for single-use link/code sign-in — no password is stored. You can change it from your profile: the new address is only saved once you enter a code sent to it (the pending request is kept for 15 minutes at most), and a notice is sent to the previous one. You can also set an optional display name, visible on your account card and synced across your devices."
+        "text": ": your email address (the only information requested at sign-up), used for single-use link/code sign-in — no password is stored. You can change it from your profile: the new address is only saved once you enter a code sent to it (the pending request is kept for 15 minutes at most), and a notice is sent to the previous one. You can also set an optional display name, visible on your account card and synced across your devices, and an optional profile photo: it is cropped and resized on your device before upload (which strips its metadata, including GPS location), kept until you remove it, and then replaces your Gravatar picture."
       },
       "library": {
         "label": "Personal library",
-        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", your custom lists, and their content. If you turn on profile sharing (optional, off by default), these items along with your ratings, display name and Gravatar profile picture (if you have one) become visible read-only to anyone who has the share link — never your email address. You can turn sharing off at any time, which permanently invalidates the link."
+        "text": ": the movies/shows you mark as \"watched\" or \"want to watch\", your custom lists, and their content. If you turn on profile sharing (optional, off by default), these items along with your ratings, display name and profile picture (your own, or else your Gravatar picture, if you have one) become visible read-only to anyone who has the share link — never your email address. You can turn sharing off at any time, which permanently invalidates the link."
       },
       "preferences": {
         "label": "Preferences",
