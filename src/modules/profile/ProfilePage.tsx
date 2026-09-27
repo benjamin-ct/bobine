@@ -13,7 +13,7 @@ import ExcludedTitlesSettings from "./components/ExcludedTitlesSettings.tsx";
 import RegionSettings from "./components/RegionSettings.tsx";
 import LanguageSettings from "./components/LanguageSettings.tsx";
 import ThemeSettings from "./components/ThemeSettings.tsx";
-import { SettingsGroup, SettingsRow } from "./components/SettingsGroup.tsx";
+import { SettingsGroup } from "./components/SettingsGroup.tsx";
 import styles from "./ProfilePage.module.css";
 
 type Tab = "compte" | "preferences" | "ma-liste" | "communaute";
@@ -109,12 +109,7 @@ export default function ProfilePage() {
             title={t("profile.notifications")}
             description={t("profile.notificationsLead")}
           >
-            <SettingsRow
-              label={t("profile.notifications")}
-              description={t("profile.notificationsHint")}
-            >
-              <NotificationSettings />
-            </SettingsRow>
+            <NotificationSettings />
           </SettingsGroup>
 
           <SettingsGroup title={t("profile.display")} description={t("profile.displayLead")}>

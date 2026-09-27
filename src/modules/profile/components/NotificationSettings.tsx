@@ -394,7 +394,11 @@ export default function NotificationSettings() {
   }, [endpoint, locale]);
 
   if (!isSupported()) {
-    return <p className={styles.hint}>{t("notificationSettings.unsupported")}</p>;
+    return (
+      <div className={styles.pushSettings}>
+        <p className={styles.hint}>{t("notificationSettings.unsupported")}</p>
+      </div>
+    );
   }
 
   async function enable() {
@@ -449,14 +453,20 @@ export default function NotificationSettings() {
   const enabled = endpoint !== null;
 
   return (
-    <div>
+    <div className={styles.pushSettings}>
       <div className={styles.switchRow}>
-        <span id="push-switch-label">{t("notificationSettings.pushLabel")}</span>
+        <div>
+          <span id="push-switch-label">{t("notificationSettings.pushLabel")}</span>
+          <p id="push-switch-hint" className={styles.pushHint}>
+            {t("profile.notificationsHint")}
+          </p>
+        </div>
         <button
           type="button"
           role="switch"
           aria-checked={enabled}
           aria-labelledby="push-switch-label"
+          aria-describedby="push-switch-hint"
           className={`${styles.switch} ${enabled ? styles.switchOn : ""}`}
           onClick={enabled ? disable : enable}
           disabled={status === "working"}

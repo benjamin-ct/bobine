@@ -162,6 +162,16 @@ précédente s'est arrêtée en cours de route) et continuer le développement (
    `fix/filtre-plateformes-streaming`. Éviter les IDs/hash illisibles ; le numéro de ticket peut être ajouté en suffixe
    si utile (`feature/watchlist-films-42`), mais jamais en tête ou seul.
 2. Développer ce qui est demandé, commiter au fur et à mesure.
+   - **Vérification visuelle** (tout changement d’interface) : le conteneur fournit
+     `bobine-screenshot <url> <sortie.png> --both [--full] [--cookie bobine_session=<jeton>]`
+     (Chromium headless, desktop 1440×900 + mobile iPhone 13), puis lire les PNG avec Read.
+     Cibles : la preview de la PR une fois déployée (accessible si `CF_ACCESS_CLIENT_ID` /
+     `CF_ACCESS_CLIENT_SECRET` sont définis, sinon on obtient la page de connexion Access), ou
+     un `wrangler dev` local lancé depuis un worktree dans `/tmp` (`npm ci`, `npm run build`,
+     `wrangler d1 migrations apply bobine-notifications --local`, `.dev.vars` avec
+     `TMDB_API_KEY` si défini, données de test + ligne `sessions` pour le cookie). Voir
+     `infra/trello-claude/README.md`, section « Vérification visuelle ». Si l’outil n’est pas
+     disponible, le dire dans le commentaire de la carte.
 3. **Si un blocage survient** (ambiguïté du besoin, blocage technique, décision à prendre, dépendance manquante) et
    empêche de finaliser :
    1. Ajouter un commentaire détaillé sur la carte expliquant précisément le blocage et ce qui est attendu comme
