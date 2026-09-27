@@ -366,11 +366,17 @@
     margin-inline: auto;
     padding: var(--tabbar-pad);
     border-radius: 999px;
-    /* Verre dépoli : fond translucide + flou/saturation de ce qui passe
-       dessous, liseré clair et reflet en haut, ombre portée douce. */
-    background: color-mix(in oklab, var(--header-bg) 62%, transparent);
-    backdrop-filter: blur(22px) saturate(180%);
-    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    /* Verre givré : voile laiteux clair par-dessus un fond translucide, flou
+       fort + saturation de ce qui passe dessous, liseré clair et reflet en
+       haut, ombre portée douce. Hors iOS, le voile est quasi opaque : sur Android
+       (Brave, Chrome…) le flou peut ne pas s'appliquer du tout, et c'est
+       alors lui seul qui donne l'aspect givré. iOS garde un verre plus
+       léger, son flou rendant bien (bloc @supports plus bas). */
+    background:
+      linear-gradient(oklch(1 0 0 / 0.26), oklch(1 0 0 / 0.18)),
+      color-mix(in oklab, var(--header-bg) 97%, transparent);
+    backdrop-filter: blur(32px) saturate(190%);
+    -webkit-backdrop-filter: blur(32px) saturate(190%);
     border: 1px solid oklch(1 0 0 / 0.14);
     box-shadow:
       inset 0 1px 0 oklch(1 0 0 / 0.16),
@@ -382,6 +388,15 @@
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .tabbar {
       background: color-mix(in oklab, var(--header-bg) 94%, transparent);
+    }
+  }
+  /* iOS (seul WebKit à connaître -webkit-touch-callout) : verre léger, le
+     flou y suffisant à rendre ce qui passe dessous givré. */
+  @supports (-webkit-touch-callout: none) {
+    .tabbar {
+      background:
+        linear-gradient(oklch(1 0 0 / 0.12), oklch(1 0 0 / 0.06)),
+        color-mix(in oklab, var(--header-bg) 68%, transparent);
     }
   }
   /* Pastille de l'onglet actif : glisse d'un onglet à l'autre (--tab-index
@@ -424,14 +439,24 @@
   }
 }
 
-/* Thème clair : verre blanc laiteux, pastille sombre discrète. */
+/* Thème clair : verre blanc laiteux, pastille sombre discrète (voile épais
+   hors iOS, comme en thème sombre). */
 @media (max-width: 860px) {
   [data-theme="light"] .tabbar {
-    background: color-mix(in oklab, var(--surface) 66%, transparent);
+    background:
+      linear-gradient(oklch(1 0 0 / 0.55), oklch(1 0 0 / 0.4)),
+      color-mix(in oklab, var(--surface) 96%, transparent);
     border-color: oklch(1 0 0 / 0.7);
     box-shadow:
       inset 0 1px 0 oklch(1 0 0 / 0.8),
       0 10px 30px -10px oklch(0 0 0 / 0.25);
+  }
+  @supports (-webkit-touch-callout: none) {
+    [data-theme="light"] .tabbar {
+      background:
+        linear-gradient(oklch(1 0 0 / 0.3), oklch(1 0 0 / 0.15)),
+        color-mix(in oklab, var(--surface) 66%, transparent);
+    }
   }
   [data-theme="light"] .tabbarIndicator {
     background: oklch(0 0 0 / 0.07);
