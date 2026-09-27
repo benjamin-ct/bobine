@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { SUPPORTED_LOCALES } from "../../../core/i18n/i18n.ts";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
+import { SlidingIndicator } from "../../../shared/components/index.ts";
 import { SettingsRow } from "./SettingsGroup.tsx";
 import styles from "./SettingsPanel.module.css";
 
@@ -19,6 +20,7 @@ export default function LanguageSettings() {
       description={t("languageSettings.description")}
     >
       <div className={styles.segmented} role="radiogroup" aria-label={t("languageSettings.title")}>
+        <SlidingIndicator activeKey={locale} />
         {SUPPORTED_LOCALES.map((code) => (
           <button
             key={code}

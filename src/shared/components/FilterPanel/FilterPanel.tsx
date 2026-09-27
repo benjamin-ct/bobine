@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Dropdown from "../Dropdown/Dropdown.tsx";
 import Icon from "../Icon/Icon.tsx";
+import SlidingIndicator from "../SlidingIndicator/SlidingIndicator.tsx";
 import {
   AdvancedFilterFields,
   EMPTY_ADVANCED_FILTERS,
@@ -367,6 +368,7 @@ export default function FilterPanel({
 
   const segmented = (
     <div className={styles.segmented} role="group" aria-label={t("filterBar.typeAriaLabel")}>
+      <SlidingIndicator activeKey={mediaType} />
       <button
         type="button"
         className={mediaType === "movie" ? styles.segActive : ""}
