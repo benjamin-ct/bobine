@@ -115,15 +115,16 @@
   --halo-2: var(--g-adv-2);
 }
 
-/* Desktop : pilule au-dessus de l'affiche, de la même largeur. */
+/* Desktop : petite pilule au-dessus de l'affiche, calée à gauche (étirée
+   sur toute la largeur de l'affiche, elle paraissait trop grosse). */
 .back {
   grid-area: back;
-  justify-self: stretch;
+  justify-self: start;
   margin-bottom: 24px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 16px;
+  padding: 7px 14px;
   border-radius: 999px;
   border: 1px solid var(--border-2);
   background: color-mix(in oklch, var(--bg) 55%, transparent);
