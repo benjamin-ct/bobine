@@ -763,7 +763,10 @@
     "tvStatusPlanned": "Announced",
     "tvStatusEnded": "Ended",
     "tvStatusCanceled": "Canceled",
-    "followingInProgress": "Watching · S{{season}} E{{episode}}"
+    "followingInProgress": "Watching · S{{season}} E{{episode}}",
+    "castShown": "{{shown}} of {{total}}",
+    "showMoreCast_one": "Show the next one",
+    "showMoreCast_other": "Show the next {{count}}"
   },
   "personPage": {
     "back": "← Back",

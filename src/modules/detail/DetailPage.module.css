@@ -529,6 +529,34 @@
   gap: 18px;
 }
 
+.castMore {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.castMoreCount {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.castMoreBtn {
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.castMoreBtn:hover {
+  background: var(--surface-2);
+}
+
 .infoCard {
   padding: 20px;
   border: 1px solid var(--border);
@@ -779,34 +807,16 @@
     order: 4;
   }
 
-  /* Casting : rangée qui défile horizontalement. */
+  /* Casting : grille de 4 colonnes, sans défilement horizontal. Les 8
+     acteurs principaux tiennent sur deux rangées ; « Tout le casting »
+     ajoute des lots de 48 (multiple de 4), les rangées restent complètes. */
   .castGrid {
-    display: flex;
-    gap: 14px;
-    margin-inline: calc(-1 * var(--gutter));
-    padding-inline: var(--gutter);
-    overflow-x: auto;
-    scrollbar-width: none;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px 12px;
   }
 
   .castGrid > * {
-    flex: none;
-    width: 96px;
-  }
-
-  /* « Tout le casting » : grille qui passe à la ligne. Dans la rangée
-     horizontale, les acteurs ajoutés arrivaient hors écran, à droite, et le
-     bouton semblait ne rien faire. */
-  .castGridAll {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-    row-gap: 18px;
-    margin-inline: 0;
-    padding-inline: 0;
-    overflow: visible;
-  }
-
-  .castGridAll > * {
-    width: auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }
