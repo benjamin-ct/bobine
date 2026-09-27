@@ -465,7 +465,7 @@ export default function PersonPage() {
           {crewFirst ? [crewSection, actingSection] : [actingSection, crewSection]}
         </div>
 
-        <aside className={detailStyles.aside}>
+        <aside className={`${detailStyles.aside} ${styles.asideFirst}`}>
           <section className={detailStyles.infoCard}>
             <h2>{t("personPage.infos")}</h2>
             <dl className={detailStyles.infoList}>
