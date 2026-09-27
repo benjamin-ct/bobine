@@ -100,11 +100,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 11px 18px;
+  gap: 7px;
+  padding: 8px 14px;
   border-radius: 999px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .primaryBtn {
@@ -263,11 +264,8 @@
     background: var(--border-2);
   }
 
-  .actions > * {
-    flex: 1;
-  }
-
   .primaryBtn {
     width: 100%;
+    padding-block: 10px;
   }
 }

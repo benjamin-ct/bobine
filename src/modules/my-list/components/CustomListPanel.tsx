@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
@@ -9,6 +9,7 @@ import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
+import { neighborOf, useSortable } from "../../../shared/hooks/useSortable.ts";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
 import type { CustomList, LibraryItem } from "../../../core/types/library.ts";
 import ListShareDialog from "./ListShareDialog.tsx";
@@ -54,8 +55,6 @@ export default function CustomListPanel({
   const [renameValue, setRenameValue] = useState(list.name);
   const [sortMode, setSortMode] = useState<SortMode>("manual");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [dragKey, setDragKey] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ key: string; after: boolean } | null>(null);
   const items = getListItems(list.id);
   const ratedCount = items.filter((item) => getRating(item.mediaType, item.id) != null).length;
   const cover = items.slice(0, COVER_SIZE);
@@ -73,39 +72,39 @@ export default function CustomListPanel({
   }
 
   const manual = sortMode === "manual";
+  const canSort = manual && items.length > 1;
+  const byKey = new Map(items.map((item) => [makeKey(item), item]));
+  const sortable = useSortable({
+    keys: items.map(makeKey),
+    enabled: canSort,
+    onReorder: (next, moved) => {
+      const { toKey, after } = neighborOf(next, moved);
+      reorderList(list.id, moved, toKey, after);
+    },
+  });
   const sorted =
     sortMode === "title"
       ? [...items].sort((a, b) => a.title.localeCompare(b.title, "fr"))
       : sortMode === "year"
         ? [...items].sort((a, b) => (b.date || "").localeCompare(a.date || ""))
-        : items;
+        : sortable.order.map((key) => byKey.get(key)!);
 
-  function onDragStart(key: string) {
-    setDragKey(key);
+  // Glisser à la souris sur tout l'élément, au doigt depuis la poignée ⋮⋮.
+  function sortItemProps(item: LibraryItem, className = "") {
+    const key = makeKey(item);
+    return {
+      key,
+      ...(canSort ? sortable.itemProps(key) : {}),
+      className: `${styles.sortItem} ${className} ${canSort ? styles.draggable : ""} ${
+        sortable.dragKey === key ? styles.dragging : ""
+      }`,
+    };
   }
-  function onDragOver(e: DragEvent<HTMLDivElement>, key: string) {
-    if (!manual || !dragKey || dragKey === key) {
-      return;
-    }
-    e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const after =
-      viewMode === "grid"
-        ? e.clientX - rect.left > rect.width / 2
-        : e.clientY - rect.top > rect.height / 2;
-    setDropTarget({ key, after });
-  }
-  function onDrop(key: string) {
-    if (dragKey && dragKey !== key && dropTarget) {
-      reorderList(list.id, dragKey, key, dropTarget.after);
-    }
-    setDragKey(null);
-    setDropTarget(null);
-  }
-  function onDragEnd() {
-    setDragKey(null);
-    setDropTarget(null);
-  }
+  const dragHandle = canSort && (
+    <span className={styles.dragHandle} data-drag-handle aria-hidden>
+      <Icon name="dragHandle" />
+    </span>
+  );
 
   return (
     <div>
@@ -224,33 +223,33 @@ export default function CustomListPanel({
               <Icon name="share" /> {t("customListPanel.share")}
             </button>
           )}
-          <Dropdown
-            label={<Icon name="more" size={18} />}
-            ariaLabel={t("customListPanel.moreActions")}
-            caret={false}
-            closeOnSelect
-            align="right"
-          >
-            <button
-              type="button"
-              className={dropdownStyles.option}
-              onClick={() => {
-                setRenameValue(list.name);
-                setRenaming(true);
-              }}
+          <div className={styles.more}>
+            <Dropdown
+              label={<Icon name="more" size={18} />}
+              ariaLabel={t("customListPanel.moreActions")}
+              caret={false}
+              closeOnSelect
+              align="right"
             >
-              <Icon name="edit" /> {t("customListPanel.renameButton")}
-            </button>
-            <button type="button" className={dropdownStyles.option} onClick={handleDelete}>
-              <Icon name="trash" /> {t("customListPanel.deleteButton")}
-            </button>
-          </Dropdown>
+              <button
+                type="button"
+                className={dropdownStyles.option}
+                onClick={() => {
+                  setRenameValue(list.name);
+                  setRenaming(true);
+                }}
+              >
+                <Icon name="edit" /> {t("customListPanel.renameButton")}
+              </button>
+              <button type="button" className={dropdownStyles.option} onClick={handleDelete}>
+                <Icon name="trash" /> {t("customListPanel.deleteButton")}
+              </button>
+            </Dropdown>
+          </div>
         </div>
       </div>
 
-      {items.length > 1 && manual && (
-        <p className={styles.dragHint}>{t("customListPanel.dragHint")}</p>
-      )}
+      {canSort && <p className={styles.dragHint}>{t("customListPanel.dragHint")}</p>}
 
       {canShare && (
         <ListShareDialog
@@ -268,25 +267,11 @@ export default function CustomListPanel({
       ) : viewMode === "grid" ? (
         <div className={gridStyles.grid}>
           {sorted.map((item) => {
-            const key = makeKey(item);
+            const { key, ...props } = sortItemProps(item);
             return (
-              <div
-                key={key}
-                draggable={manual}
-                onDragStart={() => onDragStart(key)}
-                onDragOver={(e) => onDragOver(e, key)}
-                onDragLeave={() => setDropTarget((t) => (t?.key === key ? null : t))}
-                onDrop={() => onDrop(key)}
-                onDragEnd={onDragEnd}
-                className={`${manual ? styles.draggable : ""} ${dragKey === key ? styles.dragging : ""} ${
-                  dropTarget?.key === key
-                    ? dropTarget.after
-                      ? styles.dropAfter
-                      : styles.dropBefore
-                    : ""
-                }`}
-              >
+              <div key={key} {...props}>
                 <MediaCard item={libraryItemToMediaItem(item)} />
+                {dragHandle}
               </div>
             );
           })}
@@ -294,25 +279,10 @@ export default function CustomListPanel({
       ) : (
         <div className={styles.rows}>
           {sorted.map((item) => {
-            const key = makeKey(item);
+            const { key, ...props } = sortItemProps(item, styles.row);
             const accentKey = posterAccentFromGenres(item.genreIds, key);
             return (
-              <div
-                key={key}
-                draggable={manual}
-                onDragStart={() => onDragStart(key)}
-                onDragOver={(e) => onDragOver(e, key)}
-                onDragLeave={() => setDropTarget((t) => (t?.key === key ? null : t))}
-                onDrop={() => onDrop(key)}
-                onDragEnd={onDragEnd}
-                className={`${styles.row} ${manual ? styles.draggable : ""} ${dragKey === key ? styles.dragging : ""} ${
-                  dropTarget?.key === key
-                    ? dropTarget.after
-                      ? styles.rowDropAfter
-                      : styles.rowDropBefore
-                    : ""
-                }`}
-              >
+              <div key={key} {...props}>
                 <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.rowThumb}>
                   {item.posterPath ? (
                     <img src={posterUrl(item.posterPath, "w92") ?? undefined} alt={item.title} />
@@ -334,6 +304,7 @@ export default function CustomListPanel({
                       : ""}
                   </span>
                 </Link>
+                {dragHandle}
               </div>
             );
           })}

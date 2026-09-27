@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
@@ -8,6 +8,7 @@ import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
 import { Icon } from "../../../shared/components/index.ts";
 import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
+import { moveKey, useSortable } from "../../../shared/hooks/useSortable.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import styles from "./TopPicksPanel.module.css";
 
@@ -27,10 +28,9 @@ const RANK_CLASS = ["rank1", "rank2", "rank3", "rankOutline", "rankOutline"] as 
 // 860px) : liste verticale avec une poignée par ligne. Même DOM pour les deux,
 // seule la mise en page change (TopPicksPanel.module.css).
 //
-// Ordre par glisser-déposer via les Pointer Events plutôt que le drag & drop
-// HTML5, qui ne fonctionne pas au doigt sur iOS/Android. Au doigt, le glisser
-// ne part que de la poignée pour laisser la page défiler ailleurs. Au clavier,
-// les flèches déplacent le titre dont la poignée a le focus.
+// Ordre par glisser-déposer (useSortable : souris sur toute l'affiche, doigt
+// depuis la poignée, les autres titres se décalent en direct). Au clavier, les
+// flèches déplacent le titre dont la poignée a le focus.
 export default function TopPicksPanel() {
   const { t } = useTranslation();
   const { watched } = useLibrary();
@@ -38,8 +38,6 @@ export default function TopPicksPanel() {
   const [picks, setPicks] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [dragKey, setDragKey] = useState<string | null>(null);
-  const [overKey, setOverKey] = useState<string | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const panelRef = useRef<HTMLElement>(null);
 
@@ -79,6 +77,11 @@ export default function TopPicksPanel() {
   // Un titre retiré des « vus » depuis disparaît aussi du Top (le Worker
   // fait de même côté page publique).
   const chosen = (picks ?? []).filter((key) => byKey.has(key));
+  const sortable = useSortable({
+    keys: chosen,
+    enabled: chosen.length > 1,
+    onReorder: (next) => save(next),
+  });
 
   async function save(next: string[]) {
     const previous = picks;
@@ -114,9 +117,7 @@ export default function TopPicksPanel() {
     if (from === to || to < 0 || to >= chosen.length) {
       return;
     }
-    const next = chosen.filter((k) => k !== key);
-    next.splice(to, 0, key);
-    save(next);
+    save(moveKey(chosen, key, to));
   }
 
   function onHandleKeyDown(e: KeyboardEvent<HTMLButtonElement>, key: string) {
@@ -137,38 +138,6 @@ export default function TopPicksPanel() {
     e.preventDefault();
     move(key, target);
     setFocusKey(key);
-  }
-
-  function onPointerDown(e: PointerEvent<HTMLLIElement>, key: string) {
-    if (e.button !== 0 || chosen.length < 2) {
-      return;
-    }
-    // À la souris, toute l'affiche se glisse ; au doigt, seulement la poignée.
-    const fromHandle = (e.target as HTMLElement).closest("[data-drag-handle]");
-    if (e.pointerType !== "mouse" && !fromHandle) {
-      return;
-    }
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragKey(key);
-    setOverKey(key);
-  }
-  function onPointerMove(e: PointerEvent<HTMLLIElement>) {
-    if (!dragKey) {
-      return;
-    }
-    const target = document
-      .elementFromPoint(e.clientX, e.clientY)
-      ?.closest<HTMLElement>("[data-pick-key]");
-    if (target?.dataset.pickKey) {
-      setOverKey(target.dataset.pickKey);
-    }
-  }
-  function onPointerUp() {
-    if (dragKey && overKey && dragKey !== overKey) {
-      move(dragKey, chosen.indexOf(overKey));
-    }
-    setDragKey(null);
-    setOverKey(null);
   }
 
   // Poignée de déplacement : départ du glisser au doigt, flèches au clavier.
@@ -215,7 +184,7 @@ export default function TopPicksPanel() {
       ) : (
         <>
           <ol className={styles.slots}>
-            {chosen.map((key, index) => {
+            {sortable.order.map((key, index) => {
               const item = byKey.get(key)!;
               const poster = posterUrl(item.posterPath, "w342");
               const accent = posterAccentFromGenres(item.genreIds, key);
@@ -224,14 +193,10 @@ export default function TopPicksPanel() {
               return (
                 <li
                   key={key}
-                  data-pick-key={key}
+                  {...sortable.itemProps(key)}
                   className={`${styles.slot} ${canDrag ? styles.draggable : ""} ${
-                    dragKey === key ? styles.dragging : ""
-                  } ${overKey === key && dragKey !== key ? styles.dropTarget : ""}`}
-                  onPointerDown={(e) => onPointerDown(e, key)}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                  onPointerCancel={onPointerUp}
+                    sortable.dragKey === key ? styles.dragging : ""
+                  }`}
                 >
                   {canDrag && (
                     <button
@@ -347,10 +312,7 @@ export default function TopPicksPanel() {
         onClose={() => setPickerOpen(false)}
         watched={watched}
         chosen={chosen}
-        onAdd={(key) => {
-          add(key);
-          setPickerOpen(false);
-        }}
+        onAdd={add}
       />
     </section>
   );
@@ -369,8 +331,9 @@ const TYPE_FILTERS: TypeFilter[] = ["all", "movie", "tv"];
 
 // Modale « Ajouter à mon top 5 » (feuille du bas sur mobile) : la recherche
 // ne porte que sur les titres vus, jamais sur tout le catalogue. Les mieux
-// notés d'abord ; un clic ajoute le titre et referme la modale. Les titres
-// déjà dans le top sont grisés avec leur rang.
+// notés d'abord ; un clic ajoute le titre, la modale reste ouverte pour en
+// ajouter d'autres jusqu'à ce qu'on la ferme. Les titres déjà dans le top
+// sont grisés avec leur rang.
 function TopPicksPicker({ open, onClose, watched, chosen, onAdd }: PickerProps) {
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);

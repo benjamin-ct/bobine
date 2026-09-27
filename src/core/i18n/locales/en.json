@@ -362,6 +362,7 @@
     "tabSeen": "Watched",
     "tabWant": "Want to watch",
     "tabProgress": "In progress",
+    "customListsTabs": "My lists",
     "newListTab": "+ New list",
     "newListPlaceholder": "List name…",
     "create": "Create",
@@ -371,6 +372,7 @@
     "sharedTab": "(shared)"
   },
   "watchlistPanel": {
+    "moveItem": "Move {{title}}",
     "emptyState": "Empty list. Add titles with \"Want to watch\".",
     "dragHint": "Drag to reorder",
     "sortLabel": "Sort",
@@ -405,6 +407,7 @@
     "recentlyWatched": "Recently watched"
   },
   "customListPanel": {
+    "moveItem": "Move {{title}}",
     "confirmDelete": "Delete the list \"{{name}}\"? The titles themselves will stay in your other lists.",
     "rename": "Rename",
     "cancel": "Cancel",
@@ -865,6 +868,7 @@
     "removeTitle": "Remove {{title}} from top 5",
     "loadError": "Couldn't load your top 5.",
     "saveError": "Couldn't save your top 5.",
+    "freeSlots_zero": "Top 5 is full · remove a title to add another one",
     "freeSlots_one": "{{count}} spot left · tap a title to add it",
     "freeSlots_other": "{{count}} spots left · tap a title to add it",
     "close": "Close",

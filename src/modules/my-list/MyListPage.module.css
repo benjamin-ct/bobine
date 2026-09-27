@@ -45,6 +45,15 @@
   margin-block: 24px 26px;
 }
 
+/* Ligne des listes perso, juste sous les onglets fixes. */
+.tabs:has(+ .listTabs) {
+  margin-bottom: 0;
+}
+
+.listTabs {
+  margin-top: 10px;
+}
+
 .tab {
   display: inline-flex;
   align-items: center;

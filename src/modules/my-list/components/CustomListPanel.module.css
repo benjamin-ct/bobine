@@ -162,20 +162,61 @@
   color: var(--subtle);
 }
 
+/* Conteneur : la poignée se cale en bas à gauche de l'affiche (2/3, donc
+   150cqw de haut), le logo de plateforme occupant le coin haut droit. */
+.sortItem {
+  position: relative;
+  container-type: inline-size;
+}
+
 .draggable {
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
+/* Titre tenu : il suit le pointeur au-dessus des autres (useSortable). */
 .dragging {
-  opacity: 0.45;
+  z-index: 5;
+  cursor: grabbing;
+  filter: drop-shadow(0 16px 26px oklch(0 0 0 / 0.4));
 }
 
-.dropBefore {
-  box-shadow: -3px 0 0 var(--accent);
+/* Poignée ⋮⋮ pour glisser au doigt (la souris glisse tout l'élément). */
+.dragHandle {
+  display: none;
 }
 
-.dropAfter {
-  box-shadow: 3px 0 0 var(--accent);
+@media (pointer: coarse) {
+  .dragHandle {
+    position: absolute;
+    top: calc(150cqw - 36px - 8px);
+    left: 8px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: oklch(0.15 0.02 260 / 0.75);
+    color: var(--on-image);
+    backdrop-filter: blur(4px);
+    touch-action: none;
+  }
+
+  .row {
+    padding-right: 56px;
+  }
+
+  .row .dragHandle {
+    top: 50%;
+    left: auto;
+    right: 10px;
+    margin-top: -18px;
+    background: none;
+    color: var(--subtle);
+    backdrop-filter: none;
+  }
 }
 
 .viewToggle {
@@ -260,17 +301,21 @@
   color: var(--muted);
 }
 
-.rowDropBefore {
-  box-shadow: 0 -3px 0 var(--accent);
-}
-
-.rowDropAfter {
-  box-shadow: 0 3px 0 var(--accent);
-}
-
 @media (max-width: 860px) {
+  /* Menu ⋯ en haut à droite, à hauteur du nom, au lieu d'une ligne à part. */
   .header {
+    position: relative;
     gap: 14px 16px;
+  }
+
+  .headerBody {
+    padding-right: 48px;
+  }
+
+  .more {
+    position: absolute;
+    top: 0;
+    right: 0;
   }
 
   .cover {

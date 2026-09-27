@@ -115,6 +115,7 @@ export default function MyListContent() {
         </>
       )}
 
+      {/* Onglets fixes sur une ligne, listes perso sur la ligne du dessous. */}
       <div className={styles.tabs} role="tablist">
         <button
           type="button"
@@ -138,6 +139,12 @@ export default function MyListContent() {
           {t("myListPage.tabProgress")}{" "}
           <span className={styles.count}>{continuingSeries.length}</span>
         </button>
+      </div>
+      <div
+        className={`${styles.tabs} ${styles.listTabs}`}
+        role="tablist"
+        aria-label={t("myListPage.customListsTabs")}
+      >
         {customLists.map((list) => (
           <button
             key={list.id}

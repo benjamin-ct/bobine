@@ -362,6 +362,7 @@
     "tabSeen": "Déjà vu",
     "tabWant": "Envie de voir",
     "tabProgress": "En cours",
+    "customListsTabs": "Mes listes",
     "newListTab": "+ Nouvelle liste",
     "newListPlaceholder": "Nom de la liste…",
     "create": "Créer",
@@ -371,6 +372,7 @@
     "sharedTab": "(partagée)"
   },
   "watchlistPanel": {
+    "moveItem": "Déplacer {{title}}",
     "emptyState": "Liste vide. Ajoutez des titres avec « Envie de voir ».",
     "dragHint": "Glissez pour réordonner",
     "sortLabel": "Trier",
@@ -405,6 +407,7 @@
     "recentlyWatched": "Vus récemment"
   },
   "customListPanel": {
+    "moveItem": "Déplacer {{title}}",
     "confirmDelete": "Supprimer la liste « {{name}} » ? Les titres eux-mêmes resteront dans vos autres listes.",
     "rename": "Renommer",
     "cancel": "Annuler",
@@ -865,6 +868,7 @@
     "removeTitle": "Retirer {{title}} du top 5",
     "loadError": "Impossible de charger votre top 5.",
     "saveError": "Impossible d'enregistrer votre top 5.",
+    "freeSlots_zero": "Top 5 complet · retirez un titre pour en ajouter un autre",
     "freeSlots_one": "{{count}} place libre · touchez un titre pour l'ajouter",
     "freeSlots_other": "{{count}} places libres · touchez un titre pour l'ajouter",
     "close": "Fermer",
