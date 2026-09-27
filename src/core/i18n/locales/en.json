@@ -987,7 +987,8 @@
   },
   "tonightPick": {
     "eyebrow": "For you tonight",
-    "seeDetails": "See details"
+    "seeDetails": "See details",
+    "another": "Another pick"
   },
   "filterPanel": {
     "filters": "Filters",

@@ -164,6 +164,12 @@
   color: var(--accent-ink);
 }
 
+/* Mobile seulement (les actions y sont masquées) : « Autre suggestion » en
+   pastille ronde dans le coin, au-dessus du lien qui couvre la carte. */
+.skipIcon {
+  display: none;
+}
+
 /* ─── Mobile : carte compacte d'environ 130 px ─────────────────────────── */
 
 @media (max-width: 860px) {
@@ -196,6 +202,8 @@
 
   .body {
     gap: 5px;
+    /* Place pour la pastille « Autre suggestion ». */
+    padding-right: 34px;
   }
 
   .eyebrow {
@@ -219,5 +227,28 @@
 
   .meta {
     font-size: 12px;
+  }
+
+  .skipIcon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid var(--border-2);
+    background: var(--surface-2);
+    color: var(--fg);
+  }
+
+  /* Cible tactile portée à 44 px. */
+  .skipIcon::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: inherit;
   }
 }

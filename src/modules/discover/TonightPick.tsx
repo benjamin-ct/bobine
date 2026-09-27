@@ -19,13 +19,43 @@ const PICK_POOL_SIZE = 10;
 // Évite de mettre en avant un titre populaire mais quasi pas noté.
 const MIN_VOTE_COUNT = 300;
 
+// Titres écartés aujourd'hui via « Autre suggestion » : gardés pour la
+// journée sur cet appareil (le tirage du jour étant stable, le même film
+// reviendrait sinon à chaque visite), oubliés le lendemain.
+const SKIPPED_KEY = "tonightPick.skipped";
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function readSkipped(): number[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SKIPPED_KEY) || "null") as {
+      date?: string;
+      ids?: unknown;
+    } | null;
+    return raw?.date === today() && Array.isArray(raw.ids)
+      ? raw.ids.filter((id): id is number => typeof id === "number")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSkipped(ids: number[]) {
+  try {
+    localStorage.setItem(SKIPPED_KEY, JSON.stringify({ date: today(), ids }));
+  } catch {
+    // Stockage indisponible (navigation privée…) : l'écart vaut pour la session.
+  }
+}
+
 // Tirage stable sur la journée (même film à chaque visite du jour, un autre
 // le lendemain) plutôt qu'un Math.random() qui changerait à chaque
 // remontage de la page.
 function dailyIndex(size: number): number {
-  const today = new Date().toISOString().slice(0, 10);
   let hash = 0;
-  for (const char of today) {
+  for (const char of today()) {
     hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   }
   return hash % size;
@@ -33,7 +63,8 @@ function dailyIndex(size: number): number {
 
 /** « Pour vous ce soir » (en tête de Découvrir, nouvelle DA) : un film
  * populaire et bien noté, disponible sur vos plateformes si vous en avez
- * choisi, hors genres/titres exclus et films déjà vus. Grand bloc avec spot
+ * choisi, hors genres/titres exclus et films déjà vus. « Autre suggestion »
+ * écarte le film du jour et en tire un autre. Grand bloc avec spot
  * doré sur desktop, carte compacte (~130 px) sur mobile. */
 export default function TonightPick() {
   const { t, i18n } = useTranslation();
@@ -44,6 +75,7 @@ export default function TonightPick() {
   const { isWatched, isInWatchlist, toggleWatchlist } = useLibrary();
   const [candidates, setCandidates] = useState<MediaItem[] | null>(null);
   const [genres, setGenres] = useState<Genre[]>([]);
+  const [skipped, setSkipped] = useState<number[]>(readSkipped);
 
   const favoritesKey = favoriteProviderIds.join(",");
   const excludedGenresKey = excludedGenreIds.join(",");
@@ -82,11 +114,21 @@ export default function TonightPick() {
     return <div className={`${styles.hero} ${styles.placeholder}`} aria-hidden="true" />;
   }
 
-  const pool = candidates.filter((c) => !isWatched("movie", c.id)).slice(0, PICK_POOL_SIZE);
-  if (pool.length === 0) {
+  const unwatched = candidates.filter((c) => !isWatched("movie", c.id));
+  if (unwatched.length === 0) {
     return null;
   }
+  // Les titres écartés laissent la place aux suivants dans l'ordre de
+  // popularité ; une fois tout écarté, on repart du début.
+  const remaining = unwatched.filter((c) => !skipped.includes(c.id));
+  const pool = (remaining.length ? remaining : unwatched).slice(0, PICK_POOL_SIZE);
   const pick = pool[dailyIndex(pool.length)];
+
+  function skip() {
+    const next = remaining.length > 1 ? [...skipped, pick.id] : [pick.id];
+    setSkipped(next);
+    writeSkipped(next);
+  }
 
   const title = pick.title || pick.name || t("common.unknownTitle");
   const date = pick.release_date;
@@ -99,6 +141,15 @@ export default function TonightPick() {
 
   return (
     <section className={styles.hero} aria-labelledby="tonight-title">
+      <button
+        type="button"
+        className={styles.skipIcon}
+        onClick={skip}
+        aria-label={t("tonightPick.another")}
+        title={t("tonightPick.another")}
+      >
+        <Icon name="refresh" size={16} />
+      </button>
       {backdrop && (
         <div className={styles.backdrop} style={{ backgroundImage: `url(${backdrop})` }} />
       )}
@@ -148,6 +199,9 @@ export default function TonightPick() {
             }
           >
             <Icon name="star" filled={inWatchlist} /> {t("mediaCard.wantToWatch")}
+          </button>
+          <button type="button" className={styles.secondary} onClick={skip}>
+            <Icon name="refresh" /> {t("tonightPick.another")}
           </button>
         </div>
       </div>
