@@ -77,3 +77,6 @@ terminer.
   `🤖 [Claude]`.
 - En cas d'incertitude sur l'architecture ou les credentials disponibles, ne pas deviner : décrire
   précisément le blocage dans le résumé Discord plutôt que d'agir à l'aveugle.
+- Si une action humaine est nécessaire sur le serveur (NAS), citer les commandes `bobine-*`
+  (`bobine-status`, `bobine-pull`, `bobine-rebuild`, `bobine-deploy`, `bobine-logs`, voir
+  `infra/trello-claude/README.md`, « Commandes serveur ») plutôt que les commandes Docker/Git brutes.
