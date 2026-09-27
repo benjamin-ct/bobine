@@ -81,7 +81,9 @@
     "updateShareError": "Impossible de modifier le partage du profil.",
     "usernameTaken": "Ce pseudo est déjà pris.",
     "usernameInvalid": "Pseudo invalide : 3 à 15 caractères, lettres minuscules, chiffres ou « _ ».",
-    "updateUsernameError": "Impossible d'enregistrer le pseudo."
+    "updateUsernameError": "Impossible d'enregistrer le pseudo.",
+    "avatarError": "Impossible d'enregistrer la photo de profil.",
+    "avatarTooLarge": "Cette image est trop lourde, même une fois réduite."
   },
   "loginPage": {
     "title": "Se connecter",
@@ -198,7 +200,18 @@
     "emailHint": "Sert à vous connecter. Personne d'autre ne la voit.",
     "emailPrivate": "Jamais affichée publiquement",
     "session": "Session",
-    "sessionHint": "Vous déconnecter de Seancy sur cet appareil."
+    "sessionHint": "Vous déconnecter de Seancy sur cet appareil.",
+    "avatarChoose": "Ajouter une photo",
+    "avatarChange": "Changer la photo",
+    "avatarRemove": "Supprimer la photo",
+    "avatarHint": "Sans photo, Seancy affiche votre Gravatar, ou à défaut votre initiale.",
+    "avatarUnreadable": "Impossible de lire cette image. Essayez un fichier JPEG ou PNG.",
+    "avatarCropTitle": "Recadrer la photo",
+    "avatarCropHint": "Faites glisser la photo pour la déplacer, pincez ou utilisez le curseur pour zoomer.",
+    "avatarCropPreview": "Aperçu du recadrage. Flèches pour déplacer, + et − pour zoomer.",
+    "avatarCropZoom": "Zoom",
+    "avatarCropCancel": "Annuler",
+    "avatarCropConfirm": "Valider"
   },
   "excludedGenres": {
     "summary": "Genres à exclure",
@@ -570,7 +583,7 @@
   "privacyPolicyPage": {
     "title": "Politique de confidentialité",
     "lastUpdated": "Dernière mise à jour : {{date}}",
-    "lastUpdatedValue": "26 septembre 2026",
+    "lastUpdatedValue": "27 septembre 2026",
     "controller": {
       "title": "Responsable du traitement",
       "textBefore": "Seancy est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
@@ -579,11 +592,11 @@
       "title": "Données que nous collectons",
       "account": {
         "label": "Compte",
-        "text": " : votre adresse email (seule information demandée à l'inscription), utilisée pour la connexion par lien/code à usage unique — aucun mot de passe n'est stocké. Vous pouvez la modifier depuis votre profil : la nouvelle adresse n'est enregistrée qu'après saisie d'un code envoyé à celle-ci (la demande en attente est conservée 15 minutes au plus), et un avertissement est envoyé à l'ancienne. Vous pouvez aussi renseigner un nom affiché, facultatif, visible sur votre carte de compte et synchronisé entre vos appareils."
+        "text": " : votre adresse email (seule information demandée à l'inscription), utilisée pour la connexion par lien/code à usage unique — aucun mot de passe n'est stocké. Vous pouvez la modifier depuis votre profil : la nouvelle adresse n'est enregistrée qu'après saisie d'un code envoyé à celle-ci (la demande en attente est conservée 15 minutes au plus), et un avertissement est envoyé à l'ancienne. Vous pouvez aussi renseigner un nom affiché, facultatif, visible sur votre carte de compte et synchronisé entre vos appareils, ainsi qu'une photo de profil, facultative : elle est recadrée et réduite sur votre appareil avant envoi (ce qui retire ses métadonnées, dont la position GPS), conservée tant que vous ne la supprimez pas, et remplace alors votre photo Gravatar."
       },
       "library": {
         "label": "Bibliothèque personnelle",
-        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu. Si vous activez le partage de votre profil (facultatif, désactivé par défaut), ces éléments ainsi que vos notes, votre nom affiché et votre photo de profil Gravatar (si vous en avez une) deviennent visibles en lecture seule par toute personne disposant du lien de partage — jamais votre adresse email. Vous pouvez désactiver ce partage à tout moment, ce qui rend le lien définitivement invalide."
+        "text": " : les films/séries que vous marquez « vus » ou « envie de voir », vos listes personnalisées et leur contenu. Si vous activez le partage de votre profil (facultatif, désactivé par défaut), ces éléments ainsi que vos notes, votre nom affiché et votre photo de profil (la vôtre, ou à défaut celle de Gravatar, si vous en avez une) deviennent visibles en lecture seule par toute personne disposant du lien de partage — jamais votre adresse email. Vous pouvez désactiver ce partage à tout moment, ce qui rend le lien définitivement invalide."
       },
       "preferences": {
         "label": "Préférences",
