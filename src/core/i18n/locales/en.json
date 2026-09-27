@@ -207,7 +207,7 @@
     "description": "These genres will never be suggested anywhere in Seancy.",
     "loading": "Loading genres…",
     "error": "Couldn't load the genre list.",
-    "toggleHint": "tap a genre to exclude or restore it"
+    "toggleHint": "check a genre to exclude it, uncheck it to restore it"
   },
   "navBar": {
     "mainNavAriaLabel": "Main navigation",

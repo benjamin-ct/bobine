@@ -134,33 +134,23 @@
 
 /* --- Genres à exclure ---------------------------------------------------- */
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
+.genreGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 15px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--fg);
-  font-weight: 600;
-  font-size: 14.5px;
+.genreCheckbox {
+  accent-color: var(--accent);
 }
 
-.chip:hover {
-  border-color: var(--border-2);
-}
-
-.chipExcluded {
+.genreExcluded {
   border-color: color-mix(in oklch, var(--accent) 55%, transparent);
   background: var(--accent-soft);
   color: var(--accent-ink);
+}
+
+.genreExcluded > span:last-child {
   text-decoration: line-through;
 }
 
@@ -479,7 +469,8 @@
 }
 
 @media (max-width: 860px) {
-  .providerGrid {
+  .providerGrid,
+  .genreGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 

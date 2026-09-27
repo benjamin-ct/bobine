@@ -2,16 +2,15 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getGenres } from "../../../core/api/tmdb.ts";
 import { useExcludedGenres } from "../../../core/context/ExcludedGenresContext.tsx";
-import { Icon } from "../../../shared/components/index.ts";
 import type { Genre } from "../../../core/types/tmdb.ts";
 import { SettingsRow } from "./SettingsGroup.tsx";
 import styles from "./SettingsPanel.module.css";
 
 // Réglage "Genres à exclure" : les genres qu'on ne veut jamais voir
 // suggérés, pour filtrer Découvrir/Nouveautés/Prochainement/Aléatoire et
-// les recommandations d'une fiche. Nouvelle DA 8/10 : une puce par genre,
-// toutes visibles d'un coup (plus de recherche, la liste tient en quelques
-// lignes) ; genre exclu = puce corail barrée avec ✕.
+// les recommandations d'une fiche. Nouvelle DA 8/10 : rangés comme "Mes
+// plateformes", en grille de cases à cocher (2 colonnes sur desktop, 1 sur
+// mobile), tous visibles d'un coup ; genre exclu = case cochée, ligne corail et nom barré.
 export default function ExcludedGenresSettings() {
   const { t } = useTranslation();
   const { excludedGenreIds, toggleExcludedGenre } = useExcludedGenres();
@@ -49,20 +48,22 @@ export default function ExcludedGenresSettings() {
       {status === "loading" && <p className={styles.status}>{t("excludedGenres.loading")}</p>}
       {status === "error" && <p className={styles.error}>{t("excludedGenres.error")}</p>}
       {status === "success" && (
-        <div className={styles.chips}>
+        <div className={styles.genreGrid}>
           {genres.map((g) => {
             const excluded = excludedGenreIds.includes(g.id);
             return (
-              <button
+              <label
                 key={g.id}
-                type="button"
-                aria-pressed={excluded}
-                className={`${styles.chip} ${excluded ? styles.chipExcluded : ""}`}
-                onClick={() => toggleExcludedGenre(g.id)}
+                className={`${styles.provider} ${excluded ? styles.genreExcluded : ""}`}
               >
-                {excluded && <Icon name="close" size={13} />}
-                {g.name}
-              </button>
+                <input
+                  type="checkbox"
+                  className={`${styles.checkbox} ${styles.genreCheckbox}`}
+                  checked={excluded}
+                  onChange={() => toggleExcludedGenre(g.id)}
+                />
+                <span>{g.name}</span>
+              </label>
             );
           })}
         </div>
