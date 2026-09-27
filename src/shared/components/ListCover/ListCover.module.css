@@ -1,0 +1,81 @@
+.cover {
+  --card: 56px;
+  --spread: 26px;
+  position: relative;
+  flex-shrink: 0;
+  width: calc(var(--card) * 2);
+  height: calc(var(--card) * 1.64);
+}
+
+.lg {
+  --card: 96px;
+  --spread: 44px;
+}
+
+.coverCard,
+.coverEmpty {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: var(--card);
+  aspect-ratio: 2 / 3;
+  margin-left: calc(var(--card) / -2);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  box-shadow: 0 6px 16px oklch(0 0 0 / 0.35);
+  transform-origin: 50% 100%;
+}
+
+.coverCard img,
+.coverCard > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coverEmpty {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-style: dashed;
+  box-shadow: none;
+}
+
+/* 1re affiche au premier plan, les suivantes en éventail derrière. */
+.coverCard:nth-child(1) {
+  z-index: 3;
+}
+
+.cover2 .coverCard:nth-child(1) {
+  transform: translateX(calc(var(--spread) * -0.46)) rotate(-6deg);
+}
+
+.cover2 .coverCard:nth-child(2) {
+  z-index: 2;
+  transform: translateX(calc(var(--spread) * 0.46)) rotate(6deg);
+}
+
+.cover3 .coverCard:nth-child(2) {
+  z-index: 2;
+  transform: translateX(calc(var(--spread) * -1)) rotate(-11deg);
+}
+
+.cover3 .coverCard:nth-child(3) {
+  z-index: 1;
+  transform: translateX(var(--spread)) rotate(11deg);
+}
+
+@media (max-width: 860px) {
+  .md {
+    --card: 46px;
+    --spread: 26px;
+  }
+
+  .lg {
+    --card: 72px;
+    --spread: 33px;
+  }
+}

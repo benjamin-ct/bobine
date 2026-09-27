@@ -1,0 +1,186 @@
+.section {
+  padding-top: clamp(24px, 3.5vw, 40px);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin-bottom: 18px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ── Desktop : 5 affiches alignées, précédées de grands chiffres ── */
+
+.row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 22px;
+}
+
+/* Colonne du chiffre de largeur fixe (24 % du créneau) : la hauteur de
+   l'affiche est alors connue (76 % × 3/2) et le chiffre peut se poser sur
+   son bas, en passant légèrement dessous comme dans Ma liste. */
+.slot {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: 24% minmax(0, 1fr);
+  align-items: start;
+  min-width: 0;
+}
+
+.rank {
+  position: relative;
+  z-index: 0;
+  margin-top: calc(114cqw - 0.78 * 52cqw);
+  margin-right: -0.08em;
+  font-family: var(--font-poster);
+  font-size: 52cqw;
+  line-height: 0.78;
+  text-align: right;
+}
+
+.slot > :last-child {
+  position: relative;
+  z-index: 1;
+}
+
+.rank1 {
+  color: var(--top-rank-1);
+}
+
+.rank2 {
+  color: var(--top-rank-2);
+}
+
+.rank3 {
+  color: var(--top-rank-3);
+}
+
+.rankOutline {
+  color: transparent;
+  -webkit-text-stroke: 2px var(--top-rank-outline);
+}
+
+/* ── Mobile : liste verticale ── */
+
+.list {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.lineRank {
+  font-family: var(--font-poster);
+  font-size: 40px;
+  line-height: 1;
+  text-align: center;
+}
+
+.lineLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: var(--fg);
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 46px;
+  aspect-ratio: 2 / 3;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.thumb img,
+.thumb > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lineBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lineTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineSub,
+.lineRating {
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineRating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lineRating svg {
+  color: var(--gold);
+}
+
+.pastilles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 860px) {
+  .row {
+    display: none;
+  }
+
+  .list {
+    display: flex;
+  }
+
+  .title {
+    font-size: 1.2rem;
+  }
+}

@@ -14,6 +14,11 @@ export interface ProfileSummary {
   viewerFollows: boolean;
   /** Ce profil est celui du visiteur connecté. */
   isSelf: boolean;
+  /** Titres vus par ce profil (`null` s'il est privé). */
+  watchedCount: number | null;
+  /** Titres vus à la fois par ce profil et par le visiteur connecté
+   * (`null` hors connexion, pour soi-même ou pour un profil privé). */
+  commonCount: number | null;
 }
 
 export interface FollowCounts {

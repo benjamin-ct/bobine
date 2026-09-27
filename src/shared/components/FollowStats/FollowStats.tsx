@@ -10,6 +10,8 @@ interface Props {
   /** Profil partagé affiché, ou `null` pour le compte connecté lui-même. */
   slug: string | null;
   counts: FollowCounts;
+  /** Nom du profil affiché, pour le titre « Réseau de X » de la modale. */
+  name?: string;
   /** Un follow/unfollow depuis une des listes a pu changer les compteurs
    * affichés (ex. mes abonnements) : l'appelant peut les recharger. */
   onListChange?: () => void;
@@ -20,10 +22,13 @@ type ListState =
   | { status: "success"; profiles: ProfileSummary[] }
   | { status: "error"; message: string };
 
-// « X abonnés · Y abonnements », cliquables : chacun ouvre la liste des
-// profils correspondants dans une modale (`<dialog>` natif, comme
-// MembersOnlyDialog : top layer, piège à focus et Échap gratuits).
-export default function FollowStats({ slug, counts, onListChange }: Props) {
+const TABS: FollowListKind[] = ["followers", "following"];
+
+// « X abonnés · Y abonnements », cliquables : chacun ouvre la modale
+// « Réseau de X » (feuille du bas sur mobile) sur l'onglet correspondant.
+// `<dialog>` natif, comme MembersOnlyDialog : top layer, piège à focus et
+// Échap gratuits.
+export default function FollowStats({ slug, counts, name, onListChange }: Props) {
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState<FollowListKind | null>(null);
@@ -74,11 +79,12 @@ export default function FollowStats({ slug, counts, onListChange }: Props) {
     <>
       <div className={styles.stats}>
         <button type="button" className={styles.stat} onClick={() => setOpen("followers")}>
-          {t("follow.followersCount", { count: counts.followers })}
+          <strong>{counts.followers}</strong>{" "}
+          {t("follow.followersWord", { count: counts.followers })}
         </button>
-        <span aria-hidden="true">·</span>
         <button type="button" className={styles.stat} onClick={() => setOpen("following")}>
-          {t("follow.followingCount", { count: counts.following })}
+          <strong>{counts.following}</strong>{" "}
+          {t("follow.followingWord", { count: counts.following })}
         </button>
       </div>
 
@@ -95,40 +101,62 @@ export default function FollowStats({ slug, counts, onListChange }: Props) {
       >
         {open && (
           <div className={styles.content}>
-            <button
-              type="button"
-              className={styles.close}
-              onClick={close}
-              aria-label={t("common.close")}
-              title={t("common.close")}
-            >
-              <Icon name="close" />
-            </button>
-            <h2 id="follow-list-title" className={styles.title}>
-              {open === "followers" ? t("follow.followersTitle") : t("follow.followingTitle")}
-            </h2>
-            {list.status === "loading" && <p className={styles.text}>{t("common.loading")}</p>}
-            {list.status === "error" && <p className={styles.text}>{list.message}</p>}
-            {list.status === "success" &&
-              (list.profiles.length === 0 ? (
-                <p className={styles.text}>
-                  {open === "followers" ? t("follow.noFollowers") : t("follow.noFollowing")}
-                </p>
-              ) : (
-                <ProfileList
-                  profiles={list.profiles}
-                  onNavigate={close}
-                  onFollowChange={(index, following) => {
-                    setList({
-                      status: "success",
-                      profiles: list.profiles.map((p, i) =>
-                        i === index ? { ...p, viewerFollows: following } : p
-                      ),
-                    });
-                    onListChange?.();
-                  }}
-                />
+            <span className={styles.sheetGrabber} aria-hidden />
+            <div className={styles.head}>
+              <h2 id="follow-list-title" className={styles.title}>
+                {name ? t("follow.networkTitle", { name }) : t("follow.networkOwn")}
+              </h2>
+              <button
+                type="button"
+                className={styles.close}
+                onClick={close}
+                aria-label={t("common.close")}
+                title={t("common.close")}
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+            <div className={styles.tabs} role="tablist">
+              {TABS.map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  role="tab"
+                  aria-selected={open === kind}
+                  className={`${styles.tab} ${open === kind ? styles.tabActive : ""}`}
+                  onClick={() => setOpen(kind)}
+                >
+                  {kind === "followers" ? t("follow.followersTitle") : t("follow.followingTitle")}
+                  <span className={styles.tabCount}>
+                    {kind === "followers" ? counts.followers : counts.following}
+                  </span>
+                </button>
               ))}
+            </div>
+            <div className={styles.body}>
+              {list.status === "loading" && <p className={styles.text}>{t("common.loading")}</p>}
+              {list.status === "error" && <p className={styles.text}>{list.message}</p>}
+              {list.status === "success" &&
+                (list.profiles.length === 0 ? (
+                  <p className={styles.text}>
+                    {open === "followers" ? t("follow.noFollowers") : t("follow.noFollowing")}
+                  </p>
+                ) : (
+                  <ProfileList
+                    profiles={list.profiles}
+                    onNavigate={close}
+                    onFollowChange={(index, following) => {
+                      setList({
+                        status: "success",
+                        profiles: list.profiles.map((p, i) =>
+                          i === index ? { ...p, viewerFollows: following } : p
+                        ),
+                      });
+                      onListChange?.();
+                    }}
+                  />
+                ))}
+            </div>
           </div>
         )}
       </dialog>

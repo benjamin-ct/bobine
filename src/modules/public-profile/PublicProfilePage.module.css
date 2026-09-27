@@ -4,30 +4,33 @@
   padding: 0 var(--gutter) 64px;
 }
 
+/* ── En-tête : avatar, identité, actions ── */
+
 .header {
   display: flex;
   align-items: center;
-  gap: clamp(16px, 3vw, 24px);
-}
-
-.header > :last-child {
-  flex: 1;
-  min-width: 0;
+  gap: clamp(16px, 3vw, 28px);
+  padding-top: clamp(8px, 2vw, 20px);
 }
 
 .avatar {
-  width: clamp(64px, 12vw, 96px);
-  height: clamp(64px, 12vw, 96px);
+  width: clamp(72px, 12vw, 112px);
+  height: clamp(72px, 12vw, 112px);
   border-radius: 50%;
   flex: none;
   display: grid;
   place-items: center;
-  background: linear-gradient(150deg, var(--g-thril-1), var(--g-thril-2));
+  background: linear-gradient(150deg, var(--g-drama-1), var(--g-drama-2));
   color: var(--on-image);
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(22px, 4vw, 32px);
+  font-size: clamp(26px, 4vw, 38px);
   overflow: hidden;
+  /* Anneau doré. */
+  border: 3px solid var(--gold);
+  box-shadow:
+    0 0 0 4px color-mix(in oklch, var(--gold) 22%, transparent),
+    0 12px 28px oklch(0 0 0 / 0.35);
 }
 
 .avatarImg {
@@ -36,97 +39,333 @@
   object-fit: cover;
 }
 
-.tools {
+.identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.nameRow {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.name {
+  margin: 0;
+  font-size: var(--fs-h1);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.handle {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.followsYou {
+  align-self: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
+  color: var(--fg);
+}
+
+.followedBy {
+  display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 18px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
-.section {
-  padding-top: clamp(20px, 3vw, 32px);
+.miniAvatars {
+  display: inline-flex;
+  flex-shrink: 0;
 }
 
-.section h2 {
-  font-size: 20px;
+.miniAvatar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  background: linear-gradient(150deg, var(--g-thril-1), var(--g-thril-2));
+  color: var(--on-image);
+  font-size: 10px;
   font-weight: 700;
-  margin-bottom: 16px;
 }
 
-.tabs {
+.miniAvatar:first-child {
+  margin-left: 0;
+}
+
+.actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-block: 32px 26px;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 12px;
 }
 
-.tab {
+.shareBtn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 9px 16px;
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-2);
   background: var(--surface);
+  color: var(--fg);
   font-weight: 600;
   font-size: 14px;
+  white-space: nowrap;
+}
+
+.shareBtn:hover {
+  background: var(--surface-2);
+}
+
+/* Connecté : « Suivre » prend la vedette, le partage devient une icône. */
+.shareBtnIcon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+}
+
+.shareBtnIcon .shareLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.selfHint {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.confirmation {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── Chiffres clés ── */
+
+.stats {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 96px;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.statValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.statStar {
+  display: inline-flex;
+  color: var(--gold);
+}
+
+.statLabel {
+  font-size: 12px;
   color: var(--muted);
 }
 
-.tab:hover {
-  color: var(--fg);
-  border-color: var(--border-2);
+/* ── Onglets, légende, filtre ── */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin: 36px 0 22px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
 }
 
-/* Sélection : Surface 3 + bordure marquée, le corail étant réservé aux
-   actions (voir variables.css). */
-.tabActive {
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.segment:hover {
+  color: var(--fg);
+}
+
+/* Sélection : Surface 3, le corail étant réservé aux actions (voir
+   variables.css). */
+.segmentActive {
   background: var(--selected-bg);
-  color: var(--fg) !important;
-  border-color: var(--selected-border);
+  color: var(--fg);
 }
 
 .count {
   font-family: var(--font-mono);
-  font-size: 12px;
-  opacity: 0.85;
+  font-size: 11px;
+  opacity: 0.8;
 }
 
-.meta {
+.legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 0 auto;
+  font-size: 12px;
+  color: var(--subtle);
+}
+
+.legend svg:first-child {
+  color: var(--gold);
+}
+
+/* ── Listes ── */
+
+.lists {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.listCard {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-.rating {
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid;
-  font-weight: 700;
-}
-
-/* Mêmes paliers que le badge de RatingStars (voir ratingTier.ts) : une
-   mauvaise note reste discrète, une bonne ressort en or. */
-.rating-low {
+  gap: 16px;
+  width: 100%;
+  padding: 16px 18px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--muted);
+  text-align: left;
+}
+
+.listCard:hover {
+  border-color: var(--border-2);
   background: var(--surface-2);
-  border-color: var(--border);
 }
 
-.rating-mid {
-  color: var(--accent-ink);
-  background: var(--accent-soft);
-  border-color: color-mix(in oklch, var(--accent) 34%, transparent);
+.listBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.rating-high {
-  color: var(--on-gold);
-  background: var(--gold);
-  border-color: color-mix(in oklch, var(--gold) 65%, oklch(0 0 0));
+.listName {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listCount {
+  font-size: 13px;
+}
+
+.listHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 20px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.backBtn:hover {
+  background: var(--surface-2);
+}
+
+.listTitle {
+  margin: 0;
+  font-size: 1.3rem;
 }
 
 .homeLink {
@@ -144,15 +383,98 @@
   border-color: var(--border-2);
 }
 
-.social {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 20px;
-  margin-top: 16px;
-}
+@media (max-width: 720px) {
+  .header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
 
-.selfHint {
-  color: var(--muted);
-  font-size: 13px;
+  .identity {
+    flex-basis: calc(100% - 100px);
+  }
+
+  .header:has(.actionsSolo) .identity {
+    padding-right: 48px;
+  }
+
+  /* Mobile : « Suivre » sur toute la largeur, partage en icône à côté. */
+  .actions {
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .actions > :first-child:not(:last-child) {
+    flex: 1;
+  }
+
+  .actions > :first-child:not(:last-child) button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .shareBtn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .shareLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Visiteur : seul le partage reste, en icône en haut à droite. */
+  .header {
+    position: relative;
+  }
+
+  .actionsSolo {
+    position: absolute;
+    top: clamp(8px, 2vw, 20px);
+    right: 0;
+    width: auto;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .stat {
+    min-width: 0;
+    padding: 8px 10px;
+  }
+
+  .statValue {
+    font-size: 18px;
+  }
+
+  .statLabel {
+    font-size: 11px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .segmented {
+    display: flex;
+  }
+
+  .segment {
+    flex: 1;
+    padding-inline: 8px;
+  }
+
+  .legend {
+    margin-left: 0;
+    order: 3;
+  }
 }
