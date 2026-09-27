@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
@@ -9,14 +9,20 @@ import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
+import { neighborOf, useSortable } from "../../../shared/hooks/useSortable.ts";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
 import type { CustomList, LibraryItem } from "../../../core/types/library.ts";
-import ListShareControls from "./ListShareControls.tsx";
+import ListShareDialog from "./ListShareDialog.tsx";
 import styles from "./CustomListPanel.module.css";
 
 interface CustomListPanelProps {
   list: CustomList;
   onDeleted: () => void;
+  /** Partage géré seulement pour un membre connecté (sinon `canShare` à false). */
+  canShare: boolean;
+  /** Slug du lien public, null si la liste n'est pas partagée. */
+  shareSlug: string | null;
+  onShareChange: (slug: string | null) => void;
 }
 
 type SortMode = "manual" | "title" | "year";
@@ -32,17 +38,26 @@ function makeKey(item: LibraryItem): string {
   return `${item.mediaType}:${item.id}`;
 }
 
-export default function CustomListPanel({ list, onDeleted }: CustomListPanelProps) {
+const COVER_SIZE = 3;
+
+export default function CustomListPanel({
+  list,
+  onDeleted,
+  canShare,
+  shareSlug,
+  onShareChange,
+}: CustomListPanelProps) {
   const { t } = useTranslation();
-  const { getListItems, deleteList, renameList, reorderList } = useLibrary();
+  const { getListItems, deleteList, renameList, reorderList, getRating } = useLibrary();
+  const [shareOpen, setShareOpen] = useState(false);
   const { locale } = useLocale();
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(list.name);
   const [sortMode, setSortMode] = useState<SortMode>("manual");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [dragKey, setDragKey] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ key: string; after: boolean } | null>(null);
   const items = getListItems(list.id);
+  const ratedCount = items.filter((item) => getRating(item.mediaType, item.id) != null).length;
+  const cover = items.slice(0, COVER_SIZE);
 
   function handleDelete() {
     if (window.confirm(t("customListPanel.confirmDelete", { name: list.name }))) {
@@ -57,155 +72,206 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
   }
 
   const manual = sortMode === "manual";
+  const canSort = manual && items.length > 1;
+  const byKey = new Map(items.map((item) => [makeKey(item), item]));
+  const sortable = useSortable({
+    keys: items.map(makeKey),
+    enabled: canSort,
+    onReorder: (next, moved) => {
+      const { toKey, after } = neighborOf(next, moved);
+      reorderList(list.id, moved, toKey, after);
+    },
+  });
   const sorted =
     sortMode === "title"
       ? [...items].sort((a, b) => a.title.localeCompare(b.title, "fr"))
       : sortMode === "year"
         ? [...items].sort((a, b) => (b.date || "").localeCompare(a.date || ""))
-        : items;
+        : sortable.order.map((key) => byKey.get(key)!);
 
-  function onDragStart(key: string) {
-    setDragKey(key);
+  // Glisser à la souris sur tout l'élément, au doigt depuis la poignée ⋮⋮.
+  function sortItemProps(item: LibraryItem, className = "") {
+    const key = makeKey(item);
+    return {
+      key,
+      ...(canSort ? sortable.itemProps(key) : {}),
+      className: `${styles.sortItem} ${className} ${canSort ? styles.draggable : ""} ${
+        sortable.dragKey === key ? styles.dragging : ""
+      }`,
+    };
   }
-  function onDragOver(e: DragEvent<HTMLDivElement>, key: string) {
-    if (!manual || !dragKey || dragKey === key) {
-      return;
-    }
-    e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const after =
-      viewMode === "grid"
-        ? e.clientX - rect.left > rect.width / 2
-        : e.clientY - rect.top > rect.height / 2;
-    setDropTarget({ key, after });
-  }
-  function onDrop(key: string) {
-    if (dragKey && dragKey !== key && dropTarget) {
-      reorderList(list.id, dragKey, key, dropTarget.after);
-    }
-    setDragKey(null);
-    setDropTarget(null);
-  }
-  function onDragEnd() {
-    setDragKey(null);
-    setDropTarget(null);
-  }
+  const dragHandle = canSort && (
+    <span className={styles.dragHandle} data-drag-handle aria-hidden>
+      <Icon name="dragHandle" />
+    </span>
+  );
 
   return (
     <div>
-      <div className={styles.tools}>
-        {renaming ? (
-          <form
-            className={styles.renameForm}
-            onSubmit={(e) => {
-              e.preventDefault();
-              submitRename();
-            }}
-          >
-            <input
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              maxLength={40}
-              autoFocus
-            />
-            <button type="submit">{t("customListPanel.rename")}</button>
-            <button type="button" onClick={() => setRenaming(false)}>
-              {t("customListPanel.cancel")}
-            </button>
-          </form>
-        ) : (
-          <span className={styles.hint}>
-            {items.length
-              ? `${list.name} · ${t("customListPanel.itemsCount", { count: items.length })}`
-              : t("customListPanel.addHint")}
-          </span>
-        )}
-        <span className={styles.spacer} />
-        {items.length > 0 && (
-          <>
-            {manual && <span className={styles.dragHint}>{t("customListPanel.dragHint")}</span>}
-            <div
-              className={styles.viewToggle}
-              role="group"
-              aria-label={t("customListPanel.viewModeAriaLabel")}
+      <div className={styles.header}>
+        {/* Couverture en éventail : les 3 premières affiches de la liste. */}
+        <div className={`${styles.cover} ${styles[`cover${cover.length}`]}`} aria-hidden>
+          {cover.length === 0 ? (
+            <span className={styles.coverEmpty}>
+              <Icon name="list" size={26} />
+            </span>
+          ) : (
+            cover.map((item) => {
+              const key = makeKey(item);
+              const src = posterUrl(item.posterPath, "w185");
+              return (
+                <span key={key} className={styles.coverCard}>
+                  {src ? (
+                    <img src={src} alt="" />
+                  ) : (
+                    <span className={posterStyles[posterAccentFromGenres(item.genreIds, key)]} />
+                  )}
+                </span>
+              );
+            })
+          )}
+        </div>
+
+        <div className={styles.headerBody}>
+          {renaming ? (
+            <form
+              className={styles.renameForm}
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitRename();
+              }}
             >
-              <button
-                type="button"
-                className={`${styles.viewBtn} ${viewMode === "grid" ? styles.viewBtnOn : ""}`}
-                aria-pressed={viewMode === "grid"}
-                title={t("customListPanel.gridViewTitle")}
-                onClick={() => setViewMode("grid")}
-              >
-                <Icon name="grid" />
+              <input
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                maxLength={40}
+                aria-label={t("customListPanel.renameLabel")}
+                autoFocus
+              />
+              <button type="submit">{t("customListPanel.rename")}</button>
+              <button type="button" onClick={() => setRenaming(false)}>
+                {t("customListPanel.cancel")}
               </button>
-              <button
-                type="button"
-                className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnOn : ""}`}
-                aria-pressed={viewMode === "list"}
-                title={t("customListPanel.listViewTitle")}
-                onClick={() => setViewMode("list")}
+            </form>
+          ) : (
+            <h2 className={styles.listName}>{list.name}</h2>
+          )}
+          <p className={styles.listMeta}>
+            {t("customListPanel.itemsCount", { count: items.length })} ·{" "}
+            {t("customListPanel.ratedCount", { count: ratedCount })}
+          </p>
+          {canShare && (
+            <span className={`${styles.status} ${shareSlug ? styles.statusShared : ""}`}>
+              <Icon name={shareSlug ? "link" : "lock"} />
+              {t(shareSlug ? "customListPanel.statusShared" : "customListPanel.statusPrivate")}
+            </span>
+          )}
+        </div>
+
+        <div className={styles.headerActions}>
+          {items.length > 0 && (
+            <>
+              <div
+                className={styles.viewToggle}
+                role="group"
+                aria-label={t("customListPanel.viewModeAriaLabel")}
               >
-                <Icon name="grip" />
-              </button>
-            </div>
+                <button
+                  type="button"
+                  className={`${styles.viewBtn} ${viewMode === "grid" ? styles.viewBtnOn : ""}`}
+                  aria-pressed={viewMode === "grid"}
+                  title={t("customListPanel.gridViewTitle")}
+                  onClick={() => setViewMode("grid")}
+                >
+                  <Icon name="grid" />
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnOn : ""}`}
+                  aria-pressed={viewMode === "list"}
+                  title={t("customListPanel.listViewTitle")}
+                  onClick={() => setViewMode("list")}
+                >
+                  <Icon name="grip" />
+                </button>
+              </div>
+              <Dropdown
+                label={
+                  <>
+                    {t("customListPanel.sortLabel")}&nbsp;:{" "}
+                    {t(SORTS.find((s) => s.id === sortMode)?.labelKey ?? "")}
+                  </>
+                }
+                align="right"
+              >
+                <div className={dropdownStyles.head}>{t("customListPanel.sortBy")}</div>
+                {SORTS.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`${dropdownStyles.option} ${sortMode === s.id ? dropdownStyles.optionOn : ""}`}
+                    onClick={() => setSortMode(s.id)}
+                  >
+                    <span className={dropdownStyles.radio} /> {t(s.labelKey)}
+                  </button>
+                ))}
+              </Dropdown>
+            </>
+          )}
+          {canShare && (
+            <button type="button" className={styles.shareBtn} onClick={() => setShareOpen(true)}>
+              <Icon name="share" /> {t("customListPanel.share")}
+            </button>
+          )}
+          <div className={styles.more}>
             <Dropdown
-              label={
-                <>
-                  {t("customListPanel.sortLabel")}&nbsp;:{" "}
-                  {t(SORTS.find((s) => s.id === sortMode)?.labelKey ?? "")}
-                </>
-              }
+              label={<Icon name="more" size={18} />}
+              ariaLabel={t("customListPanel.moreActions")}
+              caret={false}
+              closeOnSelect
               align="right"
             >
-              <div className={dropdownStyles.head}>{t("customListPanel.sortBy")}</div>
-              {SORTS.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`${dropdownStyles.option} ${sortMode === s.id ? dropdownStyles.optionOn : ""}`}
-                  onClick={() => setSortMode(s.id)}
-                >
-                  <span className={dropdownStyles.radio} /> {t(s.labelKey)}
-                </button>
-              ))}
+              <button
+                type="button"
+                className={dropdownStyles.option}
+                onClick={() => {
+                  setRenameValue(list.name);
+                  setRenaming(true);
+                }}
+              >
+                <Icon name="edit" /> {t("customListPanel.renameButton")}
+              </button>
+              <button type="button" className={dropdownStyles.option} onClick={handleDelete}>
+                <Icon name="trash" /> {t("customListPanel.deleteButton")}
+              </button>
             </Dropdown>
-          </>
-        )}
-        <ListShareControls listId={list.id} listName={list.name} />
-        {!renaming && (
-          <button type="button" className={styles.ghostBtn} onClick={() => setRenaming(true)}>
-            <Icon name="edit" /> {t("customListPanel.renameButton")}
-          </button>
-        )}
-        <button type="button" className={styles.ghostBtn} onClick={handleDelete}>
-          <Icon name="trash" /> {t("customListPanel.deleteButton")}
-        </button>
+          </div>
+        </div>
       </div>
+
+      {canSort && <p className={styles.dragHint}>{t("customListPanel.dragHint")}</p>}
+
+      {canShare && (
+        <ListShareDialog
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          listId={list.id}
+          listName={list.name}
+          slug={shareSlug}
+          onSlugChange={onShareChange}
+        />
+      )}
 
       {items.length === 0 ? (
         <EmptyState label={t("customListPanel.emptyState", { name: list.name })} />
       ) : viewMode === "grid" ? (
         <div className={gridStyles.grid}>
           {sorted.map((item) => {
-            const key = makeKey(item);
+            const { key, ...props } = sortItemProps(item);
             return (
-              <div
-                key={key}
-                draggable={manual}
-                onDragStart={() => onDragStart(key)}
-                onDragOver={(e) => onDragOver(e, key)}
-                onDragLeave={() => setDropTarget((t) => (t?.key === key ? null : t))}
-                onDrop={() => onDrop(key)}
-                onDragEnd={onDragEnd}
-                className={`${manual ? styles.draggable : ""} ${dragKey === key ? styles.dragging : ""} ${
-                  dropTarget?.key === key
-                    ? dropTarget.after
-                      ? styles.dropAfter
-                      : styles.dropBefore
-                    : ""
-                }`}
-              >
+              <div key={key} {...props}>
                 <MediaCard item={libraryItemToMediaItem(item)} />
+                {dragHandle}
               </div>
             );
           })}
@@ -213,25 +279,10 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
       ) : (
         <div className={styles.rows}>
           {sorted.map((item) => {
-            const key = makeKey(item);
+            const { key, ...props } = sortItemProps(item, styles.row);
             const accentKey = posterAccentFromGenres(item.genreIds, key);
             return (
-              <div
-                key={key}
-                draggable={manual}
-                onDragStart={() => onDragStart(key)}
-                onDragOver={(e) => onDragOver(e, key)}
-                onDragLeave={() => setDropTarget((t) => (t?.key === key ? null : t))}
-                onDrop={() => onDrop(key)}
-                onDragEnd={onDragEnd}
-                className={`${styles.row} ${manual ? styles.draggable : ""} ${dragKey === key ? styles.dragging : ""} ${
-                  dropTarget?.key === key
-                    ? dropTarget.after
-                      ? styles.rowDropAfter
-                      : styles.rowDropBefore
-                    : ""
-                }`}
-              >
+              <div key={key} {...props}>
                 <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.rowThumb}>
                   {item.posterPath ? (
                     <img src={posterUrl(item.posterPath, "w92") ?? undefined} alt={item.title} />
@@ -253,6 +304,7 @@ export default function CustomListPanel({ list, onDeleted }: CustomListPanelProp
                       : ""}
                   </span>
                 </Link>
+                {dragHandle}
               </div>
             );
           })}

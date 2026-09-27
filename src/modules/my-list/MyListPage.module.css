@@ -45,6 +45,15 @@
   margin-block: 24px 26px;
 }
 
+/* Ligne des listes perso, juste sous les onglets fixes. */
+.tabs:has(+ .listTabs) {
+  margin-bottom: 0;
+}
+
+.listTabs {
+  margin-top: 10px;
+}
+
 .tab {
   display: inline-flex;
   align-items: center;
@@ -118,4 +127,44 @@
   background: var(--accent);
   color: var(--on-accent);
   border-color: var(--accent);
+}
+
+.divider {
+  margin: 32px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.sharedIcon {
+  color: var(--muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Mobile : onglets sur une ligne, défilement horizontal (maquette). */
+@media (max-width: 860px) {
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab,
+  .newTab {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
 }

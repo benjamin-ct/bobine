@@ -1,32 +1,45 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
+import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { posterUrl } from "../../../core/api/tmdbClient.ts";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import type { MediaType } from "../../../core/types/tmdb.ts";
 import { Icon } from "../../../shared/components/index.ts";
+import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
+import { moveKey, useSortable } from "../../../shared/hooks/useSortable.ts";
+import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import styles from "./TopPicksPanel.module.css";
 
 const MAX_PICKS = 5;
 
 const keyOf = (item: { mediaType: string; id: number }) => `${item.mediaType}:${item.id}`;
 
-// Top 5 du profil partagé choisi à la main parmi ses titres vus, façon
-// « films favoris » de Letterboxd. Sans choix, la page publique garde le
-// calcul automatique (titres vus les mieux notés). Chaque modification est
-// enregistrée tout de suite (PUT /api/account/top-picks).
+const RANK_CLASS = ["rank1", "rank2", "rank3", "rankOutline", "rankOutline"] as const;
+
+// Top 5 du profil partagé choisi à la main parmi ses titres vus (seuls les
+// titres vus peuvent être notés, donc « vus ou notés » = vus). Sans choix, la
+// page publique garde le calcul automatique (titres vus les mieux notés).
+// Chaque modification est enregistrée tout de suite (PUT
+// /api/account/top-picks) : le top suit donc le compte sur tous les appareils.
 //
-// Sélection dans une modale (clic = ajouter/retirer), ordre par glisser-
-// déposer. Le glisser passe par les Pointer Events plutôt que le drag & drop
-// HTML5 : ce dernier ne fonctionne pas au doigt sur iOS/Android.
+// Desktop : bandeau de 5 affiches précédées de grands chiffres. Mobile (sous
+// 860px) : liste verticale avec une poignée par ligne. Même DOM pour les deux,
+// seule la mise en page change (TopPicksPanel.module.css).
+//
+// Ordre par glisser-déposer (useSortable : souris sur toute l'affiche, doigt
+// depuis la poignée, les autres titres se décalent en direct). Au clavier, les
+// flèches déplacent le titre dont la poignée a le focus.
 export default function TopPicksPanel() {
   const { t } = useTranslation();
   const { watched } = useLibrary();
+  const { shareSlug, username } = useAuth();
   const [picks, setPicks] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [dragKey, setDragKey] = useState<string | null>(null);
-  const [overKey, setOverKey] = useState<string | null>(null);
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,10 +61,27 @@ export default function TopPicksPanel() {
     };
   }, [t]);
 
+  // Après un déplacement au clavier, le focus suit le titre déplacé (sur la
+  // poignée visible : « Glisser » sur desktop, ⋮⋮ sur mobile).
+  useEffect(() => {
+    if (focusKey) {
+      const handles = panelRef.current?.querySelectorAll<HTMLButtonElement>(
+        `[data-handle-for="${CSS.escape(focusKey)}"]`
+      );
+      [...(handles ?? [])].find((el) => el.offsetParent !== null)?.focus();
+      setFocusKey(null);
+    }
+  }, [focusKey]);
+
   const byKey = useMemo(() => new Map(watched.map((item) => [keyOf(item), item])), [watched]);
   // Un titre retiré des « vus » depuis disparaît aussi du Top (le Worker
   // fait de même côté page publique).
   const chosen = (picks ?? []).filter((key) => byKey.has(key));
+  const sortable = useSortable({
+    keys: chosen,
+    enabled: chosen.length > 1,
+    onReorder: (next) => save(next),
+  });
 
   async function save(next: string[]) {
     const previous = picks;
@@ -72,136 +102,217 @@ export default function TopPicksPanel() {
     }
   }
 
-  function toggle(key: string) {
-    if (chosen.includes(key)) {
-      save(chosen.filter((k) => k !== key));
-    } else if (chosen.length < MAX_PICKS) {
+  function add(key: string) {
+    if (!chosen.includes(key) && chosen.length < MAX_PICKS) {
       save([...chosen, key]);
     }
   }
 
-  function onPointerDown(e: PointerEvent<HTMLLIElement>, key: string) {
-    if (e.button !== 0 || chosen.length < 2) {
+  function remove(key: string) {
+    save(chosen.filter((k) => k !== key));
+  }
+
+  function move(key: string, to: number) {
+    const from = chosen.indexOf(key);
+    if (from === to || to < 0 || to >= chosen.length) {
       return;
     }
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragKey(key);
-    setOverKey(key);
+    save(moveKey(chosen, key, to));
   }
-  function onPointerMove(e: PointerEvent<HTMLLIElement>) {
-    if (!dragKey) {
+
+  function onHandleKeyDown(e: KeyboardEvent<HTMLButtonElement>, key: string) {
+    const index = chosen.indexOf(key);
+    const target =
+      e.key === "ArrowLeft" || e.key === "ArrowUp"
+        ? index - 1
+        : e.key === "ArrowRight" || e.key === "ArrowDown"
+          ? index + 1
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? chosen.length - 1
+              : null;
+    if (target === null) {
       return;
     }
-    const target = document
-      .elementFromPoint(e.clientX, e.clientY)
-      ?.closest<HTMLElement>("[data-pick-key]");
-    if (target?.dataset.pickKey) {
-      setOverKey(target.dataset.pickKey);
-    }
+    e.preventDefault();
+    move(key, target);
+    setFocusKey(key);
   }
-  function onPointerUp() {
-    if (dragKey && overKey && dragKey !== overKey) {
-      const next = chosen.filter((k) => k !== dragKey);
-      next.splice(chosen.indexOf(overKey), 0, dragKey);
-      save(next);
-    }
-    setDragKey(null);
-    setOverKey(null);
+
+  // Poignée de déplacement : départ du glisser au doigt, flèches au clavier.
+  function handleProps(key: string, title: string, index: number) {
+    return {
+      "data-drag-handle": true,
+      "data-handle-for": key,
+      onKeyDown: (e: KeyboardEvent<HTMLButtonElement>) => onHandleKeyDown(e, key),
+      "aria-label": t("topPicks.moveLabel", { title, rank: index + 1, count: chosen.length }),
+      "aria-describedby": "top-picks-keyboard-hint",
+    };
   }
 
   if (picks === null) {
     return null;
   }
 
-  const emptySlots = Array.from({ length: MAX_PICKS - chosen.length }, (_, i) => chosen.length + i);
+  const free = MAX_PICKS - chosen.length;
+  const emptySlots = Array.from({ length: free }, (_, i) => chosen.length + i);
+  const profilePath = shareSlug ? `/u/${username ?? shareSlug}` : null;
+  const canDrag = chosen.length > 1;
 
   return (
-    <section className={styles.panel} aria-labelledby="top-picks-title">
+    <section ref={panelRef} className={styles.panel} aria-labelledby="top-picks-title">
       <div className={styles.head}>
-        <h2 id="top-picks-title" className={styles.title}>
-          {t("topPicks.title")}
-        </h2>
-        {watched.length > 0 && (
-          <button type="button" className={styles.editBtn} onClick={() => setPickerOpen(true)}>
-            {t(chosen.length ? "topPicks.edit" : "topPicks.choose")}
-          </button>
+        <div>
+          <h2 id="top-picks-title" className={styles.title}>
+            {t("topPicks.title")}
+            <span className={styles.counter}>
+              {t("topPicks.counter", { count: chosen.length, max: MAX_PICKS })}
+            </span>
+          </h2>
+          <p className={styles.subtitle}>{t("topPicks.subtitle")}</p>
+        </div>
+        {profilePath && (
+          <Link to={profilePath} className={styles.profileBtn}>
+            <Icon name="external" /> {t("topPicks.viewOnProfile")}
+          </Link>
         )}
       </div>
-      <p className={styles.hint}>
-        {watched.length === 0
-          ? t("topPicks.noWatched")
-          : t(
-              chosen.length > 1
-                ? "topPicks.hintDrag"
-                : chosen.length
-                  ? "topPicks.hint"
-                  : "topPicks.hintEmpty"
-            )}
-      </p>
 
-      {watched.length > 0 && (
-        <ol className={styles.slots}>
-          {chosen.map((key, index) => {
-            const item = byKey.get(key)!;
-            const poster = posterUrl(item.posterPath, "w185");
-            return (
-              <li
-                key={key}
-                data-pick-key={key}
-                className={`${styles.slot} ${chosen.length > 1 ? styles.draggable : ""} ${
-                  dragKey === key ? styles.dragging : ""
-                } ${overKey === key && dragKey !== key ? styles.dropTarget : ""}`}
-                onPointerDown={(e) => onPointerDown(e, key)}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-              >
-                {poster ? (
-                  <img className={styles.poster} src={poster} alt="" draggable={false} />
-                ) : (
-                  <span className={styles.noPoster}>{item.title}</span>
-                )}
-                <span className={`${styles.rank} ${index < 3 ? styles[`rank${index + 1}`] : ""}`}>
+      {watched.length === 0 ? (
+        <p className={styles.hint}>{t("topPicks.noWatched")}</p>
+      ) : (
+        <>
+          <ol className={styles.slots}>
+            {sortable.order.map((key, index) => {
+              const item = byKey.get(key)!;
+              const poster = posterUrl(item.posterPath, "w342");
+              const accent = posterAccentFromGenres(item.genreIds, key);
+              const year = item.date?.slice(0, 4);
+              const type = t(item.mediaType === "tv" ? "topPicks.series" : "topPicks.movie");
+              return (
+                <li
+                  key={key}
+                  {...sortable.itemProps(key)}
+                  className={`${styles.slot} ${canDrag ? styles.draggable : ""} ${
+                    sortable.dragKey === key ? styles.dragging : ""
+                  }`}
+                >
+                  {canDrag && (
+                    <button
+                      type="button"
+                      className={styles.rowHandle}
+                      {...handleProps(key, item.title, index)}
+                    >
+                      <Icon name="dragHandle" />
+                    </button>
+                  )}
+                  <span className={`${styles.rank} ${styles[RANK_CLASS[index]]}`} aria-hidden>
+                    {index + 1}
+                  </span>
+                  <div className={styles.card}>
+                    {poster ? (
+                      <img className={styles.poster} src={poster} alt="" draggable={false} />
+                    ) : (
+                      <span className={`${styles.noPoster} ${posterStyles[accent]}`}>
+                        <span className={styles.noPosterTitle}>{item.title}</span>
+                      </span>
+                    )}
+                    <span className={styles.typeBadge}>{type}</span>
+                    {canDrag && (
+                      <button
+                        type="button"
+                        className={styles.dragChip}
+                        {...handleProps(key, item.title, index)}
+                      >
+                        <Icon name="dragHandle" /> {t("topPicks.drag")}
+                      </button>
+                    )}
+                  </div>
+                  <div className={styles.meta}>
+                    <span className={styles.slotTitle}>{item.title}</span>
+                    <span className={styles.slotSub}>
+                      {type}
+                      {year ? ` · ${year}` : ""}
+                      {item.rating != null && (
+                        <span className={styles.slotRating}>
+                          {" · "}
+                          <Icon name="star" filled /> {item.rating}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.remove}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={() => remove(key)}
+                    aria-label={t("topPicks.removeTitle", { title: item.title })}
+                    title={t("topPicks.remove")}
+                  >
+                    <Icon name="close" />
+                  </button>
+                </li>
+              );
+            })}
+            {emptySlots.map((index) => (
+              <li key={`empty-${index}`} className={`${styles.slot} ${styles.emptySlot}`}>
+                <span className={`${styles.rank} ${styles.rankOutline}`} aria-hidden>
                   {index + 1}
                 </span>
                 <button
                   type="button"
-                  className={styles.remove}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => toggle(key)}
-                  aria-label={t("topPicks.removeTitle", { title: item.title })}
-                  title={t("topPicks.remove")}
+                  className={styles.addCard}
+                  onClick={() => setPickerOpen(true)}
+                  aria-label={t("topPicks.addAt", { rank: index + 1 })}
                 >
-                  <Icon name="close" />
+                  <span className={styles.plus} aria-hidden>
+                    +
+                  </span>
+                  {t("topPicks.add")}
                 </button>
-                <span className={styles.slotTitle}>{item.title}</span>
+                <div className={styles.meta}>
+                  <span className={styles.slotSub}>{t("topPicks.freeSlot")}</span>
+                </div>
               </li>
-            );
-          })}
-          {emptySlots.map((index) => (
-            <li key={`empty-${index}`} className={styles.slot}>
-              <button
-                type="button"
-                className={styles.emptySlot}
-                onClick={() => setPickerOpen(true)}
-                aria-label={t("topPicks.addAt", { rank: index + 1 })}
-              >
-                <span className={styles.emptyRank}>{index + 1}</span>
-                <span className={styles.plus}>+</span>
-              </button>
-            </li>
-          ))}
-        </ol>
+            ))}
+          </ol>
+
+          {free > 0 && (
+            <button type="button" className={styles.addRow} onClick={() => setPickerOpen(true)}>
+              <span className={styles.plus} aria-hidden>
+                +
+              </span>
+              <span className={styles.addRowLabel}>{t("topPicks.addRow")}</span>
+              <span className={styles.addRowFree}>{t("topPicks.freeCount", { count: free })}</span>
+            </button>
+          )}
+
+          {canDrag && (
+            <p className={styles.footHint}>
+              <Icon name="dragHandle" />
+              <span className={styles.footHintDesktop}>{t("topPicks.hintDesktop")}</span>
+              <span className={styles.footHintMobile}>{t("topPicks.hintMobile")}</span>
+            </p>
+          )}
+          <p id="top-picks-keyboard-hint" hidden>
+            {t("topPicks.keyboardHint")}
+          </p>
+        </>
       )}
 
-      {error && <p className={styles.errorHint}>{error}</p>}
+      {error && (
+        <p className={styles.errorHint} role="alert">
+          {error}
+        </p>
+      )}
 
       <TopPicksPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         watched={watched}
         chosen={chosen}
-        onToggle={toggle}
+        onToggle={(key) => (chosen.includes(key) ? remove(key) : add(key))}
       />
     </section>
   );
@@ -218,10 +329,11 @@ interface PickerProps {
 type TypeFilter = "all" | MediaType;
 const TYPE_FILTERS: TypeFilter[] = ["all", "movie", "tv"];
 
-// Modale de sélection : tous les titres vus (les notés d'abord, du mieux au
-// moins bien noté), filtrables par une recherche et par type. Un clic ajoute
-// ou retire le titre ; la modale reste ouverte pour en choisir plusieurs
-// d'affilée.
+// Modale « Ajouter à mon top 5 » (feuille du bas sur mobile) : la recherche
+// ne porte que sur les titres vus, jamais sur tout le catalogue. Les mieux
+// notés d'abord ; un clic ajoute le titre, la modale reste ouverte pour en
+// ajouter d'autres jusqu'à ce qu'on la ferme. Les titres déjà dans le top
+// sont grisés avec leur rang ; un nouveau clic les retire (décocher).
 function TopPicksPicker({ open, onClose, watched, chosen, onToggle }: PickerProps) {
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -269,14 +381,13 @@ function TopPicksPicker({ open, onClose, watched, chosen, onToggle }: PickerProp
     >
       {open && (
         <div className={styles.dialogContent}>
+          <span className={styles.sheetGrabber} aria-hidden />
           <div className={styles.dialogHead}>
             <div>
               <h2 id="top-picks-picker-title" className={styles.dialogTitle}>
                 {t("topPicks.pickerTitle")}
               </h2>
-              <p className={styles.dialogSubtitle}>
-                {free === 0 ? t("topPicks.full") : t("topPicks.freeSlots", { count: free })}
-              </p>
+              <p className={styles.dialogSubtitle}>{t("topPicks.freeSlots", { count: free })}</p>
             </div>
             <button
               type="button"
@@ -287,14 +398,16 @@ function TopPicksPicker({ open, onClose, watched, chosen, onToggle }: PickerProp
               <Icon name="close" />
             </button>
           </div>
-          <input
-            className={styles.search}
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("topPicks.searchPlaceholder")}
-            aria-label={t("topPicks.searchLabel")}
-          />
+          <label className={styles.search}>
+            <Icon name="search" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("topPicks.searchPlaceholder")}
+              aria-label={t("topPicks.searchLabel")}
+            />
+          </label>
           <div className={styles.typeTabs} role="group" aria-label={t("topPicks.typeFilter")}>
             {TYPE_FILTERS.map((type) => (
               <button
@@ -319,24 +432,27 @@ function TopPicksPicker({ open, onClose, watched, chosen, onToggle }: PickerProp
                     const key = keyOf(item);
                     const rank = chosen.indexOf(key) + 1;
                     const poster = posterUrl(item.posterPath, "w185");
+                    const accent = posterAccentFromGenres(item.genreIds, key);
                     const year = item.date?.slice(0, 4);
                     return (
                       <li key={key}>
                         <button
                           type="button"
-                          className={`${styles.candidate} ${rank ? styles.selected : ""}`}
+                          className={`${styles.candidate} ${rank ? styles.inTopCandidate : ""}`}
                           onClick={() => onToggle(key)}
-                          disabled={!rank && free === 0}
+                          disabled={rank === 0 && free === 0}
                           aria-pressed={rank > 0}
                         >
                           <span className={styles.candidatePoster}>
                             {poster ? (
                               <img className={styles.poster} src={poster} alt="" loading="lazy" />
                             ) : (
-                              <span className={styles.noPoster}>{item.title}</span>
+                              <span className={`${styles.noPoster} ${posterStyles[accent]}`}>
+                                <span className={styles.noPosterTitle}>{item.title}</span>
+                              </span>
                             )}
                             <span className={styles.typeBadge}>
-                              {t(item.mediaType === "tv" ? "mediaCard.series" : "mediaCard.movie")}
+                              {t(item.mediaType === "tv" ? "topPicks.series" : "topPicks.movie")}
                             </span>
                             {item.rating != null && (
                               <span className={styles.rating}>
@@ -346,11 +462,14 @@ function TopPicksPicker({ open, onClose, watched, chosen, onToggle }: PickerProp
                             {rank > 0 && (
                               <span className={styles.inTop}>
                                 <span
-                                  className={`${styles.inTopRank} ${styles[`inTopRank${rank}`] ?? ""}`}
+                                  className={`${styles.inTopRank} ${styles[RANK_CLASS[rank - 1]]}`}
                                 >
                                   {rank}
                                 </span>
                                 <span className={styles.inTopLabel}>{t("topPicks.inTop")}</span>
+                                <span className={styles.inTopRemove}>
+                                  <Icon name="close" /> {t("topPicks.untick")}
+                                </span>
                               </span>
                             )}
                           </span>

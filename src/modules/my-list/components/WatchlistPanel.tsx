@@ -1,9 +1,10 @@
-import { useState, type DragEvent } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
-import { MediaCard, Dropdown, EmptyState } from "../../../shared/components/index.ts";
+import { MediaCard, Dropdown, EmptyState, Icon } from "../../../shared/components/index.ts";
 import dropdownStyles from "../../../shared/components/Dropdown/Dropdown.module.css";
 import { libraryItemToMediaItem } from "../../../shared/lib/libraryItem.ts";
+import { neighborOf, useSortable } from "../../../shared/hooks/useSortable.ts";
 import gridStyles from "../../../shared/styles/mediaGrid.module.css";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import styles from "./WatchlistPanel.module.css";
@@ -24,52 +25,39 @@ export default function WatchlistPanel({ items }: { items: LibraryItem[] }) {
   const { t } = useTranslation();
   const { reorderWatchlist } = useLibrary();
   const [sortMode, setSortMode] = useState<SortMode>("manual");
-  const [dragKey, setDragKey] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ key: string; after: boolean } | null>(null);
+  const manual = sortMode === "manual";
+  const canSort = manual && items.length > 1;
+  const byKey = new Map(items.map((item) => [makeKey(item), item]));
+  // Glisser à la souris sur toute l'affiche, au doigt depuis la poignée ⋮⋮.
+  const sortable = useSortable({
+    keys: items.map(makeKey),
+    enabled: canSort,
+    onReorder: (next, moved) => {
+      const { toKey, after } = neighborOf(next, moved);
+      reorderWatchlist(moved, toKey, after);
+    },
+  });
 
   if (items.length === 0) {
     return <EmptyState label={t("watchlistPanel.emptyState")} />;
   }
 
-  const sorted =
-    sortMode === "manual"
-      ? items
-      : [...items].sort((a, b) => {
-          if (sortMode === "title") {
-            return a.title.localeCompare(b.title, "fr");
-          }
-          if (sortMode === "year") {
-            return (b.date || "").localeCompare(a.date || "");
-          }
-          return (b.rating ?? -1) - (a.rating ?? -1);
-        });
-
-  const manual = sortMode === "manual";
-
-  function onDragStart(key: string) {
-    setDragKey(key);
-  }
-  function onDragOver(e: DragEvent<HTMLDivElement>, key: string) {
-    if (!manual || !dragKey || dragKey === key) {
-      return;
-    }
-    e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const after = e.clientX - rect.left > rect.width / 2;
-    setDropTarget({ key, after });
-  }
-  function onDrop(key: string) {
-    if (dragKey && dragKey !== key && dropTarget) {
-      reorderWatchlist(dragKey, key, dropTarget.after);
-    }
-    setDragKey(null);
-    setDropTarget(null);
-  }
+  const sorted = manual
+    ? sortable.order.map((key) => byKey.get(key)!)
+    : [...items].sort((a, b) => {
+        if (sortMode === "title") {
+          return a.title.localeCompare(b.title, "fr");
+        }
+        if (sortMode === "year") {
+          return (b.date || "").localeCompare(a.date || "");
+        }
+        return (b.rating ?? -1) - (a.rating ?? -1);
+      });
 
   return (
     <div>
       <div className={styles.tools}>
-        {manual && <span className={styles.dragHint}>{t("watchlistPanel.dragHint")}</span>}
+        {canSort && <span className={styles.dragHint}>{t("watchlistPanel.dragHint")}</span>}
         <span className={styles.spacer} />
         <Dropdown
           label={
@@ -100,24 +88,17 @@ export default function WatchlistPanel({ items }: { items: LibraryItem[] }) {
           return (
             <div
               key={key}
-              draggable={manual}
-              onDragStart={() => onDragStart(key)}
-              onDragOver={(e) => onDragOver(e, key)}
-              onDragLeave={() => setDropTarget((t) => (t?.key === key ? null : t))}
-              onDrop={() => onDrop(key)}
-              onDragEnd={() => {
-                setDragKey(null);
-                setDropTarget(null);
-              }}
-              className={`${manual ? styles.draggable : ""} ${dragKey === key ? styles.dragging : ""} ${
-                dropTarget?.key === key
-                  ? dropTarget.after
-                    ? styles.dropAfter
-                    : styles.dropBefore
-                  : ""
+              {...(canSort ? sortable.itemProps(key) : {})}
+              className={`${styles.sortItem} ${canSort ? styles.draggable : ""} ${
+                sortable.dragKey === key ? styles.dragging : ""
               }`}
             >
               <MediaCard item={libraryItemToMediaItem(item)} />
+              {canSort && (
+                <span className={styles.dragHandle} data-drag-handle aria-hidden>
+                  <Icon name="dragHandle" />
+                </span>
+              )}
             </div>
           );
         })}

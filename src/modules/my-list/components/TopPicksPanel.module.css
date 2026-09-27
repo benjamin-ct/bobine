@@ -1,6 +1,6 @@
 .panel {
   margin-top: 24px;
-  padding: 18px 20px 20px;
+  padding: 26px 26px 22px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -8,37 +8,63 @@
 
 .head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+  margin-bottom: 22px;
 }
 
 .title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.5rem;
 }
 
-.editBtn {
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-  font-size: 13px;
+.counter {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--subtle);
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.profileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.profileBtn:hover {
+  background: var(--surface-2);
 }
 
 .hint {
-  margin: 6px 0 14px;
+  margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .errorHint {
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   color: var(--accent-ink);
   font-size: 13px;
 }
+
+/* ── Desktop : 5 affiches alignées, précédées de grands chiffres ── */
 
 .slots {
   list-style: none;
@@ -46,15 +72,16 @@
   padding: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  max-width: 640px;
+  gap: 22px;
 }
 
 .slot {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "rank card"
+    ". meta";
   min-width: 0;
   user-select: none;
   -webkit-user-select: none;
@@ -62,29 +89,71 @@
 
 .draggable {
   cursor: grab;
-  /* Le doigt glisse l'affiche au lieu de faire défiler la page. */
-  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Appui long au doigt : pas d'aperçu du lien sur iOS. */
+  -webkit-touch-callout: none;
 }
 
+/* Titre tenu : il suit le pointeur au-dessus des autres (useSortable). */
 .dragging {
-  opacity: 0.45;
+  position: relative;
+  z-index: 5;
   cursor: grabbing;
 }
 
-.dropTarget .poster,
-.dropTarget .noPoster {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
+.dragging .card {
+  box-shadow: 0 18px 36px oklch(0 0 0 / 0.45);
+}
+
+.rowHandle {
+  display: none;
+}
+
+.rank {
+  grid-area: rank;
+  align-self: end;
+  /* Le chiffre passe légèrement sous l'affiche, comme sur la maquette. */
+  margin-right: -0.08em;
+  font-family: var(--font-poster);
+  font-size: clamp(72px, 8.4vw, 132px);
+  line-height: 0.78;
+}
+
+.rank1 {
+  color: var(--top-rank-1);
+}
+
+.rank2 {
+  color: var(--top-rank-2);
+}
+
+.rank3 {
+  color: var(--top-rank-3);
+}
+
+.rankOutline {
+  color: transparent;
+  -webkit-text-stroke: 2px var(--top-rank-outline);
+}
+
+.card {
+  grid-area: card;
+  position: relative;
+  z-index: 1;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
 }
 
 .poster,
 .noPoster {
   display: block;
   width: 100%;
-  aspect-ratio: 2 / 3;
-  border-radius: 8px;
+  height: 100%;
   object-fit: cover;
-  background: var(--surface-2);
 }
 
 .poster {
@@ -92,104 +161,299 @@
 }
 
 .noPoster {
-  display: grid;
-  place-items: center;
-  padding: 6px;
-  font-size: 11px;
-  text-align: center;
-  color: var(--muted);
-  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 12px 12px 48px;
 }
 
-.slotTitle,
-.candidateTitle {
+.noPosterTitle {
+  color: var(--on-image);
+  font-family: var(--font-poster);
+  font-size: clamp(16px, 1.8vw, 24px);
+  line-height: 0.95;
+  text-transform: uppercase;
+  text-shadow: 0 2px 16px oklch(0 0 0 / 0.55);
+  overflow-wrap: anywhere;
+}
+
+.typeBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: oklch(0 0 0 / 0.55);
+  color: var(--on-image);
+  backdrop-filter: blur(4px);
+}
+
+.remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  font-size: 13px;
+  background: oklch(0.15 0.02 260 / 0.8);
+  color: var(--on-image);
+}
+
+.remove:hover {
+  background: oklch(0.1 0.02 260 / 0.95);
+}
+
+.dragChip {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
   font-size: 12px;
+  white-space: nowrap;
+  background: oklch(0.15 0.02 260 / 0.75);
+  color: oklch(0.99 0 0 / 0.75);
+  backdrop-filter: blur(4px);
+  cursor: grab;
+  /* Le doigt glisse l'affiche au lieu de faire défiler la page. */
+  touch-action: none;
+}
+
+.meta {
+  grid-area: meta;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin-top: 12px;
+}
+
+.slotTitle {
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.emptySlot {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  border-radius: 8px;
-  border: 1.5px dashed var(--border);
+.slotSub {
   color: var(--muted);
+  font-size: 14px;
 }
 
-.emptySlot:hover {
-  color: var(--fg);
-  border-color: var(--muted);
+.slotRating {
+  display: none;
+}
+
+.addCard {
+  grid-area: card;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius);
+  border: 1.5px dashed color-mix(in oklch, var(--accent) 70%, transparent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.addCard:hover {
+  background: var(--accent-soft);
 }
 
 .plus {
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   font-weight: 300;
-}
-
-.emptyRank {
-  position: absolute;
-  top: 6px;
-  left: 8px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-/* Médaillon repris du Top 5 de la page publique (MediaCard). */
-.rank {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 13px;
   line-height: 1;
-  /* 4 et 5 : médaille en contour (tokens --medal-* de variables.css) */
-  background: var(--medal-outline-bg);
-  color: var(--medal-outline-ink);
-  border: 1.5px solid var(--medal-outline);
-  box-shadow: 0 3px 10px oklch(0 0 0 / 0.45);
 }
 
-.rank1 {
-  background: var(--medal-1);
-  color: var(--medal-1-ink);
-  border-color: var(--medal-1);
+.emptySlot .slotSub {
+  color: var(--subtle);
 }
 
-.rank2 {
-  background: var(--medal-2);
-  color: var(--medal-2-ink);
-  border-color: var(--medal-2);
+.addRow {
+  display: none;
 }
 
-.rank3 {
-  background: var(--medal-3);
-  color: var(--medal-3-ink);
-  border-color: var(--medal-3);
+.footHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 22px 0 0;
+  color: var(--subtle);
+  font-size: 14px;
 }
 
-.remove {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: oklch(0 0 0 / 0.6);
-  color: var(--on-image);
+.footHintMobile {
+  display: none;
 }
+
+/* ── Mobile : liste verticale, une poignée par ligne ── */
+
+@media (max-width: 860px) {
+  .panel {
+    padding: 20px 18px 18px;
+  }
+
+  .head {
+    margin-bottom: 16px;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .profileBtn {
+    display: none;
+  }
+
+  .slots {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .slot {
+    grid-template-columns: 22px 30px 42px minmax(0, 1fr) 32px;
+    grid-template-areas: "handle rank card meta remove";
+    align-items: center;
+    column-gap: 10px;
+    padding: 10px 8px 10px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+  }
+
+  .draggable {
+    cursor: default;
+  }
+
+  .dragging {
+    box-shadow: 0 14px 30px oklch(0 0 0 / 0.35);
+  }
+
+  .dragging .card {
+    box-shadow: none;
+  }
+
+  .rowHandle {
+    grid-area: handle;
+    display: grid;
+    place-items: center;
+    height: 40px;
+    color: var(--subtle);
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .rank {
+    align-self: center;
+    margin: 0;
+    text-align: center;
+    font-size: 30px;
+    line-height: 1;
+  }
+
+  .rankOutline {
+    -webkit-text-stroke-width: 1px;
+  }
+
+  .card {
+    width: 42px;
+    border-radius: 6px;
+  }
+
+  .noPoster {
+    padding: 0;
+  }
+
+  .noPosterTitle,
+  .typeBadge,
+  .dragChip {
+    display: none;
+  }
+
+  .meta {
+    margin-top: 0;
+    gap: 2px;
+  }
+
+  .slotSub {
+    font-size: 13px;
+  }
+
+  .slotRating {
+    display: inline;
+  }
+
+  .remove {
+    grid-area: remove;
+    position: static;
+    width: 32px;
+    height: 32px;
+    background: none;
+    color: var(--muted);
+  }
+
+  .emptySlot {
+    display: none;
+  }
+
+  .addRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    border: 1.5px dashed color-mix(in oklch, var(--accent) 70%, transparent);
+    color: var(--accent-ink);
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .addRowLabel {
+    flex: 1;
+  }
+
+  .addRowFree {
+    color: var(--subtle);
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  .footHint {
+    margin-top: 16px;
+    font-size: 13px;
+  }
+
+  .footHintDesktop {
+    display: none;
+  }
+
+  .footHintMobile {
+    display: inline;
+  }
+}
+
+/* ── Modale « Ajouter à mon top 5 » ── */
 
 .dialog {
   width: min(720px, calc(100% - 2 * var(--gutter)));
@@ -198,7 +462,7 @@
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--bg);
+  background: var(--surface-2);
   color: var(--fg);
   overflow: hidden;
 }
@@ -211,7 +475,11 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 18px 18px 0;
+  padding: 20px 20px 0;
+}
+
+.sheetGrabber {
+  display: none;
 }
 
 .dialogHead {
@@ -219,12 +487,12 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .dialogTitle {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
 }
 
 .dialogSubtitle {
@@ -240,16 +508,46 @@
   height: 34px;
   flex-shrink: 0;
   border-radius: 999px;
-  background: var(--surface-2);
+  background: var(--surface-3);
   color: var(--fg);
   font-size: 13px;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  transition: border-color 0.18s ease;
+}
+
+/* Pas d'anneau de focus corail : la modale focalise le champ à l'ouverture,
+   une bordure neutre plus marquée suffit à signaler le focus. */
+.search:focus-within {
+  border-color: var(--border-2);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font-size: 16px;
+  outline: none;
 }
 
 .typeTabs {
   display: flex;
   gap: 4px;
   align-self: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   padding: 4px;
   border-radius: 999px;
   background: var(--surface);
@@ -265,7 +563,7 @@
 }
 
 .typeTabActive {
-  background: var(--surface-2);
+  background: var(--selected-bg);
   color: var(--fg);
 }
 
@@ -273,7 +571,8 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: 18px;
+  overscroll-behavior: contain;
+  padding-bottom: 20px;
 }
 
 .sectionTitle {
@@ -286,41 +585,16 @@
   color: var(--muted);
 }
 
-.sectionTitle ~ .sectionTitle {
-  margin-top: 20px;
-}
-
-.search {
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--fg);
-  font-size: 14px;
-  transition: border-color 0.18s ease;
-}
-
-/* Pas d'anneau de focus rouge (accent) : la modale focalise le champ à
-   l'ouverture, une bordure neutre plus marquée suffit à signaler le focus. */
-.search:focus,
-.search:focus-visible {
-  outline: none;
-  border-color: var(--border-2);
-}
-
 .grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 14px 12px;
 }
 
 .candidate {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -332,53 +606,77 @@
 .candidatePoster {
   position: relative;
   display: block;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: border-color 0.15s ease;
+}
+
+.candidate:not(:disabled):hover .candidatePoster {
+  border-color: var(--border-2);
+}
+
+.candidatePoster .noPoster {
+  padding: 8px 8px 10px;
+}
+
+.candidatePoster .noPosterTitle {
+  font-size: 15px;
+}
+
+.candidatePoster .typeBadge {
+  top: 5px;
+  left: 5px;
+  padding: 2px 5px;
+  font-size: 9px;
+}
+
+.candidateTitle {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .candidateYear {
   margin-top: -4px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .candidate:disabled {
-  opacity: 0.4;
   cursor: default;
 }
 
-.selected .poster,
-.selected .noPoster {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
+/* Top déjà complet : les titres restants ne peuvent plus être ajoutés. */
+.candidate:disabled:not(.inTopCandidate) {
+  opacity: 0.4;
 }
 
-.typeBadge {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  padding: 2px 5px;
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  background: oklch(0 0 0 / 0.65);
-  color: var(--on-image);
+.inTopCandidate .candidateTitle,
+.inTopCandidate .candidateYear {
+  opacity: 0.55;
 }
 
 .rating {
   position: absolute;
-  top: 5px;
+  bottom: 5px;
   right: 5px;
-  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
   background: oklch(0 0 0 / 0.65);
-  color: var(--on-image);
+  color: var(--top-rank-1);
 }
 
-/* Titre déjà dans le Top : affiche assombrie, rang au centre. */
+/* Titre déjà dans le top : affiche grisée, rang au centre. */
 .inTop {
   position: absolute;
   inset: 0;
@@ -387,31 +685,76 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  border-radius: 8px;
-  background: oklch(0.15 0.02 260 / 0.72);
+  background: oklch(0.15 0.02 260 / 0.78);
   color: var(--on-image);
 }
 
 .inTopRank {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 2rem;
-  line-height: 1;
+  font-family: var(--font-poster);
+  font-size: 2.8rem;
+  line-height: 0.9;
 }
 
-.inTopRank1 {
-  color: var(--medal-1);
-}
-
-.inTopRank2 {
-  color: var(--medal-2);
-}
-
-.inTopRank3 {
-  color: var(--medal-3);
+.inTopRank.rankOutline {
+  -webkit-text-stroke-width: 1.5px;
+  -webkit-text-stroke-color: rgba(245, 248, 255, 0.7);
 }
 
 .inTopLabel {
   font-size: 11px;
   font-weight: 600;
+}
+
+/* Un nouveau clic retire le titre du top (décocher). */
+.inTopRemove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 3px 9px;
+  border: 1px solid oklch(1 0 0 / 0.35);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.candidate:hover .inTopRemove,
+.candidate:focus-visible .inTopRemove {
+  border-color: var(--on-image);
+  background: oklch(1 0 0 / 0.12);
+}
+
+/* Feuille du bas sur mobile. */
+@media (max-width: 860px) {
+  .dialog {
+    width: 100%;
+    max-width: none;
+    height: min(86dvh, 720px);
+    max-height: none;
+    margin: auto 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom: 0;
+  }
+
+  .dialogContent {
+    padding: 10px 18px 0;
+  }
+
+  .sheetGrabber {
+    display: block;
+    align-self: center;
+    width: 40px;
+    height: 4px;
+    margin-bottom: 12px;
+    border-radius: 999px;
+    background: var(--border-2);
+  }
+
+  .results {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
