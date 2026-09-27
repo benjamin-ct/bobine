@@ -1,11 +1,29 @@
-FROM node:22-slim
+# Node 24 : même version que la CI et que le champ "engines" du package.json.
+FROM node:24-slim
 
+# curl / procps (pkill) / jq : outils de base attendus par Claude pour ses
+# vérifications (appels HTTP, arrêt d'un serveur local, lecture de JSON).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     openssh-client \
+    curl \
+    procps \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g @anthropic-ai/claude-code@2.1.281
+
+# Navigateur headless pour que Claude puisse vérifier visuellement ses
+# changements (desktop et mobile) : Playwright + Chromium et ses dépendances
+# système, installés dans un dossier partagé lisible par claudeuser.
+# NODE_PATH : le script de capture (CommonJS) trouve le Playwright global.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    NODE_PATH=/usr/local/lib/node_modules
+RUN npm install -g playwright@1.63.0 \
+    && playwright install --with-deps chromium \
+    && chmod -R a+rX /ms-playwright
+COPY bobine-screenshot.cjs /usr/local/bin/bobine-screenshot
+RUN chmod 755 /usr/local/bin/bobine-screenshot
 
 RUN useradd -m -s /bin/bash claudeuser
 
