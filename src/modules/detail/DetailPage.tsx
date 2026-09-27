@@ -566,7 +566,7 @@ export default function DetailPage() {
                   <>
                     <Icon name="list" />
                     {/* Mobile : « Listes » tout court (maquette), pour tenir
-                        sur une ligne avec « Envie de voir », ▷ et « ⋯ ». */}
+                        sur une ligne avec « Envie de voir » et « ⋯ ». */}
                     <span className={`${styles.btnLabel} ${styles.labelLong}`}>
                       {listCount > 0
                         ? t("detailPage.inLists", { count: listCount })
@@ -627,7 +627,7 @@ export default function DetailPage() {
                   </button>
                 </div>
               </Dropdown>
-              <TrailerButton videos={details.videos?.results} compact />
+              <TrailerButton videos={details.videos?.results} className={styles.trailerBtn} />
               <Dropdown
                 label={<Icon name="more" size={20} />}
                 ariaLabel={t("detailPage.moreActions")}
@@ -734,7 +734,7 @@ export default function DetailPage() {
                   </button>
                 )}
               </div>
-              <div className={styles.castGrid}>
+              <div className={`${styles.castGrid} ${showFullCast ? styles.castGridAll : ""}`}>
                 {visibleCast.map((member) => (
                   <PersonCard
                     key={member.credit_id || `${member.id}-${member.character}`}
