@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { dateLocaleTag, formatFullDate, type SeriesEpisodeBadge } from "../../../core/api/tmdb.ts";
 import { isStrictlyFutureDate } from "../../../core/api/releaseBadge.ts";
@@ -64,6 +64,10 @@ export default function EpisodeTracker({
   const { requireMember } = useMembersOnly();
   const { locale } = useLocale();
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
+  // Saisons dont la liste d'épisodes est repliée (longues saisons : on
+  // n'a pas à faire défiler 190 épisodes pour atteindre la suite de la fiche).
+  const [collapsed, setCollapsed] = useState<ReadonlySet<number>>(new Set());
+  const tabsRef = useRef<HTMLDivElement>(null);
   const today = todayIso();
 
   const main = mainSeasons(seasons);
@@ -194,6 +198,39 @@ export default function EpisodeTracker({
     shownAired.length > 0 &&
     shownAired.every((ep) => isWatched(shown.season_number, ep.episode_number));
   const note = next.kind === "upToDate" ? upcomingNote() : null;
+  const shownCollapsed = shown != null && collapsed.has(shown.season_number);
+
+  function toggleCollapsed(seasonNumber: number, fromBottom = false) {
+    setCollapsed((prev) => {
+      const nextSet = new Set(prev);
+      if (!nextSet.delete(seasonNumber)) {
+        nextSet.add(seasonNumber);
+      }
+      return nextSet;
+    });
+    // Replié depuis le bas d'une longue liste : on remonte aux onglets,
+    // sinon on se retrouve loin sous le bloc qui vient de rétrécir.
+    if (fromBottom) {
+      requestAnimationFrame(() =>
+        tabsRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+      );
+    }
+  }
+
+  function collapseButton(seasonNumber: number, fromBottom = false) {
+    const isCollapsed = collapsed.has(seasonNumber);
+    return (
+      <button
+        type="button"
+        className={styles.collapseBtn}
+        onClick={() => toggleCollapsed(seasonNumber, fromBottom)}
+        aria-expanded={!isCollapsed}
+      >
+        <Icon name={isCollapsed ? "chevronDown" : "chevronUp"} size={16} />
+        {isCollapsed ? t("episodeTracker.expandSeason") : t("episodeTracker.collapseSeason")}
+      </button>
+    );
+  }
 
   return (
     <section className={styles.tracker}>
@@ -261,7 +298,7 @@ export default function EpisodeTracker({
         </div>
       )}
 
-      <div className={styles.tabs} role="tablist">
+      <div className={styles.tabs} role="tablist" ref={tabsRef}>
         {tabs.map((season) => {
           const count = watchedInSeason(season.season_number);
           const announced =
@@ -307,111 +344,124 @@ export default function EpisodeTracker({
           )}
           {shownEpisodes && shownEpisodes.length > 0 && (
             <>
-              <ul className={styles.episodeList}>
-                {shownEpisodes.map((ep) => {
-                  const seasonNumber = shown.season_number;
-                  const watched = isWatched(seasonNumber, ep.episode_number);
-                  const isNext =
-                    next.kind === "next" &&
-                    next.seasonNumber === seasonNumber &&
-                    next.episode.episode_number === ep.episode_number;
-                  const aired = isAired(ep, today);
-                  const badge =
-                    episodeBadge &&
-                    episodeBadge.seasonNumber === seasonNumber &&
-                    episodeBadge.episodeNumber === ep.episode_number
-                      ? episodeBadge.kind
-                      : null;
-                  const status = watched
-                    ? t("episodeTracker.statusWatched")
-                    : isNext
-                      ? t("episodeTracker.upNext")
-                      : aired
-                        ? t("episodeTracker.statusNotWatched")
+              <div className={styles.listHead}>
+                <span className={styles.listCount}>
+                  {t("episodeTracker.episodesCount", { count: shownEpisodes.length })}
+                </span>
+                {collapseButton(shown.season_number)}
+              </div>
+              {!shownCollapsed && (
+                <ul className={styles.episodeList}>
+                  {shownEpisodes.map((ep) => {
+                    const seasonNumber = shown.season_number;
+                    const watched = isWatched(seasonNumber, ep.episode_number);
+                    const isNext =
+                      next.kind === "next" &&
+                      next.seasonNumber === seasonNumber &&
+                      next.episode.episode_number === ep.episode_number;
+                    const aired = isAired(ep, today);
+                    const badge =
+                      episodeBadge &&
+                      episodeBadge.seasonNumber === seasonNumber &&
+                      episodeBadge.episodeNumber === ep.episode_number
+                        ? episodeBadge.kind
                         : null;
-                  const date = shortDate(ep.air_date);
-                  const epLabel = t("episodeTracker.episodeRef", {
-                    season: seasonNumber,
-                    episode: ep.episode_number,
-                  });
-                  return (
-                    <li
-                      key={ep.id ?? ep.episode_number}
-                      className={`${styles.episode} ${isNext ? styles.episodeNext : ""}`}
-                    >
-                      <button
-                        type="button"
-                        className={`${styles.dot} ${watched ? styles.dotOn : ""}`}
-                        aria-pressed={watched}
-                        aria-label={
-                          watched
-                            ? t("episodeTracker.unmarkEpisode", { episode: epLabel })
-                            : t("episodeTracker.markEpisode", { episode: epLabel })
-                        }
-                        onClick={() => toggleEpisodeWatched(item, seasonNumber, ep.episode_number)}
+                    const status = watched
+                      ? t("episodeTracker.statusWatched")
+                      : isNext
+                        ? t("episodeTracker.upNext")
+                        : aired
+                          ? t("episodeTracker.statusNotWatched")
+                          : null;
+                    const date = shortDate(ep.air_date);
+                    const epLabel = t("episodeTracker.episodeRef", {
+                      season: seasonNumber,
+                      episode: ep.episode_number,
+                    });
+                    return (
+                      <li
+                        key={ep.id ?? ep.episode_number}
+                        className={`${styles.episode} ${isNext ? styles.episodeNext : ""}`}
                       >
-                        <Icon name="check" size={16} strokeWidth={watched ? 3 : 2} />
-                      </button>
-                      <span className={styles.epNumber}>
-                        {t("episodeTracker.episodeShort", { number: ep.episode_number })}
-                      </span>
-                      <span className={styles.epText}>
-                        <span className={styles.epTitle}>
-                          {ep.name || t("episodeTracker.untitled")}
-                          {badge && (
-                            <span
-                              className={`${styles.badge} ${
-                                badge === "just_released" ? styles.badgeNew : ""
-                              }`}
-                            >
-                              {badge === "just_released"
-                                ? t("mediaCard.episodeJustReleased")
-                                : t("mediaCard.episodeUpcoming")}
-                            </span>
-                          )}
-                        </span>
-                        <span className={`${styles.epMeta} ${watched ? styles.epMetaOn : ""}`}>
-                          {aired || !date
-                            ? [status, date].filter(Boolean).join(" · ")
-                            : t("episodeTracker.airsOn", { date })}
-                        </span>
-                      </span>
-                      {!watched && !isNext && aired && seasonNumber > 0 && (
                         <button
                           type="button"
-                          className={styles.upToHere}
-                          onClick={() => markUpTo(seasonNumber, ep.episode_number)}
+                          className={`${styles.dot} ${watched ? styles.dotOn : ""}`}
+                          aria-pressed={watched}
+                          aria-label={
+                            watched
+                              ? t("episodeTracker.unmarkEpisode", { episode: epLabel })
+                              : t("episodeTracker.markEpisode", { episode: epLabel })
+                          }
+                          onClick={() =>
+                            toggleEpisodeWatched(item, seasonNumber, ep.episode_number)
+                          }
                         >
-                          {t("episodeTracker.watchedUpToHere")}
+                          <Icon name="check" size={16} strokeWidth={watched ? 3 : 2} />
                         </button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-              {shownAired.length > 0 && (
+                        <span className={styles.epNumber}>
+                          {t("episodeTracker.episodeShort", { number: ep.episode_number })}
+                        </span>
+                        <span className={styles.epText}>
+                          <span className={styles.epTitle}>
+                            {ep.name || t("episodeTracker.untitled")}
+                            {badge && (
+                              <span
+                                className={`${styles.badge} ${
+                                  badge === "just_released" ? styles.badgeNew : ""
+                                }`}
+                              >
+                                {badge === "just_released"
+                                  ? t("mediaCard.episodeJustReleased")
+                                  : t("mediaCard.episodeUpcoming")}
+                              </span>
+                            )}
+                          </span>
+                          <span className={`${styles.epMeta} ${watched ? styles.epMetaOn : ""}`}>
+                            {aired || !date
+                              ? [status, date].filter(Boolean).join(" · ")
+                              : t("episodeTracker.airsOn", { date })}
+                          </span>
+                        </span>
+                        {!watched && !isNext && aired && seasonNumber > 0 && (
+                          <button
+                            type="button"
+                            className={styles.upToHere}
+                            onClick={() => markUpTo(seasonNumber, ep.episode_number)}
+                          >
+                            {t("episodeTracker.watchedUpToHere")}
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {(shownAired.length > 0 || !shownCollapsed) && (
                 <div className={styles.seasonActions}>
-                  <button
-                    type="button"
-                    className={styles.seasonBtn}
-                    onClick={() =>
-                      setEpisodesWatched(
-                        item,
-                        (shownComplete ? shownEpisodes : shownAired).map((ep) => ({
-                          seasonNumber: shown.season_number,
-                          episodeNumber: ep.episode_number,
-                        })),
-                        !shownComplete
-                      )
-                    }
-                  >
-                    <Icon name={shownComplete ? "close" : "check"} />
-                    {shownComplete
-                      ? t("episodeTracker.unmarkSeason")
-                      : shown.season_number === 0
-                        ? t("episodeTracker.markAllWatched")
-                        : t("episodeTracker.markSeason", { number: shown.season_number })}
-                  </button>
+                  {!shownCollapsed && collapseButton(shown.season_number, true)}
+                  {shownAired.length > 0 && (
+                    <button
+                      type="button"
+                      className={styles.seasonBtn}
+                      onClick={() =>
+                        setEpisodesWatched(
+                          item,
+                          (shownComplete ? shownEpisodes : shownAired).map((ep) => ({
+                            seasonNumber: shown.season_number,
+                            episodeNumber: ep.episode_number,
+                          })),
+                          !shownComplete
+                        )
+                      }
+                    >
+                      <Icon name={shownComplete ? "close" : "check"} />
+                      {shownComplete
+                        ? t("episodeTracker.unmarkSeason")
+                        : shown.season_number === 0
+                          ? t("episodeTracker.markAllWatched")
+                          : t("episodeTracker.markSeason", { number: shown.season_number })}
+                    </button>
+                  )}
                 </div>
               )}
             </>

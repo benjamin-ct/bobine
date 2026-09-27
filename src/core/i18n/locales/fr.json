@@ -693,6 +693,8 @@
     "runtimeHours_one": "{{hours}} h {{minutes}}",
     "runtimeHours_other": "{{hours}} h {{minutes}}",
     "addToList": "Ajouter à une liste",
+    "listsShort": "Listes",
+    "listsShortCount": "Listes · {{count}}",
     "inLists_one": "Dans {{count}} liste",
     "inLists_other": "Dans {{count}} listes",
     "moreActions": "Plus d'actions",
@@ -754,6 +756,10 @@
     "titlesTogether_other": "{{count}} titres ensemble"
   },
   "episodeTracker": {
+    "collapseSeason": "Replier la saison",
+    "expandSeason": "Afficher les épisodes",
+    "episodesCount_one": "{{count}} épisode",
+    "episodesCount_other": "{{count}} épisodes",
     "title": "Épisodes",
     "watchedCount": "{{watched}} / {{total}} vus",
     "seasonNumber": "Saison {{number}}",

@@ -41,7 +41,7 @@ import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPrevie
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
-import type { MediaDetails, MediaType } from "../../core/types/tmdb.ts";
+import type { CastMember, MediaDetails, MediaType } from "../../core/types/tmdb.ts";
 import styles from "./DetailPage.module.css";
 
 const MAIN_CAST_COUNT = 6;
@@ -266,7 +266,21 @@ export default function DetailPage() {
     .filter(Boolean)
     .join(" · ");
 
-  const cast = details.credits?.cast || [];
+  // Série : casting de toutes les saisons (déjà trié par TMDB, rôles
+  // principaux en tête), `credits` ne couvrant que la dernière saison.
+  const aggregateCast = details.aggregate_credits?.cast;
+  const cast: CastMember[] = aggregateCast?.length
+    ? aggregateCast.map((member) => ({
+        id: member.id,
+        credit_id: member.roles?.[0]?.credit_id,
+        name: member.name,
+        character: member.roles
+          ?.map((role) => role.character)
+          .filter(Boolean)
+          .join(" / "),
+        profile_path: member.profile_path,
+      }))
+    : details.credits?.cast || [];
   const visibleCast = showFullCast ? cast : cast.slice(0, MAIN_CAST_COUNT);
 
   type DirectorEntry = { id: number; name: string };
@@ -523,11 +537,13 @@ export default function DetailPage() {
                 aria-pressed={inWatchlist}
               >
                 <Icon name="star" filled={inWatchlist} />
-                {inWatchlist ? t("detailPage.wantToWatchOn") : t("detailPage.wantToWatchOff")}
+                <span className={styles.btnLabel}>
+                  {inWatchlist ? t("detailPage.wantToWatchOn") : t("detailPage.wantToWatchOff")}
+                </span>
               </button>
               <button
                 type="button"
-                className={`${styles.actionBtn} ${watched ? styles.watchedOn : ""}`}
+                className={`${styles.actionBtn} ${styles.watchedBtn} ${watched ? styles.watchedOn : ""}`}
                 onClick={() =>
                   mediaType === "tv" ? toggleSeriesWatched() : toggleWatched(libItem)
                 }
@@ -535,21 +551,32 @@ export default function DetailPage() {
                 disabled={markingSeries}
               >
                 <Icon name="check" strokeWidth={watched ? 3 : 2} />
-                {mediaType === "tv"
-                  ? watched
-                    ? t("detailPage.seriesWatchedOn")
-                    : t("detailPage.seriesWatchedOff")
-                  : watched
-                    ? t("detailPage.watchedOn")
-                    : t("detailPage.watchedOff")}
+                <span className={styles.btnLabel}>
+                  {mediaType === "tv"
+                    ? watched
+                      ? t("detailPage.seriesWatchedOn")
+                      : t("detailPage.seriesWatchedOff")
+                    : watched
+                      ? t("detailPage.watchedOn")
+                      : t("detailPage.watchedOff")}
+                </span>
               </button>
               <Dropdown
                 label={
                   <>
                     <Icon name="list" />
-                    {listCount > 0
-                      ? t("detailPage.inLists", { count: listCount })
-                      : t("detailPage.addToList")}
+                    {/* Mobile : « Listes » tout court (maquette), pour tenir
+                        sur une ligne avec « Envie de voir », ▷ et « ⋯ ». */}
+                    <span className={`${styles.btnLabel} ${styles.labelLong}`}>
+                      {listCount > 0
+                        ? t("detailPage.inLists", { count: listCount })
+                        : t("detailPage.addToList")}
+                    </span>
+                    <span className={`${styles.btnLabel} ${styles.labelShort}`}>
+                      {listCount > 0
+                        ? t("detailPage.listsShortCount", { count: listCount })
+                        : t("detailPage.listsShort")}
+                    </span>
                   </>
                 }
                 pill

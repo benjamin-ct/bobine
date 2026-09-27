@@ -23,6 +23,8 @@
 
 @media (max-width: 720px) {
   .compact {
+    flex: none;
+    min-width: 46px;
     padding-inline: 0;
     aspect-ratio: 1;
   }

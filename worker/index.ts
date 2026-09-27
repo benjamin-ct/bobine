@@ -483,15 +483,22 @@ async function handleTestAccountNotification(
       ? Math.min(Math.max(Math.round(body.delaySeconds), 0), TEST_NOTIFICATION_MAX_DELAY_S)
       : 0;
 
+  // Sans abonnement push, le test in-app reste possible : le hub temps réel
+  // de l'hôte courant est visé directement (`syncHost`), comme pour un
+  // nouvel abonné. Le test différé, lui, sert à vérifier le repli Web Push.
   const subscriptions = await getSubscriptionsForUser(env.DB, user.id);
-  if (subscriptions.length === 0) {
-    return json({ error: "Aucun appareil de votre compte n'a activé les notifications." }, 404);
+  const noPushError = json(
+    { error: "Aucun appareil de votre compte n'a activé les notifications push." },
+    404
+  );
+  if (subscriptions.length === 0 && delaySeconds > 0) {
+    return noPushError;
   }
 
   const send = () =>
     notifyUser(
       env,
-      { userId: user.id, subscriptions },
+      { userId: user.id, subscriptions, syncHost: new URL(request.url).hostname },
       { kind: "test", mediaTitle: "", url: "/profil" }
     );
 
@@ -499,7 +506,11 @@ async function handleTestAccountNotification(
     ctx.waitUntil(new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000)).then(send));
     return json({ ok: true, scheduledInSeconds: delaySeconds });
   }
-  return json({ ok: true, channel: await send() });
+  const channel = await send();
+  if (channel === "push" && subscriptions.length === 0) {
+    return noPushError;
+  }
+  return json({ ok: true, channel });
 }
 
 // Déclenchement manuel de la vérification quotidienne, pour diagnostiquer

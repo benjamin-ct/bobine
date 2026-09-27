@@ -330,6 +330,22 @@
   flex: none;
 }
 
+/* Libellés tronqués (…) plutôt que débordant sur le bouton voisin quand la
+   place manque (mobile). */
+.btnLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions svg {
+  flex: none;
+}
+
+.labelShort {
+  display: none;
+}
+
 .moreDropdown {
   flex: none;
 }
@@ -673,8 +689,8 @@
     flex-basis: 100%;
   }
 
-  /* Envie / Vu sur une ligne, puis listes (largeur restante), bande-annonce
-     et ⋯ en boutons ronds. */
+  /* Maquette : Envie de voir · Listes · ▷ · ⋯ sur une ligne, puis « Vu » /
+     « Marquer la série comme vue » en pleine largeur en dessous. */
   .actions {
     gap: 8px;
   }
@@ -684,12 +700,25 @@
   }
 
   .actionBtn {
-    flex: 1 1 40%;
+    flex: 1 1 0;
     padding-inline: 12px;
   }
 
+  .watchedBtn {
+    order: 1;
+    flex-basis: 100%;
+  }
+
   .listDropdown {
-    flex: 1;
+    flex: 1 1 0;
+  }
+
+  .labelLong {
+    display: none;
+  }
+
+  .labelShort {
+    display: inline;
   }
 
   .listDropdown > button {

@@ -271,8 +271,42 @@
 
 .seasonActions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
+  gap: 8px 12px;
   margin-top: 16px;
+}
+
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.listCount {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.collapseBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.collapseBtn:hover {
+  color: var(--fg);
+}
+
+.seasonActions .collapseBtn {
+  margin-right: auto;
 }
 
 .seasonBtn {

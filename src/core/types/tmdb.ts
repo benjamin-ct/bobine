@@ -72,6 +72,16 @@ export interface CastMember {
   known_for_department?: string;
 }
 
+/** Casting cumulé de toutes les saisons d'une série (aggregate_credits) :
+ * un même acteur peut y tenir plusieurs rôles. */
+export interface AggregateCastMember {
+  id: number;
+  name: string;
+  profile_path?: string | null;
+  roles?: { credit_id: string; character?: string; episode_count?: number }[];
+  total_episode_count?: number;
+}
+
 export interface CrewMember {
   id: number;
   credit_id?: string;
@@ -182,6 +192,7 @@ export interface MediaDetails extends MediaSummary {
   seasons?: Season[];
   genres?: Genre[];
   credits?: Credits;
+  aggregate_credits?: { cast?: AggregateCastMember[] }; // séries
   videos?: Videos;
   recommendations?: { results: MediaSummary[] };
   release_dates?: ReleaseDatesResponse;

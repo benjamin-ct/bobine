@@ -693,6 +693,8 @@
     "runtimeHours_one": "{{hours}}h {{minutes}}m",
     "runtimeHours_other": "{{hours}}h {{minutes}}m",
     "addToList": "Add to a list",
+    "listsShort": "Lists",
+    "listsShortCount": "Lists · {{count}}",
     "inLists_one": "In {{count}} list",
     "inLists_other": "In {{count}} lists",
     "moreActions": "More actions",
@@ -754,6 +756,10 @@
     "titlesTogether_other": "{{count}} titles together"
   },
   "episodeTracker": {
+    "collapseSeason": "Collapse season",
+    "expandSeason": "Show episodes",
+    "episodesCount_one": "{{count}} episode",
+    "episodesCount_other": "{{count}} episodes",
     "title": "Episodes",
     "watchedCount": "{{watched}} / {{total}} watched",
     "seasonNumber": "Season {{number}}",

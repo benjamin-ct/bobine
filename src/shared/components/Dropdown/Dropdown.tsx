@@ -4,6 +4,9 @@ import styles from "./Dropdown.module.css";
 
 // Doit rester aligné sur .panel { max-height } dans Dropdown.module.css.
 const PANEL_MAX_HEIGHT = 340;
+// Idem pour .panel { min-width } : largeur supposée avant la première mesure.
+const PANEL_MIN_WIDTH = 220;
+const VIEWPORT_MARGIN = 8;
 
 interface DropdownProps {
   label: ReactNode;
@@ -75,10 +78,16 @@ export default function Dropdown({
       spaceBelow < PANEL_MAX_HEIGHT + 16 && rect.top > spaceBelow
         ? { bottom: window.innerHeight - rect.top + 8 }
         : { top: rect.bottom + 8 };
+    // Bascule de côté quand le panneau sortirait de l'écran (ex. « ⋯ »
+    // aligné à droite mais renvoyé à la ligne, à gauche, sur mobile).
+    const width = panelRef.current?.offsetWidth ?? PANEL_MIN_WIDTH;
+    const fitsRight = rect.right - width >= VIEWPORT_MARGIN;
+    const fitsLeft = rect.left + width <= window.innerWidth - VIEWPORT_MARGIN;
+    const alignRight = align === "right" ? fitsRight || !fitsLeft : !fitsLeft && fitsRight;
     setPosition(
-      align === "right"
-        ? { ...vertical, right: window.innerWidth - rect.right }
-        : { ...vertical, left: rect.left }
+      alignRight
+        ? { ...vertical, right: Math.max(window.innerWidth - rect.right, VIEWPORT_MARGIN) }
+        : { ...vertical, left: Math.max(rect.left, VIEWPORT_MARGIN) }
     );
   }, [align]);
 
@@ -94,6 +103,15 @@ export default function Dropdown({
     }
     updatePosition();
   }, [open, updatePosition]);
+
+  // Seconde passe une fois le panneau monté : sa largeur réelle (contenu
+  // plus large que min-width) peut changer le côté d'ouverture.
+  const panelMounted = open && position !== null;
+  useLayoutEffect(() => {
+    if (panelMounted) {
+      updatePosition();
+    }
+  }, [panelMounted, updatePosition]);
 
   useEffect(() => {
     if (!open) {

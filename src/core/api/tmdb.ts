@@ -290,7 +290,12 @@ export function getDetails(mediaType: MediaType, id: string | number): Promise<M
     // cinéma". watch/providers : plateformes de streaming/achat/location —
     // inclus ici pour ne pas faire un second appel séparé (voir
     // watchProvidersFromDetails) sur la fiche détail / la roue aléatoire.
-    append_to_response: "credits,videos,recommendations,release_dates,watch/providers",
+    // Séries : aggregate_credits en plus, `credits` ne donnant que le
+    // casting de la dernière saison (voir castFromDetails).
+    append_to_response:
+      mediaType === "tv"
+        ? "credits,aggregate_credits,videos,recommendations,release_dates,watch/providers"
+        : "credits,videos,recommendations,release_dates,watch/providers",
   }).catch((err: unknown) => {
     detailsCache.delete(key);
     throw err;
