@@ -1,0 +1,150 @@
+/* Modale de recadrage de la photo de profil (voir AvatarCropDialog.tsx). */
+
+.dialog {
+  width: min(400px, calc(100% - 2 * var(--gutter)));
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  color: var(--fg);
+  overflow: auto;
+}
+
+/* Le contenu est monté après showModal(), le focus tombe donc sur la modale
+   elle-même : pas de contour autour de toute la fenêtre. */
+.dialog:focus-visible {
+  outline: none;
+}
+
+.dialog::backdrop {
+  background: oklch(0 0 0 / 0.6);
+}
+
+.content {
+  position: relative;
+  padding: 28px 20px 20px;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: var(--muted);
+  font-size: 1.1rem;
+  padding: 6px;
+}
+
+.title {
+  font-size: 1.25rem;
+  margin: 0;
+  padding-right: 24px;
+}
+
+.text {
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* Aperçu carré ; le cercle rappelle l'avatar rond des listes (le carré
+   entier est tout de même conservé). */
+.frame {
+  position: relative;
+  width: min(280px, 100%);
+  margin: 18px auto 0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px oklch(0 0 0 / 0.35);
+  outline: 2px solid oklch(1 0 0 / 0.85);
+  pointer-events: none;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  cursor: grab;
+  /* Le glisser et le pincement sont gérés à la main. */
+  touch-action: none;
+}
+
+.canvas:active {
+  cursor: grabbing;
+}
+
+.canvas:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(280px, 100%);
+  margin: 14px auto 0;
+  color: var(--muted);
+}
+
+.zoom input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.cancelBtn,
+.confirmBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.cancelBtn {
+  color: var(--muted);
+}
+
+.cancelBtn:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.confirmBtn {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.confirmBtn:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.cancelBtn:disabled,
+.confirmBtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.error {
+  margin: 14px 0 0;
+  color: var(--accent-ink);
+  font-size: 13.5px;
+}

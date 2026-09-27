@@ -205,7 +205,13 @@
     "avatarChange": "Changer la photo",
     "avatarRemove": "Supprimer la photo",
     "avatarHint": "Sans photo, Seancy affiche votre Gravatar, ou à défaut votre initiale.",
-    "avatarUnreadable": "Impossible de lire cette image. Essayez un fichier JPEG ou PNG."
+    "avatarUnreadable": "Impossible de lire cette image. Essayez un fichier JPEG ou PNG.",
+    "avatarCropTitle": "Recadrer la photo",
+    "avatarCropHint": "Faites glisser la photo pour la déplacer, pincez ou utilisez le curseur pour zoomer.",
+    "avatarCropPreview": "Aperçu du recadrage. Flèches pour déplacer, + et − pour zoomer.",
+    "avatarCropZoom": "Zoom",
+    "avatarCropCancel": "Annuler",
+    "avatarCropConfirm": "Valider"
   },
   "excludedGenres": {
     "summary": "Genres à exclure",

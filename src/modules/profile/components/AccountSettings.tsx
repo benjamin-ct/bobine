@@ -2,8 +2,13 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { gravatarUrl } from "../../../shared/lib/gravatar.ts";
-import { prepareAvatarImage } from "../../../shared/lib/avatarImage.ts";
+import {
+  loadAvatarSource,
+  renderAvatarImage,
+  type AvatarCrop,
+} from "../../../shared/lib/avatarImage.ts";
 import { Icon } from "../../../shared/components/index.ts";
+import AvatarCropDialog from "./AvatarCropDialog.tsx";
 import EmailChangeForm from "./EmailChangeForm.tsx";
 import { SettingsGroup, SettingsRow } from "./SettingsGroup.tsx";
 import styles from "./AccountSettings.module.css";
@@ -65,14 +70,20 @@ export function AccountAvatar({ name, className }: { name: string; className: st
 }
 
 // Choix / suppression de la photo personnelle, sous l'aperçu de l'identité.
-// Enregistrée tout de suite (pas via la barre « Enregistrer » du nom et du
-// pseudo) : il n'y a rien à annuler une fois la photo choisie.
+// La photo choisie s'ouvre d'abord dans la modale de recadrage, puis est
+// enregistrée dès la validation (pas via la barre « Enregistrer » du nom et
+// du pseudo).
 function AvatarActions() {
   const { t } = useTranslation();
   const { avatarVersion, uploadAvatar, removeAvatar } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Photo en cours de recadrage (modale ouverte tant qu'elle est non nulle).
+  const [source, setSource] = useState<ImageBitmap | null>(null);
+
+  // Libère la mémoire de la photo décodée une fois la modale refermée.
+  useEffect(() => () => source?.close(), [source]);
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -93,14 +104,17 @@ function AvatarActions() {
     if (!file) {
       return;
     }
+    setError(null);
+    loadAvatarSource(file).then(setSource, () => setError(t("accountCard.avatarUnreadable")));
+  }
+
+  function onCropConfirm(crop: AvatarCrop) {
+    if (!source) {
+      return;
+    }
     run(async () => {
-      let image: Blob;
-      try {
-        image = await prepareAvatarImage(file);
-      } catch {
-        throw new Error(t("accountCard.avatarUnreadable"));
-      }
-      await uploadAvatar(image);
+      await uploadAvatar(await renderAvatarImage(source, crop));
+      setSource(null);
     });
   }
 
@@ -139,6 +153,13 @@ function AvatarActions() {
       <small className={error ? styles.errorHint : styles.mutedHint} aria-live="polite">
         {error ?? t("accountCard.avatarHint")}
       </small>
+      <AvatarCropDialog
+        image={source}
+        busy={busy}
+        error={error}
+        onCancel={() => setSource(null)}
+        onConfirm={onCropConfirm}
+      />
     </div>
   );
 }
