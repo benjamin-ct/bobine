@@ -740,12 +740,21 @@
   }
 
   /* Une seule colonne, dans l'ordre de la maquette : Où le voir, Vos
-     abonnements, casting, saga, Infos. */
+     abonnements, casting, saga, Infos. stretch : avec le `start` du
+     desktop, chaque bloc prenait la largeur de son contenu : la rangée du
+     casting, plus large que l'écran, élargissait sa section et poussait
+     « Tout le casting » hors écran, à droite. */
   .body {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 0;
     margin-top: 24px;
+  }
+
+  .main > *,
+  .aside > * {
+    min-width: 0;
   }
 
   .main,
