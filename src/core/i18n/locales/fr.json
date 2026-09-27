@@ -207,7 +207,9 @@
     "description": "Ces genres ne seront jamais suggérés, où que ce soit dans Seancy.",
     "loading": "Chargement des genres…",
     "error": "Impossible de charger la liste des genres.",
-    "toggleHint": "cochez un genre pour l'exclure, décochez-le pour le réintégrer"
+    "toggleHint": "cochez un genre pour l'exclure, décochez-le pour le réintégrer",
+    "searchPlaceholder": "Rechercher un genre…",
+    "noMatch": "Aucun genre ne correspond."
   },
   "navBar": {
     "mainNavAriaLabel": "Navigation principale",

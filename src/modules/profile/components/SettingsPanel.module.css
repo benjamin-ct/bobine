@@ -474,6 +474,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* Retour de review : en une colonne, la trentaine de genres fait une
+     liste interminable sur mobile — même bloc scrollable que les
+     plateformes (voir le commentaire d'overscroll-behavior plus haut). */
+  .genreGrid {
+    max-height: 420px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .segmented {
     display: flex;
   }
