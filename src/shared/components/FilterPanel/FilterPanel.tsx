@@ -420,7 +420,7 @@ export default function FilterPanel({
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
         <path d="M4 6h16M7 12h10M10 18h4" />
       </svg>
-      {t("filterPanel.filters")}
+      <span className={styles.filtersLabel}>{t("filterPanel.filters")}</span>
       {active.length > 0 && (
         <span
           className={styles.count}
@@ -460,7 +460,7 @@ export default function FilterPanel({
       {/* Films/Séries (et période), puis « Filtres » calé à droite, sur une
           ligne ; les puces des filtres actifs sur la suivante. */}
       <div className={styles.toolbar}>
-        <div className={styles.toolbarRow}>
+        <div className={`${styles.toolbarRow} ${allTypes ? styles.toolbarRowCompact : ""}`}>
           {segmented}
           {periods && (
             <div className={styles.periods} role="group" aria-label={periods.label}>
