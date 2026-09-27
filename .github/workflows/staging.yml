@@ -1,7 +1,7 @@
 # Environnement de test partagé : Worker `bobine-staging`
 # (https://bobine-staging.creusatbenjamin.workers.dev), déployé depuis la
 # branche choisie au lancement (main par défaut) et branché sur une copie
-# anonymisée de la base de prod — voir scripts/staging.ts.
+# de la base de prod — voir scripts/staging.ts.
 #
 # Lancement manuel uniquement (onglet Actions → "Staging" → Run workflow) :
 # la copie de la base écrase tout ce que les testeurs ont fait depuis la
@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       copy_db:
-        description: "Recopier (et anonymiser) la base de prod — écrase les données de test actuelles"
+        description: "Recopier la base de prod — écrase les données de test actuelles"
         type: boolean
         default: true
 
@@ -39,7 +39,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Copy anonymized prod database
+      - name: Copy prod database
         if: inputs.copy_db
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

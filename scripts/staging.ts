@@ -1,6 +1,6 @@
 // Environnement de test partagé (carte Trello "Environnement de test") : un
 // Worker à part, `bobine-staging`, branché sur sa propre base D1
-// (`bobine-staging`) qui contient une copie ANONYMISÉE de la base de prod.
+// (`bobine-staging`) qui contient une copie de la base de prod.
 // Lancé par le workflow .github/workflows/staging.yml (déclenchement manuel).
 //
 // Connexion avec des adresses fictives : le Worker de staging n'a pas de
@@ -8,18 +8,19 @@
 // directement à l'écran (même repli qu'en dev local, voir
 // handleRequestLink dans worker/index.ts) — n'importe quelle adresse, réelle
 // ou non, permet de se connecter sans boîte mail. Les comptes copiés depuis
-// la prod ont une adresse fictive `testeur-<id>@exemple.test` : on peut s'y
-// connecter pour tester avec de vraies bibliothèques/listes.
+// la prod gardent leur vraie adresse (décision du ticket : pas
+// d'anonymisation) : la saisir permet de se connecter sur le compte copié.
 //
 // Commandes :
 //   copy-db : exporte la base de prod, recrée la base de staging à partir de
-//             cet export puis l'anonymise (voir ANONYMIZE_SQL).
+//             cet export puis neutralise les abonnements push (voir
+//             NEUTRALIZE_PUSH_SQL).
 //   config  : génère wrangler.staging.generated.jsonc (Worker bobine-staging
 //             branché sur la base de staging) et y applique les migrations
 //             pas encore jouées.
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { experimental_readRawConfig } from "wrangler";
@@ -31,16 +32,12 @@ const PROD_DATABASE_NAME = "bobine-notifications";
 const STAGING_DATABASE_NAME = "bobine-staging";
 const STAGING_WORKER_NAME = "bobine-staging";
 
-// Tout ce qui permet d'identifier ou de contacter un vrai utilisateur, ou de
-// reprendre une de ses sessions, est effacé ou remplacé. Les pseudos, noms
-// affichés, bibliothèques et listes sont conservés : c'est ce qui rend la
-// copie utile pour tester.
-const ANONYMIZE_SQL = `
-DELETE FROM sessions;
-DELETE FROM magic_links;
-DELETE FROM email_changes;
-DELETE FROM rate_limits;
-UPDATE users SET email = 'testeur-' || id || '@exemple.test';
+// Les données sont copiées telles quelles (adresses, pseudos, sessions...),
+// sauf les abonnements push : sans ça, une action faite sur le staging
+// (ex. suivre un profil copié) enverrait une vraie notification sur le
+// téléphone de l'utilisateur de prod dès que VAPID_PRIVATE_KEY y est
+// configurée.
+const NEUTRALIZE_PUSH_SQL = `
 UPDATE subscriptions
   SET endpoint = 'https://push.invalid/staging/' || id, p256dh = '', auth = '', sync_host = NULL;
 UPDATE reminders SET sync_host = NULL;
@@ -82,6 +79,25 @@ function createDatabase(name: string): string {
   return match[1];
 }
 
+// `wrangler d1 export` écrit chaque table suivie de ses données, dans
+// l'ordre de création des tables : `subscriptions` (migration 0001) et ses
+// lignes arrivent avant `users`, alors qu'une de ses colonnes y fait
+// référence (migration 0008). À l'import, insérer une ligne dont la table
+// parente n'existe pas encore échoue avec "no such table: main.users",
+// même avec defer_foreign_keys. On crée donc tout le schéma avant d'insérer
+// les données (ordre relatif conservé), les clés étrangères n'étant vérifiées
+// qu'à la fin grâce au defer_foreign_keys de l'export. Chaque INSERT tient sur
+// une ligne : l'export encode les retours à la ligne des chaînes
+// (replace(..., '\n', char(10))).
+function schemaFirst(dump: string): string {
+  const schema: string[] = [];
+  const data: string[] = [];
+  for (const line of dump.split("\n")) {
+    (line.startsWith("INSERT INTO ") ? data : schema).push(line);
+  }
+  return [...schema, ...data].join("\n");
+}
+
 function copyDb(): void {
   // L'export contient des données personnelles : il reste dans un dossier
   // temporaire du runner, supprimé dans tous les cas, jamais publié en
@@ -101,12 +117,14 @@ function copyDb(): void {
     console.log(`Création de la base '${STAGING_DATABASE_NAME}'...`);
     createDatabase(STAGING_DATABASE_NAME);
 
+    const importPath = join(workDir, "import.sql");
+    writeFileSync(importPath, schemaFirst(readFileSync(dumpPath, "utf8")));
     console.log("Import de la copie...");
-    wrangler(["d1", "execute", STAGING_DATABASE_NAME, "--remote", "--yes", "--file", dumpPath]);
+    wrangler(["d1", "execute", STAGING_DATABASE_NAME, "--remote", "--yes", "--file", importPath]);
 
-    const anonymizePath = join(workDir, "anonymize.sql");
-    writeFileSync(anonymizePath, ANONYMIZE_SQL);
-    console.log("Anonymisation...");
+    const neutralizePath = join(workDir, "neutralize-push.sql");
+    writeFileSync(neutralizePath, NEUTRALIZE_PUSH_SQL);
+    console.log("Neutralisation des abonnements push...");
     wrangler([
       "d1",
       "execute",
@@ -114,7 +132,7 @@ function copyDb(): void {
       "--remote",
       "--yes",
       "--file",
-      anonymizePath,
+      neutralizePath,
     ]);
   } finally {
     rmSync(workDir, { recursive: true, force: true });

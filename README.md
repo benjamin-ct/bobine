@@ -133,15 +133,15 @@ Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.
 Un Worker séparé, `bobine-staging` (https://bobine-staging.creusatbenjamin.workers.dev), permet à d'autres personnes de tester l'app sur des données réalistes sans toucher à la prod. Il est déployé par le workflow **Staging** (`.github/workflows/staging.yml`), lancé à la main :
 
 1. Sur GitHub, ouvre l'onglet **Actions** du dépôt, puis **Staging** dans la colonne de gauche (lien direct : https://github.com/benjamin-ct/bobine/actions/workflows/staging.yml).
-2. Clique sur **Run workflow** (à droite, au-dessus de la liste des exécutions), choisis la branche à déployer (`main` par défaut), laisse cochée ou non la case « Recopier (et anonymiser) la base de prod », puis valide avec le bouton vert **Run workflow**.
+2. Clique sur **Run workflow** (à droite, au-dessus de la liste des exécutions), choisis la branche à déployer (`main` par défaut), laisse cochée ou non la case « Recopier la base de prod », puis valide avec le bouton vert **Run workflow**.
 3. Suis l'exécution dans la liste ; une fois terminée, le staging est à jour.
 
 En ligne de commande : `gh workflow run staging.yml --ref main -f copy_db=true`. GitHub ne propose un workflow manuel que s'il existe sur la branche par défaut : « Staging » n'apparaît donc dans l'onglet Actions qu'une fois ce fichier présent sur `main`.
 
 Ce que fait le workflow :
 
-- **Copie de la base** (case cochée par défaut) : la base de prod est exportée, recopiée dans une base D1 `bobine-staging` recréée de zéro, puis anonymisée (`scripts/staging.ts`) : sessions, liens de connexion, changements d'adresse et compteurs anti-abus sont effacés, les abonnements push sont neutralisés, et chaque compte reçoit l'adresse fictive `testeur-<id>@exemple.test`. Recopier écrase tout ce qui a été fait sur le staging depuis la copie précédente.
-- **Connexion avec des adresses fictives** : le Worker de staging n'a pas de `RESEND_API_KEY`, donc aucun email n'est envoyé : le lien et le code de connexion s'affichent directement à l'écran. N'importe quelle adresse (ex. `alice@exemple.test`) crée un compte de test, et `testeur-<id>@exemple.test` permet de se connecter sur un compte copié depuis la prod.
+- **Copie de la base** (case cochée par défaut) : la base de prod est exportée, recopiée telle quelle dans une base D1 `bobine-staging` recréée de zéro (`scripts/staging.ts`) : comptes, adresses, pseudos, bibliothèques et listes sont conservés, sans anonymisation. Seuls les abonnements push sont neutralisés, pour qu'une action faite sur le staging (ex. suivre un profil) n'envoie jamais de notification sur le téléphone d'un vrai utilisateur. Recopier écrase tout ce qui a été fait sur le staging depuis la copie précédente.
+- **Connexion avec des adresses fictives** : le Worker de staging n'a pas de `RESEND_API_KEY`, donc aucun email n'est envoyé : le lien et le code de connexion s'affichent directement à l'écran. N'importe quelle adresse fictive (ex. `alice@exemple.test`) crée un compte de test, et l'adresse d'un compte existant permet de se connecter sur sa copie.
 - Pas de tâche planifiée (aucune notification envoyée), ni Web Analytics ni reCAPTCHA. Les boutons de notification de test du profil sont affichés comme sur les previews.
 - La base de staging occupe une des 10 bases D1 du plan gratuit : les previews PR en ont donc 8 au plus (`scripts/preview-d1.ts`).
 
