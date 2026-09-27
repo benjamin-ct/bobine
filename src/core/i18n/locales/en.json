@@ -868,9 +868,9 @@
     "removeTitle": "Remove {{title}} from top 5",
     "loadError": "Couldn't load your top 5.",
     "saveError": "Couldn't save your top 5.",
-    "freeSlots_zero": "Top 5 is full · remove a title to add another one",
-    "freeSlots_one": "{{count}} spot left · tap a title to add it",
-    "freeSlots_other": "{{count}} spots left · tap a title to add it",
+    "freeSlots_zero": "Top 5 is full · tap a title in your top to remove it",
+    "freeSlots_one": "{{count}} spot left · tap a title to add or remove it",
+    "freeSlots_other": "{{count}} spots left · tap a title to add or remove it",
     "close": "Close",
     "typeFilter": "Title type",
     "type": {
@@ -880,6 +880,7 @@
     },
     "seenSection": "Your watched titles · highest rated first",
     "inTop": "In your top",
+    "untick": "Remove",
     "counter": "{{count}}/{{max}}",
     "subtitle": "Movies and shows featured at the top of your public profile.",
     "viewOnProfile": "View on my profile",
@@ -893,7 +894,7 @@
     "freeCount_one": "{{count}} spot left",
     "freeCount_other": "{{count}} spots left",
     "hintDesktop": "Drag a poster to change the order · ✕ to remove it",
-    "hintMobile": "Drag to change the order.",
+    "hintMobile": "Long-press a title or use the ⋮⋮ handle to change the order.",
     "keyboardHint": "Use the arrow keys to move this title in the ranking."
   },
   "publicProfile": {

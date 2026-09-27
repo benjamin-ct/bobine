@@ -868,9 +868,9 @@
     "removeTitle": "Retirer {{title}} du top 5",
     "loadError": "Impossible de charger votre top 5.",
     "saveError": "Impossible d'enregistrer votre top 5.",
-    "freeSlots_zero": "Top 5 complet · retirez un titre pour en ajouter un autre",
-    "freeSlots_one": "{{count}} place libre · touchez un titre pour l'ajouter",
-    "freeSlots_other": "{{count}} places libres · touchez un titre pour l'ajouter",
+    "freeSlots_zero": "Top 5 complet · touchez un titre du top pour le retirer",
+    "freeSlots_one": "{{count}} place libre · touchez un titre pour l'ajouter ou le retirer",
+    "freeSlots_other": "{{count}} places libres · touchez un titre pour l'ajouter ou le retirer",
     "close": "Fermer",
     "typeFilter": "Type de titre",
     "type": {
@@ -880,6 +880,7 @@
     },
     "seenSection": "Vos titres vus · les mieux notés d'abord",
     "inTop": "Dans le top",
+    "untick": "Retirer",
     "counter": "{{count}}/{{max}}",
     "subtitle": "Films et séries mis en avant en haut de votre profil public.",
     "viewOnProfile": "Voir sur mon profil",
@@ -893,7 +894,7 @@
     "freeCount_one": "{{count}} place libre",
     "freeCount_other": "{{count}} places libres",
     "hintDesktop": "Glissez une affiche pour changer l'ordre · ✕ pour la retirer",
-    "hintMobile": "Glissez pour changer l'ordre.",
+    "hintMobile": "Appui long sur un titre ou poignée ⋮⋮ pour changer l'ordre.",
     "keyboardHint": "Utilisez les flèches pour déplacer ce titre dans le classement."
   },
   "publicProfile": {

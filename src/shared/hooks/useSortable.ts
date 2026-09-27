@@ -14,7 +14,13 @@ interface DragSession {
   /** Centres des emplacements au départ du glisser (coordonnées de page). */
   slots: Point[];
   target: number;
-  /** false tant que la souris n'a pas bougé de quelques pixels (clic simple). */
+  /** Dernière position du pointeur (coordonnées d'écran), pour le défilement auto. */
+  client: { x: number; y: number };
+  touch: boolean;
+  /**
+   * false tant que le glisser n'a pas démarré : souris pas encore bougée de
+   * quelques pixels (clic simple), ou appui long au doigt pas encore écoulé.
+   */
   active: boolean;
 }
 
@@ -28,6 +34,14 @@ interface UseSortableOptions {
 // Au-delà de ce déplacement (px), un appui souris devient un glisser et le clic
 // qui suit est annulé (sinon l'affiche, souvent un lien, s'ouvrirait).
 const MOUSE_THRESHOLD = 6;
+// Au doigt, hors poignée : appui long avant de saisir le titre. Si le doigt
+// bouge avant, c'est un défilement de la page et on abandonne.
+const LONG_PRESS_MS = 300;
+const TOUCH_SLOP = 10;
+// Défilement automatique quand le titre tenu approche du haut ou du bas de
+// l'écran (px de la bordure, vitesse max en px par image).
+const EDGE_ZONE = 72;
+const EDGE_SPEED = 18;
 const ANIMATION = "transform 220ms cubic-bezier(0.2, 0, 0, 1)";
 
 const pagePoint = (x: number, y: number): Point => ({
@@ -70,9 +84,12 @@ export function neighborOf(next: string[], moved: string): { toKey: string; afte
  *
  * Pointer Events plutôt que le drag & drop HTML5 : ce dernier ne marche pas au
  * doigt, et sur iOS glisser une affiche (un lien) l'ouvre dans un nouvel
- * onglet. À la souris, tout l'élément se glisse ; au doigt, seulement la
- * poignée (`data-drag-handle`, avec `touch-action: none`) pour laisser la page
- * défiler ailleurs.
+ * onglet. À la souris, tout l'élément se glisse. Au doigt, la poignée
+ * (`data-drag-handle`, avec `touch-action: none`) saisit le titre tout de
+ * suite ; ailleurs, il faut un appui long, pour que la page défile normalement
+ * quand on balaie l'écran. Une fois le titre saisi, la page ne défile plus sous
+ * le doigt, sauf près du haut ou du bas de l'écran où elle défile toute seule
+ * pour atteindre les titres hors de vue.
  *
  * Pendant le glisser, l'élément suit le pointeur et les autres se décalent en
  * direct vers leur future place (animation FLIP) ; au lâcher, l'élément glisse
@@ -86,6 +103,39 @@ export function useSortable({ keys, enabled, onReorder }: UseSortableOptions) {
   const elements = useRef(new Map<string, HTMLElement>());
   const lastRects = useRef(new Map<string, Point>());
   const suppressClick = useRef(false);
+  const longPress = useRef<number | undefined>(undefined);
+  // Titre saisi au doigt : la page ne défile plus sous le doigt (sinon le
+  // navigateur interrompt le glisser par un pointercancel). Branché sur chaque
+  // élément dès le montage : un écouteur ajouté après le touchstart ne peut
+  // plus bloquer le défilement.
+  const blockTouchScroll = useRef((e: TouchEvent) => {
+    if (session.current?.active && e.cancelable) {
+      e.preventDefault();
+    }
+  }).current;
+  // Une fonction ref stable par clé : une nouvelle fonction à chaque rendu
+  // ferait détacher puis rattacher l'élément, et effacerait sa dernière
+  // position mémorisée (plus d'animation FLIP).
+  const refs = useRef(new Map<string, (el: HTMLElement | null) => void>());
+  function refFor(key: string) {
+    let ref = refs.current.get(key);
+    if (!ref) {
+      ref = (el: HTMLElement | null) => {
+        const previous = elements.current.get(key);
+        if (el) {
+          elements.current.set(key, el);
+          el.addEventListener("touchmove", blockTouchScroll, { passive: false });
+        } else {
+          previous?.removeEventListener("touchmove", blockTouchScroll);
+          elements.current.delete(key);
+          lastRects.current.delete(key);
+          refs.current.delete(key);
+        }
+      };
+      refs.current.set(key, ref);
+    }
+    return ref;
+  }
   const onReorderRef = useRef(onReorder);
   const keysRef = useRef(keys);
   useLayoutEffect(() => {
@@ -152,6 +202,7 @@ export function useSortable({ keys, enabled, onReorder }: UseSortableOptions) {
   const finish = useCallback((commit: boolean) => {
     const s = session.current;
     session.current = null;
+    window.clearTimeout(longPress.current);
     setListening(false);
     if (!s?.active) {
       return;
@@ -185,6 +236,9 @@ export function useSortable({ keys, enabled, onReorder }: UseSortableOptions) {
       lastRects.current.set(key, pagePoint(rect.left, rect.top));
       return centerOf(el);
     });
+    if (s.touch) {
+      navigator.vibrate?.(10);
+    }
     setDrag({ key: s.key, target: s.from });
   }, []);
 
@@ -192,19 +246,9 @@ export function useSortable({ keys, enabled, onReorder }: UseSortableOptions) {
     if (!listening) {
       return;
     }
-    function onMove(e: globalThis.PointerEvent) {
-      const s = session.current;
-      if (!s || e.pointerId !== s.pointerId) {
-        return;
-      }
-      const p = pagePoint(e.clientX, e.clientY);
-      if (!s.active) {
-        if (Math.hypot(p.x - s.start.x, p.y - s.start.y) < MOUSE_THRESHOLD) {
-          return;
-        }
-        start(s);
-      }
-      e.preventDefault();
+    let frame = 0;
+    function update(s: DragSession) {
+      const p = pagePoint(s.client.x, s.client.y);
       const target = nearest(s.slots, p);
       if (target !== s.target) {
         s.target = target;
@@ -212,29 +256,90 @@ export function useSortable({ keys, enabled, onReorder }: UseSortableOptions) {
       }
       followPointer(s, p);
     }
+    // Défilement automatique près du haut ou du bas de l'écran, tant que le
+    // pointeur y reste (même immobile).
+    function autoScroll() {
+      frame = 0;
+      const s = session.current;
+      if (!s?.active) {
+        return;
+      }
+      const { y } = s.client;
+      const fromBottom = window.innerHeight - y;
+      const speed =
+        y < EDGE_ZONE
+          ? -EDGE_SPEED * (1 - Math.max(y, 0) / EDGE_ZONE)
+          : fromBottom < EDGE_ZONE
+            ? EDGE_SPEED * (1 - Math.max(fromBottom, 0) / EDGE_ZONE)
+            : 0;
+      const before = window.scrollY;
+      if (speed !== 0) {
+        window.scrollBy(0, speed);
+      }
+      if (window.scrollY !== before) {
+        update(s);
+        frame = requestAnimationFrame(autoScroll);
+      }
+    }
+    function onMove(e: globalThis.PointerEvent) {
+      const s = session.current;
+      if (!s || e.pointerId !== s.pointerId) {
+        return;
+      }
+      s.client = { x: e.clientX, y: e.clientY };
+      if (!s.active) {
+        const p = pagePoint(e.clientX, e.clientY);
+        const moved = Math.hypot(p.x - s.start.x, p.y - s.start.y);
+        if (s.touch) {
+          // Le doigt bouge avant la fin de l'appui long : on fait défiler la page.
+          if (moved > TOUCH_SLOP) {
+            finish(false);
+          }
+          return;
+        }
+        if (moved < MOUSE_THRESHOLD) {
+          return;
+        }
+        start(s);
+      }
+      e.preventDefault();
+      update(s);
+      if (!frame) {
+        frame = requestAnimationFrame(autoScroll);
+      }
+    }
     function onUp(e: globalThis.PointerEvent) {
       if (session.current && e.pointerId === session.current.pointerId) {
         finish(e.type === "pointerup");
       }
     }
+    // Appui long au doigt : ni menu contextuel ni aperçu du lien.
+    function onContextMenu(e: Event) {
+      if (session.current?.touch) {
+        e.preventDefault();
+      }
+    }
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
+    window.addEventListener("contextmenu", onContextMenu);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("contextmenu", onContextMenu);
     };
   }, [listening, finish, followPointer, start]);
+
+  useEffect(() => () => window.clearTimeout(longPress.current), []);
 
   function onPointerDown(e: PointerEvent<HTMLElement>, key: string) {
     if (!enabled || e.button !== 0 || keys.length < 2 || session.current?.active) {
       return;
     }
+    const touch = e.pointerType !== "mouse";
     const fromHandle = (e.target as HTMLElement).closest("[data-drag-handle]");
-    if (e.pointerType !== "mouse" && !fromHandle) {
-      return;
-    }
     const s: DragSession = {
       key,
       pointerId: e.pointerId,
@@ -242,14 +347,24 @@ export function useSortable({ keys, enabled, onReorder }: UseSortableOptions) {
       start: pagePoint(e.clientX, e.clientY),
       slots: [],
       target: keys.indexOf(key),
+      client: { x: e.clientX, y: e.clientY },
+      touch,
       active: false,
     };
+    window.clearTimeout(longPress.current);
     session.current = s;
     setListening(true);
-    if (e.pointerType !== "mouse") {
+    if (touch && fromHandle) {
       // Au doigt, la poignée démarre le glisser tout de suite.
       e.preventDefault();
       start(s);
+    } else if (touch) {
+      longPress.current = window.setTimeout(() => {
+        if (session.current === s) {
+          start(s);
+          followPointer(s, pagePoint(s.client.x, s.client.y));
+        }
+      }, LONG_PRESS_MS);
     }
   }
 
@@ -258,14 +373,7 @@ export function useSortable({ keys, enabled, onReorder }: UseSortableOptions) {
     dragKey,
     itemProps(key: string) {
       return {
-        ref: (el: HTMLElement | null) => {
-          if (el) {
-            elements.current.set(key, el);
-          } else {
-            elements.current.delete(key);
-            lastRects.current.delete(key);
-          }
-        },
+        ref: refFor(key),
         onPointerDown: (e: PointerEvent<HTMLElement>) => onPointerDown(e, key),
         // Empêche le drag & drop natif des liens et images (souris).
         onDragStart: (e: MouseEvent<HTMLElement>) => e.preventDefault(),

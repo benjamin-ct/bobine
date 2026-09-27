@@ -312,7 +312,7 @@ export default function TopPicksPanel() {
         onClose={() => setPickerOpen(false)}
         watched={watched}
         chosen={chosen}
-        onAdd={add}
+        onToggle={(key) => (chosen.includes(key) ? remove(key) : add(key))}
       />
     </section>
   );
@@ -323,7 +323,7 @@ interface PickerProps {
   onClose: () => void;
   watched: LibraryItem[];
   chosen: string[];
-  onAdd: (key: string) => void;
+  onToggle: (key: string) => void;
 }
 
 type TypeFilter = "all" | MediaType;
@@ -333,8 +333,8 @@ const TYPE_FILTERS: TypeFilter[] = ["all", "movie", "tv"];
 // ne porte que sur les titres vus, jamais sur tout le catalogue. Les mieux
 // notés d'abord ; un clic ajoute le titre, la modale reste ouverte pour en
 // ajouter d'autres jusqu'à ce qu'on la ferme. Les titres déjà dans le top
-// sont grisés avec leur rang.
-function TopPicksPicker({ open, onClose, watched, chosen, onAdd }: PickerProps) {
+// sont grisés avec leur rang ; un nouveau clic les retire (décocher).
+function TopPicksPicker({ open, onClose, watched, chosen, onToggle }: PickerProps) {
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState("");
@@ -439,8 +439,9 @@ function TopPicksPicker({ open, onClose, watched, chosen, onAdd }: PickerProps) 
                         <button
                           type="button"
                           className={`${styles.candidate} ${rank ? styles.inTopCandidate : ""}`}
-                          onClick={() => onAdd(key)}
-                          disabled={rank > 0 || free === 0}
+                          onClick={() => onToggle(key)}
+                          disabled={rank === 0 && free === 0}
+                          aria-pressed={rank > 0}
                         >
                           <span className={styles.candidatePoster}>
                             {poster ? (
@@ -466,6 +467,9 @@ function TopPicksPicker({ open, onClose, watched, chosen, onAdd }: PickerProps) 
                                   {rank}
                                 </span>
                                 <span className={styles.inTopLabel}>{t("topPicks.inTop")}</span>
+                                <span className={styles.inTopRemove}>
+                                  <Icon name="close" /> {t("topPicks.untick")}
+                                </span>
                               </span>
                             )}
                           </span>

@@ -27,6 +27,8 @@
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
+  /* Appui long au doigt : pas d'aperçu du lien sur iOS. */
+  -webkit-touch-callout: none;
 }
 
 /* Titre tenu : il suit le pointeur au-dessus des autres (useSortable). */
@@ -44,13 +46,13 @@
 @media (pointer: coarse) {
   .dragHandle {
     position: absolute;
-    top: calc(150cqw - 36px - 8px);
+    top: calc(150cqw - 44px - 6px);
     left: 8px;
     z-index: 2;
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 999px;
     background: oklch(0.15 0.02 260 / 0.75);
     color: var(--on-image);

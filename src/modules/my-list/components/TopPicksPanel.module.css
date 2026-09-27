@@ -89,6 +89,10 @@
 
 .draggable {
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Appui long au doigt : pas d'aperçu du lien sur iOS. */
+  -webkit-touch-callout: none;
 }
 
 /* Titre tenu : il suit le pointeur au-dessus des autres (useSortable). */
@@ -699,6 +703,25 @@
 .inTopLabel {
   font-size: 11px;
   font-weight: 600;
+}
+
+/* Un nouveau clic retire le titre du top (décocher). */
+.inTopRemove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 3px 9px;
+  border: 1px solid oklch(1 0 0 / 0.35);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.candidate:hover .inTopRemove,
+.candidate:focus-visible .inTopRemove {
+  border-color: var(--on-image);
+  background: oklch(1 0 0 / 0.12);
 }
 
 /* Feuille du bas sur mobile. */
