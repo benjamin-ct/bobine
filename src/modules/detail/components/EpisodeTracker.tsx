@@ -8,6 +8,7 @@ import { useMembersOnly } from "../../../core/context/MembersOnlyContext.tsx";
 import type { EpisodeRef, LibraryItemInput } from "../../../core/types/library.ts";
 import type { Episode, EpisodeAirInfo, Season } from "../../../core/types/tmdb.ts";
 import { Icon } from "../../../shared/components/index.ts";
+import { pop } from "../../../shared/lib/motion.ts";
 import {
   airedEpisodesUpTo,
   isAired,
@@ -275,9 +276,10 @@ export default function EpisodeTracker({
               <button
                 type="button"
                 className={styles.upNextBtn}
-                onClick={() =>
-                  toggleEpisodeWatched(item, next.seasonNumber, next.episode.episode_number)
-                }
+                onClick={(e) => {
+                  pop(e.currentTarget.firstElementChild);
+                  toggleEpisodeWatched(item, next.seasonNumber, next.episode.episode_number);
+                }}
               >
                 <Icon name="check" strokeWidth={3} />
                 {t("episodeTracker.watched")}
@@ -392,9 +394,12 @@ export default function EpisodeTracker({
                               ? t("episodeTracker.unmarkEpisode", { episode: epLabel })
                               : t("episodeTracker.markEpisode", { episode: epLabel })
                           }
-                          onClick={() =>
-                            toggleEpisodeWatched(item, seasonNumber, ep.episode_number)
-                          }
+                          onClick={(e) => {
+                            if (!watched) {
+                              pop(e.currentTarget);
+                            }
+                            toggleEpisodeWatched(item, seasonNumber, ep.episode_number);
+                          }}
                         >
                           <Icon name="check" size={16} strokeWidth={watched ? 3 : 2} />
                         </button>

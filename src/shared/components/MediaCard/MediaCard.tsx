@@ -17,6 +17,7 @@ import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
+import { pop } from "../../lib/motion.ts";
 import type {
   MediaItem,
   RegionWatchProviders,
@@ -24,6 +25,7 @@ import type {
 } from "../../../core/types/tmdb.ts";
 import Icon, { type IconName } from "../Icon/Icon.tsx";
 import posterStyles from "../../styles/posterAccents.module.css";
+import staggerStyles from "../../styles/stagger.module.css";
 import styles from "./MediaCard.module.css";
 
 interface MediaCardProps {
@@ -249,7 +251,7 @@ function MediaCard({
   const accentKey = posterAccentFromGenres(item.genre_ids, `${mediaType}:${item.id}`);
 
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${staggerStyles.item}`}>
       <Link to={`/media/${mediaType}/${item.id}`} className={styles.link}>
         <div className={styles.poster} ref={posterRef}>
           {item.poster_path ? (
@@ -335,7 +337,12 @@ function MediaCard({
         <button
           type="button"
           className={`${styles.pastille} ${inWatchlist ? styles.pastilleWant : ""}`}
-          onClick={() => toggleWatchlist(libItem)}
+          onClick={(e) => {
+            if (!inWatchlist) {
+              pop(e.currentTarget.firstElementChild);
+            }
+            toggleWatchlist(libItem);
+          }}
           aria-pressed={inWatchlist}
           aria-label={t("mediaCard.wantToWatch")}
           title={t("mediaCard.wantToWatch")}
@@ -345,7 +352,12 @@ function MediaCard({
         <button
           type="button"
           className={`${styles.pastille} ${watched ? styles.pastilleWatched : ""}`}
-          onClick={() => toggleWatched(libItem)}
+          onClick={(e) => {
+            if (!watched) {
+              pop(e.currentTarget.firstElementChild);
+            }
+            toggleWatched(libItem);
+          }}
           aria-pressed={watched}
           aria-label={t("mediaCard.markAsWatched")}
           title={t("mediaCard.markAsWatched")}

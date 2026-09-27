@@ -6,6 +6,7 @@ import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import Icon from "../Icon/Icon.tsx";
 import type { LibraryItem } from "../../../core/types/library.ts";
 import posterStyles from "../../styles/posterAccents.module.css";
+import staggerStyles from "../../styles/stagger.module.css";
 import styles from "./FeaturedMediaRow.module.css";
 
 export interface FeaturedMediaEntry {
@@ -46,7 +47,7 @@ export default function FeaturedMediaRow({ items }: FeaturedMediaRowProps) {
           <Link
             key={`${item.mediaType}:${item.id}`}
             to={`/media/${item.mediaType}/${item.id}`}
-            className={styles.card}
+            className={`${styles.card} ${staggerStyles.item}`}
           >
             <div className={styles.thumb}>
               {item.posterPath ? (

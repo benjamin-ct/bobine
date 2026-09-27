@@ -3,9 +3,11 @@ import { useTranslation } from "react-i18next";
 import { posterUrl } from "../../../core/api/tmdb.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
+import { pop } from "../../lib/motion.ts";
 import { lastWatchedEntry, type ResumableSeries } from "../../hooks/useResumableSeries.ts";
 import Icon from "../Icon/Icon.tsx";
 import posterStyles from "../../styles/posterAccents.module.css";
+import staggerStyles from "../../styles/stagger.module.css";
 import styles from "./ContinueWatchingRow.module.css";
 
 interface ContinueWatchingRowProps {
@@ -32,7 +34,10 @@ export default function ContinueWatchingRow({ items }: ContinueWatchingRowProps)
         const lastWatched = lastWatchedEntry(item.watchedEpisodes || []);
         const next = item.nextEpisode;
         return (
-          <div key={`${item.mediaType}:${item.id}`} className={styles.card}>
+          <div
+            key={`${item.mediaType}:${item.id}`}
+            className={`${styles.card} ${staggerStyles.item}`}
+          >
             <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.link}>
               <div className={styles.thumb}>
                 {item.posterPath ? (
@@ -65,7 +70,10 @@ export default function ContinueWatchingRow({ items }: ContinueWatchingRowProps)
               <button
                 type="button"
                 className={styles.watchedBtn}
-                onClick={() => toggleEpisodeWatched(item, next.seasonNumber, next.episodeNumber)}
+                onClick={(e) => {
+                  pop(e.currentTarget.firstElementChild);
+                  toggleEpisodeWatched(item, next.seasonNumber, next.episodeNumber);
+                }}
                 aria-label={t("continueWatching.markWatchedAria", {
                   title: item.title,
                   season: next.seasonNumber,

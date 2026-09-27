@@ -1,0 +1,61 @@
+/* Arrivée en cascade des cartes d'une grille ou d'une rangée (affiches de
+   Découvrir, Nouveautés, Ma liste...) : chacune apparaît en fondu, un peu
+   après la précédente. Joué au montage de la carte, donc au chargement de
+   la grille ; les cartes ajoutées ensuite par le scroll infini (au-delà de
+   la 18e) arrivent sans animation, pour ne pas ralentir le défilement. */
+.item {
+  --stagger: 0;
+  animation: in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--stagger) * 35ms);
+}
+
+.item:nth-child(n + 2) {
+  --stagger: 1;
+}
+.item:nth-child(n + 3) {
+  --stagger: 2;
+}
+.item:nth-child(n + 4) {
+  --stagger: 3;
+}
+.item:nth-child(n + 5) {
+  --stagger: 4;
+}
+.item:nth-child(n + 6) {
+  --stagger: 5;
+}
+.item:nth-child(n + 7) {
+  --stagger: 6;
+}
+.item:nth-child(n + 8) {
+  --stagger: 7;
+}
+.item:nth-child(n + 9) {
+  --stagger: 8;
+}
+.item:nth-child(n + 10) {
+  --stagger: 9;
+}
+.item:nth-child(n + 11) {
+  --stagger: 10;
+}
+.item:nth-child(n + 12) {
+  --stagger: 11;
+}
+
+.item:nth-child(n + 19) {
+  animation: none;
+}
+
+@keyframes in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    animation: none;
+  }
+}

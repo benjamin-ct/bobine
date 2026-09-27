@@ -226,3 +226,25 @@ h4 {
     filter: none;
   }
 }
+
+/* « Réduire les animations » (réglage système) : coupe toutes les
+   animations et transitions du site d'un coup, y compris celles qui n'ont
+   pas leur propre @media. Durée quasi nulle plutôt que `none` pour que les
+   écouteurs `animationend` / `transitionend` (ex. splash de index.html)
+   se déclenchent toujours. Les animations jouées en JS (shared/lib/motion.ts)
+   testent le même réglage. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}

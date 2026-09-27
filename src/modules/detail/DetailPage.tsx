@@ -37,6 +37,7 @@ import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx"
 import { useMembersOnly } from "../../core/context/MembersOnlyContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import { STAR_LABEL_KEYS } from "../../shared/lib/ratingTier.ts";
+import { pop } from "../../shared/lib/motion.ts";
 import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPreviewCache.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
@@ -560,7 +561,12 @@ export default function DetailPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${inWatchlist ? styles.wantOn : ""}`}
-                onClick={() => toggleWatchlist(libItem)}
+                onClick={(e) => {
+                  if (!inWatchlist) {
+                    pop(e.currentTarget.firstElementChild);
+                  }
+                  toggleWatchlist(libItem);
+                }}
                 aria-pressed={inWatchlist}
               >
                 <Icon name="star" filled={inWatchlist} />
@@ -571,9 +577,16 @@ export default function DetailPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${styles.watchedBtn} ${watched ? styles.watchedOn : ""}`}
-                onClick={() =>
-                  mediaType === "tv" ? toggleSeriesWatched() : toggleWatched(libItem)
-                }
+                onClick={(e) => {
+                  if (!watched) {
+                    pop(e.currentTarget.firstElementChild);
+                  }
+                  if (mediaType === "tv") {
+                    toggleSeriesWatched();
+                  } else {
+                    toggleWatched(libItem);
+                  }
+                }}
                 aria-pressed={watched}
                 disabled={markingSeries}
               >
