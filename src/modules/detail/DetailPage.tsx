@@ -44,7 +44,11 @@ import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import type { CastMember, MediaDetails, MediaType } from "../../core/types/tmdb.ts";
 import styles from "./DetailPage.module.css";
 
+// Acteurs affichés avant « Tout le casting » : une rangée de 6 sur desktop,
+// deux rangées de 4 sur mobile (grille sans défilement horizontal).
 const MAIN_CAST_COUNT = 6;
+const MAIN_CAST_COUNT_MOBILE = 8;
+const MOBILE_CAST_QUERY = "(max-width: 720px)";
 // Certaines séries ont des milliers d'entrées de casting : TMDB les renvoie
 // d'un bloc (pas de pagination des crédits), mais en afficher des milliers
 // d'un coup fige la page. On les révèle par lots, multiple de 6 et de 4
@@ -87,6 +91,20 @@ function languageName(code: string | undefined, localeTag: string): string | nul
   }
 }
 
+function useMainCastCount(): number {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(MOBILE_CAST_QUERY).matches
+  );
+  useEffect(() => {
+    const query = window.matchMedia(MOBILE_CAST_QUERY);
+    const onChange = () => setIsMobile(query.matches);
+    onChange();
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+  return isMobile ? MAIN_CAST_COUNT_MOBILE : MAIN_CAST_COUNT;
+}
+
 export default function DetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -95,7 +113,9 @@ export default function DetailPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<Error | null>(null);
   const [preview, setPreview] = useState<MediaPreview | null>(null);
-  const [castLimit, setCastLimit] = useState(MAIN_CAST_COUNT);
+  const mainCastCount = useMainCastCount();
+  // Nombre de lots de CAST_BATCH révélés en plus des acteurs principaux.
+  const [castBatches, setCastBatches] = useState(0);
   const [newListName, setNewListName] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
   const [markingSeries, setMarkingSeries] = useState(false);
@@ -127,7 +147,7 @@ export default function DetailPage() {
     }
     let cancelled = false;
     setStatus("loading");
-    setCastLimit(MAIN_CAST_COUNT);
+    setCastBatches(0);
     setPreview(getMediaPreview(mediaType, id));
     getDetails(mediaType, id)
       .then((d) => {
@@ -286,8 +306,8 @@ export default function DetailPage() {
         profile_path: member.profile_path,
       }))
     : details.credits?.cast || [];
-  const castExpanded = castLimit > MAIN_CAST_COUNT;
-  const visibleCast = cast.slice(0, castLimit);
+  const castExpanded = castBatches > 0;
+  const visibleCast = cast.slice(0, mainCastCount + castBatches * CAST_BATCH);
   const castRemaining = cast.length - visibleCast.length;
 
   type DirectorEntry = { id: number; name: string };
@@ -728,13 +748,11 @@ export default function DetailPage() {
             <section className={styles.section}>
               <div className={styles.sectionHead}>
                 <h2>{t("detailPage.mainCast")}</h2>
-                {cast.length > MAIN_CAST_COUNT && (
+                {cast.length > mainCastCount && (
                   <button
                     type="button"
                     className={styles.textBtn}
-                    onClick={() =>
-                      setCastLimit(castExpanded ? MAIN_CAST_COUNT : MAIN_CAST_COUNT + CAST_BATCH)
-                    }
+                    onClick={() => setCastBatches(castExpanded ? 0 : 1)}
                     aria-expanded={castExpanded}
                   >
                     {castExpanded
@@ -743,7 +761,7 @@ export default function DetailPage() {
                   </button>
                 )}
               </div>
-              <div className={`${styles.castGrid} ${castExpanded ? styles.castGridAll : ""}`}>
+              <div className={styles.castGrid}>
                 {visibleCast.map((member) => (
                   <PersonCard
                     key={member.credit_id || `${member.id}-${member.character}`}
@@ -762,7 +780,7 @@ export default function DetailPage() {
                   <button
                     type="button"
                     className={styles.castMoreBtn}
-                    onClick={() => setCastLimit((limit) => limit + CAST_BATCH)}
+                    onClick={() => setCastBatches((batches) => batches + 1)}
                   >
                     {t("detailPage.showMoreCast", { count: Math.min(CAST_BATCH, castRemaining) })}
                   </button>
