@@ -379,7 +379,7 @@ export default function FilterPanel({
   const tvActive = !allTypes?.active && mediaType === "tv";
   const segmented = (
     <div className={styles.segmented} role="group" aria-label={t("filterBar.typeAriaLabel")}>
-      <SlidingIndicator activeKey={mediaType} />
+      <SlidingIndicator activeKey={allTypes?.active ? "all" : mediaType} />
       <button
         type="button"
         className={movieActive ? styles.segActive : ""}

@@ -41,9 +41,15 @@ import styles from "./RandomPage.module.css";
 
 const MAX_ATTEMPTS = 6;
 // Défilement d'affiches pendant un tirage : une affiche toutes les 90 ms,
-// parmi au plus REEL_MAX affiches déjà connues (historique, envies de voir).
+// piochée parmi au plus REEL_MAX miniatures (w92, quelques Ko chacune) du
+// catalogue, de l'historique et des envies de voir. Elles sont préchargées
+// une seule fois et seules celles déjà chargées défilent : rien n'arrive en
+// retard, rien n'est retéléchargé, même sur une connexion lente.
 const REEL_INTERVAL_MS = 90;
-const REEL_MAX = 30;
+const REEL_MAX = 16;
+// Attente maximale de l'affiche du titre tiré avant de le révéler : le
+// défilement continue en attendant, et la révélation montre la bonne affiche.
+const POSTER_WAIT_MS = 2500;
 
 type DrawSource = "watchlist" | "catalog";
 // « Les deux » : chaque tirage choisit au hasard entre films et séries.
@@ -99,20 +105,56 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
-// Affiche qui défile pendant le tirage (null hors tirage ou sans affiches).
+/** Résout quand l'image est chargée, en échec, ou au bout de timeoutMs. */
+function preloadImage(src: string, timeoutMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    const timer = setTimeout(resolve, timeoutMs);
+    image.onload = image.onerror = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    image.src = src;
+  });
+}
+
+// URL de la miniature qui défile pendant le tirage (null hors tirage ou tant
+// qu'aucune n'est chargée).
 function useReelPoster(rolling: boolean, posterPaths: string[]): string | null {
+  const [loaded, setLoaded] = useState<string[]>([]);
   const [index, setIndex] = useState(0);
+  // Images gardées en mémoire : le défilement ne redemande rien au réseau.
+  const images = useRef(new Map<string, HTMLImageElement>());
+
   useEffect(() => {
-    if (!rolling || posterPaths.length < 2) {
+    for (const path of posterPaths) {
+      const src = posterUrl(path, "w92");
+      if (!src || images.current.has(src) || images.current.size >= REEL_MAX) {
+        continue;
+      }
+      const image = new Image();
+      image.onload = () => setLoaded((prev) => [...prev, src]);
+      image.src = src;
+      images.current.set(src, image);
+    }
+  }, [posterPaths]);
+
+  useEffect(() => {
+    if (!rolling || loaded.length < 2) {
       return;
     }
-    const timer = setInterval(() => setIndex((i) => i + 1), REEL_INTERVAL_MS);
+    // Saut aléatoire, jamais sur l'affiche courante.
+    const timer = setInterval(
+      () => setIndex((i) => i + 1 + Math.floor(Math.random() * (loaded.length - 1))),
+      REEL_INTERVAL_MS
+    );
     return () => clearInterval(timer);
-  }, [rolling, posterPaths]);
-  if (!rolling || posterPaths.length === 0) {
+  }, [rolling, loaded.length]);
+
+  if (!rolling || loaded.length === 0) {
     return null;
   }
-  return posterPaths[index % posterPaths.length];
+  return loaded[index % loaded.length];
 }
 
 function hasAnyProvider(providers: RegionWatchProviders | null, ids: string[]): boolean {
@@ -143,6 +185,8 @@ export default function RandomPage() {
   // Incrémenté à chaque tirage réussi : relance l'animation d'apparition,
   // même quand le même titre ressort.
   const [drawCount, setDrawCount] = useState(0);
+  // Affiches du catalogue vues au fil des requêtes (pour le défilement).
+  const [catalogPosters, setCatalogPosters] = useState<string[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
   const historyId = useId();
 
@@ -193,6 +237,27 @@ export default function RandomPage() {
         }
       }
     );
+    return () => {
+      cancelled = true;
+    };
+  }, [drawTypes, region]);
+
+  function collectCatalogPosters(items: { poster_path?: string | null }[]) {
+    const paths = items.map((item) => item.poster_path).filter((p): p is string => !!p);
+    setCatalogPosters((prev) =>
+      prev.length >= REEL_MAX ? prev : [...new Set([...prev, ...paths])].slice(0, REEL_MAX)
+    );
+  }
+
+  // Affiches populaires du type choisi, pour que le défilement pioche aussi
+  // dans le catalogue même quand on tire dans « Mes envies de voir ».
+  useEffect(() => {
+    let cancelled = false;
+    for (const type of drawTypes) {
+      discover(type, { page: 1, region })
+        .then((data) => !cancelled && collectCatalogPosters(shuffle(data.results ?? [])))
+        .catch(() => {});
+    }
     return () => {
       cancelled = true;
     };
@@ -301,6 +366,7 @@ export default function RandomPage() {
       yearMax: yearMax ? Number(yearMax) : undefined,
     };
     const first = await discover(type, { page: 1, ...discoverParams });
+    collectCatalogPosters(first.results ?? []);
     const totalPages = Math.min(first.total_pages || 1, 500);
     if (totalPages === 0 || !first.results?.length) {
       return null;
@@ -357,6 +423,10 @@ export default function RandomPage() {
         setStatus("empty");
         return;
       }
+      const poster = posterUrl(drawn.item.poster_path, "w342");
+      if (poster) {
+        await preloadImage(poster, POSTER_WAIT_MS);
+      }
       setPick(drawn.item);
       setPickDetails(drawn.details);
       setProvidersResult(watchProvidersFromDetails(drawn.details, region));
@@ -390,12 +460,17 @@ export default function RandomPage() {
   const rolling = status === "loading";
   const availability = availabilityOf(providersResult);
 
-  // Affiches déjà connues (historique, envies de voir) qui défilent pendant
-  // le tirage, façon machine à sous.
+  // Affiches qui défilent pendant le tirage, façon machine à sous : catalogue,
+  // historique et envies de voir, en alternance.
   const reelPosters = useMemo(() => {
-    const paths = [...history.map((h) => h.posterPath), ...watchlist.map((w) => w.posterPath)];
-    return shuffle([...new Set(paths.filter((p): p is string => !!p))]).slice(0, REEL_MAX);
-  }, [history, watchlist]);
+    const personal = shuffle(
+      [...history.map((h) => h.posterPath), ...watchlist.map((w) => w.posterPath)].filter(
+        (p): p is string => !!p
+      )
+    );
+    const mixed = catalogPosters.flatMap((path, i) => (personal[i] ? [path, personal[i]] : [path]));
+    return [...new Set([...mixed, ...personal])];
+  }, [catalogPosters, history, watchlist]);
   const reelPoster = useReelPoster(rolling, reelPosters);
 
   // Un titre est déjà tiré à l'arrivée sur la page, avec la source et les
@@ -540,7 +615,7 @@ export default function RandomPage() {
         <div className={styles.spotlight} aria-busy="true">
           {reelPoster ? (
             <div className={`${styles.posterWrap} ${styles.reel}`}>
-              <img src={posterUrl(reelPoster, "w154") ?? undefined} alt="" />
+              <img key="reel" src={reelPoster} alt="" />
             </div>
           ) : (
             <div className={`${styles.posterWrap} ${styles.fading}`} />
@@ -554,9 +629,13 @@ export default function RandomPage() {
             className={`${styles.posterWrap} ${rolling ? (reelPoster ? styles.reel : styles.fading) : ""}`}
           >
             {reelPoster ? (
-              <img src={posterUrl(reelPoster, "w154") ?? undefined} alt="" />
+              <img key="reel" src={reelPoster} alt="" />
             ) : pick.poster_path ? (
-              <img src={posterUrl(pick.poster_path, "w342") ?? undefined} alt={title} />
+              <img
+                key={pick.poster_path}
+                src={posterUrl(pick.poster_path, "w342") ?? undefined}
+                alt={title}
+              />
             ) : (
               <div className={`${styles.posterEmpty} ${posterStyles[accentKey]}`}>{title}</div>
             )}
