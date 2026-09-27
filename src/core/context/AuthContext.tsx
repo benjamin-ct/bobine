@@ -298,7 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (image: Blob): Promise<void> => {
       const res = await fetch("/api/account/avatar", {
         method: "PUT",
-        headers: { "content-type": image.type || "image/jpeg", ...syncClientHeaders() },
+        headers: { "content-type": image.type || "image/webp", ...syncClientHeaders() },
         body: image,
       });
       const data = await res.json().catch(() => ({}));
