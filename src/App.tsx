@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { useLayoutEffect, useRef } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import {
   NavBar,
   ScrollToTop,
@@ -22,14 +23,39 @@ import SharedList from "./modules/shared-list/index.ts";
 import { LoginPage, VerifyAuthPage, MembersOnlyDialog } from "./modules/auth/index.ts";
 import { TermsPage, PrivacyPolicyPage } from "./modules/legal/index.ts";
 import NotFound from "./modules/not-found/index.ts";
+import { fadeIn } from "./shared/lib/motion.ts";
 
 export default function App() {
+  const { pathname } = useLocation();
+  const navigationType = useNavigationType();
+  const mainRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
+
+  // Fondu court à chaque changement de page (pas au premier affichage,
+  // couvert par le splash, ni quand seuls les paramètres changent : onglets
+  // du profil, filtres). En layout effect pour partir de l'opacité 0 avant
+  // que la nouvelle page ne soit peinte.
+  useLayoutEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    // Retour (bouton « Retour », geste de balayage, bouton du navigateur) :
+    // pas de fondu, la page revient telle quelle. Sur Safari iOS, le geste
+    // fait déjà glisser la page ; repartir ensuite de l'opacité 0 laissait
+    // un écran vide le temps du fondu (retour de review, vidéo du 28/09).
+    if (navigationType !== "POP") {
+      fadeIn(mainRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   return (
     <>
       <ScrollToTop />
       <RecaptchaBadge />
       <NavBar />
-      <main>
+      <main ref={mainRef}>
         <Routes>
           <Route path="/" element={<Discover />} />
           <Route path="/nouveautes" element={<NewReleases />} />

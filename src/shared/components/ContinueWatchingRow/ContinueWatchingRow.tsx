@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { posterUrl } from "../../../core/api/tmdb.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
+import { pop } from "../../lib/motion.ts";
 import { lastWatchedEntry, type ResumableSeries } from "../../hooks/useResumableSeries.ts";
 import Icon from "../Icon/Icon.tsx";
 import posterStyles from "../../styles/posterAccents.module.css";
@@ -65,7 +66,10 @@ export default function ContinueWatchingRow({ items }: ContinueWatchingRowProps)
               <button
                 type="button"
                 className={styles.watchedBtn}
-                onClick={() => toggleEpisodeWatched(item, next.seasonNumber, next.episodeNumber)}
+                onClick={(e) => {
+                  pop(e.currentTarget.firstElementChild);
+                  toggleEpisodeWatched(item, next.seasonNumber, next.episodeNumber);
+                }}
                 aria-label={t("continueWatching.markWatchedAria", {
                   title: item.title,
                   season: next.seasonNumber,

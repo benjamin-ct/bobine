@@ -17,6 +17,7 @@ import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
+import { pop } from "../../lib/motion.ts";
 import type {
   MediaItem,
   RegionWatchProviders,
@@ -335,7 +336,12 @@ function MediaCard({
         <button
           type="button"
           className={`${styles.pastille} ${inWatchlist ? styles.pastilleWant : ""}`}
-          onClick={() => toggleWatchlist(libItem)}
+          onClick={(e) => {
+            if (!inWatchlist) {
+              pop(e.currentTarget.firstElementChild);
+            }
+            toggleWatchlist(libItem);
+          }}
           aria-pressed={inWatchlist}
           aria-label={t("mediaCard.wantToWatch")}
           title={t("mediaCard.wantToWatch")}
@@ -345,7 +351,12 @@ function MediaCard({
         <button
           type="button"
           className={`${styles.pastille} ${watched ? styles.pastilleWatched : ""}`}
-          onClick={() => toggleWatched(libItem)}
+          onClick={(e) => {
+            if (!watched) {
+              pop(e.currentTarget.firstElementChild);
+            }
+            toggleWatched(libItem);
+          }}
           aria-pressed={watched}
           aria-label={t("mediaCard.markAsWatched")}
           title={t("mediaCard.markAsWatched")}

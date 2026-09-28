@@ -50,6 +50,16 @@ interface FiltersSnapshot {
 // vie du composant peut survivre pour être réappliqué au remontage.
 const filtersMemory = new Map<string, FiltersSnapshot>();
 
+// Résultats déjà chargés, par entrée d'historique : au retour arrière, la
+// grille réapparaît tout de suite (sans squelette ni nouvel appel), prête à
+// être replacée à sa position de défilement.
+interface ResultsSnapshot {
+  results: MediaItem[];
+  page: number;
+  totalPages: number;
+}
+const resultsMemory = new Map<string, ResultsSnapshot>();
+
 // Convertit les valeurs texte des <input> en nombres (ou undefined si vide)
 // pour discover().
 function toDiscoverParams(advanced: AdvancedFiltersState) {
@@ -71,6 +81,10 @@ export default function DiscoverPage() {
   const location = useLocation();
   const navigationType = useNavigationType();
   const restoredFilters = navigationType === "POP" ? filtersMemory.get(location.key) : undefined;
+  const restoredResults = navigationType === "POP" ? resultsMemory.get(location.key) : undefined;
+  // Vrai jusqu'au premier passage des effets ci-dessous : ils ne doivent ni
+  // remettre la page à 1 ni recharger la grille restaurée.
+  const keepRestoredResultsRef = useRef(restoredResults !== undefined);
 
   const [mediaType, setMediaType] = useState<MediaType>(restoredFilters?.mediaType ?? "movie");
   const [genreIds, setGenreIds] = useState<number[]>(restoredFilters?.genreIds ?? []);
@@ -87,11 +101,11 @@ export default function DiscoverPage() {
   );
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
-  const [page, setPage] = useState(1);
-  const [results, setResults] = useState<MediaItem[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(restoredResults?.page ?? 1);
+  const [results, setResults] = useState<MediaItem[]>(restoredResults?.results ?? []);
+  const [totalPages, setTotalPages] = useState(restoredResults?.totalPages ?? 1);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error" | "invalid">(
-    "idle"
+    restoredResults ? "success" : "idle"
   );
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -151,6 +165,9 @@ export default function DiscoverPage() {
   }, [mediaType]);
 
   useEffect(() => {
+    if (keepRestoredResultsRef.current) {
+      return;
+    }
     setPage(1);
   }, [genreIds, providerIds, useMyPlatforms, sortField, sortDirection, advancedKey]);
 
@@ -201,6 +218,10 @@ export default function DiscoverPage() {
       // pas l'API, qui retomberait silencieusement sur 0 résultat.
       setResults([]);
       setStatus("invalid");
+      return;
+    }
+    if (keepRestoredResultsRef.current) {
+      keepRestoredResultsRef.current = false;
       return;
     }
     let cancelled = false;
@@ -304,6 +325,12 @@ export default function DiscoverPage() {
     advancedKey,
     i18n.language,
   ]);
+
+  useEffect(() => {
+    if (status === "success") {
+      resultsMemory.set(location.key, { results, page, totalPages });
+    }
+  }, [location.key, status, results, page, totalPages]);
 
   // Sentinelle observée pour déclencher le chargement de la page suivante
   // dès qu'elle approche du bas de l'écran (scroll infini, plus de bouton).

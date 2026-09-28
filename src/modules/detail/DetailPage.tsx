@@ -6,6 +6,7 @@ import {
   backdropUrl,
   posterUrl,
   getDetails,
+  peekDetails,
   watchProvidersFromDetails,
   estimateRuntimeMinutes,
   getTheatricalDateFromDetails,
@@ -37,6 +38,7 @@ import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx"
 import { useMembersOnly } from "../../core/context/MembersOnlyContext.tsx";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import { STAR_LABEL_KEYS } from "../../shared/lib/ratingTier.ts";
+import { pop } from "../../shared/lib/motion.ts";
 import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPreviewCache.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
@@ -109,8 +111,14 @@ export default function DetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
-  const [details, setDetails] = useState<MediaDetails | null>(null);
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  // Fiche déjà chargée pendant la session (déjà vue) : affichée dès le
+  // premier rendu, sans passer par le squelette.
+  const [details, setDetails] = useState<MediaDetails | null>(() =>
+    mediaType && id ? peekDetails(mediaType, id) : null
+  );
+  const [status, setStatus] = useState<"loading" | "success" | "error">(() =>
+    details ? "success" : "loading"
+  );
   const [error, setError] = useState<Error | null>(null);
   const [preview, setPreview] = useState<MediaPreview | null>(null);
   const mainCastCount = useMainCastCount();
@@ -146,8 +154,14 @@ export default function DetailPage() {
       return;
     }
     let cancelled = false;
-    setStatus("loading");
     setCastBatches(0);
+    const ready = peekDetails(mediaType, id);
+    if (ready) {
+      setDetails(ready);
+      setStatus("success");
+      return;
+    }
+    setStatus("loading");
     setPreview(getMediaPreview(mediaType, id));
     getDetails(mediaType, id)
       .then((d) => {
@@ -560,7 +574,12 @@ export default function DetailPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${inWatchlist ? styles.wantOn : ""}`}
-                onClick={() => toggleWatchlist(libItem)}
+                onClick={(e) => {
+                  if (!inWatchlist) {
+                    pop(e.currentTarget.firstElementChild);
+                  }
+                  toggleWatchlist(libItem);
+                }}
                 aria-pressed={inWatchlist}
               >
                 <Icon name="star" filled={inWatchlist} />
@@ -571,9 +590,16 @@ export default function DetailPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${styles.watchedBtn} ${watched ? styles.watchedOn : ""}`}
-                onClick={() =>
-                  mediaType === "tv" ? toggleSeriesWatched() : toggleWatched(libItem)
-                }
+                onClick={(e) => {
+                  if (!watched) {
+                    pop(e.currentTarget.firstElementChild);
+                  }
+                  if (mediaType === "tv") {
+                    toggleSeriesWatched();
+                  } else {
+                    toggleWatched(libItem);
+                  }
+                }}
                 aria-pressed={watched}
                 disabled={markingSeries}
               >

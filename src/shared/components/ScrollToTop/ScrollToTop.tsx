@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 // Composant invisible : remonte la page en haut à chaque changement de
@@ -7,8 +7,14 @@ import { useLocation } from "react-router-dom";
 export default function ScrollToTop() {
   const { pathname } = useLocation();
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
+  // Effet de layout : il passe avant ceux de la page (composant frère placé
+  // avant <main>), donc avant la restauration de défilement d'un retour
+  // (useScrollRestoration), qu'il écrasait sinon en remettant la page en
+  // haut, et avant que la nouvelle page ne soit peinte.
+  useLayoutEffect(() => {
+    // Toujours instantané : avec le `scroll-behavior: smooth` global, la
+    // nouvelle page s'affichait défilée puis remontait sous les yeux (0,4 s).
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
 
   return null;

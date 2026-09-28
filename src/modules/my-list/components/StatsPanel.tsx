@@ -9,6 +9,7 @@ import {
 } from "../../../core/api/tmdb.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { DonutChart, Icon } from "../../../shared/components/index.ts";
+import { useCountUp } from "../../../shared/hooks/useCountUp.ts";
 import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
 import type { LibraryItem } from "../../../core/types/library.ts";
@@ -104,10 +105,6 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
     });
   }, [watched, setRuntime, setDirectors]);
 
-  if (watched.length === 0) {
-    return null;
-  }
-
   const movieCount = watched.filter((w) => w.mediaType === "movie").length;
   const seriesCount = watched.length - movieCount;
   const filmsPct = watched.length ? Math.round((movieCount / watched.length) * 100) : 0;
@@ -122,6 +119,15 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
   const averageRating = ratedItems.length
     ? ratedItems.reduce((sum, w) => sum + (w.rating || 0), 0) / ratedItems.length
     : null;
+
+  // Les chiffres défilent jusqu'à leur valeur à l'ouverture de l'onglet.
+  const watchedShown = useCountUp(watched.length);
+  const hoursShown = useCountUp(totalHours);
+  const ratingShown = useCountUp(averageRating ?? 0, 900, 1);
+
+  if (watched.length === 0) {
+    return null;
+  }
 
   const yearCounts = new Map<string, number>();
   for (const item of watched) {
@@ -156,7 +162,7 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
         <span className={styles.k}>{t("statsPanel.distribution")}</span>
         <div className={styles.donutRow}>
           <DonutChart
-            centerValue={watched.length}
+            centerValue={watchedShown}
             centerLabel={t("statsPanel.watchedLabel")}
             segments={[
               { label: t("statsPanel.movies"), value: movieCount, color: DONUT_COLORS.movie },
@@ -173,7 +179,7 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
       <div className={`${styles.ticket} ${styles.span4}`}>
         <span className={styles.k}>{t("statsPanel.watchTime")}</span>
         <div className={styles.bigNum}>
-          {totalHours} <span className={styles.unit}>{t("statsPanel.hours")}</span>
+          {hoursShown} <span className={styles.unit}>{t("statsPanel.hours")}</span>
         </div>
         <p className={styles.hint}>
           ≈ {totalDays} {t("statsPanel.daysUnit")} ·{" "}
@@ -185,7 +191,7 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
       <div className={`${styles.ticket} ${styles.span3}`}>
         <span className={styles.k}>{t("statsPanel.averageRating")}</span>
         <div className={styles.bigNum}>
-          {averageRating != null ? averageRating.toFixed(1).replace(".", ",") : "—"}
+          {averageRating != null ? ratingShown.toFixed(1).replace(".", ",") : "—"}
           <span className={styles.unit}>/10</span>
         </div>
         <p className={styles.hint}>{t("statsPanel.ratedCount", { count: ratedItems.length })}</p>

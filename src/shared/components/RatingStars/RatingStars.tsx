@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ratingTier, STAR_LABEL_KEYS } from "../../lib/ratingTier.ts";
+import { light } from "../../lib/motion.ts";
 import styles from "./RatingStars.module.css";
 
 const VALUES = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -32,10 +33,24 @@ export default function RatingStars({
   const [hovered, setHovered] = useState<number | null>(null);
   const displayValue = hovered ?? value ?? 0;
   const tier = ratingTier(displayValue || 1);
+  const starsRef = useRef<HTMLDivElement>(null);
+
+  // Nouvelle note : les étoiles s'allument l'une après l'autre jusqu'à la
+  // note choisie (pas au survol, qui reste instantané).
+  const rateWith = (n: number) => {
+    const next = n === value ? null : n;
+    onRate(next);
+    if (next != null) {
+      Array.from(starsRef.current?.children ?? [])
+        .slice(0, next)
+        .forEach((star, i) => light(star, i * 60));
+    }
+  };
 
   return (
     <div className={`${styles.rate} ${disabled ? styles.disabled : ""}`}>
       <div
+        ref={starsRef}
         className={`${styles.stars} ${styles[`s-${tier.cls}`]}`}
         onMouseLeave={() => setHovered(null)}
       >
@@ -46,7 +61,7 @@ export default function RatingStars({
             className={`${styles.star} ${n <= displayValue ? styles.lit : ""}`}
             disabled={disabled}
             onMouseEnter={() => setHovered(n)}
-            onClick={() => onRate(n === value ? null : n)}
+            onClick={() => rateWith(n)}
             aria-label={t("ratingStars.starAriaLabel", { n, label: t(STAR_LABEL_KEYS[n - 1]) })}
             title={t(STAR_LABEL_KEYS[n - 1])}
           >
