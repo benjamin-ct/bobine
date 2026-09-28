@@ -87,11 +87,17 @@ body {
 /* Fond « salle de cinéma » : bords assombris vers --vignette (un simple voile
    en thème clair). Calque fixe sous tout le contenu (z-index -1, au-dessus du
    fond de <body>) plutôt qu'un background-attachment: fixed, ignoré par
-   Safari iOS. Le haut démarre sous l'en-tête collant, qui le recouvre. */
+   Safari iOS. Le haut démarre sous l'en-tête collant, qui le recouvre.
+   Hauteur du grand viewport (lvh) plutôt que bottom: 0 : Safari iOS 26 arrête
+   un calque fixé en bas au-dessus de sa barre d'outils flottante, et son bord
+   tranchait net sur la page qui défile dessous (visible dès que la barre
+   d'onglets s'escamote). Le calque descend ainsi sous la barre d'outils. */
 body::before {
   content: "";
   position: fixed;
-  inset: 0;
+  inset: 0 0 auto;
+  height: 100vh;
+  height: 100lvh;
   z-index: -1;
   pointer-events: none;
   background:
@@ -108,18 +114,6 @@ body::before {
 @media (max-width: 720px) {
   body::before {
     --vignette-side: 24px;
-  }
-}
-
-/* Mobile : Safari iOS 26 arrête les calques fixes au-dessus de sa barre
-   d'outils flottante, la page continuant de défiler dessous sans voile. Le
-   bord bas assombri du calque y tranchait net sur le fond de <body> dès que
-   la barre d'onglets (qui le recouvrait) s'escamote : on fond le calque vers
-   la transparence en bas pour qu'il n'ait plus de bord visible. */
-@media (max-width: 860px) {
-  body::before {
-    -webkit-mask-image: linear-gradient(to top, transparent, #000 var(--vignette-bottom));
-    mask-image: linear-gradient(to top, transparent, #000 var(--vignette-bottom));
   }
 }
 
