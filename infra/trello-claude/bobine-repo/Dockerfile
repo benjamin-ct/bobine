@@ -27,6 +27,12 @@ RUN chmod 755 /usr/local/bin/bobine-screenshot
 
 RUN useradd -m -s /bin/bash claudeuser
 
+# Clone de travail dédié de Claude (volume nommé monté sur /workspace, qui hérite à sa
+# création du propriétaire de ce dossier) et script de lancement des exécutions.
+RUN mkdir -p /workspace && chown claudeuser:claudeuser /workspace
+COPY bobine-claude-run.sh /usr/local/bin/bobine-claude-run
+RUN chmod 755 /usr/local/bin/bobine-claude-run
+
 RUN (type -p wget >/dev/null || (apt-get update && apt-get install -y wget)) \
     && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg > /tmp/keyring.gpg \
     && install -D -m 644 /tmp/keyring.gpg /etc/apt/keyrings/githubcli-archive-keyring.gpg \

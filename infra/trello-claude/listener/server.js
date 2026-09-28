@@ -1,14 +1,15 @@
 const http = require("http");
-const { exec } = require("child_process");
+const { execFile } = require("child_process");
 const fs = require("fs");
 
 const PORT = process.env.PORT || 8080;
 const DOCKER_CONTAINER = process.env.DOCKER_CONTAINER || "bobine-repo";
-const REPO_PATH = process.env.REPO_PATH || "/workspace";
 const LOCK_FILE = "/tmp/claude-trello.lock";
 const TRELLO_API_KEY = process.env.TRELLO_API_KEY;
 const TRELLO_TOKEN = process.env.TRELLO_TOKEN;
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+// Code de sortie de bobine-claude-run quand une exécution tourne déjà dans bobine-repo.
+const EXIT_BUSY = 75;
 
 const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || "1543573331335315497";
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
@@ -28,7 +29,7 @@ const PROMPT = [
   "Avant toute reponse finale, envoie exactement un resume detaille dans Discord via l’API Discord REST.",
   "Utilise DISCORD_TOKEN pour l’authentification et DISCORD_CHANNEL_ID comme salon cible.",
   "Le message est obligatoire, y compris si la CI est toujours en cours au timeout.",
-  "CONTRAINTE GIT : tu es dans un clone de travail. Ne suppose pas que tu es sur main. Si tu as besoin d’une branche en particulier, fais toi-même git fetch / git switch / git pull.",
+  "CONTRAINTE GIT : tu es dans ton clone de travail dédié (distinct du checkout du serveur), qui part de main à jour. Si tu as besoin d’une branche en particulier, fais toi-même git fetch / git switch / git pull.",
 ].join(" ");
 
 function sentryPrompt(rawPayload) {
@@ -37,7 +38,7 @@ function sentryPrompt(rawPayload) {
     "CONTEXTE CRITIQUE : tu es dans une execution one-shot via claude -p ; aucun processus ne reprendra apres ta sortie.",
     "INTERDICTION : ne delegue pas une attente CI a un sous-agent et ne termine jamais en disant que tu seras notifie automatiquement.",
     "Avant toute reponse finale, envoie un resume dans Discord via l'API Discord REST (DISCORD_TOKEN / DISCORD_CHANNEL_ID).",
-    "CONTRAINTE GIT : tu es dans un clone de travail. Ne suppose pas que tu es sur main. Si tu as besoin d'une branche en particulier, fais toi-même git fetch / git switch / git pull.",
+    "CONTRAINTE GIT : tu es dans ton clone de travail dédié (distinct du checkout du serveur), qui part de main à jour. Si tu as besoin d'une branche en particulier, fais toi-même git fetch / git switch / git pull.",
     "Voici le payload brut du webhook Sentry (JSON) :",
     rawPayload,
   ].join(" ");
@@ -116,110 +117,131 @@ async function postDiscordMessage(text, webhookUrl = DISCORD_WEBHOOK_URL) {
 function runClaude(label, prompt, onError) {
   console.log(`[${ts()}] Declenchement pour ${label}`);
 
-  const cmd = `docker exec --user claudeuser ${DOCKER_CONTAINER} bash -lc ${JSON.stringify(
-    `cd ${REPO_PATH} && git fetch origin && claude --model ${CLAUDE_MODEL} -p ${JSON.stringify(prompt)} --dangerously-skip-permissions --allowedTools 'Bash(git *)' 'Bash(curl *)' Read Write`
-  )}`;
+  // bobine-claude-run (voir bobine-repo/) prépare le clone de travail dédié de Claude puis lance
+  // `claude -p`. execFile : le prompt (payload Sentry compris) est passé tel quel, sans shell.
+  const args = [
+    "exec",
+    "--user",
+    "claudeuser",
+    "--env",
+    `CLAUDE_MODEL=${CLAUDE_MODEL}`,
+    DOCKER_CONTAINER,
+    "bobine-claude-run",
+    prompt,
+  ];
 
-  const child = exec(cmd, { maxBuffer: 1024 * 1024 * 50 }, async (err, stdout, stderr) => {
-    if (fs.existsSync(LOCK_FILE)) {
-      fs.unlinkSync(LOCK_FILE);
-    }
+  const child = execFile(
+    "docker",
+    args,
+    { maxBuffer: 1024 * 1024 * 50 },
+    async (err, stdout, stderr) => {
+      if (fs.existsSync(LOCK_FILE)) {
+        fs.unlinkSync(LOCK_FILE);
+      }
 
-    // Log stdout/stderr dans un fichier pour inspection
-    const logPath = "/tmp/claude-last-run.log";
-    const logContent = [
-      "=== STDOUT ===",
-      stdout || "",
-      "=== STDERR ===",
-      stderr || "",
-      "=== ERR ===",
-      err
-        ? JSON.stringify({ message: err.message, code: err.code, signal: err.signal }, null, 2)
-        : "null",
-    ].join("\n");
-    fs.writeFileSync(logPath, logContent);
+      // Log stdout/stderr dans un fichier pour inspection
+      const logPath = "/tmp/claude-last-run.log";
+      const logContent = [
+        "=== STDOUT ===",
+        stdout || "",
+        "=== STDERR ===",
+        stderr || "",
+        "=== ERR ===",
+        err
+          ? JSON.stringify({ message: err.message, code: err.code, signal: err.signal }, null, 2)
+          : "null",
+      ].join("\n");
+      fs.writeFileSync(logPath, logContent);
 
-    console.log(`[${ts()}] [debug] stdout length: ${stdout?.length || 0}`);
-    console.log(`[${ts()}] [debug] stderr length: ${stderr?.length || 0}`);
-    console.log(`[${ts()}] [debug] err.message: ${err?.message || "null"}`);
-    console.log(`[${ts()}] [debug] err.code: ${err?.code || "null"}`);
-    console.log(`[${ts()}] [debug] err.signal: ${err?.signal || "null"}`);
-    console.log(`[${ts()}] [debug] err.cmd: ${err?.cmd || "null"}`);
+      console.log(`[${ts()}] [debug] stdout length: ${stdout?.length || 0}`);
+      console.log(`[${ts()}] [debug] stderr length: ${stderr?.length || 0}`);
+      console.log(`[${ts()}] [debug] err.message: ${err?.message || "null"}`);
+      console.log(`[${ts()}] [debug] err.code: ${err?.code || "null"}`);
+      console.log(`[${ts()}] [debug] err.signal: ${err?.signal || "null"}`);
+      console.log(`[${ts()}] [debug] err.cmd: ${err?.cmd || "null"}`);
 
-    // Gestion explicite de la limite de sessions Claude
-    if (stdout && /You've hit your session limit/.test(stdout)) {
-      // Ex: "You've hit your session limit · resets 5:10pm (UTC)"
-      const match = /resets\s+(\d{1,2}):(\d{2})\s*(am|pm)?\s*(?:\(UTC\))?/i.exec(stdout);
-      let resetText = "dans quelques minutes";
+      // Gestion explicite de la limite de sessions Claude
+      if (stdout && /You've hit your session limit/.test(stdout)) {
+        // Ex: "You've hit your session limit · resets 5:10pm (UTC)"
+        const match = /resets\s+(\d{1,2}):(\d{2})\s*(am|pm)?\s*(?:\(UTC\))?/i.exec(stdout);
+        let resetText = "dans quelques minutes";
 
-      if (match) {
-        let hour = parseInt(match[1], 10);
-        const minute = parseInt(match[2], 10);
-        const ampm = (match[3] || "").toLowerCase();
+        if (match) {
+          let hour = parseInt(match[1], 10);
+          const minute = parseInt(match[2], 10);
+          const ampm = (match[3] || "").toLowerCase();
 
-        // Convertir en heure 24h UTC
-        if (ampm === "pm" && hour !== 12) {
-          hour += 12;
-        } else if (ampm === "am" && hour === 12) {
-          hour = 0;
+          // Convertir en heure 24h UTC
+          if (ampm === "pm" && hour !== 12) {
+            hour += 12;
+          } else if (ampm === "am" && hour === 12) {
+            hour = 0;
+          }
+
+          const now = new Date();
+          const resetUtc = new Date(
+            Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour, minute, 0)
+          );
+
+          // Si l'heure est déjà passée (en UTC), on suppose que c'est demain (UTC)
+          if (resetUtc.getTime() < now.getTime()) {
+            resetUtc.setUTCDate(resetUtc.getUTCDate() + 1);
+          }
+
+          // Formater en heure Europe/Paris, 24h, avec minutes
+          const resetParis = new Intl.DateTimeFormat("fr-FR", {
+            timeZone: "Europe/Paris",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: false,
+          }).format(resetUtc);
+
+          resetText = `après ${resetParis} (heure de Paris)`;
         }
 
-        const now = new Date();
-        const resetUtc = new Date(
-          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour, minute, 0)
+        const logMsg = `Limite de sessions Claude atteinte. Réessaie ${resetText}.`;
+        console.log(`[${ts()}] ${logMsg}`);
+
+        // Notification Discord uniquement
+        try {
+          await postDiscordMessage(logMsg);
+        } catch (e) {
+          console.error(`[${ts()}] [discord] echec notification limite : ${e.message}`);
+        }
+
+        return;
+      }
+
+      if (err?.code === EXIT_BUSY) {
+        console.log(
+          `[${ts()}] Execution Claude deja en cours dans ${DOCKER_CONTAINER}, declenchement ignore`
         );
-
-        // Si l'heure est déjà passée (en UTC), on suppose que c'est demain (UTC)
-        if (resetUtc.getTime() < now.getTime()) {
-          resetUtc.setUTCDate(resetUtc.getUTCDate() + 1);
-        }
-
-        // Formater en heure Europe/Paris, 24h, avec minutes
-        const resetParis = new Intl.DateTimeFormat("fr-FR", {
-          timeZone: "Europe/Paris",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: false,
-        }).format(resetUtc);
-
-        resetText = `après ${resetParis} (heure de Paris)`;
+        return;
       }
 
-      const logMsg = `Limite de sessions Claude atteinte. Réessaie ${resetText}.`;
-      console.log(`[${ts()}] ${logMsg}`);
+      const hasStderr = stderr && stderr.trim().length > 0;
 
-      // Notification Discord uniquement
-      try {
-        await postDiscordMessage(logMsg);
-      } catch (e) {
-        console.error(`[${ts()}] [discord] echec notification limite : ${e.message}`);
+      if (err && hasStderr) {
+        console.error(`[${ts()}] Echec execution : ${stderr.slice(0, 1000)}`);
+        const errorMsg = `🤖 [Claude] Echec de l'execution : ${stderr.slice(0, 1000)}`;
+        try {
+          await onError(errorMsg);
+        } catch (e) {}
+        return;
       }
 
-      return;
+      if (err) {
+        console.error(`[${ts()}] Echec execution : ${err.message || "erreur inconnue"}`);
+        const errorMsg = `🤖 [Claude] Echec de l'execution : ${err.message || "erreur inconnue"}`;
+        try {
+          await onError(errorMsg);
+        } catch (e) {}
+        return;
+      }
+
+      console.log(`[${ts()}] Execution terminee avec succes`);
     }
-
-    const hasStderr = stderr && stderr.trim().length > 0;
-
-    if (err && hasStderr) {
-      console.error(`[${ts()}] Echec execution : ${stderr.slice(0, 1000)}`);
-      const errorMsg = `🤖 [Claude] Echec de l'execution : ${stderr.slice(0, 1000)}`;
-      try {
-        await onError(errorMsg);
-      } catch (e) {}
-      return;
-    }
-
-    if (err) {
-      console.error(`[${ts()}] Echec execution : ${err.message || "erreur inconnue"}`);
-      const errorMsg = `🤖 [Claude] Echec de l'execution : ${err.message || "erreur inconnue"}`;
-      try {
-        await onError(errorMsg);
-      } catch (e) {}
-      return;
-    }
-
-    console.log(`[${ts()}] Execution terminee avec succes`);
-  });
+  );
 
   fs.writeFileSync(LOCK_FILE, String(child.pid));
 }
