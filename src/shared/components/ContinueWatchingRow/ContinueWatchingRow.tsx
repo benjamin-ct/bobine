@@ -7,7 +7,6 @@ import { pop } from "../../lib/motion.ts";
 import { lastWatchedEntry, type ResumableSeries } from "../../hooks/useResumableSeries.ts";
 import Icon from "../Icon/Icon.tsx";
 import posterStyles from "../../styles/posterAccents.module.css";
-import staggerStyles from "../../styles/stagger.module.css";
 import styles from "./ContinueWatchingRow.module.css";
 
 interface ContinueWatchingRowProps {
@@ -34,10 +33,7 @@ export default function ContinueWatchingRow({ items }: ContinueWatchingRowProps)
         const lastWatched = lastWatchedEntry(item.watchedEpisodes || []);
         const next = item.nextEpisode;
         return (
-          <div
-            key={`${item.mediaType}:${item.id}`}
-            className={`${styles.card} ${staggerStyles.item}`}
-          >
+          <div key={`${item.mediaType}:${item.id}`} className={styles.card}>
             <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.link}>
               <div className={styles.thumb}>
                 {item.posterPath ? (

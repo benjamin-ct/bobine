@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import {
   NavBar,
@@ -30,7 +30,6 @@ export default function App() {
   const navigationType = useNavigationType();
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
-  const [hasNavigated, setHasNavigated] = useState(false);
 
   // Fondu court à chaque changement de page (pas au premier affichage,
   // couvert par le splash, ni quand seuls les paramètres changent : onglets
@@ -41,7 +40,6 @@ export default function App() {
       firstRender.current = false;
       return;
     }
-    setHasNavigated(true);
     // Retour (bouton « Retour », geste de balayage, bouton du navigateur) :
     // pas de fondu, la page revient telle quelle. Sur Safari iOS, le geste
     // fait déjà glisser la page ; repartir ensuite de l'opacité 0 laissait
@@ -52,19 +50,12 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // Page retrouvée par un retour (bouton « Retour », geste ou navigateur) :
-  // les affiches ne rejouent pas leur arrivée en cascade (stagger.module.css).
-  // Elles sont déjà en place, à la position de défilement restaurée. Le
-  // premier affichage est aussi
-  // un « POP » pour React Router : il garde sa cascade.
-  const restored = navigationType === "POP" && hasNavigated;
-
   return (
     <>
       <ScrollToTop />
       <RecaptchaBadge />
       <NavBar />
-      <main ref={mainRef} data-restored={restored || undefined}>
+      <main ref={mainRef}>
         <Routes>
           <Route path="/" element={<Discover />} />
           <Route path="/nouveautes" element={<NewReleases />} />

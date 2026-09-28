@@ -10,7 +10,6 @@ import { Icon } from "../../../shared/components/index.ts";
 import { posterAccentFromGenres } from "../../../shared/lib/posterAccent.ts";
 import { moveKey, useSortable } from "../../../shared/hooks/useSortable.ts";
 import posterStyles from "../../../shared/styles/posterAccents.module.css";
-import staggerStyles from "../../../shared/styles/stagger.module.css";
 import styles from "./TopPicksPanel.module.css";
 
 const MAX_PICKS = 5;
@@ -225,7 +224,7 @@ export default function TopPicksPanel() {
                 <li
                   key={key}
                   {...sortable.itemProps(key)}
-                  className={`${styles.slot} ${staggerStyles.item} ${canDrag ? styles.draggable : ""} ${
+                  className={`${styles.slot} ${canDrag ? styles.draggable : ""} ${
                     sortable.dragKey === key ? styles.dragging : ""
                   }`}
                 >

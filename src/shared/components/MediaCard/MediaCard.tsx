@@ -25,7 +25,6 @@ import type {
 } from "../../../core/types/tmdb.ts";
 import Icon, { type IconName } from "../Icon/Icon.tsx";
 import posterStyles from "../../styles/posterAccents.module.css";
-import staggerStyles from "../../styles/stagger.module.css";
 import styles from "./MediaCard.module.css";
 
 interface MediaCardProps {
@@ -251,7 +250,7 @@ function MediaCard({
   const accentKey = posterAccentFromGenres(item.genre_ids, `${mediaType}:${item.id}`);
 
   return (
-    <div className={`${styles.card} ${staggerStyles.item}`}>
+    <div className={styles.card}>
       <Link to={`/media/${mediaType}/${item.id}`} className={styles.link}>
         <div className={styles.poster} ref={posterRef}>
           {item.poster_path ? (
