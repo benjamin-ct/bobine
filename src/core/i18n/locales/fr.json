@@ -2,6 +2,7 @@
   "common": {
     "loading": "Chargement…",
     "errorGeneric": "Une erreur est survenue.",
+    "errorNetwork": "Impossible de joindre Seancy. Vérifiez votre connexion puis réessayez.",
     "close": "Fermer",
     "unknownTitle": "Titre inconnu"
   },

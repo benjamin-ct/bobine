@@ -23,6 +23,7 @@ import { ensureSentryInit } from "./core/logger.ts";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
 import { isLikelyAutomatedClient } from "./core/botDetection.ts";
 import { setupPwaAutoUpdate } from "./core/pwaUpdate.ts";
+import { stripReauthParam } from "./core/api/accessSession.ts";
 import { clearAccountDataFromDevice, hasAccountDataOnDevice } from "./core/lib/accountStorage.ts";
 
 // Best-effort, non bloquant pour le rendu initial : voir logger.ts et
@@ -43,6 +44,9 @@ if (!isLikelyAutomatedClient(navigator)) {
 // Recharge l'app installée quand une nouvelle version est déployée, au lieu
 // de garder l'ancien bundle jusqu'à une relance complète (voir pwaUpdate.ts).
 setupPwaAutoUpdate();
+
+// Retour de la page de connexion Cloudflare Access (voir accessSession.ts).
+stripReauthParam();
 
 // Session perdue sans passer par le bouton de déconnexion (expirée, cookies
 // effacés) : le cookie compagnon bobine_auth a la même durée de vie que la
