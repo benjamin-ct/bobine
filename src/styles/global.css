@@ -111,6 +111,19 @@ body::before {
   }
 }
 
+/* Pas de voile sur iOS mobile (seul WebKit à connaître -webkit-touch-callout).
+   Safari iOS 26 reprend la couleur d'un calque fixé contre le bas de l'écran
+   sous sa barre d'outils : une bande unie au bord net, visible dès que la
+   barre d'onglets s'escamote. Sans ce calque, il reprend le fond de <body>,
+   identique à celui de la page. */
+@media (max-width: 860px) {
+  @supports (-webkit-touch-callout: none) {
+    body::before {
+      display: none;
+    }
+  }
+}
+
 img,
 svg {
   display: block;
