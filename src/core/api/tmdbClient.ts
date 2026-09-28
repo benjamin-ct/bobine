@@ -5,6 +5,7 @@
 // (voir README, "Convention de fetch API").
 import { createConcurrencyLimiter } from "./concurrencyLimiter.ts";
 import { isNetworkError, recoverFromAccessExpiry } from "./accessSession.ts";
+import { retryDelayMs } from "./retryAfter.ts";
 import i18n from "../i18n/i18n.ts";
 
 // En production, les requêtes passent par /api/tmdb/... (proxy côté
@@ -55,6 +56,20 @@ export type TmdbParams = Record<string, string | number | boolean | undefined | 
 // plutôt que d'échouer.
 const tmdbRequestLimiter = createConcurrencyLimiter(6);
 
+// 429 (plafond du proxy TMDB, voir worker/index.ts, ou quota TMDB relayé) :
+// réessai automatique après le délai annoncé plutôt qu'une « Erreur TMDB
+// (429) » affichée à la place d'une grille (ticket « Un peu trop souvent
+// d'erreur »). La pause est partagée par tout l'onglet : les autres requêtes
+// attendent aussi au lieu de consommer le quota et se prendre à leur tour un
+// 429. Après MAX_RATE_LIMIT_RETRIES réessais, message lisible.
+const MAX_RATE_LIMIT_RETRIES = 2;
+let rateLimitedUntil = 0;
+const RATE_LIMITED = Symbol("rate-limited");
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function tmdbFetch<T>(path: string, params: TmdbParams = {}): Promise<T> {
   if (IS_DEV && (!API_KEY || API_KEY === "REMPLACE_MOI_AVEC_TA_CLE_TMDB")) {
     throw new TmdbConfigError(
@@ -73,6 +88,29 @@ export async function tmdbFetch<T>(path: string, params: TmdbParams = {}): Promi
       url.searchParams.set(key, String(value));
     }
   }
+  for (let attempt = 0; ; attempt++) {
+    const pause = rateLimitedUntil - Date.now();
+    if (pause > 0) {
+      await sleep(pause);
+    }
+    const result = await fetchOnce<T>(url);
+    if (result.status !== RATE_LIMITED) {
+      return result.data;
+    }
+    if (attempt >= MAX_RATE_LIMIT_RETRIES) {
+      throw new Error(i18n.t("common.errorRateLimited"));
+    }
+    rateLimitedUntil = Math.max(
+      rateLimitedUntil,
+      Date.now() + retryDelayMs(result.retryAfter, attempt)
+    );
+  }
+}
+
+type FetchOnceResult<T> =
+  { status: "ok"; data: T } | { status: typeof RATE_LIMITED; retryAfter: string | null };
+
+function fetchOnce<T>(url: URL): Promise<FetchOnceResult<T>> {
   return tmdbRequestLimiter.run(async () => {
     let res: Response;
     try {
@@ -89,10 +127,13 @@ export async function tmdbFetch<T>(path: string, params: TmdbParams = {}): Promi
       }
       throw new Error(i18n.t("common.errorNetwork"), { cause: err });
     }
+    if (res.status === 429) {
+      return { status: RATE_LIMITED, retryAfter: res.headers.get("retry-after") };
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}) as { status_message?: string });
       throw new Error(body.status_message || `Erreur TMDB (${res.status})`);
     }
-    return res.json() as Promise<T>;
+    return { status: "ok", data: (await res.json()) as T };
   });
 }

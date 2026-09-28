@@ -3,6 +3,7 @@
     "loading": "Chargement…",
     "errorGeneric": "Une erreur est survenue.",
     "errorNetwork": "Impossible de joindre Seancy. Vérifiez votre connexion puis réessayez.",
+    "errorRateLimited": "Trop de requêtes en ce moment. Patientez quelques secondes puis réessayez.",
     "close": "Fermer",
     "unknownTitle": "Titre inconnu"
   },

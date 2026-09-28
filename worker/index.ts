@@ -231,6 +231,16 @@ async function cachedStaticJson(
 const RATE_LIMIT_RESPONSE = (): Response =>
   json({ error: "Trop de requêtes. Réessayez dans quelques minutes." }, 429);
 
+// Variante du proxy TMDB : `retry-after` (fin de la fenêtre d'une minute de
+// ses plafonds) permet à tmdbFetch de réessayer tout seul au bon moment
+// plutôt que d'afficher une erreur.
+const TMDB_RATE_LIMIT_RESPONSE = (): Response => {
+  const retryAfter = secondsUntilWindowEnd(60_000);
+  return json({ error: "Trop de requêtes. Réessayez dans quelques instants." }, 429, {
+    "retry-after": String(retryAfter),
+  });
+};
+
 // Ces deux endpoints restent volontairement accessibles sans compte (les
 // notifications push fonctionnent pour n'importe quel visiteur, connecté ou
 // non — c'est le fonctionnement voulu depuis leur conception, avant même
@@ -1861,23 +1871,7 @@ async function handleTmdbProxy(
   env: Env,
   ctx: ExecutionContext
 ): Promise<Response> {
-  const ip = getClientIp(request);
-  // En mémoire (pas D1, voir rate-limit.ts) : le proxy TMDB est de très loin
-  // la route la plus sollicitée (par les humains comme par les bots), une
-  // écriture D1 par requête y a fini par épuiser le quota d'écritures du
-  // plan gratuit (ticket "Milliers de calls workers").
-  if (!checkRateLimitInMemory(`tmdb:ip:${ip}`, { limit: 120, windowMs: 60_000 })) {
-    return RATE_LIMIT_RESPONSE();
-  }
-  // Un crawler distribué (voir ticket "Milliers de calls workers") reste
-  // sous ce plafond par IP puisqu'il tourne sur un pool d'IP différentes :
-  // cette seconde limite, partagée par famille de bot plutôt que par IP,
-  // plafonne le volume agrégé sans jamais bloquer un visiteur humain qui
-  // partagerait la même IP sortante (proxy, 4G...).
   const crawler = detectKnownCrawler(request);
-  if (crawler && !checkRateLimitInMemory(`tmdb:bot:${crawler}`, { limit: 60, windowMs: 60_000 })) {
-    return RATE_LIMIT_RESPONSE();
-  }
   if (!env.TMDB_API_KEY) {
     return json({ error: "TMDB_API_KEY non configurée côté serveur." }, 503);
   }
@@ -1897,6 +1891,29 @@ async function handleTmdbProxy(
   const cached = await cache.match(cacheKey);
   if (cached) {
     return cached;
+  }
+
+  // Plafonds vérifiés APRÈS le cache d'edge : une réponse servie depuis le
+  // cache ne coûte aucun appel TMDB, et le Worker a de toute façon déjà été
+  // invoqué — la refuser ne protège rien. Les compter faisait atteindre les
+  // 120/min à un visiteur qui parcourt simplement quelques pages (badges par
+  // carte, séries en cours...), d'où des « Erreur TMDB (429) » à l'accueil
+  // (ticket « Un peu trop souvent d'erreur »).
+  const ip = getClientIp(request);
+  // En mémoire (pas D1, voir rate-limit.ts) : le proxy TMDB est de très loin
+  // la route la plus sollicitée (par les humains comme par les bots), une
+  // écriture D1 par requête y a fini par épuiser le quota d'écritures du
+  // plan gratuit (ticket "Milliers de calls workers").
+  if (!checkRateLimitInMemory(`tmdb:ip:${ip}`, { limit: 120, windowMs: 60_000 })) {
+    return TMDB_RATE_LIMIT_RESPONSE();
+  }
+  // Un crawler distribué (voir ticket "Milliers de calls workers") reste
+  // sous ce plafond par IP puisqu'il tourne sur un pool d'IP différentes :
+  // cette seconde limite, partagée par famille de bot plutôt que par IP,
+  // plafonne le volume agrégé sans jamais bloquer un visiteur humain qui
+  // partagerait la même IP sortante (proxy, 4G...).
+  if (crawler && !checkRateLimitInMemory(`tmdb:bot:${crawler}`, { limit: 60, windowMs: 60_000 })) {
+    return TMDB_RATE_LIMIT_RESPONSE();
   }
 
   const tmdbPath = url.pathname.replace(/^\/api\/tmdb/, "");

@@ -4,6 +4,7 @@
     "loading": "Loading…",
     "errorGeneric": "Something went wrong.",
     "errorNetwork": "Couldn't reach Seancy. Check your connection and try again.",
+    "errorRateLimited": "Too many requests right now. Wait a few seconds and try again.",
     "close": "Close"
   },
   "notFound": {
