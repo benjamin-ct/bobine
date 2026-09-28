@@ -12,6 +12,8 @@ conteneur qui a le repo `bobine` monté, puis notifie Discord.
 - `ssh-keys/` — uniquement `config` (pas de secret) ; voir `ssh-keys/README.md` pour générer la
   clé privée directement sur le serveur.
 - `.env.example` — modèle des variables d'environnement à fournir via un `.env` local.
+- `bobine-shell.sh` — fonctions shell `bobine-*` à charger dans le `~/.bashrc` du serveur (voir
+  « Commandes serveur » plus bas).
 - `update.sh` — reconstruit et redémarre uniquement `webhook-listener` (seul service qui change
   en pratique, quand `listener/server.js` est modifié).
 
@@ -72,7 +74,8 @@ pour vérifier son travail. Deux cibles possibles :
    Auth ».)
 3. (Optionnel, pour le serveur local) Renseigner `TMDB_API_KEY=…` dans `.env` (clé API TMDB
    v3, la même que le secret du Worker convient).
-4. Reconstruire l'image (le Dockerfile a changé, d'où le `--build`) et recréer les services :
+4. Reconstruire l'image (le Dockerfile a changé, d'où le `--build`) et recréer les services
+   (`bobine-rebuild`, ou à la main) :
 
    ```bash
    docker-compose -f docker-compose-bobine.yml up -d --build --force-recreate bobine-repo webhook-listener
@@ -103,6 +106,30 @@ cd ..
 
 docker-compose -f docker-compose-bobine.yml up -d --build
 ```
+
+## Commandes serveur (`bobine-*`)
+
+Raccourcis pour vérifier, mettre à jour et reconstruire la stack depuis un shell du serveur.
+Installation (une fois), en adaptant le chemin si le clone du repo est ailleurs :
+
+```bash
+echo "source /Volume2/config/trello-claude/bobine/infra/trello-claude/bobine-shell.sh" >> ~/.bashrc
+source ~/.bashrc
+```
+
+| Commande         | Effet                                                                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `bobine-pull`    | Vérifie que le checkout de `bobine-repo` est propre, puis `git fetch` et `git pull --ff-only` sur la branche actuellement checkoutée |
+| `bobine-rebuild` | Rebuild les images et recrée les deux conteneurs (`up -d --build --force-recreate`)                                                  |
+| `bobine-deploy`  | Lance `bobine-pull`, puis `bobine-rebuild` s'il a réussi                                                                             |
+| `bobine-status`  | Affiche branche, commit, éventuelles modifications Git et état Docker                                                                |
+| `bobine-logs`    | Suit les logs du listener Trello/Sentry                                                                                              |
+
+`git pull --ff-only` actualise la branche sans créer de merge commit implicite et s'arrête si
+l'historique local a divergé. `--build` est indispensable pour prendre en compte un changement de
+Dockerfile ou d'un fichier copié dans une image (ex. `listener/server.js`), `--force-recreate`
+garantit une nouvelle instance de conteneur. Le dossier de la stack peut être changé avec la
+variable `BOBINE_STACK_DIR`.
 
 ## Mise à jour (commande simple)
 
