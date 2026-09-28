@@ -396,9 +396,9 @@
     visibility: hidden;
     pointer-events: none;
     transition:
-      transform 0.28s cubic-bezier(0.4, 0, 1, 1),
-      opacity 0.24s ease 0.04s,
-      visibility 0s linear 0.28s;
+      transform 0.2s cubic-bezier(0.4, 0, 0.6, 1),
+      opacity 0.16s ease,
+      visibility 0s linear 0.2s;
   }
   /* Sans backdrop-filter, un fond translucide rendrait les icônes illisibles
      sur une affiche claire : on repasse presque opaque. */
