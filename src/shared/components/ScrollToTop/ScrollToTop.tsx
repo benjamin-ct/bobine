@@ -13,9 +13,7 @@ export default function ScrollToTop() {
   // haut, et avant que la nouvelle page ne soit peinte.
   useLayoutEffect(() => {
     // Toujours instantané : avec le `scroll-behavior: smooth` global, la
-    // nouvelle page s'affichait défilée puis remontait sous les yeux (0,4 s),
-    // et une transition d'affiche (motion.ts, morphPoster) la photographiait
-    // encore défilée.
+    // nouvelle page s'affichait défilée puis remontait sous les yeux (0,4 s).
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
 

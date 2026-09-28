@@ -1,9 +1,8 @@
 import { memo, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   posterUrl,
-  backdropUrl,
   logoUrl,
   getWatchProviders,
   getDetails,
@@ -18,7 +17,7 @@ import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
-import { findDetailPoster, morphPoster, pop, preloadImage } from "../../lib/motion.ts";
+import { pop } from "../../lib/motion.ts";
 import type {
   MediaItem,
   RegionWatchProviders,
@@ -83,7 +82,6 @@ function MediaCard({
   position,
 }: MediaCardProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { isWatched, isInWatchlist, toggleWatched, toggleWatchlist } = useLibrary();
   const { getTheatricalStatus, region } = useRegion();
   const { locale } = useLocale();
@@ -252,35 +250,9 @@ function MediaCard({
 
   const accentKey = posterAccentFromGenres(item.genre_ids, `${mediaType}:${item.id}`);
 
-  const detailPath = `/media/${mediaType}/${item.id}`;
-
   return (
     <div className={`${styles.card} ${staggerStyles.item}`}>
-      <Link
-        to={detailPath}
-        className={styles.link}
-        onClick={(e) => {
-          // Clic simple : l'affiche s'agrandit jusqu'à la fiche. Ctrl/Cmd-clic,
-          // clic du milieu : comportement normal du lien (nouvel onglet).
-          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
-            return;
-          }
-          // La fiche (et son fond) est préchargée avant l'animation, pour
-          // qu'elle s'affiche d'emblée à l'arrivée de l'affiche.
-          const prepare = () =>
-            getDetails(mediaType, item.id).then((d) =>
-              Promise.race([
-                preloadImage(backdropUrl(d.backdrop_path)),
-                new Promise((resolve) => setTimeout(resolve, 150)),
-              ])
-            );
-          if (
-            morphPoster(posterRef.current, () => navigate(detailPath), findDetailPoster, prepare)
-          ) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <Link to={`/media/${mediaType}/${item.id}`} className={styles.link}>
         <div className={styles.poster} ref={posterRef}>
           {item.poster_path ? (
             <img src={posterUrl(item.poster_path) ?? undefined} alt={title} loading="lazy" />

@@ -111,9 +111,8 @@ export default function DetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
-  // Fiche déjà chargée (préchargée au clic sur une carte, ou déjà vue) :
-  // affichée dès le premier rendu, sans squelette. L'affiche qui s'agrandit
-  // vers la fiche (morphPoster) a besoin de la trouver tout de suite.
+  // Fiche déjà chargée pendant la session (déjà vue) : affichée dès le
+  // premier rendu, sans passer par le squelette.
   const [details, setDetails] = useState<MediaDetails | null>(() =>
     mediaType && id ? peekDetails(mediaType, id) : null
   );
@@ -220,8 +219,6 @@ export default function DetailPage() {
           // pour que useScrollRestoration restaure la position de la liste
           // d'origine — un <Link> classique crée une nouvelle entrée
           // d'historique (PUSH) et ne restaure jamais rien.
-          // Pas de trajet inverse de l'affiche vers sa carte : simple fondu
-          // de page (App.tsx), fiable partout (il saccadait sur Safari iOS).
           e.preventDefault();
           navigate(-1);
         }}
@@ -508,7 +505,7 @@ export default function DetailPage() {
         <div className={`${styles.halo} ${styles[`halo_${accentKey}`]}`} aria-hidden="true" />
         <div className={styles.heroInner}>
           {backLink(styles.back)}
-          <div className={styles.posterWrap} data-morph-poster>
+          <div className={styles.posterWrap}>
             {details.poster_path ? (
               <img
                 src={posterUrl(details.poster_path, "w342") ?? undefined}
