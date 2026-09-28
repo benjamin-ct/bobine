@@ -369,7 +369,8 @@
     border-radius: 999px;
     /* Verre givré : voile laiteux clair par-dessus un fond translucide, flou
        fort + saturation de ce qui passe dessous, liseré clair et reflet en
-       haut, ombre portée douce. Hors iOS, le voile est quasi opaque : sur Android
+       haut, sans ombre portée (retirée à la demande, #213). Hors iOS, le
+       voile est quasi opaque : sur Android
        (Brave, Chrome…) le flou peut ne pas s'appliquer du tout, et c'est
        alors lui seul qui donne l'aspect givré. iOS garde un verre plus
        léger, son flou rendant bien (bloc @supports plus bas).
@@ -387,12 +388,11 @@
     border: 1px solid oklch(1 0 0 / 0.14);
     box-shadow:
       inset 0 1px 0 oklch(1 0 0 / 0.16),
-      inset 0 -1px 0 oklch(0 0 0 / 0.12),
-      0 10px 30px -8px oklch(0 0 0 / 0.45);
+      inset 0 -1px 0 oklch(0 0 0 / 0.12);
     transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  /* Escamotée vers le bas quand on descend dans la page (useHideOnScroll),
-     ombre comprise ; visibility la retire aussi du parcours au clavier une
+  /* Escamotée vers le bas quand on descend dans la page (useHideOnScroll) ;
+     visibility la retire aussi du parcours au clavier une
      fois la glissade terminée. Pas de fondu : une opacité animée sur un
      élément à backdrop-filter scintille sur iOS. */
   .tabbarHidden {
@@ -473,9 +473,7 @@
         color-mix(in oklab, var(--surface) 96%, transparent)
       );
     border-color: oklch(1 0 0 / 0.7);
-    box-shadow:
-      inset 0 1px 0 oklch(1 0 0 / 0.8),
-      0 10px 30px -10px oklch(0 0 0 / 0.25);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.8);
   }
   @supports (-webkit-touch-callout: none) {
     [data-theme="light"] .tabbar {
