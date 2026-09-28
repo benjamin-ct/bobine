@@ -7,12 +7,13 @@ import styles from "./WhereToWatch.module.css";
 interface WhereToWatchProps {
   providers: RegionWatchProviders | null;
   regionName: string | null;
+  className?: string;
 }
 
 // « Où le voir » (nouvelle DA) : deux groupes, « En abonnement » et
 // « Location ou achat » (une plateforme qui loue ET vend n'apparaît qu'une
 // fois), avec un badge « Chez vous » sur les plateformes de l'utilisateur.
-export default function WhereToWatch({ providers, regionName }: WhereToWatchProps) {
+export default function WhereToWatch({ providers, regionName, className }: WhereToWatchProps) {
   const { t } = useTranslation();
   const { isFavoriteProvider } = useFavoriteProviders();
 
@@ -57,7 +58,7 @@ export default function WhereToWatch({ providers, regionName }: WhereToWatchProp
   }
 
   return (
-    <section className={styles.section}>
+    <section className={className ? `${styles.section} ${className}` : styles.section}>
       <h2 className={styles.title}>
         {t("detailPage.whereToWatch")}
         {regionName && (

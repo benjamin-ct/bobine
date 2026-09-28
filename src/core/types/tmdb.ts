@@ -249,6 +249,7 @@ export interface PersonSummary {
 export interface PersonDetails extends PersonSummary {
   biography?: string;
   birthday?: string | null;
+  deathday?: string | null;
   place_of_birth?: string | null;
 }
 
