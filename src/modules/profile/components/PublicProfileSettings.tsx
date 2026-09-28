@@ -5,6 +5,7 @@ import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { Icon } from "../../../shared/components/index.ts";
 import { AccountAvatar } from "./AccountSettings.tsx";
+import { PUBLIC_LINK_ANCHOR } from "./ProfileHeader.tsx";
 import { SettingsGroup, SettingsRow } from "./SettingsGroup.tsx";
 import styles from "./AccountSettings.module.css";
 
@@ -85,7 +86,11 @@ export default function PublicProfileSettings() {
   }
 
   return (
-    <SettingsGroup title={t("profileShare.groupTitle")} description={t("profileShare.groupLead")}>
+    <SettingsGroup
+      id={PUBLIC_LINK_ANCHOR}
+      title={t("profileShare.groupTitle")}
+      description={t("profileShare.groupLead")}
+    >
       <SettingsRow label={t("profileShare.title")} description={t("profileShare.hint")}>
         <div className={styles.statusRow}>
           {isPublic ? (

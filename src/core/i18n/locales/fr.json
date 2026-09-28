@@ -44,7 +44,20 @@
     "tabCommunity": "Communauté",
     "recommendationsLead": "Ce que Seancy vous propose, et ce qu'il doit laisser de côté.",
     "notificationsLead": "Quand et pourquoi Seancy vous prévient.",
-    "displayLead": "Langue, région et apparence."
+    "displayLead": "Langue, région et apparence.",
+    "headerEyebrow": "Mon profil",
+    "badgePublic": "Public",
+    "share": "Partager",
+    "linkCopied": "Lien copié",
+    "tabsLabel": "Sections du profil",
+    "statWatched_one": "vu",
+    "statWatched_other": "vus",
+    "statWatchlist_one": "envie",
+    "statWatchlist_other": "envies",
+    "statLists_one": "liste",
+    "statLists_other": "listes",
+    "statFollowers_one": "abonné",
+    "statFollowers_other": "abonnés"
   },
   "providerBadges": {
     "unavailable": "Non disponible en streaming en {{region}} pour le moment.",

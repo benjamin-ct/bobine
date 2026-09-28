@@ -44,7 +44,20 @@
     "tabCommunity": "Community",
     "recommendationsLead": "What Seancy suggests to you, and what it should leave out.",
     "notificationsLead": "When and why Seancy lets you know.",
-    "displayLead": "Language, region and appearance."
+    "displayLead": "Language, region and appearance.",
+    "headerEyebrow": "My profile",
+    "badgePublic": "Public",
+    "share": "Share",
+    "linkCopied": "Link copied",
+    "tabsLabel": "Profile sections",
+    "statWatched_one": "watched",
+    "statWatched_other": "watched",
+    "statWatchlist_one": "to watch",
+    "statWatchlist_other": "to watch",
+    "statLists_one": "list",
+    "statLists_other": "lists",
+    "statFollowers_one": "follower",
+    "statFollowers_other": "followers"
   },
   "providerBadges": {
     "unavailable": "Not available to stream in {{region}} right now.",
