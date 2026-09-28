@@ -37,14 +37,29 @@ la stack sans attendre qu'il ait fini, ni le retrouver sur une branche de ticket
      automatiquement même en cas de crash) et sort avec le code 75 si une exécution tourne déjà ;
   2. `git fetch`, met de côté d'éventuelles modifications laissées par une exécution interrompue
      (`git stash list` dans le clone pour les retrouver) ;
-  3. repart de `main` à jour (`git switch -C main origin/main`, skills compris), puis lance
-     `claude -p`.
+  3. repart de `main` à jour (`git switch -C main origin/main`, skills compris) ;
+  4. fait le ménage : supprime les worktrees de validation locale restés dans `/tmp` (et leurs
+     `node_modules`), les branches locales dont la branche distante a disparu (PR mergée ou
+     fermée), les stashes de plus de 30 jours, puis `git gc --auto` ;
+  5. lance `claude -p`, en ajoutant au prompt une note « REPRISE » si l'exécution précédente
+     s'est interrompue (modifications mises de côté, commits locaux non poussés sur une branche
+     de ticket), pour que Claude reparte de ce travail plutôt que de zéro.
+- Reprise après coupure (courant, crédits épuisés, `bobine-rebuild --force`…) : la carte reste en
+  `En cours` sans label, la prochaine exécution la reprend (étape 2b du skill) à partir de la
+  branche/PR poussée, des commits locaux et du stash signalés dans la note. Seul le travail non
+  committé d'un worktree de validation `/tmp` est perdu (il ne sert qu'aux tests locaux).
 - `bobine-rebuild` lit ce même verrou avant de recréer `bobine-repo` (voir « Commandes serveur »).
 
 Migration (une fois) : `bobine-pull`, recharger les fonctions (`source ~/.bashrc`), puis
 `bobine-rebuild` (le Dockerfile, le compose et le listener changent). Si le checkout serveur
 était resté sur une branche de ticket, `bobine-main` le ramène sur `main` ; il n'en bougera
 plus ensuite.
+
+Pas de parallélisation pour l'instant : le verrou limite à une exécution à la fois, comme la règle
+« un seul ticket actif » du skill. Un worktree par ticket le permettrait techniquement, mais il
+faudrait d'abord qu'une exécution « réserve » sa carte sur Trello (deux exécutions prendraient
+sinon la même), éviter les conflits sur les ressources partagées (port 8787 du `wrangler dev`,
+numéros de migrations D1, limite de sessions Claude) et accepter plusieurs PR en review à la fois.
 
 ## Webhook Sentry → Claude (triage automatique)
 

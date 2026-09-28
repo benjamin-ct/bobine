@@ -57,7 +57,8 @@ Dans **tous les cas sauf le premier** (nouveau ticket jamais travaillé), avant 
    observé) — elles contiennent souvent l'information la plus précise sur ce qui doit être corrigé, plus que le texte
    seul.
 4. Identifier s'il existe déjà une branche et une PR ouverte pour ce ticket (via le lien en description/commentaire, ou
-   une branche nommée d'après le ticket).
+   une branche nommée d'après le ticket), ainsi que le travail local laissé par une exécution interrompue : si le
+   prompt contient une note « REPRISE », repartir de la branche locale et du stash qu'elle indique.
 5. Si une branche/PR existe : la reprendre et corriger uniquement ce qui a été remonté (un ou deux bugs signalés ne
    justifient jamais de recommencer le développement à zéro). Ajouter les nouveaux commits sur la branche existante.
 6. Si aucune branche n'existe encore (cas rare pour un retour depuis `A valider` ; à vérifier tout de même par
