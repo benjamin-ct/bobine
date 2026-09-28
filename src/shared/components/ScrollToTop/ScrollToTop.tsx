@@ -1,6 +1,5 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { isPosterTransitionRunning } from "../../lib/motion.ts";
 
 // Composant invisible : remonte la page en haut à chaque changement de
 // route (par défaut, React Router garde la position de scroll telle
@@ -8,15 +7,16 @@ import { isPosterTransitionRunning } from "../../lib/motion.ts";
 export default function ScrollToTop() {
   const { pathname } = useLocation();
 
-  useEffect(() => {
-    // Instantané pendant une transition d'affiche (motion.ts, morphPoster) :
-    // le `scroll-behavior: smooth` global n'avance pas pendant la capture,
-    // et la fiche serait photographiée encore défilée.
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: isPosterTransitionRunning() ? "instant" : undefined,
-    });
+  // Effet de layout : il passe avant ceux de la page (composant frère placé
+  // avant <main>), donc avant la restauration de défilement d'un retour
+  // (useScrollRestoration), qu'il écrasait sinon en remettant la page en
+  // haut, et avant que la nouvelle page ne soit peinte.
+  useLayoutEffect(() => {
+    // Toujours instantané : avec le `scroll-behavior: smooth` global, la
+    // nouvelle page s'affichait défilée puis remontait sous les yeux (0,4 s),
+    // et une transition d'affiche (motion.ts, morphPoster) la photographiait
+    // encore défilée.
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
 
   return null;

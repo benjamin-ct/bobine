@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   posterUrl,
+  backdropUrl,
   logoUrl,
   getWatchProviders,
   getDetails,
@@ -17,7 +18,7 @@ import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import { posterAccentFromGenres } from "../../lib/posterAccent.ts";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
-import { findDetailPoster, morphPoster, pop } from "../../lib/motion.ts";
+import { findDetailPoster, morphPoster, pop, preloadImage } from "../../lib/motion.ts";
 import type {
   MediaItem,
   RegionWatchProviders,
@@ -264,7 +265,18 @@ function MediaCard({
           if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
             return;
           }
-          if (morphPoster(posterRef.current, () => navigate(detailPath), findDetailPoster)) {
+          // La fiche (et son fond) est préchargée avant l'animation, pour
+          // qu'elle s'affiche d'emblée à l'arrivée de l'affiche.
+          const prepare = () =>
+            getDetails(mediaType, item.id).then((d) =>
+              Promise.race([
+                preloadImage(backdropUrl(d.backdrop_path)),
+                new Promise((resolve) => setTimeout(resolve, 150)),
+              ])
+            );
+          if (
+            morphPoster(posterRef.current, () => navigate(detailPath), findDetailPoster, prepare)
+          ) {
             e.preventDefault();
           }
         }}

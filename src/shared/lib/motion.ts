@@ -76,7 +76,11 @@ export function fadeIn(el: Element | null | undefined): void {
 // animations » : navigation normale.
 
 const POSTER_TRANSITION_NAME = "media-poster";
+// Délai accordé au préchargement de la fiche avant l'animation. Au-delà, on
+// navigue sans l'affiche qui s'agrandit (fondu de page et squelette).
+const PREPARE_TIMEOUT_MS = 450;
 let posterTransitionRunning = false;
+let posterTransitionPending = false;
 
 /** Vrai pendant une transition d'affiche (le fondu de page s'efface alors). */
 export function isPosterTransitionRunning(): boolean {
@@ -87,16 +91,33 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Charge et décode une image (fond de la fiche) ; ne rejette jamais. */
+export function preloadImage(src: string | null | undefined): Promise<void> {
+  if (!src || typeof Image === "undefined") {
+    return Promise.resolve();
+  }
+  const img = new Image();
+  img.src = src;
+  return img.decode().catch(() => undefined);
+}
+
 /**
  * Lance `go` (la navigation) dans une transition qui fait passer l'affiche
  * `from` à l'élément renvoyé par `findTarget` une fois la nouvelle page
- * affichée. Renvoie false sans rien faire si la transition n'est pas
- * possible : l'appelant navigue alors normalement.
+ * affichée. `prepare` précharge la fiche (données, images) : la transition
+ * ne démarre qu'une fois la fiche prête, pour que la photo de l'après soit
+ * la vraie fiche. Attendre la requête pendant la transition figeait l'écran
+ * puis montrait la liste remise en haut ou le squelette avant la fiche
+ * (scintillement, vidéo de review du 28/09). La page reste donc telle
+ * quelle pendant le préchargement ; s'il dépasse PREPARE_TIMEOUT_MS, on
+ * navigue normalement. Renvoie false sans rien faire si la transition n'est
+ * pas possible : l'appelant navigue alors normalement.
  */
 export function morphPoster(
   from: HTMLElement | null,
   go: () => void,
-  findTarget: () => HTMLElement | null
+  findTarget: () => HTMLElement | null,
+  prepare: () => Promise<unknown> = () => Promise.resolve()
 ): boolean {
   if (
     !from ||
@@ -106,6 +127,32 @@ export function morphPoster(
   ) {
     return false;
   }
+  // Deuxième clic pendant le préchargement : déjà pris en compte.
+  if (posterTransitionPending || posterTransitionRunning) {
+    return true;
+  }
+  posterTransitionPending = true;
+  const timeout = wait(PREPARE_TIMEOUT_MS).then(() => false);
+  const ready = prepare().then(
+    () => true,
+    () => false
+  );
+  void Promise.race([ready, timeout]).then((isReady) => {
+    posterTransitionPending = false;
+    if (!isReady || !from.isConnected) {
+      go();
+      return;
+    }
+    startPosterTransition(from, go, findTarget);
+  });
+  return true;
+}
+
+function startPosterTransition(
+  from: HTMLElement,
+  go: () => void,
+  findTarget: () => HTMLElement | null
+): void {
   let target: HTMLElement | null = null;
   // Fiche → autre fiche (saga, recommandations) : l'affiche de la fiche
   // actuelle porte déjà le nom ; deux noms identiques annuleraient tout.
@@ -120,13 +167,12 @@ export function morphPoster(
     // React peut réutiliser le même nœud pour la nouvelle fiche.
     others.forEach((el) => (el.style.viewTransitionName = ""));
     go();
-    // La navigation de React Router est asynchrone (startTransition, ou
-    // popstate pour un retour), et la fiche attend sa requête /movie ou /tv :
-    // on attend que la nouvelle page affiche l'affiche cible, 600 ms au plus.
-    // Passé ce délai, l'ancienne affiche se fond avec le reste de la page.
+    // La navigation de React Router est asynchrone (startTransition) : la
+    // fiche, déjà en cache, s'affiche au rendu suivant. 300 ms au plus par
+    // sécurité ; passé ce délai, l'ancienne affiche se fond avec la page.
     // setTimeout et non requestAnimationFrame, suspendu pendant la capture.
     const start = performance.now();
-    while (!(target = findTarget()) && performance.now() - start < 600) {
+    while (!(target = findTarget()) && performance.now() - start < 300) {
       await wait(16);
     }
     // Image pas encore décodée : l'affiche arriverait vide puis apparaîtrait
@@ -149,7 +195,6 @@ export function morphPoster(
       target.style.viewTransitionName = "";
     }
   });
-  return true;
 }
 
 /** Affiche de la fiche ouverte (DetailPage ou son squelette). */

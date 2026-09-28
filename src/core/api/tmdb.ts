@@ -276,11 +276,24 @@ export function trending(mediaType: "all" | MediaType = "all", window: "day" | "
 // réutilise la requête en cours plutôt que d'en émettre une seconde. En
 // cas d'échec, l'entrée est retirée pour permettre un nouvel essai.
 const detailsCache = new Map<string, Promise<MediaDetails>>();
+// Mêmes réponses, une fois arrivées : lues de façon synchrone par la fiche
+// (peekDetails) pour s'afficher d'emblée, sans passer par son squelette.
+const detailsResolved = new Map<string, MediaDetails>();
+
+function detailsKey(mediaType: MediaType, id: string | number): string {
+  return `${mediaType}:${id}:${currentTmdbLanguage()}`;
+}
+
+/** Détails déjà chargés pendant la session (sans requête), sinon null. */
+export function peekDetails(mediaType: MediaType, id: string | number): MediaDetails | null {
+  return detailsResolved.get(detailsKey(mediaType, id)) ?? null;
+}
+
 export function getDetails(mediaType: MediaType, id: string | number): Promise<MediaDetails> {
   // Le titre/synopsis/genres renvoyés dépendent de la langue TMDB active : la
   // clé de cache doit en tenir compte, sinon changer de langue en cours de
   // session continue de servir la réponse mise en cache dans l'ancienne.
-  const key = `${mediaType}:${id}:${currentTmdbLanguage()}`;
+  const key = detailsKey(mediaType, id);
   const cached = detailsCache.get(key);
   if (cached) {
     return cached;
@@ -296,10 +309,15 @@ export function getDetails(mediaType: MediaType, id: string | number): Promise<M
       mediaType === "tv"
         ? "credits,aggregate_credits,videos,recommendations,release_dates,watch/providers"
         : "credits,videos,recommendations,release_dates,watch/providers",
-  }).catch((err: unknown) => {
-    detailsCache.delete(key);
-    throw err;
-  });
+  })
+    .then((details) => {
+      detailsResolved.set(key, details);
+      return details;
+    })
+    .catch((err: unknown) => {
+      detailsCache.delete(key);
+      throw err;
+    });
   detailsCache.set(key, promise);
   return promise;
 }

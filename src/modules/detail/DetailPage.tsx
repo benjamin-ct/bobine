@@ -6,6 +6,7 @@ import {
   backdropUrl,
   posterUrl,
   getDetails,
+  peekDetails,
   watchProvidersFromDetails,
   estimateRuntimeMinutes,
   getTheatricalDateFromDetails,
@@ -110,8 +111,15 @@ export default function DetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
-  const [details, setDetails] = useState<MediaDetails | null>(null);
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  // Fiche déjà chargée (préchargée au clic sur une carte, ou déjà vue) :
+  // affichée dès le premier rendu, sans squelette. L'affiche qui s'agrandit
+  // vers la fiche (morphPoster) a besoin de la trouver tout de suite.
+  const [details, setDetails] = useState<MediaDetails | null>(() =>
+    mediaType && id ? peekDetails(mediaType, id) : null
+  );
+  const [status, setStatus] = useState<"loading" | "success" | "error">(() =>
+    details ? "success" : "loading"
+  );
   const [error, setError] = useState<Error | null>(null);
   const [preview, setPreview] = useState<MediaPreview | null>(null);
   const mainCastCount = useMainCastCount();
@@ -147,8 +155,14 @@ export default function DetailPage() {
       return;
     }
     let cancelled = false;
-    setStatus("loading");
     setCastBatches(0);
+    const ready = peekDetails(mediaType, id);
+    if (ready) {
+      setDetails(ready);
+      setStatus("success");
+      return;
+    }
+    setStatus("loading");
     setPreview(getMediaPreview(mediaType, id));
     getDetails(mediaType, id)
       .then((d) => {
