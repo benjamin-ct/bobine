@@ -21,6 +21,10 @@
   box-shadow: var(--shadow);
 }
 
+.pending {
+  visibility: hidden;
+}
+
 .k {
   font-family: var(--font-mono);
   font-size: 11px;

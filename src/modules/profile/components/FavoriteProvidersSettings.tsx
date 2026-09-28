@@ -64,7 +64,9 @@ export default function FavoriteProvidersSettings() {
       <span className={styles.meta}>
         {t("favoriteProvidersSettings.activeCount", { count: favoriteProviderIds.length })}
       </span>
-      {status === "loading" && <p className={styles.status}>{t("common.loading")}</p>}
+      {status === "loading" && (
+        <p className={`${styles.status} ${styles.providersLoading}`}>{t("common.loading")}</p>
+      )}
       {status === "error" && (
         <p className={styles.error}>{t("favoriteProvidersSettings.loadError")}</p>
       )}
