@@ -4,6 +4,7 @@
 // endroit centralise la base URL, les headers/paramètres et le timeout
 // (voir README, "Convention de fetch API").
 import { createConcurrencyLimiter } from "./concurrencyLimiter.ts";
+import { isNetworkError, recoverFromAccessExpiry } from "./accessSession.ts";
 import i18n from "../i18n/i18n.ts";
 
 // En production, les requêtes passent par /api/tmdb/... (proxy côté
@@ -73,7 +74,21 @@ export async function tmdbFetch<T>(path: string, params: TmdbParams = {}): Promi
     }
   }
   return tmdbRequestLimiter.run(async () => {
-    const res = await fetch(url.toString());
+    let res: Response;
+    try {
+      res = await fetch(url.toString());
+    } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
+      // Session Access expirée (voir accessSession.ts) : la page repart vers
+      // la connexion. Sinon, vraie coupure : message lisible plutôt que le
+      // « Failed to fetch » brut du navigateur.
+      if (!IS_DEV) {
+        await recoverFromAccessExpiry();
+      }
+      throw new Error(i18n.t("common.errorNetwork"), { cause: err });
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}) as { status_message?: string });
       throw new Error(body.status_message || `Erreur TMDB (${res.status})`);

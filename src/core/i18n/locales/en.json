@@ -3,6 +3,7 @@
     "unknownTitle": "Unknown title",
     "loading": "Loading…",
     "errorGeneric": "Something went wrong.",
+    "errorNetwork": "Couldn't reach Seancy. Check your connection and try again.",
     "close": "Close"
   },
   "notFound": {
