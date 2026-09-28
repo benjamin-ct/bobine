@@ -9,6 +9,7 @@ import type { SearchMultiResult } from "../../../core/types/tmdb.ts";
 import TicketLogo from "../TicketLogo/TicketLogo.tsx";
 import Icon, { type IconName } from "../Icon/Icon.tsx";
 import SlidingIndicator from "../SlidingIndicator/SlidingIndicator.tsx";
+import useHideOnScroll from "../../hooks/useHideOnScroll.ts";
 import styles from "./NavBar.module.css";
 
 const MIN_QUERY_LENGTH = 2;
@@ -146,6 +147,9 @@ export default function NavBar() {
   // d'un membre connecté : sinon « Connexion » puis l'onglet Profil
   // apparaissent et disparaissent le temps de la réponse de /api/auth/me.
   const authenticated = authStatus !== "anonymous";
+  // Barre d'onglets mobile escamotée quand on descend dans la page, rendue
+  // dès qu'on remonte ou qu'on change de page (gardée pendant la recherche).
+  const tabbarHidden = useHideOnScroll(pathname, !searchOpen);
 
   // Hauteur réelle de l'en-tête collant, publiée en --topnav-height pour
   // les éléments collants posés juste dessous (mois de Prochainement...) :
@@ -382,7 +386,7 @@ export default function NavBar() {
           pastille de l'onglet actif glisse d'un onglet à l'autre. « Ma liste »
           n'y figure pas : elle vit dans Profil. */}
       <nav
-        className={styles.tabbar}
+        className={`${styles.tabbar} ${tabbarHidden ? styles.tabbarHidden : ""}`}
         aria-label={t("navBar.tabBarAriaLabel")}
         style={
           {
