@@ -5,16 +5,18 @@ import styles from "./SettingsGroup.module.css";
 // titre, sa description, puis un seul bloc Surface 1 découpé en lignes
 // séparées par un filet.
 export function SettingsGroup({
+  id,
   title,
   description,
   children,
 }: {
+  id?: string;
   title: ReactNode;
   description?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className={styles.group}>
+    <section id={id} className={styles.group}>
       <h2 className={styles.title}>{title}</h2>
       {description && <p className={styles.description}>{description}</p>}
       <div className={styles.panel}>{children}</div>

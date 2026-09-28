@@ -1,3 +1,9 @@
+/* Cible d'une ancre (ex. « Voir mon profil public » sans profil public) :
+   s'arrête sous l'en-tête et la barre d'onglets collante. */
+.group {
+  scroll-margin-top: calc(var(--topnav-height, var(--header-height)) + 80px);
+}
+
 .group + .group {
   margin-top: clamp(36px, 5vw, 56px);
 }
