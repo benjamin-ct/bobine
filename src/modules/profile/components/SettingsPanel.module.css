@@ -16,6 +16,17 @@
   font-size: 14px;
 }
 
+/* Chargement des plateformes / genres : le texte « Chargement… » occupe
+   déjà la place de la recherche + de la grille (46 + 14 + hauteur de la
+   grille), pour que la page ne se décale pas quand la liste arrive. */
+.providersLoading {
+  min-height: 480px;
+}
+
+.genresLoading {
+  min-height: 770px;
+}
+
 .error {
   margin: 10px 0 0;
   color: var(--accent-ink);
@@ -495,6 +506,10 @@
   /* Retour de review : en une colonne, la trentaine de genres fait une
      liste interminable sur mobile — même bloc scrollable que les
      plateformes (voir le commentaire d'overscroll-behavior plus haut). */
+  .genresLoading {
+    min-height: 480px;
+  }
+
   .genreGrid {
     max-height: 420px;
     overflow-y: auto;

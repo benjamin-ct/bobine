@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Icon, Loading } from "../../shared/components/index.ts";
@@ -39,6 +39,13 @@ export default function ProfilePage() {
   const requestedTab = searchParams.get("tab");
   const tab: Tab = TAB_IDS.includes(requestedTab as Tab) ? (requestedTab as Tab) : "compte";
   const tabRefs = useRef(new Map<Tab, HTMLButtonElement>());
+  // Onglets déjà ouverts : gardés montés (masqués) pour qu'y revenir
+  // n'affiche pas de nouveau « Chargement… » ni de contenu qui se décale
+  // pendant qu'il recharge (retour de review).
+  const [visited, setVisited] = useState<ReadonlySet<Tab>>(() => new Set([tab]));
+  if (!visited.has(tab)) {
+    setVisited(new Set([...visited, tab]));
+  }
 
   function selectTab(next: Tab) {
     setSearchParams(next === "compte" ? {} : { tab: next });
@@ -78,6 +85,59 @@ export default function ProfilePage() {
     }, 0);
   }
 
+  function renderPanel(id: Tab) {
+    switch (id) {
+      case "compte":
+        return (
+          <div className={styles.settings}>
+            <AccountSettings />
+            <PublicProfileSettings />
+          </div>
+        );
+      // Nouvelle DA 8/10 : tout ce qui décrit le comportement de l'app
+      // (recommandations, notifications, affichage), présenté en groupes et
+      // en lignes comme l'onglet Compte.
+      case "preferences":
+        return (
+          <div className={styles.settings}>
+            <SettingsGroup
+              title={t("profile.recommendations")}
+              description={t("profile.recommendationsLead")}
+            >
+              <FavoriteProvidersSettings />
+              <ExcludedGenresSettings />
+              <ExcludedTitlesSettings />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title={t("profile.notifications")}
+              description={t("profile.notificationsLead")}
+            >
+              <NotificationSettings />
+            </SettingsGroup>
+
+            <SettingsGroup title={t("profile.display")} description={t("profile.displayLead")}>
+              <LanguageSettings />
+              <RegionSettings />
+              <ThemeSettings />
+            </SettingsGroup>
+          </div>
+        );
+      case "communaute":
+        return (
+          <section className={styles.section}>
+            <CommunityPanel />
+          </section>
+        );
+      case "ma-liste":
+        return (
+          <section className={styles.section}>
+            <MyListContent />
+          </section>
+        );
+    }
+  }
+
   // Page réservée aux membres connectés : un visiteur anonyme est envoyé sur
   // /connexion, qui le ramène sur l'onglet demandé une fois connecté.
   if (status === "loading") {
@@ -110,7 +170,7 @@ export default function ProfilePage() {
             role="tab"
             id={`profile-tab-${id}`}
             aria-selected={tab === id}
-            aria-controls="profile-tabpanel"
+            aria-controls={`profile-tabpanel-${id}`}
             tabIndex={tab === id ? 0 : -1}
             className={`${styles.tab} ${tab === id ? styles.tabActive : ""}`}
             onClick={() => selectTab(id)}
@@ -122,55 +182,17 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      <div id="profile-tabpanel" role="tabpanel" aria-labelledby={`profile-tab-${tab}`}>
-        {tab === "compte" && (
-          <div className={styles.settings}>
-            <AccountSettings />
-            <PublicProfileSettings />
-          </div>
-        )}
-
-        {/* Nouvelle DA 8/10 : tout ce qui décrit le comportement de l'app
-          (recommandations, notifications, affichage), présenté en groupes et
-          en lignes comme l'onglet Compte. */}
-        {tab === "preferences" && (
-          <div className={styles.settings}>
-            <SettingsGroup
-              title={t("profile.recommendations")}
-              description={t("profile.recommendationsLead")}
-            >
-              <FavoriteProvidersSettings />
-              <ExcludedGenresSettings />
-              <ExcludedTitlesSettings />
-            </SettingsGroup>
-
-            <SettingsGroup
-              title={t("profile.notifications")}
-              description={t("profile.notificationsLead")}
-            >
-              <NotificationSettings />
-            </SettingsGroup>
-
-            <SettingsGroup title={t("profile.display")} description={t("profile.displayLead")}>
-              <LanguageSettings />
-              <RegionSettings />
-              <ThemeSettings />
-            </SettingsGroup>
-          </div>
-        )}
-
-        {tab === "communaute" && (
-          <section className={styles.section}>
-            <CommunityPanel />
-          </section>
-        )}
-
-        {tab === "ma-liste" && (
-          <section className={styles.section}>
-            <MyListContent />
-          </section>
-        )}
-      </div>
+      {TABS.filter(({ id }) => visited.has(id)).map(({ id }) => (
+        <div
+          key={id}
+          id={`profile-tabpanel-${id}`}
+          role="tabpanel"
+          aria-labelledby={`profile-tab-${id}`}
+          hidden={tab !== id}
+        >
+          {renderPanel(id)}
+        </div>
+      ))}
     </div>
   );
 }

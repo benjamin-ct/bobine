@@ -126,7 +126,15 @@ export default function CommunityPanel() {
     <div className={styles.panel}>
       <div className={styles.card}>
         <span className={styles.k}>{t("community.myNetwork")}</span>
-        {counts && <FollowStats slug={null} counts={counts} onListChange={onFollowChange} />}
+        {counts ? (
+          <FollowStats slug={null} counts={counts} onListChange={onFollowChange} />
+        ) : (
+          // Pendant le chargement : la ligne des compteurs garde sa place,
+          // pour que la carte ne grandisse pas quand ils arrivent.
+          <div className={styles.pending} aria-hidden inert>
+            <FollowStats slug={null} counts={{ followers: 0, following: 0 }} />
+          </div>
+        )}
         {!shareSlug && <p className={styles.hint}>{t("community.privateHint")}</p>}
       </div>
 

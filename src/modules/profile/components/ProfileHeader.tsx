@@ -70,11 +70,13 @@ export default function ProfileHeader({
     }
   }
 
+  // Abonnés pas encore chargés : un tiret à la place du nombre, pour que la
+  // ligne ne s'allonge pas (ni ne passe sur deux lignes) à leur arrivée.
   const stats = [
     { key: "statWatched", count: watched.length },
     { key: "statWatchlist", count: watchlist.length },
     { key: "statLists", count: customLists.length },
-    ...(followers !== null ? [{ key: "statFollowers", count: followers }] : []),
+    { key: "statFollowers", count: followers },
   ];
 
   const viewLabel = t("profileShare.preview");
@@ -99,7 +101,8 @@ export default function ProfileHeader({
             {stats.map((stat, i) => (
               <span key={stat.key}>
                 {i > 0 && " · "}
-                <strong>{stat.count}</strong> {t(`profile.${stat.key}`, { count: stat.count })}
+                <strong>{stat.count ?? "–"}</strong>{" "}
+                {t(`profile.${stat.key}`, { count: stat.count ?? 0 })}
               </span>
             ))}
           </span>

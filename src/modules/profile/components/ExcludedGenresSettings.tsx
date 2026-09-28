@@ -54,7 +54,9 @@ export default function ExcludedGenresSettings() {
         {t("excludedGenres.meta", { count: excludedGenreIds.length })} ·{" "}
         {t("excludedGenres.toggleHint")}
       </span>
-      {status === "loading" && <p className={styles.status}>{t("excludedGenres.loading")}</p>}
+      {status === "loading" && (
+        <p className={`${styles.status} ${styles.genresLoading}`}>{t("excludedGenres.loading")}</p>
+      )}
       {status === "error" && <p className={styles.error}>{t("excludedGenres.error")}</p>}
       {status === "success" && (
         <>
