@@ -120,6 +120,7 @@ source ~/.bashrc
 | Commande         | Effet                                                                                                                                |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `bobine-pull`    | Vérifie que le checkout de `bobine-repo` est propre, puis `git fetch` et `git pull --ff-only` sur la branche actuellement checkoutée |
+| `bobine-main`    | Vérifie que le checkout de `bobine-repo` est propre et que tous ses commits sont poussés, puis bascule sur `main` et le met à jour   |
 | `bobine-rebuild` | Rebuild les images et recrée les deux conteneurs (`up -d --build --force-recreate`)                                                  |
 | `bobine-deploy`  | Lance `bobine-pull`, puis `bobine-rebuild` s'il a réussi                                                                             |
 | `bobine-status`  | Affiche branche, commit, éventuelles modifications Git et état Docker                                                                |
