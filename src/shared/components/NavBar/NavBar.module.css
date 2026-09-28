@@ -389,19 +389,22 @@
     box-shadow:
       inset 0 1px 0 oklch(1 0 0 / 0.16),
       inset 0 -1px 0 oklch(0 0 0 / 0.12);
-    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    transition:
+      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.24s ease;
   }
-  /* Escamotée vers le bas quand on descend dans la page (useHideOnScroll) ;
-     visibility la retire aussi du parcours au clavier une
-     fois la glissade terminée. Pas de fondu : une opacité animée sur un
-     élément à backdrop-filter scintille sur iOS. */
+  /* Escamotée vers le bas quand on descend dans la page (useHideOnScroll),
+     en glissant et en s'estompant ; visibility la retire aussi du parcours
+     au clavier une fois la glissade terminée. */
   .tabbarHidden {
     transform: translateY(calc(100% + max(var(--tabbar-gap), env(safe-area-inset-bottom)) + 24px));
+    opacity: 0;
     visibility: hidden;
     pointer-events: none;
     transition:
-      transform 0.24s cubic-bezier(0.4, 0, 0.6, 1),
-      visibility 0s linear 0.24s;
+      transform 0.21s cubic-bezier(0.4, 0, 0.6, 1),
+      opacity 0.21s ease-out,
+      visibility 0s linear 0.21s;
   }
   /* Sans backdrop-filter, un fond translucide rendrait les icônes illisibles
      sur une affiche claire : on repasse presque opaque. */
