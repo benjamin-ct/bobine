@@ -228,13 +228,15 @@ h4 {
 }
 
 /* Affiche qui s'agrandit vers la fiche (shared/lib/motion.ts, morphPoster) :
-   le reste de la page se fond pendant que l'affiche glisse et grandit. */
+   le reste de la page se fond pendant que l'affiche glisse et grandit.
+   0,6 s plutôt que 0,45 s : plus court, le passage restait sec et laissait
+   voir un micro scintillement (review du 28/09). */
 [data-morph-poster] {
   view-transition-name: media-poster;
 }
 
 ::view-transition-group(media-poster) {
-  animation-duration: 0.45s;
+  animation-duration: 0.6s;
   animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -242,12 +244,12 @@ h4 {
 ::view-transition-new(media-poster) {
   height: 100%;
   object-fit: cover;
-  animation-duration: 0.45s;
+  animation-duration: 0.6s;
 }
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 0.3s;
+  animation-duration: 0.4s;
 }
 
 /* « Réduire les animations » (réglage système) : coupe toutes les
