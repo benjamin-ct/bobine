@@ -50,8 +50,8 @@ export default function App() {
 
   // Page retrouvée par un retour (bouton « Retour », geste ou navigateur) :
   // les affiches ne rejouent pas leur arrivée en cascade (stagger.module.css).
-  // Elles doivent être déjà en place, notamment pour que l'affiche de la fiche
-  // regagne sa carte (motion.ts, morphPoster). Le premier affichage est aussi
+  // Elles sont déjà en place, à la position de défilement restaurée. Le
+  // premier affichage est aussi
   // un « POP » pour React Router : il garde sa cascade.
   const restored = navigationType === "POP" && hasNavigated;
 

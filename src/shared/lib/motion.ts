@@ -63,7 +63,8 @@ export function fadeIn(el: Element | null | undefined): void {
 
 // ─── Affiche qui s'agrandit vers la fiche (View Transitions) ───────────────
 // Au clic sur une carte, son affiche glisse et grandit jusqu'à sa place sur
-// la fiche ; « Retour » fait le chemin inverse. Le navigateur photographie
+// la fiche. « Retour » n'a pas de trajet inverse, seulement le fondu de page
+// (il saccadait sur Safari iOS). Le navigateur photographie
 // l'avant et l'après, et anime entre les deux l'élément qui porte le même
 // `view-transition-name` des deux côtés. L'affiche de la fiche le porte en
 // CSS (global.css, [data-morph-poster]), celle du squelette non : l'affiche
@@ -154,16 +155,4 @@ export function morphPoster(
 /** Affiche de la fiche ouverte (DetailPage ou son squelette). */
 export function findDetailPoster(): HTMLElement | null {
   return document.querySelector<HTMLElement>("[data-morph-poster]");
-}
-
-/** Affiche de la carte `key` (« movie:123 ») visible à l'écran, pour le retour. */
-export function findCardPoster(key: string): HTMLElement | null {
-  const cards = document.querySelectorAll<HTMLElement>(`[data-morph-card="${key}"]`);
-  for (const card of cards) {
-    const r = card.getBoundingClientRect();
-    if (r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth) {
-      return card;
-    }
-  }
-  return null;
 }

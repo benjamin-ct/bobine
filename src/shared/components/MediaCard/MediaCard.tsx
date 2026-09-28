@@ -269,7 +269,7 @@ function MediaCard({
           }
         }}
       >
-        <div className={styles.poster} ref={posterRef} data-morph-card={`${mediaType}:${item.id}`}>
+        <div className={styles.poster} ref={posterRef}>
           {item.poster_path ? (
             <img src={posterUrl(item.poster_path) ?? undefined} alt={title} loading="lazy" />
           ) : (
