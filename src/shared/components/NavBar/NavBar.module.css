@@ -383,24 +383,28 @@
       inset 0 1px 0 oklch(1 0 0 / 0.16),
       inset 0 -1px 0 oklch(0 0 0 / 0.12),
       0 10px 30px -8px oklch(0 0 0 / 0.45);
-    /* Calque composité dès le départ : sur iOS, le créer au début de la
-       glissade faisait redessiner le flou d'arrière-plan sur une zone
-       erronée (bande ombrée à bords nets sur la page). */
-    will-change: transform;
-    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    /* Le flou ne revient qu'une fois la barre posée : sur iOS, déplacer
+       un élément à backdrop-filter laisse sur la page une bande ombrée à
+       bords nets (flou redessiné sur une zone erronée), même après coup. */
+    transition:
+      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      backdrop-filter 0s linear 0.32s,
+      -webkit-backdrop-filter 0s linear 0.32s;
   }
   /* Escamotée vers le bas quand on descend dans la page (useHideOnScroll),
      ombre comprise ; visibility la retire aussi du parcours au clavier une
-     fois la glissade terminée. Pas de fondu : une opacité animée sur un
-     élément à backdrop-filter produit le même artefact sur iOS, la
-     glissade seule suffit. */
+     fois la glissade terminée. Ni fondu ni flou pendant qu'elle bouge :
+     une opacité animée ou un déplacement sur un élément à backdrop-filter
+     produisent la bande ombrée sur iOS ; le flou est coupé dès le départ. */
   .tabbarHidden {
     transform: translateY(calc(100% + max(var(--tabbar-gap), env(safe-area-inset-bottom)) + 24px));
     visibility: hidden;
     pointer-events: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     transition:
-      transform 0.26s cubic-bezier(0.4, 0, 0.6, 1),
-      visibility 0s linear 0.26s;
+      transform 0.24s cubic-bezier(0.4, 0, 0.6, 1),
+      visibility 0s linear 0.24s;
   }
   /* Sans backdrop-filter, un fond translucide rendrait les icônes illisibles
      sur une affiche claire : on repasse presque opaque. */
