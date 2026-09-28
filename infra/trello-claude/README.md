@@ -8,7 +8,8 @@ conteneur qui a le repo `bobine` monté, puis notifie Discord.
 
 - `docker-compose-bobine.yml` — les deux services (`webhook-listener`, `bobine-repo`).
 - `listener/` — le serveur Node qui reçoit les webhooks Trello et lance Claude Code.
-- `bobine-repo/` — l'image dans laquelle tourne Claude Code (avec `git`, `gh`, accès SSH).
+- `bobine-repo/` — l'image dans laquelle tourne Claude Code (avec `git`, `gh`, accès SSH) et
+  `bobine-claude-run.sh`, le script qui lance chaque exécution (voir « Clone de travail de Claude »).
 - `ssh-keys/` — uniquement `config` (pas de secret) ; voir `ssh-keys/README.md` pour générer la
   clé privée directement sur le serveur.
 - `.env.example` — modèle des variables d'environnement à fournir via un `.env` local.
@@ -20,6 +21,30 @@ conteneur qui a le repo `bobine` monté, puis notifie Discord.
 **Aucun secret n'est présent dans ce dossier.** Toutes les valeurs sensibles (clé/token Trello,
 webhook Discord, token GitHub, token OAuth Claude Code, token API Sentry) sont injectées via
 `.env`, qui reste sur le serveur et n'est jamais commité (voir `.gitignore` à la racine du repo).
+
+## Clone de travail de Claude
+
+Claude ne travaille jamais dans le checkout du serveur : on peut donc `bobine-pull` et reconstruire
+la stack sans attendre qu'il ait fini, ni le retrouver sur une branche de ticket.
+
+- Le checkout du serveur (`../../`, celui qui contient cette stack) est monté dans `bobine-repo`
+  en `/srv/bobine`. Il reste sur `main` ; seules les commandes `bobine-*` y touchent.
+- Claude a son propre clone dans le volume `claude-workspace`, monté en `/workspace` (même chemin
+  qu'avant, pour garder sa mémoire). Il est créé au premier lancement depuis le remote `origin`
+  du checkout serveur.
+- Le listener lance chaque exécution via `bobine-claude-run`, qui :
+  1. prend un verrou (`flock` sur `/tmp/bobine-claude-run.lock` dans `bobine-repo`, libéré
+     automatiquement même en cas de crash) et sort avec le code 75 si une exécution tourne déjà ;
+  2. `git fetch`, met de côté d'éventuelles modifications laissées par une exécution interrompue
+     (`git stash list` dans le clone pour les retrouver) ;
+  3. repart de `main` à jour (`git switch -C main origin/main`, skills compris), puis lance
+     `claude -p`.
+- `bobine-rebuild` lit ce même verrou avant de recréer `bobine-repo` (voir « Commandes serveur »).
+
+Migration (une fois) : `bobine-pull`, recharger les fonctions (`source ~/.bashrc`), puis
+`bobine-rebuild` (le Dockerfile, le compose et le listener changent). Si le checkout serveur
+était resté sur une branche de ticket, `bobine-main` le ramène sur `main` ; il n'en bougera
+plus ensuite.
 
 ## Webhook Sentry → Claude (triage automatique)
 
@@ -117,14 +142,20 @@ echo "source /Volume2/config/trello-claude/bobine/infra/trello-claude/bobine-she
 source ~/.bashrc
 ```
 
-| Commande         | Effet                                                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `bobine-pull`    | Vérifie que le checkout de `bobine-repo` est propre, puis `git fetch` et `git pull --ff-only` sur la branche actuellement checkoutée |
-| `bobine-main`    | Vérifie que le checkout de `bobine-repo` est propre et que tous ses commits sont poussés, puis bascule sur `main` et le met à jour   |
-| `bobine-rebuild` | Rebuild les images et recrée les deux conteneurs (`up -d --build --force-recreate`)                                                  |
-| `bobine-deploy`  | Lance `bobine-pull`, puis `bobine-rebuild` s'il a réussi                                                                             |
-| `bobine-status`  | Affiche branche, commit, éventuelles modifications Git et état Docker                                                                |
-| `bobine-logs`    | Suit les logs du listener Trello/Sentry                                                                                              |
+| Commande                                 | Effet                                                                                                                        |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `bobine-pull`                            | Vérifie que le checkout serveur est propre, puis `git fetch` et `git pull --ff-only` sur sa branche                          |
+| `bobine-main`                            | Vérifie que le checkout serveur est propre et que tous ses commits sont poussés, puis bascule sur `main` et le met à jour    |
+| `bobine-rebuild [all\|listener\|claude]` | Rebuild + recréation (`up -d --build --force-recreate`) des deux conteneurs (`all`, défaut), du listener ou de `bobine-repo` |
+| `bobine-deploy [all\|listener\|claude]`  | Lance `bobine-pull`, puis `bobine-rebuild` avec les mêmes arguments s'il a réussi                                            |
+| `bobine-status`                          | Branche et commit du checkout serveur et du clone de Claude, exécution Claude en cours ou non, état Docker                   |
+| `bobine-logs`                            | Suit les logs du listener Trello/Sentry                                                                                      |
+
+Avant de recréer `bobine-repo` (`all` ou `claude`), `bobine-rebuild` vérifie qu'aucune exécution
+Claude n'est en cours et s'arrête sinon (`--force` pour passer outre, ce qui l'interrompt).
+`bobine-rebuild listener` est toujours sans risque : une exécution en cours continue dans
+`bobine-repo` (seul son log `/tmp/claude-last-run.log` est perdu) et le verrou empêche le nouveau
+listener d'en lancer une seconde en parallèle.
 
 `git pull --ff-only` actualise la branche sans créer de merge commit implicite et s'arrête si
 l'historique local a divergé. `--build` est indispensable pour prendre en compte un changement de

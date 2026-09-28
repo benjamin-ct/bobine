@@ -231,10 +231,12 @@ carte de `En cours` sans label en traitement actif : l'exécution est terminée.
 
 - **Actions sur le serveur (NAS)** : quand un message (commentaire Trello, résumé Discord, carte bloquée) demande à un
   humain de vérifier, mettre à jour ou reconstruire la stack, citer les commandes `bobine-*` plutôt que les commandes
-  Docker/Git brutes : `bobine-status` (état Git + Docker), `bobine-pull` (mise à jour du checkout), `bobine-rebuild`
-  (rebuild + recréation des conteneurs, ex. après un changement de Dockerfile ou de `listener/server.js`),
+  Docker/Git brutes : `bobine-status` (état Git + Docker), `bobine-pull` (mise à jour du checkout serveur),
+  `bobine-rebuild [all|listener|claude]` (rebuild + recréation des conteneurs, ex. après un changement de Dockerfile
+  ou de `listener/server.js` ; `listener` seul suffit et reste sans risque pendant une exécution de Claude),
   `bobine-deploy` (les deux), `bobine-logs` (logs du listener). Définies dans `infra/trello-claude/bobine-shell.sh`
-  (voir `infra/trello-claude/README.md`, « Commandes serveur »).
+  (voir `infra/trello-claude/README.md`, « Commandes serveur »). Claude travaille dans son propre clone (`/workspace`),
+  distinct du checkout serveur : inutile de demander de « remettre main » pour lui.
 - `A valider` et `Idées` ne sont jamais lues ni modifiées par ce skill, sauf pour déposer une carte dans `A valider` une
   fois un ticket terminé.
 - Le passage `A valider` → `To merge` (validation OK) ou `A valider` → `En cours` (review KO) se fait manuellement par
