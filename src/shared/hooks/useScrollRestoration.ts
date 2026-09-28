@@ -55,16 +55,14 @@ export function useScrollRestoration(ready: boolean, versionKey: number | string
     }
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
     const isFinalStep = maxScroll >= target;
-    // Tant que l'infinite scroll charge encore du contenu manquant, les étapes
-    // intermédiaires restent instantanées : les enchaîner en `smooth` relance une
-    // animation par-dessus la précédente à chaque nouveau lot, d'où les saccades
-    // observées auparavant. Seule la dernière étape, une fois la cible atteignable,
-    // est animée (behavior explicite : le CSS global `scroll-behavior: smooth`
-    // ne s'applique qu'en son absence).
+    // Toujours instantané (behavior explicite : le CSS global
+    // `scroll-behavior: smooth` s'appliquerait sinon) : au retour, la liste
+    // doit réapparaître là où on l'avait laissée, pas défiler sous les yeux
+    // jusqu'à sa place (retour de review : « scintillements »).
     window.scrollTo({
       top: Math.min(target, Math.max(maxScroll, 0)),
       left: 0,
-      behavior: isFinalStep ? "smooth" : "instant",
+      behavior: "instant",
     });
     if (isFinalStep) {
       restoringRef.current = false;

@@ -43,9 +43,14 @@ export default function App() {
     }
     setHasNavigated(true);
     // Transition d'affiche en cours : elle fait déjà son propre fondu.
-    if (!isPosterTransitionRunning()) {
+    // Retour (bouton « Retour », geste de balayage, bouton du navigateur) :
+    // pas de fondu, la page revient telle quelle. Sur Safari iOS, le geste
+    // fait déjà glisser la page ; repartir ensuite de l'opacité 0 laissait
+    // un écran vide le temps du fondu (retour de review, vidéo du 28/09).
+    if (!isPosterTransitionRunning() && navigationType !== "POP") {
       fadeIn(mainRef.current);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   // Page retrouvée par un retour (bouton « Retour », geste ou navigateur) :
