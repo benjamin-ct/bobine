@@ -86,6 +86,15 @@ export function regionName(
   }
 }
 
+// Région déduite de l'IP par le Worker (/api/region), ou null si
+// indisponible (hors ligne, dev local sans Worker).
+export function fetchRegion(): Promise<string | null> {
+  return fetch("/api/region")
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data: { country?: string } | null) => data?.country || null)
+    .catch(() => null);
+}
+
 // Détecte le pays du visiteur via /api/region (déduit par Cloudflare au
 // niveau du edge, voir worker/index.ts — aucune permission navigateur,
 // aucun service tiers). Utilisé pour adapter "Où regarder" et la liste des
@@ -94,6 +103,7 @@ export function regionName(
 export function RegionProvider({
   children,
   initialRegion,
+  regionRequest,
 }: {
   children: ReactNode;
   // Résolue en amont du montage (voir main.tsx) pour éviter tout rendu
@@ -103,6 +113,9 @@ export function RegionProvider({
   // rafraîchit intégralement une fois la vraie région connue, ce qui donne
   // l'impression que l'appli clignote/se recharge au premier affichage.
   initialRegion?: string;
+  // Requête /api/region déjà lancée par main.tsx (null si une région est
+  // mémorisée) : reprise telle quelle plutôt que refaite.
+  regionRequest?: Promise<string | null> | null;
 }) {
   const { locale } = useLocale();
   const [region, setRegionState] = useState(initialRegion ?? DEFAULT_REGION);
@@ -120,20 +133,17 @@ export function RegionProvider({
       return;
     }
     let cancelled = false;
-    fetch("/api/region")
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("region fetch failed"))))
-      .then((data: { country?: string }) => {
-        if (!cancelled && data.country) {
-          setRegionState(data.country);
-        }
-      })
-      .catch(() => {
-        // Repli silencieux sur DEFAULT_REGION (déjà l'état initial) — ex.
-        // en dev local où /api/region n'existe pas (Vite seul, pas de Worker).
-      });
+    // Sans résultat (null), on garde l'état initial (DEFAULT_REGION) — ex.
+    // en dev local où /api/region n'existe pas (Vite seul, pas de Worker).
+    void (regionRequest ?? fetchRegion()).then((country) => {
+      if (!cancelled && country) {
+        setRegionState(country);
+      }
+    });
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Choix manuel (réglages du profil) : persisté localement tout de suite,

@@ -45,10 +45,30 @@ import type {
   CollectionDetails,
 } from "../types/tmdb.ts";
 
+// Listes quasi-statiques (genres, pays, langues), appelées depuis de
+// nombreux composants au même moment (ex. Découvrir et TonightPick sur
+// l'accueil) : on met en cache la promesse, pas seulement le résultat, pour
+// qu'un appel concurrent réutilise la requête en vol (audit M8). Clé par
+// langue TMDB (noms localisés) ; une entrée en échec est retirée pour
+// permettre un nouvel essai.
+const staticListCache = new Map<string, Promise<unknown>>();
+
+function cachedStaticList<T>(name: string, load: () => Promise<T>): Promise<T> {
+  const key = `${name}:${currentTmdbLanguage()}`;
+  const cached = staticListCache.get(key);
+  if (cached) {
+    return cached as Promise<T>;
+  }
+  const promise = load();
+  staticListCache.set(key, promise);
+  promise.catch(() => staticListCache.delete(key));
+  return promise;
+}
+
 // Genres --------------------------------------------------------------
 
 export function getGenres(mediaType: MediaType): Promise<{ genres: Genre[] }> {
-  return tmdbFetch(`/genre/${mediaType}/list`);
+  return cachedStaticList(`genres:${mediaType}`, () => tmdbFetch(`/genre/${mediaType}/list`));
 }
 
 // Découverte / recherche -----------------------------------------------
@@ -201,31 +221,27 @@ export const SORT_FIELDS: Array<{ value: DiscoverSortField; labelKey: string }> 
 // Liste des pays (code ISO 3166-1 + nom localisé), pour le filtre "pays de
 // production". Résultat quasi-statique côté TMDB, sans dépendance à une
 // région particulière.
-let countriesCache: Country[] | null = null;
-export async function getCountries(): Promise<Country[]> {
-  if (countriesCache) {
-    return countriesCache;
-  }
-  const list = await tmdbFetch<Country[]>("/configuration/countries");
-  countriesCache = list.slice().sort((a, b) => a.english_name.localeCompare(b.english_name));
-  return countriesCache;
+export function getCountries(): Promise<Country[]> {
+  return cachedStaticList("countries", async () => {
+    const list = await tmdbFetch<Country[]>("/configuration/countries");
+    return list.slice().sort((a, b) => a.english_name.localeCompare(b.english_name));
+  });
 }
 
 // Liste des langues (code ISO 639-1 + nom natif), pour le filtre "langue
 // originale". `name` est le nom natif renvoyé par TMDB (ex. "Español",
 // "日本語") — plus reconnaissable qu'une traduction. Résultat
 // quasi-statique, mis en cache comme getCountries().
-let languagesCache: Language[] | null = null;
-export async function getLanguages(): Promise<Language[]> {
-  if (languagesCache) {
-    return languagesCache;
-  }
-  const list = await tmdbFetch<Language[]>("/configuration/languages");
-  languagesCache = list
-    .filter((l) => l.iso_639_1 && (l.name || l.english_name))
-    .slice()
-    .sort((a, b) => (a.english_name || a.name || "").localeCompare(b.english_name || b.name || ""));
-  return languagesCache;
+export function getLanguages(): Promise<Language[]> {
+  return cachedStaticList("languages", async () => {
+    const list = await tmdbFetch<Language[]>("/configuration/languages");
+    return list
+      .filter((l) => l.iso_639_1 && (l.name || l.english_name))
+      .slice()
+      .sort((a, b) =>
+        (a.english_name || a.name || "").localeCompare(b.english_name || b.name || "")
+      );
+  });
 }
 
 export function searchMulti(
