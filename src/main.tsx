@@ -23,8 +23,14 @@ import { FavoriteProvidersProvider } from "./core/context/FavoriteProvidersConte
 import { ExcludedGenresProvider } from "./core/context/ExcludedGenresContext.tsx";
 import { ExcludedTitlesProvider } from "./core/context/ExcludedTitlesContext.tsx";
 import { ThemeProvider } from "./core/context/ThemeContext.tsx";
-import { LocaleProvider, loadInitialLocale } from "./core/context/LocaleContext.tsx";
-import { ensureLocaleLoaded } from "./core/i18n/i18n.ts";
+import { LocaleProvider } from "./core/context/LocaleContext.tsx";
+import {
+  applyInitialLocale,
+  ensureLocaleLoaded,
+  isSupportedLocale,
+  loadInitialLocale,
+  type Locale,
+} from "./core/i18n/i18n.ts";
 import { LocaleAccountSync } from "./core/context/LocaleAccountSync.tsx";
 import { ensureSentryInit, logError } from "./core/logger.ts";
 import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
@@ -105,12 +111,49 @@ async function resolveInitialRegion(): Promise<string> {
   }
 }
 
-// Traductions de la langue initiale chargées en parallèle (chunk séparé hors
-// français, voir i18n.ts), sans allonger l'attente du splash.
-const [initialRegion] = await Promise.all([
-  resolveInitialRegion(),
-  ensureLocaleLoaded(loadInitialLocale()),
-]);
+// Langue enregistrée sur le compte, lue avant le premier rendu pour la même
+// raison que la région : sans elle, un compte réglé en anglais sur un
+// appareil qui n'a encore rien mémorisé (nouvelle connexion, preview) ou qui
+// a gardé une autre langue affichait l'accueil en français, puis tout
+// rebasculait en anglais à la réponse de LocaleAccountSync (review H8).
+// Seulement si connecté, et borné comme /api/region.
+async function fetchAccountLocale(): Promise<Locale | null> {
+  if (!document.cookie.includes("bobine_auth=1")) {
+    return null;
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1500);
+  try {
+    const res = await fetch("/api/locale", { signal: controller.signal });
+    if (!res.ok) {
+      return null;
+    }
+    const data: { locale?: string | null } = await res.json();
+    return data.locale && isSupportedLocale(data.locale) ? data.locale : null;
+  } catch {
+    // Repli sur la langue de l'appareil ; LocaleAccountSync resynchronise
+    // après le montage.
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// Traductions de la langue de l'appareil chargées en parallèle (chunk séparé
+// hors français, voir i18n.ts), sans allonger l'attente du splash.
+async function resolveInitialLocale(): Promise<void> {
+  const deviceLocale = loadInitialLocale();
+  const [accountLocale] = await Promise.all([
+    fetchAccountLocale(),
+    ensureLocaleLoaded(deviceLocale),
+  ]);
+  if (accountLocale && accountLocale !== deviceLocale) {
+    await ensureLocaleLoaded(accountLocale);
+    applyInitialLocale(accountLocale);
+  }
+}
+
+const [initialRegion] = await Promise.all([resolveInitialRegion(), resolveInitialLocale()]);
 
 // Erreurs de rendu hors de toute ErrorBoundary (providers, NavBar…) : React
 // démonte alors l'appli, au moins l'erreur remonte dans Sentry. Celles

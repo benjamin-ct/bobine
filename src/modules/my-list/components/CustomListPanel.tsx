@@ -268,7 +268,12 @@ export default function CustomListPanel({
               <div key={key} {...props}>
                 <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.rowThumb}>
                   {item.posterPath ? (
-                    <img src={posterUrl(item.posterPath, "w92") ?? undefined} alt={item.title} />
+                    <img
+                      src={posterUrl(item.posterPath, "w92") ?? undefined}
+                      alt={item.title}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   ) : (
                     <div
                       className={posterStyles[accentKey]}

@@ -35,7 +35,7 @@ export default function ListCover({ items, size = "md", className = "" }: Props)
           return (
             <span key={key} className={styles.coverCard}>
               {src ? (
-                <img src={src} alt="" />
+                <img src={src} alt="" loading="lazy" decoding="async" />
               ) : (
                 <span className={posterStyles[posterAccentFromGenres(item.genreIds, key)]} />
               )}

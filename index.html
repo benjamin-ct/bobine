@@ -46,6 +46,9 @@
     />
     <meta property="og:image" content="https://bobine.creusatbenjamin.workers.dev/icon-512.png" />
     <meta name="twitter:card" content="summary" />
+    <!-- Affiches TMDB : connexion (DNS + TLS) ouverte dès le HTML, avant que le
+         JS ne demande la première image (audit M9). -->
+    <link rel="preconnect" href="https://image.tmdb.org" />
     <style>
       /* Loader affiché avant que React (et global.css/variables.css) ne soit
          chargé : couleurs dupliquées en dur ici (pas d'accès aux custom
