@@ -101,6 +101,7 @@ import {
 } from "./avatars.ts";
 import { randomShareSlug, normalizeUsername, SHARE_SLUG_PATTERN } from "./share-slug.ts";
 import { SECURITY_HEADERS } from "./security-headers.ts";
+import { PAGE_META_ROUTE, servePageWithMeta, serveRobots, serveSitemap } from "./page-meta.ts";
 import {
   follow,
   unfollow,
@@ -1959,14 +1960,29 @@ async function handleTmdbProxy(
 export default withSentry({
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    // `run_worker_first` (wrangler.jsonc) ne route que /api/* ici : les
+    // `run_worker_first` (wrangler.jsonc) route surtout /api/* ici : les
     // assets statiques (dont le service worker /sw.js) sont servis
     // nativement par Cloudflare sans passer par ce Worker — reconstruire
     // leur Response ici (même pour juste ajouter des en-têtes) casse
     // l'enregistrement du service worker. Leurs en-têtes de sécurité sont
     // donc posés nativement via public/_headers (généré depuis
     // worker/security-headers.ts) plutôt qu'ici.
+    // Exceptions : robots.txt, sitemap.xml et les pages partageables (fiche,
+    // profil, liste), qui passent par ici pour leurs balises de partage
+    // (voir page-meta.ts). Réponses reconstruites, d'où withSecurityHeaders.
     if (!url.pathname.startsWith("/api/")) {
+      if (url.pathname === "/robots.txt") {
+        return withSecurityHeaders(serveRobots(url));
+      }
+      if (url.pathname === "/sitemap.xml") {
+        return withSecurityHeaders(serveSitemap(url));
+      }
+      if (
+        PAGE_META_ROUTE.test(url.pathname) &&
+        (request.method === "GET" || request.method === "HEAD")
+      ) {
+        return withSecurityHeaders(await servePageWithMeta(request, env, ctx));
+      }
       return env.ASSETS.fetch(request);
     }
     // Filet de sécurité : sans lui, une exception non rattrapée donne une
@@ -2270,7 +2286,7 @@ async function routeRequest(
     });
   }
 
-  // `run_worker_first` (wrangler.jsonc) ne route ici que /api/*, mais on
+  // `run_worker_first` (wrangler.jsonc) ne route ici que des /api/*, mais on
   // garde un filet : toute autre requête retombe sur les assets statiques.
   return env.ASSETS.fetch(request);
 }

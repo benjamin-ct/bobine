@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "../../shared/components/index.ts";
@@ -8,6 +9,17 @@ import styles from "./NotFoundPage.module.css";
  * vide sous le header/footer. */
 export default function NotFoundPage() {
   const { t } = useTranslation();
+
+  // Les URL inconnues répondent 200 (index.html de l’appli monopage) : ce
+  // noindex évite qu’un moteur les indexe comme de vraies pages (audit H12).
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex";
+    document.head.appendChild(meta);
+    return () => meta.remove();
+  }, []);
+
   return (
     <div className={styles.page}>
       <PageHeader
