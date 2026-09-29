@@ -4,6 +4,18 @@
   padding: 0 var(--gutter) 64px;
 }
 
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Source du tirage, toujours visible : sélecteur pleine largeur, puis une
    phrase qui dit dans quoi on tire. */
 .source {

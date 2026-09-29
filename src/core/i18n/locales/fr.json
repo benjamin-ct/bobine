@@ -377,7 +377,8 @@
     "typeSeries": "Série",
     "availableOn": "Disponible sur",
     "withSubscription": "inclus avec abonnement",
-    "rentOrBuy": "en location ou à l'achat"
+    "rentOrBuy": "en location ou à l'achat",
+    "drawnAnnouncement": "Titre tiré : {{title}}"
   },
   "searchPage": {
     "resultsFor": "Résultats pour « {{query}} »",
