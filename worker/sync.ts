@@ -169,8 +169,10 @@ export async function openSyncSocket(request: Request, userId: number): Promise<
   // refuse aussi explicitement toute poignée de main venant d'une autre
   // origine que l'app elle-même.
   const url = new URL(request.url);
+  // `URL.parse` plutôt que `new URL` : une origine illisible (ex. « null »,
+  // envoyée par un document sandboxé) est refusée au lieu de lever.
   const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== url.host) {
+  if (origin && URL.parse(origin)?.host !== url.host) {
     return new Response("Origine refusée.", { status: 403 });
   }
   try {

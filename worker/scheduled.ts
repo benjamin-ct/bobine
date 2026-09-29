@@ -21,6 +21,7 @@ import {
 import { getAllReminders, updateReminderProviders, type ReminderRow } from "./reminders.ts";
 import { notifyUser, type NotificationRecipient } from "./notify.ts";
 import { logError } from "./logger.ts";
+import { purgeExpiredRows } from "./purge.ts";
 import type { Env, SubscriptionRow } from "./types.ts";
 
 const GENRE_WINDOW_DAYS = 2; // marge de sécurité au-delà de l'intervalle du cron (1x/jour)
@@ -349,6 +350,8 @@ export function groupRecipients(subscriptions: SubscriptionRow[]): NotificationR
 
 export async function runDailyCheck(env: Env): Promise<void> {
   const db = env.DB;
+  // En premier : un échec plus loin dans le cron ne doit pas l'empêcher.
+  await purgeExpiredRows(db);
   const subscriptions = await getAllSubscriptions(db);
   const tmdbCache = createTmdbRunCache();
   const regions = await getRegionsByUser(db);
