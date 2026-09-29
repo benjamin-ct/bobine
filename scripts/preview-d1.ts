@@ -3,9 +3,10 @@
 // (voir ticket Trello "Infra : base D1 isolée par preview").
 //
 // Le plan D1 gratuit limite le compte à 10 bases au total (voir
-// developers.cloudflare.com/d1/platform/limits) ; une est réservée à la prod
-// (`bobine-notifications`), donc au plus MAX_PREVIEW_DATABASES previews
-// peuvent coexister. Au-delà, `provision` patiente qu'une place se libère
+// developers.cloudflare.com/d1/platform/limits), prod comprise
+// (`seancy-notifications`, plus l'ancienne `bobine-notifications` tant
+// qu'elle n'est pas supprimée) : une base de preview n'est créée que s'il
+// reste une place sur le compte. Au-delà, `provision` patiente qu'une place se libère
 // (fermeture/merge d'une autre PR) plutôt que d'échouer immédiatement, comme
 // demandé sur le ticket.
 //
@@ -22,9 +23,12 @@ import { experimental_readRawConfig } from "wrangler";
 const WRANGLER_BIN = "node_modules/.bin/wrangler";
 const SOURCE_CONFIG_PATH = "wrangler.jsonc";
 const PREVIEW_CONFIG_PATH = "wrangler.preview.generated.jsonc";
-const PROD_DATABASE_NAME = "bobine-notifications";
-const PREVIEW_DATABASE_PREFIX = "bobine-preview-pr-";
-const MAX_PREVIEW_DATABASES = 9; // 10 max du plan gratuit, moins la base de prod
+const PROD_DATABASE_NAME = "seancy-notifications";
+const PREVIEW_DATABASE_PREFIX = "seancy-preview-pr-";
+// Bases créées avant le renommage Seancy, encore nettoyées à la fermeture
+// de leur PR.
+const LEGACY_PREVIEW_DATABASE_PREFIX = "bobine-preview-pr-";
+const ACCOUNT_DATABASE_LIMIT = 10; // plan D1 gratuit, toutes bases confondues
 const POLL_INTERVAL_SECONDS = 30;
 const MAX_WAIT_MINUTES = 15;
 // Nom du binding (voir worker/types.ts, Env) sous lequel chaque classe
@@ -146,12 +150,9 @@ function provision(prNumber: string): void {
       break;
     }
 
-    const previewCount = databases.filter((db) =>
-      db.name.startsWith(PREVIEW_DATABASE_PREFIX)
-    ).length;
-    if (previewCount < MAX_PREVIEW_DATABASES) {
+    if (databases.length < ACCOUNT_DATABASE_LIMIT) {
       console.log(
-        `Création de la base de preview '${dbName}' (${previewCount}/${MAX_PREVIEW_DATABASES} utilisées)...`
+        `Création de la base de preview '${dbName}' (${databases.length}/${ACCOUNT_DATABASE_LIMIT} bases sur le compte)...`
       );
       uuid = createDatabase(dbName);
       break;
@@ -159,12 +160,12 @@ function provision(prNumber: string): void {
 
     if (Date.now() > deadline) {
       throw new Error(
-        `Plan D1 gratuit saturé (${MAX_PREVIEW_DATABASES} previews max) depuis plus de ${MAX_WAIT_MINUTES} min, ` +
+        `Plan D1 gratuit saturé (${ACCOUNT_DATABASE_LIMIT} bases max) depuis plus de ${MAX_WAIT_MINUTES} min, ` +
           `abandon. Une autre PR doit être fermée/mergée pour libérer une place.`
       );
     }
     console.log(
-      `Plan D1 saturé (${previewCount}/${MAX_PREVIEW_DATABASES} previews en cours) : nouvelle tentative dans ${POLL_INTERVAL_SECONDS}s...`
+      `Plan D1 saturé (${databases.length}/${ACCOUNT_DATABASE_LIMIT} bases sur le compte) : nouvelle tentative dans ${POLL_INTERVAL_SECONDS}s...`
     );
     sleepSeconds(POLL_INTERVAL_SECONDS);
   }
@@ -181,14 +182,16 @@ function provision(prNumber: string): void {
 }
 
 function cleanup(prNumber: string): void {
-  const dbName = dbNameForPr(prNumber);
-  const databases = listDatabases();
-  if (!databases.some((db) => db.name === dbName)) {
-    console.log(`Aucune base de preview à nettoyer pour cette PR ('${dbName}' n'existe pas).`);
+  const dbNames = [dbNameForPr(prNumber), `${LEGACY_PREVIEW_DATABASE_PREFIX}${prNumber}`];
+  const existing = listDatabases().filter((db) => dbNames.includes(db.name));
+  if (existing.length === 0) {
+    console.log(`Aucune base de preview à nettoyer pour cette PR ('${dbNames[0]}' n'existe pas).`);
     return;
   }
-  console.log(`Suppression de la base de preview '${dbName}'...`);
-  execFileSync(WRANGLER_BIN, ["d1", "delete", dbName, "--skip-confirmation"], { stdio: "inherit" });
+  for (const { name } of existing) {
+    console.log(`Suppression de la base de preview '${name}'...`);
+    execFileSync(WRANGLER_BIN, ["d1", "delete", name, "--skip-confirmation"], { stdio: "inherit" });
+  }
 }
 
 const [, , command, prNumber] = process.argv;
