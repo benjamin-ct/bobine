@@ -17,6 +17,7 @@ import {
 import Discover from "./modules/discover/index.ts";
 import { MembersOnlyDialog } from "./modules/auth/index.ts";
 import { fadeIn } from "./shared/lib/motion.ts";
+import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
 
 const NewReleases = lazy(() => import("./modules/new-releases/index.ts"));
 const ComingSoon = lazy(() => import("./modules/coming-soon/index.ts"));
@@ -83,26 +84,28 @@ export default function App() {
       <RecaptchaBadge />
       <NavBar />
       <main ref={mainRef}>
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/" element={<Discover />} />
-            <Route path="/nouveautes" element={<NewReleases />} />
-            <Route path="/prochainement" element={<ComingSoon />} />
-            <Route path="/media/:mediaType/:id" element={<Detail />} />
-            <Route path="/personne/:id" element={<Person />} />
-            <Route path="/aleatoire" element={<Random />} />
-            <Route path="/ma-liste" element={<Navigate to="/profil?tab=ma-liste" replace />} />
-            <Route path="/profil" element={<Profile />} />
-            <Route path="/u/:slug" element={<PublicProfile />} />
-            <Route path="/recherche" element={<Search />} />
-            <Route path="/liste/:slug" element={<SharedList />} />
-            <Route path="/connexion" element={<LoginPage />} />
-            <Route path="/auth/verify" element={<VerifyAuthPage />} />
-            <Route path="/conditions-utilisation" element={<TermsPage />} />
-            <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
+        <ErrorBoundary resetKey={pathname}>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/" element={<Discover />} />
+              <Route path="/nouveautes" element={<NewReleases />} />
+              <Route path="/prochainement" element={<ComingSoon />} />
+              <Route path="/media/:mediaType/:id" element={<Detail />} />
+              <Route path="/personne/:id" element={<Person />} />
+              <Route path="/aleatoire" element={<Random />} />
+              <Route path="/ma-liste" element={<Navigate to="/profil?tab=ma-liste" replace />} />
+              <Route path="/profil" element={<Profile />} />
+              <Route path="/u/:slug" element={<PublicProfile />} />
+              <Route path="/recherche" element={<Search />} />
+              <Route path="/liste/:slug" element={<SharedList />} />
+              <Route path="/connexion" element={<LoginPage />} />
+              <Route path="/auth/verify" element={<VerifyAuthPage />} />
+              <Route path="/conditions-utilisation" element={<TermsPage />} />
+              <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </main>
       <Footer />
       <LegalLinks />

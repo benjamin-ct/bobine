@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import {
@@ -110,6 +110,7 @@ function useMainCastCount(): number {
 export default function DetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
   // Fiche déjà chargée pendant la session (déjà vue) : affichée dès le
   // premier rendu, sans passer par le squelette.
@@ -218,9 +219,15 @@ export default function DetailPage() {
           // navigate(-1) déclenche un vrai retour arrière (POP), nécessaire
           // pour que useScrollRestoration restaure la position de la liste
           // d'origine — un <Link> classique crée une nouvelle entrée
-          // d'historique (PUSH) et ne restaure jamais rien.
-          e.preventDefault();
-          navigate(-1);
+          // d'historique (PUSH) et ne restaure jamais rien. Seulement si la
+          // fiche n'est pas la première page de la session (clé "default") :
+          // ouverte depuis un lien partagé, une notification ou un nouvel
+          // onglet, reculer ferait quitter le site ; le lien mène alors à
+          // l'accueil.
+          if (location.key !== "default") {
+            e.preventDefault();
+            navigate(-1);
+          }
         }}
       >
         {t("detailPage.back")}

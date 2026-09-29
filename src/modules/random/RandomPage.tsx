@@ -28,6 +28,7 @@ import type { AdvancedFiltersState } from "../../shared/components/index.ts";
 import { posterAccentFromGenres } from "../../shared/lib/posterAccent.ts";
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import { ratingTier } from "../../shared/lib/ratingTier.ts";
+import { prefersReducedMotion } from "../../shared/lib/motion.ts";
 import type { LibraryItem } from "../../core/types/library.ts";
 import type {
   Genre,
@@ -40,12 +41,15 @@ import type { WatchProviderOption } from "../../core/api/tmdb.ts";
 import styles from "./RandomPage.module.css";
 
 const MAX_ATTEMPTS = 6;
-// Défilement d'affiches pendant un tirage : une affiche toutes les 90 ms,
+// Défilement d'affiches pendant un tirage : une affiche toutes les 350 ms,
 // piochée parmi au plus REEL_MAX miniatures (w92, quelques Ko chacune) du
 // catalogue, de l'historique et des envies de voir. Elles sont préchargées
 // une seule fois et seules celles déjà chargées défilent : rien n'arrive en
 // retard, rien n'est retéléchargé, même sur une connexion lente.
-const REEL_INTERVAL_MS = 90;
+// 350 ms : moins de 3 changements par seconde, seuil WCAG 2.3.1 des contenus
+// clignotants (à 90 ms, le défilement flashait à ~11 images/s). Désactivé
+// avec « réduire les animations » (voir useReelPoster).
+const REEL_INTERVAL_MS = 350;
 const REEL_MAX = 16;
 // Attente maximale de l'affiche du titre tiré avant de le révéler : le
 // défilement continue en attendant, et la révélation montre la bonne affiche.
@@ -121,12 +125,18 @@ function preloadImage(src: string, timeoutMs: number): Promise<void> {
 // URL de la miniature qui défile pendant le tirage (null hors tirage ou tant
 // qu'aucune n'est chargée).
 function useReelPoster(rolling: boolean, posterPaths: string[]): string | null {
+  // Lu une fois : piloté par setInterval en JS, le défilement échappe à la
+  // media query CSS globale qui coupe les animations.
+  const [reducedMotion] = useState(prefersReducedMotion);
   const [loaded, setLoaded] = useState<string[]>([]);
   const [index, setIndex] = useState(0);
   // Images gardées en mémoire : le défilement ne redemande rien au réseau.
   const images = useRef(new Map<string, HTMLImageElement>());
 
   useEffect(() => {
+    if (reducedMotion) {
+      return;
+    }
     for (const path of posterPaths) {
       const src = posterUrl(path, "w92");
       if (!src || images.current.has(src) || images.current.size >= REEL_MAX) {
@@ -137,7 +147,7 @@ function useReelPoster(rolling: boolean, posterPaths: string[]): string | null {
       image.src = src;
       images.current.set(src, image);
     }
-  }, [posterPaths]);
+  }, [posterPaths, reducedMotion]);
 
   useEffect(() => {
     if (!rolling || loaded.length < 2) {
@@ -508,6 +518,11 @@ export default function RandomPage() {
         title={t("randomPage.title")}
         lead={t("randomPage.lead")}
       />
+      {/* Région live toujours montée (une région créée avec son contenu
+          n'est pas annoncée) : le titre tiré est lu une fois le tirage fini. */}
+      <p className={styles.srOnly} aria-live="polite" aria-atomic="true">
+        {pick && !rolling ? t("randomPage.drawnAnnouncement", { title }) : ""}
+      </p>
 
       <div className={styles.source}>
         <div className={styles.sourceSwitch} role="group" aria-label={t("randomPage.source")}>
