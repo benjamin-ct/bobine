@@ -54,6 +54,8 @@ interface AuthContextValue {
   verify: (token: string) => Promise<VerifyResult>;
   verifyCode: (code: string) => Promise<VerifyResult>;
   logout: () => Promise<void>;
+  // Déconnecte tous les appareils du compte, celui-ci compris (audit M1).
+  logoutAll: () => Promise<void>;
   // Enregistre le nom affiché côté serveur (save manuel, pas de synchro
   // automatique — voir AccountCard) et met à jour l'état local à l'identique.
   updateDisplayName: (displayName: string) => Promise<void>;
@@ -93,6 +95,16 @@ function hasAuthHint(): boolean {
 // origine), donc les cookies de session partent automatiquement avec
 // `credentials: "same-origin"` (comportement par défaut de fetch) — pas
 // besoin de `credentials: "include"` ni de gestion CORS.
+
+// Plus rien du compte ne doit rester dans le navigateur : on efface les
+// données stockées puis on recharge l'app sur l'accueil, ce qui vide aussi
+// l'état gardé en mémoire par les contextes (bibliothèque, listes, réglages)
+// — sans quoi leurs effets de persistance le réécriraient dans localStorage
+// au prochain changement.
+function leaveAccount(): void {
+  clearAccountDataFromDevice();
+  window.location.replace("/");
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -174,10 +186,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
+  // Sessions révoquées depuis un autre appareil (« tous les appareils »,
+  // changement d'email) : la WebSocket est fermée par le serveur. Si la
+  // session de cet appareil ne vaut plus rien, on quitte le compte comme
+  // pour une déconnexion ; sinon la synchro reprend.
+  const handleSessionRevoked = useCallback(async (): Promise<boolean> => {
+    const res = await fetch("/api/auth/me").catch(() => null);
+    if (res?.status === 401) {
+      pinnedRef.current = false;
+      // Cookie compagnon (pas HttpOnly) : le serveur n'a pas pu l'effacer ici.
+      document.cookie = "bobine_auth=; Path=/; Max-Age=0";
+      leaveAccount();
+      return false;
+    }
+    return true;
+  }, []);
+
   // Synchro temps réel entre appareils du compte (voir core/sync/liveSync.ts) :
   // ouverte ici, une seule fois pour toute l'app. Le nom affiché modifié
   // depuis un autre appareil est rechargé via /api/auth/me.
-  useLiveSyncConnection(status === "authenticated");
+  useLiveSyncConnection(status === "authenticated", handleSessionRevoked);
   useLiveSyncEvent("display-name", () => {
     refresh();
   });
@@ -247,15 +275,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     pinnedRef.current = false;
-    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-    // Plus rien du compte ne doit rester dans le navigateur : on efface les
-    // données stockées puis on recharge l'app sur l'accueil, ce qui vide
-    // aussi l'état gardé en mémoire par les contextes (bibliothèque,
-    // listes, réglages) — sans quoi leurs effets de persistance le
-    // réécriraient dans localStorage au prochain changement.
-    clearAccountDataFromDevice();
-    window.location.replace("/");
+    await fetch("/api/auth/logout", { method: "POST", headers: syncClientHeaders() }).catch(
+      () => {}
+    );
+    leaveAccount();
   }, []);
+
+  // Si l'appel échoue, rien n'est effacé : l'erreur remonte au bouton.
+  const logoutAll = useCallback(async () => {
+    const res = await fetch("/api/auth/logout-all", { method: "POST" });
+    if (!res.ok) {
+      throw new Error(t("accountCard.logoutAllError"));
+    }
+    pinnedRef.current = false;
+    leaveAccount();
+  }, [t]);
 
   // Save manuel uniquement (voir AccountCard, bouton "Enregistrer") : pas de
   // synchro automatique/temps réel — décision produit explicite pour le
@@ -404,6 +438,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         verify,
         verifyCode,
         logout,
+        logoutAll,
         updateDisplayName: updateDisplayNameCallback,
         setProfileShared,
         requestEmailChange,

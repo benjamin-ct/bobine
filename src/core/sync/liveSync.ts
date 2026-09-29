@@ -72,12 +72,23 @@ const PING_INTERVAL_MS = 30_000;
 const MAX_RECONNECT_DELAY_MS = 60_000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
+// Fermeture par le serveur quand les sessions du compte sont révoquées
+// (voir worker/sync.ts, SESSION_REVOKED_CLOSE_CODE).
+const SESSION_REVOKED_CLOSE_CODE = 4001;
+
 /**
  * Ouvre la WebSocket de synchro tant que `enabled` est vrai (utilisateur
  * connecté), avec reconnexion automatique (délai exponentiel) et reconnexion
  * immédiate au retour au premier plan. Monté une seule fois (AuthProvider).
+ * `onRevoked` : appelé si le serveur signale une révocation de session ;
+ * renvoie `true` si la session de cet appareil est toujours valide, auquel
+ * cas la connexion est rouverte.
  */
-export function useLiveSyncConnection(enabled: boolean): void {
+export function useLiveSyncConnection(enabled: boolean, onRevoked?: () => Promise<boolean>): void {
+  const onRevokedRef = useRef(onRevoked);
+  useEffect(() => {
+    onRevokedRef.current = onRevoked;
+  }, [onRevoked]);
   useEffect(() => {
     if (!enabled || typeof WebSocket === "undefined") {
       return;
@@ -116,7 +127,9 @@ export function useLiveSyncConnection(enabled: boolean): void {
         `${protocol}//${location.host}/api/sync/socket?client=${encodeURIComponent(CLIENT_ID)}&visible=1`
       );
       socket = ws;
+      let opened = false;
       ws.onopen = () => {
+        opened = true;
         attempts = 0;
         // Première connexion : les contextes viennent tout juste de charger
         // leurs données. Reconnexion : on a pu manquer des événements.
@@ -147,10 +160,24 @@ export function useLiveSyncConnection(enabled: boolean): void {
           logWarn("Seancy : événement de synchro illisible.", err);
         }
       };
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         clearInterval(pingTimer);
         if (socket === ws) {
           socket = null;
+        }
+        // Poignée de main refusée (socket jamais ouverte) : la session a pu
+        // être révoquée pendant que la connexion était coupée (appareil en
+        // veille, app en arrière-plan), et le 401 du serveur est invisible
+        // pour WebSocket. Sans cette vérification, l'appareil retentait en
+        // boucle et restait affiché connecté jusqu'au rechargement (review M1).
+        const handleRevoked = onRevokedRef.current;
+        if (handleRevoked && (event.code === SESSION_REVOKED_CLOSE_CODE || !opened)) {
+          void handleRevoked().then((stillValid) => {
+            if (stillValid) {
+              scheduleReconnect();
+            }
+          });
+          return;
         }
         scheduleReconnect();
       };

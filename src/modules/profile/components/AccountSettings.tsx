@@ -177,6 +177,7 @@ export default function AccountSettings() {
     updateUsername,
     checkUsername,
     logout,
+    logoutAll,
   } = useAuth();
   const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
@@ -186,6 +187,20 @@ export default function AccountSettings() {
   const [error, setError] = useState<string | null>(null);
   const [editingEmail, setEditingEmail] = useState(false);
   const [emailChanged, setEmailChanged] = useState(false);
+  const [confirmingLogoutAll, setConfirmingLogoutAll] = useState(false);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
+  const [logoutAllError, setLogoutAllError] = useState<string | null>(null);
+
+  async function onLogoutAll() {
+    setLoggingOutAll(true);
+    setLogoutAllError(null);
+    try {
+      await logoutAll();
+    } catch (err) {
+      setLogoutAllError(err instanceof Error ? err.message : t("accountCard.logoutAllError"));
+      setLoggingOutAll(false);
+    }
+  }
 
   // Source de vérité : D1 (colonne users.display_name), chargée avec le
   // reste de la session (voir AuthContext, /api/auth/me) — c'est ce qui
@@ -417,6 +432,44 @@ export default function AccountSettings() {
         <button type="button" className={styles.secondaryBtn} onClick={logout}>
           {t("accountCard.logout")}
         </button>
+      </SettingsRow>
+
+      <SettingsRow
+        label={t("accountCard.allDevices")}
+        description={t("accountCard.allDevicesHint")}
+      >
+        {confirmingLogoutAll ? (
+          <div role="alert">
+            <p className={styles.subtleHint}>{t("accountCard.logoutAllConfirm")}</p>
+            <div className={styles.inline}>
+              <button
+                type="button"
+                className={styles.primaryBtn}
+                onClick={onLogoutAll}
+                disabled={loggingOutAll}
+              >
+                {t("accountCard.logoutAll")}
+              </button>
+              <button
+                type="button"
+                className={styles.ghostBtn}
+                onClick={() => setConfirmingLogoutAll(false)}
+                disabled={loggingOutAll}
+              >
+                {t("accountCard.emailChange.cancel")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={() => setConfirmingLogoutAll(true)}
+          >
+            {t("accountCard.logoutAll")}
+          </button>
+        )}
+        {logoutAllError && <p className={styles.errorHint}>{logoutAllError}</p>}
       </SettingsRow>
     </SettingsGroup>
   );
