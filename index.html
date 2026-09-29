@@ -58,7 +58,7 @@
          chargé ci-dessus *avant* ce bloc, via l'attribut data-theme sur <html> —
          seule source de vérité, plus fiable qu'une media query dupliquée ici
          qui ignorerait un choix explicite différent du système (flash au
-         montage de React). Retiré par main.tsx une fois React monté. */
+         montage de React). Retiré après le premier rendu (src/core/initialLoader.ts). */
       #app-loader {
         position: fixed;
         inset: 0;

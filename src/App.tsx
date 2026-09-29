@@ -1,4 +1,4 @@
-import { lazy, Suspense, useLayoutEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import {
@@ -17,6 +17,7 @@ import {
 import Discover from "./modules/discover/index.ts";
 import { MembersOnlyDialog } from "./modules/auth/index.ts";
 import { fadeIn } from "./shared/lib/motion.ts";
+import { hideInitialLoader } from "./core/initialLoader.ts";
 import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
 
 const NewReleases = lazy(() => import("./modules/new-releases/index.ts"));
@@ -58,6 +59,10 @@ export default function App() {
   const navigationType = useNavigationType();
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
+
+  useEffect(() => {
+    hideInitialLoader();
+  }, []);
 
   // Fondu court à chaque changement de page (pas au premier affichage,
   // couvert par le splash, ni quand seuls les paramètres changent : onglets
