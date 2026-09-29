@@ -30,19 +30,20 @@
 // `*.ingest.de.sentry.io` reçoit les rapports d'erreur du SDK Sentry client
 // (src/core/logger.ts, région EU).
 
-// Domaine parent de la prod et des previews `<slug>-bobine.…` : à changer
-// ici seulement lors de la migration de domaine (Seancy).
-export const APP_PARENT_DOMAIN = "creusatbenjamin.workers.dev";
+// Origines WebSocket de la synchro : seancy.com (prod), ses sous-domaines
+// (previews `<slug>.dev.seancy.com`) et l'ancienne URL workers.dev, dont les
+// onglets encore ouverts se reconnectent le temps d'être redirigés.
+const SYNC_SOCKET_SOURCES =
+  "wss://seancy.com wss://*.seancy.com wss://*.creusatbenjamin.workers.dev";
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' https://image.tmdb.org https://i.ytimg.com https://www.gravatar.com data:",
-  // `wss://*.<domaine>` : WebSocket de synchro temps réel (worker/sync.ts) —
-  // explicite car Safari ne couvre pas wss: par 'self' ; le joker couvre la
-  // prod comme les previews.
-  `connect-src 'self' https://www.google.com https://image.tmdb.org https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.ingest.de.sentry.io wss://*.${APP_PARENT_DOMAIN}`,
+  // `wss://…` : WebSocket de synchro temps réel (worker/sync.ts) —
+  // explicite car Safari ne couvre pas wss: par 'self'.
+  `connect-src 'self' https://www.google.com https://image.tmdb.org https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.ingest.de.sentry.io ${SYNC_SOCKET_SOURCES}`,
   "frame-src https://www.youtube.com https://www.google.com",
   "worker-src 'self'",
   "frame-ancestors 'none'",

@@ -239,7 +239,7 @@ async function syncSubscriptionDelta(
 const TEST_NOTIFICATION_DELAY_S = 15;
 
 // Les boutons de test ne servent qu'à valider le choix de canal sur les
-// previews PR (`<slug>-bobine.creusatbenjamin.workers.dev`, voir
+// previews PR (`<slug>.dev.seancy.com`, voir
 // worker/sentry.ts) et en dev local, et n'ont rien à faire sous les yeux des
 // utilisateurs (l'endpoint est aussi refusé côté Worker en prod). Liste
 // blanche plutôt que comparaison au domaine de prod : ce dernier avait
@@ -247,7 +247,7 @@ const TEST_NOTIFICATION_DELAY_S = 15;
 const SHOW_TEST_NOTIFICATION =
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1" ||
-  window.location.hostname.endsWith("-bobine.creusatbenjamin.workers.dev");
+  window.location.hostname.endsWith(".dev.seancy.com");
 
 // Envoie une notification de test au compte via notifyUser (voir
 // worker/index.ts, /api/notifications/test), pour vérifier le choix de canal

@@ -1,5 +1,7 @@
-// Doit rester le premier import : migre les clés localStorage « bobine.* »
-// avant que les contextes ci-dessous ne lisent leur stockage.
+// Ancienne URL de prod : départ immédiat vers seancy.com.
+import "./core/lib/legacyOriginRedirect.ts";
+// Doit rester avant les autres imports : migre les clés localStorage
+// « bobine.* » avant que les contextes ci-dessous ne lisent leur stockage.
 import "./core/lib/legacyStorageMigration.ts";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -40,6 +42,7 @@ import { setupPwaAutoUpdate, setupStaleChunkReload } from "./core/pwaUpdate.ts";
 import { hideInitialLoader } from "./core/initialLoader.ts";
 import { stripReauthParam } from "./core/api/accessSession.ts";
 import { clearAccountDataFromDevice, hasAccountDataOnDevice } from "./core/lib/accountStorage.ts";
+import { hasAuthHintCookie } from "./core/lib/authHintCookie.ts";
 
 // Best-effort, non bloquant pour le rendu initial : voir logger.ts et
 // webAnalytics.ts (no-op tant que les secrets Cloudflare correspondants ne
@@ -65,11 +68,11 @@ setupStaleChunkReload();
 stripReauthParam();
 
 // Session perdue sans passer par le bouton de déconnexion (expirée, cookies
-// effacés) : le cookie compagnon bobine_auth a la même durée de vie que la
+// effacés) : le cookie compagnon seancy_auth a la même durée de vie que la
 // session (voir worker/auth.ts), son absence suffit donc à savoir qu'on
 // n'est plus connecté. Effacé avant le premier rendu, pour que les contextes
 // ne rechargent pas en mémoire les données du compte précédent.
-if (!document.cookie.includes("bobine_auth=1") && hasAccountDataOnDevice()) {
+if (!hasAuthHintCookie() && hasAccountDataOnDevice()) {
   clearAccountDataFromDevice();
 }
 
@@ -113,7 +116,7 @@ async function resolveInitialRegion(): Promise<string> {
 // rebasculait en anglais à la réponse de LocaleAccountSync (review H8).
 // Seulement si connecté, et borné comme /api/region.
 async function fetchAccountLocale(): Promise<Locale | null> {
-  if (!document.cookie.includes("bobine_auth=1")) {
+  if (!hasAuthHintCookie()) {
     return null;
   }
   const controller = new AbortController();

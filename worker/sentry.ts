@@ -6,11 +6,20 @@
 import * as Sentry from "@sentry/cloudflare";
 import type { Env } from "./types.ts";
 
-// Seul domaine de prod : les previews PR répondent sur
-// `<slug>-bobine.creusatbenjamin.workers.dev` (voir .github/workflows/ci.yml,
-// job deploy-preview) — tout le reste (dev local compris) est traité comme
+// Domaine de prod : les previews PR répondent sur `<slug>.dev.seancy.com`
+// (domaine de preview réglé sur le Worker, voir .github/workflows/ci.yml, job
+// deploy-preview) — tout le reste (dev local compris) est traité comme
 // non-prod.
-export const PRODUCTION_HOSTNAME = "bobine.creusatbenjamin.workers.dev";
+export const PRODUCTION_HOSTNAME = "seancy.com";
+// Ancienne URL de prod (avant Seancy), servie par le même Worker et la même
+// base : ses pages redirigent vers PRODUCTION_HOSTNAME (voir index.ts et
+// src/main.tsx), mais ses appels /api restent servis pour les onglets encore
+// ouverts, donc traités comme la prod.
+export const LEGACY_PRODUCTION_HOSTNAME = "bobine.creusatbenjamin.workers.dev";
+
+export function isProductionHostname(hostname: string): boolean {
+  return hostname === PRODUCTION_HOSTNAME || hostname === LEGACY_PRODUCTION_HOSTNAME;
+}
 
 // `wrangler versions upload --preview-alias` ne supprime jamais l'alias de
 // preview à la fermeture d'une PR (aucun endpoint Cloudflare pour ça — voir
@@ -35,7 +44,7 @@ export function withSentry<Handler extends ExportedHandler<Env>>(handler: Handle
       tracesSampleRate: 0,
       beforeSend(event) {
         const hostname = event.request?.url ? new URL(event.request.url).hostname : null;
-        if (hostname && hostname !== PRODUCTION_HOSTNAME && isDeadPreviewD1Error(event)) {
+        if (hostname && !isProductionHostname(hostname) && isDeadPreviewD1Error(event)) {
           return null;
         }
         return event;

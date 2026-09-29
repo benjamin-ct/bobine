@@ -26,7 +26,16 @@ import type { Env } from "./types.ts";
 // En-tête posé par le client sur ses propres écritures (voir
 // src/core/sync/liveSync.ts, syncClientHeaders) : l'appareil à l'origine
 // d'un changement ne reçoit pas son propre événement en écho.
-export const SYNC_CLIENT_HEADER = "x-bobine-client";
+// L'ancien nom (avant Seancy) reste accepté pour les onglets qui tournent
+// encore sur un bundle d'avant le renommage.
+export const SYNC_CLIENT_HEADER = "x-seancy-client";
+const LEGACY_SYNC_CLIENT_HEADER = "x-bobine-client";
+
+function syncClientIdOf(request: Request): string | null {
+  const header =
+    request.headers.get(SYNC_CLIENT_HEADER) ?? request.headers.get(LEGACY_SYNC_CLIENT_HEADER);
+  return header && CLIENT_ID_PATTERN.test(header) ? header : null;
+}
 
 // Ressources synchronisées — chaque valeur correspond à un consommateur côté
 // client (voir useLiveSyncEvent).
@@ -215,15 +224,12 @@ export async function openSyncSocket(request: Request, userId: number): Promise<
 // réponse HTTP de l'écriture (waitUntil) ni jamais la faire échouer : la
 // synchro temps réel est un plus, la donnée est déjà écrite en base.
 export function publishToUser(request: Request, userId: number, event: SyncEvent): void {
-  const sourceClientId = request.headers.get(SYNC_CLIENT_HEADER);
+  const sourceClientId = syncClientIdOf(request);
   const hostname = new URL(request.url).hostname;
   waitUntil(
     (async () => {
       try {
-        await hubFor(hostname, userId).publish(
-          event,
-          sourceClientId && CLIENT_ID_PATTERN.test(sourceClientId) ? sourceClientId : null
-        );
+        await hubFor(hostname, userId).publish(event, sourceClientId);
       } catch (err) {
         logError(`Synchro temps réel : diffusion "${event.type}" impossible.`, err);
       }
@@ -258,8 +264,7 @@ export async function revokeUserSockets(
   userId: number,
   scope: "self" | "others" | "all"
 ): Promise<void> {
-  const header = request.headers.get(SYNC_CLIENT_HEADER);
-  const clientId = header && CLIENT_ID_PATTERN.test(header) ? header : null;
+  const clientId = syncClientIdOf(request);
   if (scope === "self" && !clientId) {
     return;
   }

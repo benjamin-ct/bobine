@@ -54,7 +54,7 @@ const CLIENT_ID =
 
 /** En-têtes à ajouter à toute écriture synchronisée (PUT/POST/PATCH). */
 export function syncClientHeaders(): Record<string, string> {
-  return { "x-bobine-client": CLIENT_ID };
+  return { "x-seancy-client": CLIENT_ID };
 }
 
 type Listener = (event: SyncEvent | null) => void;

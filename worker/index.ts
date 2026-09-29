@@ -52,8 +52,7 @@ import {
   deleteSession,
   deleteUserSessions,
   getUserFromRequest,
-  sessionCookieHeader,
-  authHintCookieHeader,
+  sessionCookieHeaders,
   sendMagicLinkEmail,
   createEmailChange,
   confirmEmailChange,
@@ -85,7 +84,12 @@ import {
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
 import { getTheatricalIndex } from "./tmdb.ts";
-import { PRODUCTION_HOSTNAME, withSentry } from "./sentry.ts";
+import {
+  LEGACY_PRODUCTION_HOSTNAME,
+  PRODUCTION_HOSTNAME,
+  isProductionHostname,
+  withSentry,
+} from "./sentry.ts";
 import { logError } from "./logger.ts";
 import { trackEvent } from "./analytics.ts";
 import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
@@ -455,7 +459,7 @@ async function handleTestAccountNotification(
 ): Promise<Response> {
   // Outil de validation réservé aux previews PR et au dev local : l'UI le
   // masque en prod, on le ferme aussi ici pour qu'il ne soit pas appelable.
-  if (new URL(request.url).hostname === PRODUCTION_HOSTNAME) {
+  if (isProductionHostname(new URL(request.url).hostname)) {
     return json({ error: "Introuvable." }, 404);
   }
   const user = await getUserFromRequest(env.DB, request);
@@ -696,7 +700,7 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
       avatarVersion: await getAvatarVersion(env.DB, user.id),
     },
     200,
-    { "set-cookie": [sessionCookieHeader(request, sessionToken), authHintCookieHeader(request)] }
+    { "set-cookie": sessionCookieHeaders(request, sessionToken) }
   );
 }
 
@@ -705,13 +709,21 @@ async function handleMe(request: Request, env: Env): Promise<Response> {
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  return json({
-    email: user.email,
-    displayName: user.displayName,
-    shareSlug: user.shareSlug,
-    username: user.username,
-    avatarVersion: await getAvatarVersion(env.DB, user.id),
-  });
+  return json(
+    {
+      email: user.email,
+      displayName: user.displayName,
+      shareSlug: user.shareSlug,
+      username: user.username,
+      avatarVersion: await getAvatarVersion(env.DB, user.id),
+    },
+    200,
+    // Session ouverte sous les anciens noms de cookies (bobine_*) : appelé à
+    // chaque démarrage de l'app, c'est ici qu'elle passe aux nouveaux noms.
+    user.legacyCookie
+      ? { "set-cookie": sessionCookieHeaders(request, user.sessionToken, user.expiresAt) }
+      : undefined
+  );
 }
 
 // Photo de profil personnelle (ticket « Ajouter son propre avatar ») --------
@@ -1325,10 +1337,7 @@ async function handleLogout(request: Request, env: Env): Promise<Response> {
     await revokeUserSockets(request, user.id, "self");
   }
   return json({ ok: true }, 200, {
-    "set-cookie": [
-      sessionCookieHeader(request, null, { clear: true }),
-      authHintCookieHeader(request, { clear: true }),
-    ],
+    "set-cookie": sessionCookieHeaders(request, null),
   });
 }
 
@@ -1344,10 +1353,7 @@ async function handleLogoutAll(request: Request, env: Env): Promise<Response> {
   await deleteUserSessions(env.DB, user.id);
   await revokeUserSockets(request, user.id, "all");
   return json({ ok: true }, 200, {
-    "set-cookie": [
-      sessionCookieHeader(request, null, { clear: true }),
-      authHintCookieHeader(request, { clear: true }),
-    ],
+    "set-cookie": sessionCookieHeaders(request, null),
   });
 }
 
@@ -1984,6 +1990,14 @@ export default withSentry({
     // profil, liste), qui passent par ici pour leurs balises de partage
     // (voir page-meta.ts). Réponses reconstruites, d'où withSecurityHeaders.
     if (!url.pathname.startsWith("/api/")) {
+      // Ancienne URL de prod : liens partagés, robots et sitemap renvoient
+      // définitivement vers seancy.com. Les autres pages sont des assets
+      // servis sans passer par ici, redirigés côté client (src/main.tsx).
+      // /api/* reste servi pour les onglets encore ouverts sur l'ancienne
+      // URL, le temps qu'ils se rechargent.
+      if (url.hostname === LEGACY_PRODUCTION_HOSTNAME) {
+        return Response.redirect(`https://${PRODUCTION_HOSTNAME}${url.pathname}${url.search}`, 301);
+      }
       if (url.pathname === "/robots.txt") {
         return withSecurityHeaders(serveRobots(url));
       }

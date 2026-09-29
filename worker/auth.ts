@@ -19,14 +19,20 @@ import type { Env, UserRow } from "./types.ts";
 
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const SESSION_COOKIE = "bobine_session";
+const SESSION_COOKIE = "seancy_session";
 // Cookie compagnon, lisible en JS (pas HttpOnly, aucune valeur sensible :
 // juste "1"), posé/effacé en même temps que SESSION_COOKIE — voir
 // AuthContext.tsx, qui l'utilise pour savoir s'il vaut la peine d'appeler
 // /api/auth/me. But : un visiteur anonyme (donc sans jamais avoir eu de
 // session) n'a jamais ce cookie et peut sauter cet appel réseau — ce qui
 // couvre aussi tout le trafic de crawlers/bots, qui ne se connectent jamais.
-const AUTH_HINT_COOKIE = "bobine_auth";
+const AUTH_HINT_COOKIE = "seancy_auth";
+// Noms d'avant le renommage Seancy : la session est encore lue sous l'ancien
+// nom, puis reposée sous le nouveau par /api/auth/me (voir handleMe dans
+// index.ts), et les anciens cookies sont effacés à chaque pose ou
+// effacement des nouveaux.
+const LEGACY_SESSION_COOKIE = "bobine_session";
+const LEGACY_AUTH_HINT_COOKIE = "bobine_auth";
 // Alphabet sans caractères ambigus à l'oreille/à l'écrit (pas de 0/O, 1/I/L).
 const CODE_CHARSET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const CODE_LENGTH = 6;
@@ -41,6 +47,10 @@ export interface AuthUser {
   /** Pseudo public (migration 0012), `null` tant qu'aucun n'a été choisi. */
   username: string | null;
   sessionToken: string;
+  /** Fin de validité de la session (ms depuis l'epoch). */
+  expiresAt: number;
+  /** Session lue sous l'ancien nom de cookie (`bobine_session`). */
+  legacyCookie: boolean;
 }
 
 // Jetons de session et de lien magique (et codes courts) stockés hachés en
@@ -219,7 +229,8 @@ export async function getUserFromRequest(
   db: D1Database,
   request: Request
 ): Promise<AuthUser | null> {
-  const token = parseCookie(request, SESSION_COOKIE);
+  const currentToken = parseCookie(request, SESSION_COOKIE);
+  const token = currentToken ?? parseCookie(request, LEGACY_SESSION_COOKIE);
   if (!token) {
     return null;
   }
@@ -257,34 +268,30 @@ export async function getUserFromRequest(
     shareSlug: row.share_slug,
     username: row.username,
     sessionToken: token,
+    expiresAt: row.expires_at,
+    legacyCookie: !currentToken,
   };
 }
 
-// `Secure` casse les cookies en local http (wrangler dev sans --local-protocol
-// https) : on ne l'ajoute que si la requête est bien passée en https.
-export function sessionCookieHeader(
+// Cookie de session HttpOnly et cookie compagnon (voir AUTH_HINT_COOKIE),
+// toujours posés/effacés ensemble avec la même durée de vie pour que leur
+// présence reste cohérente ; `token` à null les efface. Les anciens noms
+// (bobine_*) sont effacés dans tous les cas. `Secure` casse les cookies en
+// local http (wrangler dev sans --local-protocol https) : on ne l'ajoute que
+// si la requête est bien passée en https.
+export function sessionCookieHeaders(
   request: Request,
   token: string | null,
-  { clear = false } = {}
-): string {
+  expiresAt = Date.now() + SESSION_TTL_MS
+): string[] {
   const secure = new URL(request.url).protocol === "https:" ? " Secure;" : "";
-  if (clear) {
-    return `${SESSION_COOKIE}=; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=0`;
-  }
-  const maxAge = Math.floor(SESSION_TTL_MS / 1000);
-  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`;
-}
-
-// Même durée de vie que sessionCookieHeader, volontairement PAS HttpOnly
-// (voir AUTH_HINT_COOKIE) : les deux cookies sont toujours posés/effacés
-// ensemble, donc leur présence reste cohérente.
-export function authHintCookieHeader(request: Request, { clear = false } = {}): string {
-  const secure = new URL(request.url).protocol === "https:" ? " Secure;" : "";
-  if (clear) {
-    return `${AUTH_HINT_COOKIE}=; Path=/;${secure} SameSite=Lax; Max-Age=0`;
-  }
-  const maxAge = Math.floor(SESSION_TTL_MS / 1000);
-  return `${AUTH_HINT_COOKIE}=1; Path=/;${secure} SameSite=Lax; Max-Age=${maxAge}`;
+  const maxAge = token ? Math.max(0, Math.floor((expiresAt - Date.now()) / 1000)) : 0;
+  return [
+    `${SESSION_COOKIE}=${token ?? ""}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`,
+    `${AUTH_HINT_COOKIE}=${token ? "1" : ""}; Path=/;${secure} SameSite=Lax; Max-Age=${maxAge}`,
+    `${LEGACY_SESSION_COOKIE}=; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=0`,
+    `${LEGACY_AUTH_HINT_COOKIE}=; Path=/;${secure} SameSite=Lax; Max-Age=0`,
+  ];
 }
 
 // Langue du destinataire de l'email : celle active dans son navigateur au

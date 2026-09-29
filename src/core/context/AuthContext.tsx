@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { getRecaptchaToken } from "../lib/recaptcha.ts";
 import { clearAccountDataFromDevice } from "../lib/accountStorage.ts";
+import { clearAuthHintCookie, hasAuthHintCookie } from "../lib/authHintCookie.ts";
 import { useLocale } from "./LocaleContext.tsx";
 import { syncClientHeaders, useLiveSyncConnection, useLiveSyncEvent } from "../sync/liveSync.ts";
 import { usePushAccountLink } from "../sync/pushAccountLink.ts";
@@ -85,12 +86,6 @@ export interface UsernameCheck {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Cookie compagnon de la session (voir worker/auth.ts, AUTH_HINT_COOKIE) :
-// absent, une réponse 401 de /api/auth/me est garantie.
-function hasAuthHint(): boolean {
-  return document.cookie.includes("bobine_auth=1");
-}
-
 // Toutes les routes /api/* sont servies par le même Worker que l'app (même
 // origine), donc les cookies de session partent automatiquement avec
 // `credentials: "same-origin"` (comportement par défaut de fetch) — pas
@@ -112,7 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sans cookie compagnon, le visiteur est anonyme dès le premier rendu :
   // pas de passage par "loading" (et donc pas d'interface qui change
   // d'aspect au rechargement). Avec, "loading" le temps de /api/auth/me.
-  const [status, setStatus] = useState<AuthStatus>(() => (hasAuthHint() ? "loading" : "anonymous"));
+  const [status, setStatus] = useState<AuthStatus>(() =>
+    hasAuthHintCookie() ? "loading" : "anonymous"
+  );
   const [email, setEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
@@ -138,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // (dont l'intégralité du trafic anonyme et des crawlers/bots — voir
     // worker/auth.ts, AUTH_HINT_COOKIE) : sans ce cookie compagnon, une
     // réponse 401 est de toute façon garantie.
-    if (!pinnedRef.current && !hasAuthHint()) {
+    if (!pinnedRef.current && !hasAuthHintCookie()) {
       setEmail(null);
       setDisplayName(null);
       setShareSlug(null);
@@ -195,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res?.status === 401) {
       pinnedRef.current = false;
       // Cookie compagnon (pas HttpOnly) : le serveur n'a pas pu l'effacer ici.
-      document.cookie = "bobine_auth=; Path=/; Max-Age=0";
+      clearAuthHintCookie();
       leaveAccount();
       return false;
     }
