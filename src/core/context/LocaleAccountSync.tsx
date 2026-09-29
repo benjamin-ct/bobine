@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { useAuth } from "./AuthContext.tsx";
-import { isSupportedLocale, useLocale } from "./LocaleContext.tsx";
+import { isSupportedLocale } from "../i18n/i18n.ts";
+import { useLocale } from "./LocaleContext.tsx";
 import { logWarn } from "../logger.ts";
 import { syncClientHeaders, useLiveSyncRevision } from "../sync/liveSync.ts";
 
