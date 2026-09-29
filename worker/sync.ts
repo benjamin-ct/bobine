@@ -69,6 +69,11 @@ function isForeground(ws: WebSocket): boolean {
   // au premier plan, comme avant.
   return attachment?.foreground !== false;
 }
+// Code de fermeture envoyé quand les sessions du compte sont révoquées
+// (déconnexion, « tous les appareils », changement d'email) : le client
+// vérifie alors sa session au lieu de se reconnecter (voir liveSync.ts).
+export const SESSION_REVOKED_CLOSE_CODE = 4001;
+
 // Bornes défensives : un compte n'a normalement qu'une poignée d'appareils.
 const MAX_SOCKETS_PER_USER = 20;
 
@@ -122,6 +127,26 @@ export class UserSyncHub extends DurableObject<Env> {
       }
     }
     return delivered;
+  }
+
+  // Appelé en RPC par revokeUserSockets : ferme les WebSockets du compte,
+  // seulement celle de `clientId` si fourni, sinon toutes sauf
+  // `exceptClientId`.
+  async revoke(clientId: string | null, exceptClientId: string | null): Promise<void> {
+    for (const ws of this.ctx.getWebSockets()) {
+      const tags = this.ctx.getTags(ws);
+      if (
+        (clientId && !tags.includes(clientId)) ||
+        (exceptClientId && tags.includes(exceptClientId))
+      ) {
+        continue;
+      }
+      try {
+        ws.close(SESSION_REVOKED_CLOSE_CODE, "session revoked");
+      } catch {
+        // Déjà fermée.
+      }
+    }
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
@@ -221,5 +246,29 @@ export async function deliverToUser(
   } catch (err) {
     logError(`Synchro temps réel : livraison "${event.type}" impossible.`, err);
     return 0;
+  }
+}
+
+// Sessions révoquées (audit M1) : sans ça, une WebSocket déjà ouverte
+// continuait de recevoir les événements du compte après la déconnexion.
+// `scope` : l'appareil à l'origine de la requête seul ("self"), ou tous les
+// autres ("others"), ou tous ("all"). Ne lève jamais.
+export async function revokeUserSockets(
+  request: Request,
+  userId: number,
+  scope: "self" | "others" | "all"
+): Promise<void> {
+  const header = request.headers.get(SYNC_CLIENT_HEADER);
+  const clientId = header && CLIENT_ID_PATTERN.test(header) ? header : null;
+  if (scope === "self" && !clientId) {
+    return;
+  }
+  try {
+    await hubFor(new URL(request.url).hostname, userId).revoke(
+      scope === "self" ? clientId : null,
+      scope === "others" ? clientId : null
+    );
+  } catch (err) {
+    logError("Synchro temps réel : fermeture des WebSockets impossible.", err);
   }
 }

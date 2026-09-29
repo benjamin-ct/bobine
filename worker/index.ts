@@ -50,6 +50,7 @@ import {
   findOrCreateUser,
   createSession,
   deleteSession,
+  deleteUserSessions,
   getUserFromRequest,
   sessionCookieHeader,
   authHintCookieHeader,
@@ -89,7 +90,7 @@ import { trackEvent } from "./analytics.ts";
 import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
 import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
-import { openSyncSocket, publishToUser } from "./sync.ts";
+import { openSyncSocket, publishToUser, revokeUserSockets } from "./sync.ts";
 import {
   AVATAR_MAX_BYTES,
   deleteAvatar,
@@ -911,8 +912,10 @@ async function handleConfirmEmailChange(request: Request, env: Env): Promise<Res
     // le faire passer pour raté côté client.
     logError("Échec de l'envoi de l'avertissement de changement d'adresse :", err);
   }
-  // Les autres appareils rechargent /api/auth/me, qui porte l'email.
-  publishToUser(request, user.id, { type: "display-name" });
+  // Les autres appareils sont déconnectés (audit M1) : si l'ancienne adresse
+  // était compromise, ses sessions ne doivent pas survivre au changement.
+  await deleteUserSessions(env.DB, user.id, user.sessionToken);
+  await revokeUserSockets(request, user.id, "others");
   return json({ ok: true, email: result.newEmail });
 }
 
@@ -1313,7 +1316,27 @@ async function handleLogout(request: Request, env: Env): Promise<Response> {
   const user = await getUserFromRequest(env.DB, request);
   if (user) {
     await deleteSession(env.DB, user.sessionToken);
+    await revokeUserSockets(request, user.id, "self");
   }
+  return json({ ok: true }, 200, {
+    "set-cookie": [
+      sessionCookieHeader(request, null, { clear: true }),
+      authHintCookieHeader(request, { clear: true }),
+    ],
+  });
+}
+
+// « Se déconnecter de tous les appareils » (audit M1) : toutes les sessions
+// du compte, y compris celle-ci, et toutes ses WebSockets de synchro. Les
+// autres appareils s'en aperçoivent aussitôt (fermeture 4001, voir
+// liveSync.ts) ou à leur prochaine requête.
+async function handleLogoutAll(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  await deleteUserSessions(env.DB, user.id);
+  await revokeUserSockets(request, user.id, "all");
   return json({ ok: true }, 200, {
     "set-cookie": [
       sessionCookieHeader(request, null, { clear: true }),
@@ -2096,6 +2119,10 @@ async function routeRequest(
 
   if (url.pathname === "/api/auth/logout" && request.method === "POST") {
     return handleLogout(request, env);
+  }
+
+  if (url.pathname === "/api/auth/logout-all" && request.method === "POST") {
+    return handleLogoutAll(request, env);
   }
 
   if (url.pathname === "/api/account/display-name" && request.method === "PATCH") {

@@ -43,6 +43,15 @@ export interface AuthUser {
   sessionToken: string;
 }
 
+// Jetons de session et de lien magique (et codes courts) stockés hachés en
+// base (audit M1) : une fuite d'export ou de sauvegarde D1 ne donne plus
+// de session utilisable. SHA-256 suffit (pas de sel ni d'étirement) : les
+// jetons sont aléatoires, pas des mots de passe choisis par quelqu'un.
+export async function hashToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 function randomToken(): string {
   return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
 }
@@ -71,24 +80,27 @@ export async function createMagicLink(
     .prepare(
       "INSERT INTO magic_links (token, code, email, expires_at, used_at) VALUES (?, ?, ?, ?, NULL)"
     )
-    .bind(token, code, email, Date.now() + MAGIC_LINK_TTL_MS)
+    .bind(await hashToken(token), await hashToken(code), email, Date.now() + MAGIC_LINK_TTL_MS)
     .run();
   return { token, code };
 }
 
 // Consomme le jeton (marque used_at) et renvoie l'email associé, ou null si
 // le jeton est invalide, expiré, ou déjà utilisé.
+// Liens émis avant le hachage (valables 15 min) : encore acceptés en clair
+// le temps qu'ils expirent, d'où le `IN (haché, clair)`.
 export async function consumeMagicLink(db: D1Database, token: string): Promise<string | null> {
+  const hashed = await hashToken(token);
   const row = await db
-    .prepare("SELECT email, expires_at, used_at FROM magic_links WHERE token = ?")
-    .bind(token)
-    .first<{ email: string; expires_at: number; used_at: number | null }>();
+    .prepare("SELECT token, email, expires_at, used_at FROM magic_links WHERE token IN (?, ?)")
+    .bind(hashed, token)
+    .first<{ token: string; email: string; expires_at: number; used_at: number | null }>();
   if (!row || row.used_at || row.expires_at < Date.now()) {
     return null;
   }
   await db
     .prepare("UPDATE magic_links SET used_at = ? WHERE token = ?")
-    .bind(Date.now(), token)
+    .bind(Date.now(), row.token)
     .run();
   return row.email;
 }
@@ -104,15 +116,15 @@ export async function consumeMagicLinkByCode(
     return null;
   }
   const row = await db
-    .prepare("SELECT email, expires_at, used_at FROM magic_links WHERE code = ?")
-    .bind(normalized)
-    .first<{ email: string; expires_at: number; used_at: number | null }>();
+    .prepare("SELECT code, email, expires_at, used_at FROM magic_links WHERE code IN (?, ?)")
+    .bind(await hashToken(normalized), normalized)
+    .first<{ code: string; email: string; expires_at: number; used_at: number | null }>();
   if (!row || row.used_at || row.expires_at < Date.now()) {
     return null;
   }
   await db
     .prepare("UPDATE magic_links SET used_at = ? WHERE code = ?")
-    .bind(Date.now(), normalized)
+    .bind(Date.now(), row.code)
     .run();
   return row.email;
 }
@@ -157,17 +169,39 @@ export async function findOrCreateUser(
   };
 }
 
+// Renvoie le jeton en clair (pour le cookie) ; seule son empreinte est stockée.
 export async function createSession(db: D1Database, userId: number): Promise<string> {
   const token = randomToken();
   await db
     .prepare("INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
-    .bind(token, userId, Date.now() + SESSION_TTL_MS, Date.now())
+    .bind(await hashToken(token), userId, Date.now() + SESSION_TTL_MS, Date.now())
     .run();
   return token;
 }
 
 export async function deleteSession(db: D1Database, token: string): Promise<void> {
-  await db.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
+  await db
+    .prepare("DELETE FROM sessions WHERE token IN (?, ?)")
+    .bind(await hashToken(token), token)
+    .run();
+}
+
+// Déconnexion des autres appareils (changement d'email, « tous les
+// appareils ») : toutes les sessions du compte sauf `keepToken` s'il est
+// fourni.
+export async function deleteUserSessions(
+  db: D1Database,
+  userId: number,
+  keepToken: string | null = null
+): Promise<void> {
+  if (keepToken) {
+    await db
+      .prepare("DELETE FROM sessions WHERE user_id = ? AND token != ?")
+      .bind(userId, await hashToken(keepToken))
+      .run();
+    return;
+  }
+  await db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();
 }
 
 function parseCookie(request: Request, name: string): string | null {
@@ -189,15 +223,20 @@ export async function getUserFromRequest(
   if (!token) {
     return null;
   }
+  const hashed = await hashToken(token);
+  // `IN (haché, clair)` : sessions ouvertes avant le hachage (audit M1),
+  // converties ci-dessous à leur première utilisation. Les autres expirent
+  // d'elles-mêmes au bout de 30 jours.
   const row = await db
     .prepare(
       `SELECT users.id, users.email, users.display_name, users.share_slug, users.username,
-              sessions.expires_at
+              sessions.expires_at, sessions.token
        FROM sessions JOIN users ON users.id = sessions.user_id
-       WHERE sessions.token = ?`
+       WHERE sessions.token IN (?, ?)`
     )
-    .bind(token)
+    .bind(hashed, token)
     .first<{
+      token: string;
       id: number;
       email: string;
       display_name: string | null;
@@ -207,6 +246,9 @@ export async function getUserFromRequest(
     }>();
   if (!row || row.expires_at < Date.now()) {
     return null;
+  }
+  if (row.token !== hashed) {
+    await db.prepare("UPDATE sessions SET token = ? WHERE token = ?").bind(hashed, token).run();
   }
   return {
     id: row.id,
