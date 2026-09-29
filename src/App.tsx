@@ -17,6 +17,7 @@ import {
 import Discover from "./modules/discover/index.ts";
 import { MembersOnlyDialog } from "./modules/auth/index.ts";
 import { fadeIn } from "./shared/lib/motion.ts";
+import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
 
 const NewReleases = lazy(() => import("./modules/new-releases/index.ts"));
 const ComingSoon = lazy(() => import("./modules/coming-soon/index.ts"));
@@ -83,7 +84,8 @@ export default function App() {
       <RecaptchaBadge />
       <NavBar />
       <main ref={mainRef}>
-        <Suspense fallback={<RouteFallback />}>
+        <ErrorBoundary resetKey={pathname}>
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Discover />} />
             <Route path="/nouveautes" element={<NewReleases />} />
@@ -102,7 +104,8 @@ export default function App() {
             <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </Suspense>
+          </Suspense>
+        </ErrorBoundary>
       </main>
       <Footer />
       <LegalLinks />
