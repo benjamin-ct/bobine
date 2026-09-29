@@ -18,6 +18,12 @@ export interface WaitUntil {
   waitUntil(promise: Promise<unknown>): void;
 }
 
+// Appels TMDB réellement émis (hors cache), pour les imputer au plafond du
+// visiteur (audit H3, voir handleTmdbProxy).
+export interface TmdbUsage {
+  calls: number;
+}
+
 export type WatchProvidersByRegion = Record<
   string,
   { flatrate?: unknown; rent?: unknown; buy?: unknown }
@@ -31,7 +37,8 @@ async function fetchTmdbJsonCached(
   tmdbPath: string,
   apiKey: string,
   cache: EdgeCache,
-  ctx: WaitUntil
+  ctx: WaitUntil,
+  usage?: TmdbUsage
 ): Promise<unknown> {
   const cacheKey = new Request(cacheUrl);
   const cached = await cache.match(cacheKey);
@@ -40,6 +47,9 @@ async function fetchTmdbJsonCached(
   }
   const tmdbUrl = new URL(`https://api.themoviedb.org/3${tmdbPath}`);
   tmdbUrl.searchParams.set("api_key", apiKey);
+  if (usage) {
+    usage.calls++;
+  }
   const res = await fetch(tmdbUrl.toString());
   const body = await res.text();
   if (!res.ok) {
@@ -71,14 +81,16 @@ export async function fetchWatchProvidersCached(
   id: number,
   apiKey: string,
   cache: EdgeCache,
-  ctx: WaitUntil
+  ctx: WaitUntil,
+  usage?: TmdbUsage
 ): Promise<WatchProvidersByRegion | null> {
   const data = (await fetchTmdbJsonCached(
     `${origin}/api/tmdb/${mediaType}/${id}/watch/providers?language=fr-FR`,
     `/${mediaType}/${id}/watch/providers`,
     apiKey,
     cache,
-    ctx
+    ctx,
+    usage
   )) as { results?: WatchProvidersByRegion } | null;
   return data ? (data.results ?? {}) : null;
 }
@@ -90,13 +102,15 @@ export async function fetchReleaseDatesCached(
   id: number,
   apiKey: string,
   cache: EdgeCache,
-  ctx: WaitUntil
+  ctx: WaitUntil,
+  usage?: TmdbUsage
 ): Promise<ReleaseDatesResponse | null> {
   return (await fetchTmdbJsonCached(
     `${origin}/api/tmdb/movie/${id}/release_dates?language=fr-FR`,
     `/movie/${id}/release_dates`,
     apiKey,
     cache,
-    ctx
+    ctx,
+    usage
   )) as ReleaseDatesResponse | null;
 }
