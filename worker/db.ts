@@ -970,6 +970,15 @@ export async function getRegionForUser(db: D1Database, userId: number): Promise<
   return row?.region ?? null;
 }
 
+// Régions enregistrées de tous les comptes, pour le cron quotidien (une
+// seule requête au lieu d'une par destinataire).
+export async function getRegionsByUser(db: D1Database): Promise<Map<number, string>> {
+  const { results } = await db
+    .prepare("SELECT id, region FROM users WHERE region IS NOT NULL")
+    .all<{ id: number; region: string }>();
+  return new Map(results.map((row) => [row.id, row.region]));
+}
+
 export async function setRegionForUser(
   db: D1Database,
   userId: number,

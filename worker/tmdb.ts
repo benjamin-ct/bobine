@@ -7,7 +7,9 @@
 import type { Env } from "./types.ts";
 
 const BASE_URL = "https://api.themoviedb.org/3";
-const REGION = "FR";
+// Région de repli pour les vérifications de disponibilité : abonnements
+// anonymes et comptes sans région enregistrée (users.region, migration 0007).
+export const DEFAULT_REGION = "FR";
 const LANGUAGE = "fr-FR";
 
 async function tmdbFetch<T>(
@@ -37,19 +39,26 @@ interface WatchProvidersResult {
   results?: Record<string, { flatrate?: Array<{ provider_id: number }> }>;
 }
 
-// Renvoie les ids des plateformes en abonnement (flatrate) disponibles en
-// France pour ce titre, ou [] si rien.
-export async function getFlatrateProviderIds(
+// Ids des plateformes en abonnement (flatrate) d'un titre, par région.
+// TMDB renvoie toutes les régions en un seul appel : un titre ne coûte qu'un
+// appel par exécution du cron, quel que soit le nombre de régions des
+// destinataires.
+export type FlatrateByRegion = Record<string, number[]>;
+
+async function getFlatrateProvidersByRegion(
   env: Env,
   mediaType: string,
   tmdbId: number
-): Promise<number[]> {
+): Promise<FlatrateByRegion> {
   const data = await tmdbFetch<WatchProvidersResult>(
     env,
     `/${mediaType}/${tmdbId}/watch/providers`
   );
-  const flatrate = data.results?.[REGION]?.flatrate || [];
-  return flatrate.map((p) => p.provider_id);
+  const byRegion: FlatrateByRegion = {};
+  for (const [region, entry] of Object.entries(data.results || {})) {
+    byRegion[region] = (entry.flatrate || []).map((p) => p.provider_id);
+  }
+  return byRegion;
 }
 
 export interface TmdbListItem {
@@ -69,7 +78,7 @@ export interface TmdbListItem {
 // inutilement les appels et le risque de throttling TMDB sur une même
 // invocation.
 export interface TmdbRunCache {
-  providers: Map<string, Promise<number[]>>;
+  providers: Map<string, Promise<FlatrateByRegion>>;
   genreDiscover: Map<string, Promise<TmdbListItem[]>>;
 }
 
@@ -77,19 +86,22 @@ export function createTmdbRunCache(): TmdbRunCache {
   return { providers: new Map(), genreDiscover: new Map() };
 }
 
-export function getFlatrateProviderIdsCached(
+// Plateformes en abonnement disponibles pour ce titre dans `region` (celle
+// du destinataire), ou [] si rien.
+export async function getFlatrateProviderIdsCached(
   cache: TmdbRunCache,
   env: Env,
   mediaType: string,
-  tmdbId: number
+  tmdbId: number,
+  region: string
 ): Promise<number[]> {
   const key = `${mediaType}:${tmdbId}`;
   let pending = cache.providers.get(key);
   if (!pending) {
-    pending = getFlatrateProviderIds(env, mediaType, tmdbId);
+    pending = getFlatrateProvidersByRegion(env, mediaType, tmdbId);
     cache.providers.set(key, pending);
   }
-  return pending;
+  return (await pending)[region] ?? [];
 }
 
 export function discoverRecentByGenreCached(
