@@ -100,6 +100,8 @@ import {
 } from "./avatars.ts";
 import { randomShareSlug, normalizeUsername, SHARE_SLUG_PATTERN } from "./share-slug.ts";
 import { fetchReleaseDatesCached, fetchWatchProvidersCached } from "./tmdb-edge-cache.ts";
+import { SECURITY_HEADERS } from "./security-headers.ts";
+import { PAGE_META_ROUTE, servePageWithMeta, serveRobots, serveSitemap } from "./page-meta.ts";
 import {
   follow,
   unfollow,
@@ -152,48 +154,30 @@ function json(
   return new Response(JSON.stringify(data), { status, headers });
 }
 
-// En-têtes de durcissement HTTP, appliqués à TOUTE réponse (API et assets
-// statiques) — voir la fin de fetch() ci-dessous. `frame-src` autorise les
-// bandes-annonces YouTube embarquées (TrailerButton) et l'iframe invisible
-// de reCAPTCHA v3 ; `script-src`/`connect-src` autorisent le script
-// reCAPTCHA et ses appels réseau ; `style-src 'unsafe-inline'` est
-// nécessaire pour les styles inline posés par React (style={{...}}),
-// largement utilisés dans l'app. `connect-src` inclut aussi
-// https://image.tmdb.org : le service worker (src/sw.ts) met les affiches
-// en cache via un fetch() interne (Workbox CacheFirst), classifié sous
-// connect-src (pas img-src, qui ne couvre que les <img> natifs) — sans ça,
-// les affiches se chargent au premier accès mais disparaissent partout dès
-// qu'on recharge la page (SW actif, requêtes interceptées et bloquées).
-// `static.cloudflareinsights.com` sert le script du beacon Web Analytics
-// (src/core/webAnalytics.ts) ; le beacon envoie ensuite ses données RUM en
-// XHR vers `cloudflareinsights.com` (sans le sous-domaine `static.`), d'où
-// les deux domaines en connect-src. `*.ingest.de.sentry.io` reçoit les
-// rapports d'erreur du SDK Sentry client (src/core/logger.ts, région EU).
-// `wss://*.creusatbenjamin.workers.dev` : WebSocket de synchro temps réel
-// (worker/sync.ts) — explicite car Safari ne couvre pas wss: par 'self' ;
-// le joker couvre la prod comme les previews `<slug>-bobine.…`.
-// ⚠️ Cette CSP est DUPLIQUÉE dans public/_headers (voir plus bas dans ce
-// fichier, "posés nativement via public/_headers") : toute modification ici
-// doit être répercutée là-bas, sinon les assets statiques (dont `/`) restent
-// sur l'ancienne policy.
-const SECURITY_HEADERS: Record<string, string> = {
-  "content-security-policy": [
-    "default-src 'self'",
-    "script-src 'self' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' https://image.tmdb.org https://i.ytimg.com data:",
-    "connect-src 'self' https://www.google.com https://image.tmdb.org https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.ingest.de.sentry.io wss://*.creusatbenjamin.workers.dev",
-    "frame-src https://www.youtube.com https://www.google.com",
-    "worker-src 'self'",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join("; "),
-  "x-frame-options": "DENY",
-  "referrer-policy": "strict-origin-when-cross-origin",
-  "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=()",
-};
+// Corps JSON attendu sous forme d'objet : `null` pour un JSON invalide, mais
+// aussi pour `null`, un tableau ou un scalaire, sur lesquels un simple
+// `body.champ` lèverait une exception.
+async function readJsonObject(request: Request): Promise<Record<string, unknown> | null> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return null;
+  }
+  return typeof body === "object" && body !== null && !Array.isArray(body)
+    ? (body as Record<string, unknown>)
+    : null;
+}
 
+// Champ texte facultatif d'un corps de requête : toute autre valeur (nombre,
+// objet…) est traitée comme absente plutôt que passée telle quelle.
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+// En-têtes de durcissement HTTP (CSP, HSTS…), appliqués à toute réponse /api/*
+// — voir la fin de fetch() ci-dessous. Définis dans worker/security-headers.ts,
+// source unique partagée avec public/_headers (assets statiques).
 function withSecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
@@ -276,10 +260,8 @@ async function handleSubscribe(request: Request, env: Env): Promise<Response> {
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
 
@@ -338,10 +320,8 @@ async function handleSubscribeSync(request: Request, env: Env): Promise<Response
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
 
@@ -381,10 +361,8 @@ async function handleUnsubscribe(request: Request, env: Env): Promise<Response> 
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (typeof body.endpoint !== "string") {
@@ -409,10 +387,8 @@ async function handleLinkSubscriptionAccount(request: Request, env: Env): Promis
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (typeof body.endpoint !== "string") {
@@ -438,10 +414,8 @@ async function handleUpdateSubscriptionLocale(request: Request, env: Env): Promi
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (typeof body.endpoint !== "string") {
@@ -491,12 +465,8 @@ async function handleTestAccountNotification(
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown> = {};
-  try {
-    body = await request.json();
-  } catch {
-    // Corps absent : envoi immédiat.
-  }
+  // Corps absent : envoi immédiat.
+  const body = (await readJsonObject(request)) ?? {};
   const delaySeconds =
     typeof body.delaySeconds === "number" && Number.isFinite(body.delaySeconds)
       ? Math.min(Math.max(Math.round(body.delaySeconds), 0), TEST_NOTIFICATION_MAX_DELAY_S)
@@ -610,10 +580,8 @@ async function handleTestNotification(request: Request, env: Env): Promise<Respo
 // Compte (lien magique) ---------------------------------------------------
 
 async function handleRequestLink(request: Request, env: Env): Promise<Response> {
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const email = String(body?.email || "")
@@ -624,11 +592,7 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
   }
   const locale = sanitizeEmailLocale(body?.locale);
 
-  const recaptcha = await verifyRecaptcha(
-    env,
-    body?.recaptchaToken as string | undefined,
-    "request_link"
-  );
+  const recaptcha = await verifyRecaptcha(env, optionalString(body.recaptchaToken), "request_link");
   if (!recaptcha.ok) {
     return json({ error: "Vérification anti-robot échouée. Réessayez." }, 403);
   }
@@ -684,23 +648,17 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
-  const token = body?.token as string | undefined;
-  const code = body?.code as string | undefined;
+  const token = optionalString(body.token);
+  const code = optionalString(body.code);
   if (!token && !code) {
     return json({ error: "Jeton ou code manquant." }, 400);
   }
 
-  const recaptcha = await verifyRecaptcha(
-    env,
-    body?.recaptchaToken as string | undefined,
-    "verify"
-  );
+  const recaptcha = await verifyRecaptcha(env, optionalString(body.recaptchaToken), "verify");
   if (!recaptcha.ok) {
     return json({ error: "Vérification anti-robot échouée. Réessayez." }, 403);
   }
@@ -819,10 +777,8 @@ async function handleUpdateDisplayName(request: Request, env: Env): Promise<Resp
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const displayName = sanitizeDisplayName(body?.displayName);
@@ -847,10 +803,8 @@ async function handleRequestEmailChange(request: Request, env: Env): Promise<Res
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const newEmail = String(body?.email || "")
@@ -930,13 +884,11 @@ async function handleConfirmEmailChange(request: Request, env: Env): Promise<Res
       "retry-after": String(retryAfter),
     });
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
-  const result = await confirmEmailChange(env.DB, user.id, body?.code as string | undefined);
+  const result = await confirmEmailChange(env.DB, user.id, optionalString(body.code));
   if (!result.ok) {
     return result.reason === "taken"
       ? json(
@@ -993,10 +945,8 @@ async function handleUpdateUsername(request: Request, env: Env): Promise<Respons
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   // Chaîne vide ou null : retire le pseudo (le lien de partage repasse sur
@@ -1031,10 +981,8 @@ async function handleUpdateProfileShare(request: Request, env: Env): Promise<Res
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (typeof body?.enabled !== "boolean") {
@@ -1064,10 +1012,8 @@ async function handlePutTopPicks(request: Request, env: Env): Promise<Response> 
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (!Array.isArray(body?.topPicks) || body.topPicks.length > TOP_PICKS_MAX) {
@@ -1126,10 +1072,8 @@ async function handleDeleteReminder(request: Request, env: Env): Promise<Respons
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const [key] = sanitizeKeyList([body?.key], 1);
@@ -1511,10 +1455,8 @@ async function handlePutListShare(request: Request, env: Env): Promise<Response>
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const listId = body?.listId;
@@ -1960,26 +1902,50 @@ async function handleTmdbProxy(
 export default withSentry({
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    // `run_worker_first` (wrangler.jsonc) ne route que /api/* ici : les
+    // `run_worker_first` (wrangler.jsonc) route surtout /api/* ici : les
     // assets statiques (dont le service worker /sw.js) sont servis
     // nativement par Cloudflare sans passer par ce Worker — reconstruire
     // leur Response ici (même pour juste ajouter des en-têtes) casse
     // l'enregistrement du service worker. Leurs en-têtes de sécurité sont
-    // donc posés nativement via public/_headers plutôt qu'ici.
+    // donc posés nativement via public/_headers (généré depuis
+    // worker/security-headers.ts) plutôt qu'ici.
+    // Exceptions : robots.txt, sitemap.xml et les pages partageables (fiche,
+    // profil, liste), qui passent par ici pour leurs balises de partage
+    // (voir page-meta.ts). Réponses reconstruites, d'où withSecurityHeaders.
     if (!url.pathname.startsWith("/api/")) {
+      if (url.pathname === "/robots.txt") {
+        return withSecurityHeaders(serveRobots(url));
+      }
+      if (url.pathname === "/sitemap.xml") {
+        return withSecurityHeaders(serveSitemap(url));
+      }
+      if (
+        PAGE_META_ROUTE.test(url.pathname) &&
+        (request.method === "GET" || request.method === "HEAD")
+      ) {
+        return withSecurityHeaders(await servePageWithMeta(request, env, ctx));
+      }
       return env.ASSETS.fetch(request);
     }
-    // Poignée de main WebSocket de la synchro temps réel : la réponse 101
-    // ne doit pas passer par withSecurityHeaders (voir openSyncSocket).
-    if (url.pathname === "/api/sync/socket" && request.method === "GET") {
-      const user = await getUserFromRequest(env.DB, request);
-      if (!user) {
-        return withSecurityHeaders(json({ error: "Non connecté." }, 401));
+    // Filet de sécurité : sans lui, une exception non rattrapée donne une
+    // page d'erreur Cloudflare en HTML (sans en-têtes de sécurité), que le
+    // client ne sait pas lire.
+    try {
+      // Poignée de main WebSocket de la synchro temps réel : la réponse 101
+      // ne doit pas passer par withSecurityHeaders (voir openSyncSocket).
+      if (url.pathname === "/api/sync/socket" && request.method === "GET") {
+        const user = await getUserFromRequest(env.DB, request);
+        if (!user) {
+          return withSecurityHeaders(json({ error: "Non connecté." }, 401));
+        }
+        return await openSyncSocket(request, user.id);
       }
-      return openSyncSocket(request, user.id);
+      const response = await routeRequest(request, env, url, ctx);
+      return withSecurityHeaders(response);
+    } catch (err) {
+      logError(`Erreur non gérée sur ${request.method} ${url.pathname} :`, err);
+      return withSecurityHeaders(json({ error: "Erreur interne du serveur." }, 500));
     }
-    const response = await routeRequest(request, env, url, ctx);
-    return withSecurityHeaders(response);
   },
 
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
@@ -2262,7 +2228,7 @@ async function routeRequest(
     });
   }
 
-  // `run_worker_first` (wrangler.jsonc) ne route ici que /api/*, mais on
+  // `run_worker_first` (wrangler.jsonc) ne route ici que des /api/*, mais on
   // garde un filet : toute autre requête retombe sur les assets statiques.
   return env.ASSETS.fetch(request);
 }

@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { Icon, Loading } from "../../shared/components/index.ts";
 import type { IconName } from "../../shared/components/Icon/Icon.tsx";
 import { useAuth } from "../../core/context/AuthContext.tsx";
@@ -33,6 +34,7 @@ const TAB_IDS = TABS.map((tab) => tab.id);
 // plateformes favorites, genres exclus) directement dans MyList.jsx.
 export default function ProfilePage() {
   const { t } = useTranslation();
+  useDocumentTitle(t("pageTitle.profile"));
   const { status } = useAuth();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();

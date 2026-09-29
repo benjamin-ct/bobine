@@ -13,6 +13,13 @@
     "lead": "This page doesn't exist anymore. Check the address, or head back home.",
     "backToHome": "Back to home"
   },
+  "errorBoundary": {
+    "eyebrow": "Error",
+    "title": "Oops, this page crashed",
+    "lead": "Something unexpected happened. It has been reported to us automatically. You can try again, or head back home.",
+    "retry": "Try again",
+    "backToHome": "Back to home"
+  },
   "legalLinks": {
     "ariaLabel": "Legal information",
     "privacy": "Privacy",
@@ -377,7 +384,8 @@
     "typeSeries": "Series",
     "availableOn": "Available on",
     "withSubscription": "included with subscription",
-    "rentOrBuy": "to rent or buy"
+    "rentOrBuy": "to rent or buy",
+    "drawnAnnouncement": "Picked title: {{title}}"
   },
   "searchPage": {
     "resultsFor": "Results for “{{query}}”",
@@ -1115,5 +1123,20 @@
   "readOnlyBanner": {
     "cta": "Create my account",
     "ctaMobile": "Create my free account"
+  },
+  "pageTitle": {
+    "default": "Seancy — Movies & shows to watch",
+    "withSuffix": "{{page}} — Seancy",
+    "newReleases": "New releases",
+    "comingSoon": "Coming soon",
+    "random": "Random",
+    "profile": "Profile",
+    "search": "Search",
+    "searchQuery": "Search: {{query}}",
+    "login": "Sign in",
+    "terms": "Terms of use",
+    "privacy": "Privacy policy",
+    "notFound": "Page not found",
+    "withYear": "{{title}} ({{year}})"
   }
 }

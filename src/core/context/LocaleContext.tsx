@@ -1,43 +1,19 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import i18n, { DEFAULT_LOCALE, SUPPORTED_LOCALES, type Locale } from "../i18n/i18n.ts";
+import i18n, {
+  LOCALE_STORAGE_KEY,
+  ensureLocaleLoaded,
+  isSupportedLocale,
+  loadInitialLocale,
+  type Locale,
+} from "../i18n/i18n.ts";
 
 // Langue de l'interface, indépendante du réglage des plateformes de
 // streaming (voir FavoriteProvidersContext, qui reste piloté par
 // RegionContext/le pays) : les deux réglages ne doivent jamais se piloter
 // l'un l'autre (cf. carte Trello "Internationalisation de l'application").
 // Détection auto à la première visite (langue du navigateur), avec
-// possibilité de override manuel persisté ensuite.
-const STORAGE_KEY = "seancy.locale";
-
-export function isSupportedLocale(value: string): value is Locale {
-  return (SUPPORTED_LOCALES as readonly string[]).includes(value);
-}
-
-function detectBrowserLocale(): Locale {
-  if (typeof navigator === "undefined") {
-    return DEFAULT_LOCALE;
-  }
-  const candidates = navigator.languages?.length ? navigator.languages : [navigator.language];
-  for (const candidate of candidates) {
-    const base = candidate?.slice(0, 2).toLowerCase();
-    if (base && isSupportedLocale(base)) {
-      return base;
-    }
-  }
-  return DEFAULT_LOCALE;
-}
-
-function loadInitialLocale(): Locale {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && isSupportedLocale(stored)) {
-      return stored;
-    }
-  } catch {
-    // localStorage indisponible (mode privé strict...) : repli silencieux.
-  }
-  return detectBrowserLocale();
-}
+// possibilité de override manuel persisté ensuite : la langue initiale est
+// résolue dans i18n.ts (loadInitialLocale), avant le premier rendu.
 
 interface LocaleContextValue {
   locale: Locale;
@@ -47,17 +23,29 @@ interface LocaleContextValue {
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(loadInitialLocale);
+  const [locale, setLocale] = useState<Locale>(() =>
+    isSupportedLocale(i18n.language) ? i18n.language : loadInitialLocale()
+  );
 
   useEffect(() => {
-    i18n.changeLanguage(locale);
+    // Traductions chargées à la demande (voir i18n.ts) : on n'active la
+    // langue qu'une fois prête, et seulement si elle est toujours choisie.
+    let cancelled = false;
+    void ensureLocaleLoaded(locale).then(() => {
+      if (!cancelled) {
+        i18n.changeLanguage(locale);
+      }
+    });
     document.documentElement.setAttribute("lang", locale);
     try {
-      localStorage.setItem(STORAGE_KEY, locale);
+      localStorage.setItem(LOCALE_STORAGE_KEY, locale);
     } catch {
       // Repli silencieux : la langue reste appliquée pour cette session,
       // simplement pas mémorisée pour la prochaine visite.
     }
+    return () => {
+      cancelled = true;
+    };
   }, [locale]);
 
   const value = useMemo(() => ({ locale, setLocale }), [locale]);

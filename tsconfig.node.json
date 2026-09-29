@@ -33,6 +33,7 @@
     "src/core/botDetection.ts",
     "worker/bots.ts",
     "worker/rate-limit-memory.ts",
-    "worker/tmdb-edge-cache.ts"
+    "worker/tmdb-edge-cache.ts",
+    "worker/security-headers.ts"
   ]
 }

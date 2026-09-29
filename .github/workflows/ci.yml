@@ -87,9 +87,13 @@ jobs:
           npm run verify:rate-limit-memory
           npm run verify:tmdb-retry-after
           npm run verify:tmdb-edge-cache
+          npm run verify:security-headers
 
       - name: Build
         run: npm run build
+
+      - name: Budget de taille du bundle initial
+        run: npm run check:bundle-size
 
   secrets-scan:
     name: Scan secrets (gitleaks)

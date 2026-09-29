@@ -7,18 +7,21 @@ import {
   markNotified,
   wasUserAlreadyNotified,
   markUserNotified,
+  getRegionsByUser,
 } from "./db.ts";
 import {
   getFlatrateProviderIdsCached,
   discoverRecentByGenreCached,
   trendingToday,
   createTmdbRunCache,
+  DEFAULT_REGION,
   type TmdbListItem,
   type TmdbRunCache,
 } from "./tmdb.ts";
 import { getAllReminders, updateReminderProviders, type ReminderRow } from "./reminders.ts";
 import { notifyUser, type NotificationRecipient } from "./notify.ts";
 import { logError } from "./logger.ts";
+import { purgeExpiredRows } from "./purge.ts";
 import type { Env, SubscriptionRow } from "./types.ts";
 
 const GENRE_WINDOW_DAYS = 2; // marge de sécurité au-delà de l'intervalle du cron (1x/jour)
@@ -75,10 +78,12 @@ async function markRecipientNotified(
 // watchlist et la référence des plateformes connues restent propres à chaque
 // abonnement ; seule la notification est dédupliquée pour le destinataire
 // (un même titre peut être dans la watchlist de plusieurs appareils).
+// `region` : celle du compte (users.region), sinon DEFAULT_REGION.
 async function checkWatchlistAvailability(
   env: Env,
   db: D1Database,
   recipient: NotificationRecipient,
+  region: string,
   tmdbCache: TmdbRunCache
 ): Promise<void> {
   const notifiedThisRun = new Set<string>();
@@ -91,7 +96,8 @@ async function checkWatchlistAvailability(
           tmdbCache,
           env,
           item.media_type,
-          item.tmdb_id
+          item.tmdb_id,
+          region
         );
       } catch (err) {
         logError(`Providers TMDB indisponibles pour ${item.media_type}/${item.tmdb_id} :`, err);
@@ -225,6 +231,7 @@ async function checkReminder(
   db: D1Database,
   recipient: NotificationRecipient,
   reminder: ReminderRow,
+  region: string,
   tmdbCache: TmdbRunCache
 ): Promise<void> {
   const { media_type: mediaType, tmdb_id: tmdbId } = reminder;
@@ -232,7 +239,13 @@ async function checkReminder(
 
   let currentProviders: number[] | null = null;
   try {
-    currentProviders = await getFlatrateProviderIdsCached(tmdbCache, env, mediaType, tmdbId);
+    currentProviders = await getFlatrateProviderIdsCached(
+      tmdbCache,
+      env,
+      mediaType,
+      tmdbId,
+      region
+    );
   } catch (err) {
     logError(`Providers TMDB indisponibles pour le rappel ${mediaType}/${tmdbId} :`, err);
   }
@@ -271,6 +284,7 @@ async function checkReminders(
   env: Env,
   db: D1Database,
   subscriptions: SubscriptionRow[],
+  regions: Map<number, string>,
   tmdbCache: TmdbRunCache
 ): Promise<void> {
   const byUser = new Map<number, ReminderRow[]>();
@@ -289,7 +303,14 @@ async function checkReminders(
     };
     for (const reminder of reminders) {
       try {
-        await checkReminder(env, db, recipient, reminder, tmdbCache);
+        await checkReminder(
+          env,
+          db,
+          recipient,
+          reminder,
+          regions.get(userId) ?? DEFAULT_REGION,
+          tmdbCache
+        );
       } catch (err) {
         logError(`Rappel ${reminder.media_type}/${reminder.tmdb_id} en échec :`, err);
       }
@@ -329,9 +350,12 @@ export function groupRecipients(subscriptions: SubscriptionRow[]): NotificationR
 
 export async function runDailyCheck(env: Env): Promise<void> {
   const db = env.DB;
+  // En premier : un échec plus loin dans le cron ne doit pas l'empêcher.
+  await purgeExpiredRows(db);
   const subscriptions = await getAllSubscriptions(db);
   const tmdbCache = createTmdbRunCache();
-  await checkReminders(env, db, subscriptions, tmdbCache);
+  const regions = await getRegionsByUser(db);
+  await checkReminders(env, db, subscriptions, regions, tmdbCache);
   if (subscriptions.length === 0) {
     return;
   }
@@ -346,7 +370,9 @@ export async function runDailyCheck(env: Env): Promise<void> {
   }
 
   for (const recipient of groupRecipients(subscriptions)) {
-    await checkWatchlistAvailability(env, db, recipient, tmdbCache);
+    const region =
+      (recipient.userId !== null ? regions.get(recipient.userId) : undefined) ?? DEFAULT_REGION;
+    await checkWatchlistAvailability(env, db, recipient, region, tmdbCache);
     await checkFavoriteGenreReleases(env, db, recipient, tmdbCache);
     await checkTrendingReleases(env, db, recipient, trending);
   }

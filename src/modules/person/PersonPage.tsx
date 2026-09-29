@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import {
   posterUrl,
   backdropUrl,
@@ -165,6 +166,7 @@ function CreditsSection({
 export default function PersonPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { locale } = useLocale();
   const [person, setPerson] = useState<PersonDetails | null>(null);
@@ -173,6 +175,7 @@ export default function PersonPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<Error | null>(null);
   const [bioOpen, setBioOpen] = useState(false);
+  useDocumentTitle(person?.name);
 
   useEffect(() => {
     if (!id) {
@@ -276,9 +279,12 @@ export default function PersonPage() {
         className={className}
         onClick={(e) => {
           // Voir DetailPage : navigate(-1) déclenche un vrai POP, requis
-          // pour que useScrollRestoration restaure la liste d'origine.
-          e.preventDefault();
-          navigate(-1);
+          // pour que useScrollRestoration restaure la liste d'origine, sauf
+          // en première page de session (sinon on quitterait le site).
+          if (location.key !== "default") {
+            e.preventDefault();
+            navigate(-1);
+          }
         }}
       >
         {t("personPage.back")}

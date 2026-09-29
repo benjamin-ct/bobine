@@ -178,9 +178,16 @@ export default function NavBar() {
       return;
     }
     setStatus("loading");
+    // Réponse d'une frappe précédente arrivée après la suivante (« bat »
+    // après « batman »), ou après que le champ a été vidé : ignorée, sinon
+    // elle écraserait les bons résultats ou rouvrirait la liste.
+    let cancelled = false;
     const timeoutId = setTimeout(() => {
       searchMulti(trimmed, 1, region)
         .then((data) => {
+          if (cancelled) {
+            return;
+          }
           const filtered = (data.results || [])
             .filter(
               (item) =>
@@ -194,11 +201,17 @@ export default function NavBar() {
           setOpen(true);
         })
         .catch(() => {
+          if (cancelled) {
+            return;
+          }
           setResults([]);
           setStatus("error");
         });
     }, DEBOUNCE_MS);
-    return () => clearTimeout(timeoutId);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
   }, [query, region]);
 
   useEffect(() => {

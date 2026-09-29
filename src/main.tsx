@@ -4,6 +4,12 @@ import "./core/lib/legacyStorageMigration.ts";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+// Polices de la DA auto-hébergées (servies depuis l’origine avec le bundle) :
+// plus de Google Fonts, bloqué par la CSP et source d’un transfert d’IP vers
+// Google. Seuls les sous-ensembles Unicode utilisés sont téléchargés.
+import "@fontsource/bebas-neue/400.css";
+import "@fontsource-variable/bricolage-grotesque/opsz.css";
+import "@fontsource-variable/inter/wght.css";
 import "./styles/global.css";
 import App from "./App.tsx";
 import { AuthProvider } from "./core/context/AuthContext.tsx";
@@ -18,11 +24,19 @@ import { ExcludedGenresProvider } from "./core/context/ExcludedGenresContext.tsx
 import { ExcludedTitlesProvider } from "./core/context/ExcludedTitlesContext.tsx";
 import { ThemeProvider } from "./core/context/ThemeContext.tsx";
 import { LocaleProvider } from "./core/context/LocaleContext.tsx";
+import {
+  applyInitialLocale,
+  ensureLocaleLoaded,
+  isSupportedLocale,
+  loadInitialLocale,
+  type Locale,
+} from "./core/i18n/i18n.ts";
 import { LocaleAccountSync } from "./core/context/LocaleAccountSync.tsx";
-import { ensureSentryInit } from "./core/logger.ts";
+import { ensureSentryInit, logError } from "./core/logger.ts";
+import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
 import { isLikelyAutomatedClient } from "./core/botDetection.ts";
-import { setupPwaAutoUpdate } from "./core/pwaUpdate.ts";
+import { setupPwaAutoUpdate, setupStaleChunkReload } from "./core/pwaUpdate.ts";
 import { stripReauthParam } from "./core/api/accessSession.ts";
 import { clearAccountDataFromDevice, hasAccountDataOnDevice } from "./core/lib/accountStorage.ts";
 
@@ -44,6 +58,7 @@ if (!isLikelyAutomatedClient(navigator)) {
 // Recharge l'app installée quand une nouvelle version est déployée, au lieu
 // de garder l'ancien bundle jusqu'à une relance complète (voir pwaUpdate.ts).
 setupPwaAutoUpdate();
+setupStaleChunkReload();
 
 // Retour de la page de connexion Cloudflare Access (voir accessSession.ts).
 stripReauthParam();
@@ -96,9 +111,56 @@ async function resolveInitialRegion(): Promise<string> {
   }
 }
 
-const initialRegion = await resolveInitialRegion();
+// Langue enregistrée sur le compte, lue avant le premier rendu pour la même
+// raison que la région : sans elle, un compte réglé en anglais sur un
+// appareil qui n'a encore rien mémorisé (nouvelle connexion, preview) ou qui
+// a gardé une autre langue affichait l'accueil en français, puis tout
+// rebasculait en anglais à la réponse de LocaleAccountSync (review H8).
+// Seulement si connecté, et borné comme /api/region.
+async function fetchAccountLocale(): Promise<Locale | null> {
+  if (!document.cookie.includes("bobine_auth=1")) {
+    return null;
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1500);
+  try {
+    const res = await fetch("/api/locale", { signal: controller.signal });
+    if (!res.ok) {
+      return null;
+    }
+    const data: { locale?: string | null } = await res.json();
+    return data.locale && isSupportedLocale(data.locale) ? data.locale : null;
+  } catch {
+    // Repli sur la langue de l'appareil ; LocaleAccountSync resynchronise
+    // après le montage.
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
-createRoot(rootElement).render(
+// Traductions de la langue de l'appareil chargées en parallèle (chunk séparé
+// hors français, voir i18n.ts), sans allonger l'attente du splash.
+async function resolveInitialLocale(): Promise<void> {
+  const deviceLocale = loadInitialLocale();
+  const [accountLocale] = await Promise.all([
+    fetchAccountLocale(),
+    ensureLocaleLoaded(deviceLocale),
+  ]);
+  if (accountLocale && accountLocale !== deviceLocale) {
+    await ensureLocaleLoaded(accountLocale);
+    applyInitialLocale(accountLocale);
+  }
+}
+
+const [initialRegion] = await Promise.all([resolveInitialRegion(), resolveInitialLocale()]);
+
+// Erreurs de rendu hors de toute ErrorBoundary (providers, NavBar…) : React
+// démonte alors l'appli, au moins l'erreur remonte dans Sentry. Celles
+// interceptées par ErrorBoundary sont déjà journalisées par elle.
+createRoot(rootElement, {
+  onUncaughtError: (error) => logError("Erreur React non interceptée", error),
+}).render(
   <StrictMode>
     <ThemeProvider>
       <LocaleProvider>
@@ -113,7 +175,9 @@ createRoot(rootElement).render(
                         <MembersOnlyProvider>
                           <LibraryProvider>
                             <RemindersProvider>
-                              <App />
+                              <ErrorBoundary>
+                                <App />
+                              </ErrorBoundary>
                             </RemindersProvider>
                           </LibraryProvider>
                         </MembersOnlyProvider>

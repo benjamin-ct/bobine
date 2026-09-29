@@ -36,6 +36,12 @@ export function currentTmdbLanguage(): string {
 export const IMG_BASE = "https://image.tmdb.org/t/p/";
 export const posterUrl = (path: string | null | undefined, size = "w342"): string | null =>
   path ? `${IMG_BASE}${size}${path}` : null;
+// `srcset` des affiches, à associer à un `sizes` (audit M9) : w185 suffit aux
+// cartes sur un écran standard, w342 au-delà (écrans haute densité, mobile).
+// Pas de w500 : les mobiles 3x le choisiraient et téléchargeraient plus
+// qu'aujourd'hui pour une différence invisible à cette taille.
+export const posterSrcSet = (path: string | null | undefined): string | undefined =>
+  path ? `${IMG_BASE}w185${path} 185w, ${IMG_BASE}w342${path} 342w` : undefined;
 export const backdropUrl = (path: string | null | undefined, size = "w780"): string | null =>
   path ? `${IMG_BASE}${size}${path}` : null;
 export const logoUrl = (path: string | null | undefined, size = "w92"): string | null =>

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import type { TFunction } from "i18next";
 import {
   backdropUrl,
   posterUrl,
+  posterSrcSet,
   getDetails,
   peekDetails,
   watchProvidersFromDetails,
@@ -26,7 +28,7 @@ import {
 } from "../../shared/components/index.ts";
 import EpisodeTracker from "./components/EpisodeTracker.tsx";
 import CollectionSection from "./components/CollectionSection.tsx";
-import DetailSkeleton from "./components/DetailSkeleton.tsx";
+import DetailSkeleton, { DETAIL_POSTER_SIZES } from "./components/DetailSkeleton.tsx";
 import WhereToWatch from "./components/WhereToWatch.tsx";
 import FollowingActivity from "./components/FollowingActivity.tsx";
 import { airedEpisodesUpTo, useSeasonEpisodes } from "./useSeasonEpisodes.ts";
@@ -110,6 +112,7 @@ function useMainCastCount(): number {
 export default function DetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
   // Fiche déjà chargée pendant la session (déjà vue) : affichée dès le
   // premier rendu, sans passer par le squelette.
@@ -121,6 +124,12 @@ export default function DetailPage() {
   );
   const [error, setError] = useState<Error | null>(null);
   const [preview, setPreview] = useState<MediaPreview | null>(null);
+  // Titre de l'onglet : « Dune (2021) — Seancy », dès l'aperçu si on le connaît.
+  const pageName = details ? details.title || details.name : preview?.title;
+  const pageYear = (details?.release_date || details?.first_air_date)?.slice(0, 4);
+  useDocumentTitle(
+    pageName && pageYear ? t("pageTitle.withYear", { title: pageName, year: pageYear }) : pageName
+  );
   const mainCastCount = useMainCastCount();
   // Nombre de lots de CAST_BATCH révélés en plus des acteurs principaux.
   const [castBatches, setCastBatches] = useState(0);
@@ -218,9 +227,15 @@ export default function DetailPage() {
           // navigate(-1) déclenche un vrai retour arrière (POP), nécessaire
           // pour que useScrollRestoration restaure la position de la liste
           // d'origine — un <Link> classique crée une nouvelle entrée
-          // d'historique (PUSH) et ne restaure jamais rien.
-          e.preventDefault();
-          navigate(-1);
+          // d'historique (PUSH) et ne restaure jamais rien. Seulement si la
+          // fiche n'est pas la première page de la session (clé "default") :
+          // ouverte depuis un lien partagé, une notification ou un nouvel
+          // onglet, reculer ferait quitter le site ; le lien mène alors à
+          // l'accueil.
+          if (location.key !== "default") {
+            e.preventDefault();
+            navigate(-1);
+          }
         }}
       >
         {t("detailPage.back")}
@@ -509,8 +524,11 @@ export default function DetailPage() {
             {details.poster_path ? (
               <img
                 src={posterUrl(details.poster_path, "w342") ?? undefined}
+                srcSet={posterSrcSet(details.poster_path)}
+                sizes={DETAIL_POSTER_SIZES}
                 alt={title}
                 className={styles.poster}
+                fetchPriority="high"
               />
             ) : (
               <div className={`${styles.poster} ${styles.posterEmpty} ${posterStyles[accentKey]}`}>

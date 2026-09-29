@@ -24,7 +24,14 @@ export { getSeriesEpisodeBadge } from "./seriesEpisodeBadge.ts";
 export type { SeriesEpisodeBadge } from "./seriesEpisodeBadge.ts";
 export { getMovieReleaseBadge } from "./movieReleaseBadge.ts";
 export type { MovieReleaseBadge } from "./movieReleaseBadge.ts";
-export { posterUrl, backdropUrl, logoUrl, IMG_BASE, TmdbConfigError } from "./tmdbClient.ts";
+export {
+  posterUrl,
+  posterSrcSet,
+  backdropUrl,
+  logoUrl,
+  IMG_BASE,
+  TmdbConfigError,
+} from "./tmdbClient.ts";
 import { tmdbFetch, IS_DEV, currentTmdbLanguage } from "./tmdbClient.ts";
 
 import type {
