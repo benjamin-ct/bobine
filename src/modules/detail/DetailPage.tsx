@@ -47,6 +47,8 @@ import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import type { CastMember, MediaDetails, MediaType } from "../../core/types/tmdb.ts";
 import styles from "./DetailPage.module.css";
+import { TmdbHttpError } from "../../core/api/tmdbClient.ts";
+import NotFoundPage from "../not-found/NotFoundPage.tsx";
 
 // Acteurs affichés avant « Tout le casting » : une rangée de 6 sur desktop,
 // deux rangées de 4 sur mobile (grille sans défilement horizontal).
@@ -123,6 +125,8 @@ export default function DetailPage() {
     details ? "success" : "loading"
   );
   const [error, setError] = useState<Error | null>(null);
+  // Incrémenté par « Réessayer » après un échec de chargement (audit M11).
+  const [reloadKey, setReloadKey] = useState(0);
   const [preview, setPreview] = useState<MediaPreview | null>(null);
   // Titre de l'onglet : « Dune (2021) — Seancy », dès l'aperçu si on le connaît.
   const pageName = details ? details.title || details.name : preview?.title;
@@ -197,7 +201,7 @@ export default function DetailPage() {
     // changement de région (ex. détection async après le rendu initial en
     // région par défaut) provoquait un flash complet de la fiche (skeleton +
     // affiche qui semble ne se rafraîchir qu'au reload).
-  }, [mediaType, id]);
+  }, [mediaType, id, reloadKey]);
 
   // Saute directement aux titres similaires si on arrive via le bouton "🔁".
   useEffect(() => {
@@ -252,10 +256,15 @@ export default function DetailPage() {
     );
   }
   if (status === "error") {
+    // Titre inexistant chez TMDB : vraie page « introuvable », pas un message
+    // d'erreur technique (audit M11).
+    if (error instanceof TmdbHttpError && error.status === 404) {
+      return <NotFoundPage />;
+    }
     return (
       <div className={styles.page}>
         {backLink(styles.backPlain)}
-        <ErrorMessage error={error} />
+        <ErrorMessage error={error} onRetry={() => setReloadKey((key) => key + 1)} />
       </div>
     );
   }

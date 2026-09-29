@@ -49,6 +49,20 @@ export const logoUrl = (path: string | null | undefined, size = "w92"): string |
 
 export class TmdbConfigError extends Error {}
 
+// Réponse HTTP en erreur (hors 429, réessayé plus bas) : le message affiché
+// est traduit selon le statut, jamais le `status_message` brut de TMDB (en
+// anglais, ex. « The resource you requested could not be found. »). Le
+// statut reste lisible par l'appelant (fiche inexistante → page 404, audit M11).
+export class TmdbHttpError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(status === 404 ? i18n.t("common.errorNotFound") : i18n.t("common.errorTmdb", { status }));
+    this.name = "TmdbHttpError";
+    this.status = status;
+  }
+}
+
 export type TmdbParams = Record<string, string | number | boolean | undefined | null>;
 
 // Plafond de requêtes TMDB réellement simultanées, tous appels confondus,
@@ -137,8 +151,7 @@ function fetchOnce<T>(url: URL): Promise<FetchOnceResult<T>> {
       return { status: RATE_LIMITED, retryAfter: res.headers.get("retry-after") };
     }
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}) as { status_message?: string });
-      throw new Error(body.status_message || `Erreur TMDB (${res.status})`);
+      throw new TmdbHttpError(res.status);
     }
     return { status: "ok", data: (await res.json()) as T };
   });

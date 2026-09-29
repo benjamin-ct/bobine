@@ -15,3 +15,17 @@
   border-color: color-mix(in oklch, var(--accent) 45%, var(--border));
   color: var(--accent-ink);
 }
+
+.retry {
+  margin-top: 16px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  color: var(--fg);
+  font-weight: 700;
+}
+
+.retry:hover {
+  background: var(--surface-2);
+}

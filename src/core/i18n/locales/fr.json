@@ -4,6 +4,10 @@
     "errorGeneric": "Une erreur est survenue.",
     "errorNetwork": "Impossible de joindre Seancy. Vérifiez votre connexion puis réessayez.",
     "errorRateLimited": "Trop de requêtes en ce moment. Patientez quelques secondes puis réessayez.",
+    "errorNotFound": "Ce contenu est introuvable.",
+    "errorTmdb": "Le catalogue de films ne répond pas correctement (erreur {{status}}). Réessayez dans un instant.",
+    "retry": "Réessayer",
+    "loadMoreError": "La suite n'a pas pu être chargée.",
     "close": "Fermer",
     "unknownTitle": "Titre inconnu"
   },
