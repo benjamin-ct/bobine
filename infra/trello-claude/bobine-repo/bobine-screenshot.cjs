@@ -10,7 +10,8 @@
 // --both produit <sortie>-desktop.png et <sortie>-mobile.png. Les erreurs
 // console et les requêtes en échec sont affichées sur la sortie standard.
 //
-// Previews Cloudflare (*.workers.dev, derrière Cloudflare Access) : si
+// Previews Cloudflare (*.dev.seancy.com, et les anciennes *.workers.dev,
+// derrière Cloudflare Access) : si
 // CF_ACCESS_CLIENT_ID et CF_ACCESS_CLIENT_SECRET sont définis (jeton de
 // service Access, voir infra/trello-claude/README.md), ils sont envoyés en
 // en-têtes à chaque requête vers ces hôtes.
@@ -61,7 +62,7 @@ async function capture(browser, opts, mode, out) {
   if (accessHeaders) {
     // Seulement vers les previews : pas de fuite du jeton vers TMDB & co.
     await context.route(
-      (u) => u.hostname.endsWith(".workers.dev"),
+      (u) => u.hostname.endsWith(".dev.seancy.com") || u.hostname.endsWith(".workers.dev"),
       (route) => route.continue({ headers: { ...route.request().headers(), ...accessHeaders } })
     );
   }
