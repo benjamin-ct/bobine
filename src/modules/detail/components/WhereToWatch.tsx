@@ -45,7 +45,13 @@ export default function WhereToWatch({ providers, regionName, className }: Where
               key={p.provider_id}
               className={`${styles.provider} ${isFavoriteProvider(p.provider_id) ? styles.providerYours : ""}`}
             >
-              <img src={logoUrl(p.logo_path) ?? undefined} alt="" className={styles.logo} />
+              <img
+                src={logoUrl(p.logo_path) ?? undefined}
+                alt=""
+                className={styles.logo}
+                loading="lazy"
+                decoding="async"
+              />
               <span className={styles.name}>{p.provider_name}</span>
               {isFavoriteProvider(p.provider_id) && (
                 <span className={styles.yours}>{t("detailPage.yourPlatform")}</span>

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { useAuth } from "../../core/context/AuthContext.tsx";
 import { Loading } from "../../shared/components/index.ts";
 import styles from "./AuthPages.module.css";
 
 export default function VerifyAuthPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t("pageTitle.login"));
   const [searchParams] = useSearchParams();
   const { verify } = useAuth();
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");

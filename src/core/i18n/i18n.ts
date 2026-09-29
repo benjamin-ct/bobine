@@ -68,6 +68,19 @@ i18next.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
+// Remplace la langue initiale avant le premier rendu, quand celle enregistrée
+// sur le compte diffère de celle de cet appareil (voir main.tsx). Les
+// traductions doivent déjà être chargées (ensureLocaleLoaded).
+export function applyInitialLocale(locale: Locale): void {
+  void i18next.changeLanguage(locale);
+  document.documentElement.lang = locale;
+  try {
+    localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  } catch {
+    // Repli silencieux, comme dans loadInitialLocale.
+  }
+}
+
 // Charge les traductions de `locale` si ce n'est pas déjà fait. En cas
 // d'échec (hors ligne, chunk introuvable), l'interface reste en français.
 export async function ensureLocaleLoaded(locale: Locale): Promise<void> {

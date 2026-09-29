@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useRegion } from "../../core/context/RegionContext.tsx";
@@ -77,6 +78,7 @@ function dateRangeFor(windowDays: number) {
 
 export default function NewReleasesPage() {
   const { t, i18n } = useTranslation();
+  useDocumentTitle(t("pageTitle.newReleases"));
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerIds, setProviderIds] = useState<string[]>([]);

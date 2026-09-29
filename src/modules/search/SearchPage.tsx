@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { searchMulti } from "../../core/api/tmdb.ts";
 import {
   MediaCard,
@@ -19,6 +20,7 @@ export default function SearchPage() {
   const { region } = useRegion();
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
+  useDocumentTitle(query ? t("pageTitle.searchQuery", { query }) : t("pageTitle.search"));
   const [titles, setTitles] = useState<MediaItem[]>([]);
   const [people, setPeople] = useState<PersonSummary[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");

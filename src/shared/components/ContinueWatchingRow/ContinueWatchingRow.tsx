@@ -37,7 +37,12 @@ export default function ContinueWatchingRow({ items }: ContinueWatchingRowProps)
             <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.link}>
               <div className={styles.thumb}>
                 {item.posterPath ? (
-                  <img src={posterUrl(item.posterPath, "w185") ?? undefined} alt={item.title} />
+                  <img
+                    src={posterUrl(item.posterPath, "w185") ?? undefined}
+                    alt={item.title}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
                   <div className={`${styles.thumbEmpty} ${posterStyles[accentKey]}`} />
                 )}

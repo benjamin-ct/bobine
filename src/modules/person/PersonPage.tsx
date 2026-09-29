@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import {
   posterUrl,
   backdropUrl,
@@ -174,6 +175,7 @@ export default function PersonPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<Error | null>(null);
   const [bioOpen, setBioOpen] = useState(false);
+  useDocumentTitle(person?.name);
 
   useEffect(() => {
     if (!id) {

@@ -8,7 +8,9 @@
     "directory": "./dist",
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    // Hors /api : robots.txt, sitemap.xml et pages partageables, pour leurs
+    // balises de partage (voir worker/page-meta.ts).
+    "run_worker_first": ["/api/*", "/robots.txt", "/sitemap.xml", "/media/*", "/u/*", "/liste/*"]
   },
   // Logs & traces natifs Workers (dashboard Cloudflare → ce Worker → onglet
   // Observability) : le dashboard affiche un avertissement tant que ces

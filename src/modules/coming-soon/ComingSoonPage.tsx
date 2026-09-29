@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useNearViewport } from "../../shared/hooks/useNearViewport.ts";
 import { useUpcomingRelease } from "../../shared/hooks/useUpcomingRelease.ts";
@@ -150,7 +151,12 @@ function TimelineItem({ item }: { item: MediaItem }) {
       </div>
       <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.thumb}>
         {item.poster_path ? (
-          <img src={posterUrl(item.poster_path, "w92") ?? undefined} alt={title} />
+          <img
+            src={posterUrl(item.poster_path, "w92") ?? undefined}
+            alt={title}
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <div className={posterStyles[accentKey]} style={{ width: "100%", height: "100%" }} />
         )}
@@ -209,6 +215,7 @@ function TimelineItem({ item }: { item: MediaItem }) {
 
 export default function ComingSoonPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t("pageTitle.comingSoon"));
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerIds, setProviderIds] = useState<string[]>([]);
