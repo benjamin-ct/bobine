@@ -179,7 +179,7 @@ export async function getSubscriptionIdByEndpoint(
 // seulement pour l'abonnement initial, un vrai remplacement complet).
 // `known_providers` est délibérément absent du SET : sur un conflit (item
 // déjà connu), on ne touche ni ne réinitialise cette colonne — seule
-// updateKnownProviders() doit l'écrire. Seul un item réellement nouveau
+// knownProvidersUpdate() doit l'écrire. Seul un item réellement nouveau
 // démarre à NULL (repli logique : "pas encore observé").
 export async function applyWatchlistChanges(
   db: D1Database,
@@ -287,21 +287,6 @@ export async function getGenrePreferencesForSubscription(
     .bind(subscriptionId)
     .all<GenrePreferenceRow>();
   return results;
-}
-
-export async function updateKnownProviders(
-  db: D1Database,
-  subscriptionId: number,
-  mediaType: string,
-  tmdbId: number,
-  providerIds: number[]
-): Promise<void> {
-  await db
-    .prepare(
-      "UPDATE watchlist_items SET known_providers = ? WHERE subscription_id = ? AND media_type = ? AND tmdb_id = ?"
-    )
-    .bind(JSON.stringify(providerIds), subscriptionId, mediaType, tmdbId)
-    .run();
 }
 
 // Nom affiché (ticket #45), mis à jour uniquement sur un save manuel côté
@@ -969,22 +954,6 @@ export async function setRegionForUser(
   await db.prepare("UPDATE users SET region = ? WHERE id = ?").bind(region, userId).run();
 }
 
-export async function wasAlreadyNotified(
-  db: D1Database,
-  subscriptionId: number,
-  mediaType: string,
-  tmdbId: number,
-  reason: string
-): Promise<boolean> {
-  const row = await db
-    .prepare(
-      "SELECT 1 FROM notified_releases WHERE subscription_id = ? AND media_type = ? AND tmdb_id = ? AND reason = ?"
-    )
-    .bind(subscriptionId, mediaType, tmdbId, reason)
-    .first();
-  return Boolean(row);
-}
-
 export async function markNotified(
   db: D1Database,
   subscriptionId: number,
@@ -1000,24 +969,8 @@ export async function markNotified(
     .run();
 }
 
-// Équivalents de wasAlreadyNotified/markNotified au niveau du compte (voir
-// migration 0008) : utilisés pour les abonnements rattachés à un compte.
-export async function wasUserAlreadyNotified(
-  db: D1Database,
-  userId: number,
-  mediaType: string,
-  tmdbId: number,
-  reason: string
-): Promise<boolean> {
-  const row = await db
-    .prepare(
-      "SELECT 1 FROM user_notified_releases WHERE user_id = ? AND media_type = ? AND tmdb_id = ? AND reason = ?"
-    )
-    .bind(userId, mediaType, tmdbId, reason)
-    .first();
-  return Boolean(row);
-}
-
+// Équivalent de markNotified au niveau du compte (voir migration 0008) :
+// utilisé pour les abonnements rattachés à un compte.
 export async function markUserNotified(
   db: D1Database,
   userId: number,
@@ -1031,4 +984,80 @@ export async function markUserNotified(
     )
     .bind(userId, mediaType, tmdbId, reason, Date.now())
     .run();
+}
+
+// Historique des notifications d'un destinataire (compte + ses abonnements),
+// chargé en une fois par le cron au lieu d'un SELECT par titre et par motif
+// (audit H5). Clés `${mediaType}:${tmdbId}:${reason}`.
+export function notifiedKey(mediaType: string, tmdbId: number, reason: string): string {
+  return `${mediaType}:${tmdbId}:${reason}`;
+}
+
+// D1 limite le nombre de paramètres liés par requête : les ids sont découpés.
+const MAX_BOUND_IDS = 90;
+
+export async function getNotifiedKeys(
+  db: D1Database,
+  userId: number | null,
+  subscriptionIds: number[]
+): Promise<Set<string>> {
+  const statements: D1PreparedStatement[] = [];
+  if (userId !== null) {
+    statements.push(
+      db
+        .prepare("SELECT media_type, tmdb_id, reason FROM user_notified_releases WHERE user_id = ?")
+        .bind(userId)
+    );
+  }
+  for (let i = 0; i < subscriptionIds.length; i += MAX_BOUND_IDS) {
+    const ids = subscriptionIds.slice(i, i + MAX_BOUND_IDS);
+    statements.push(
+      db
+        .prepare(
+          `SELECT media_type, tmdb_id, reason FROM notified_releases
+           WHERE subscription_id IN (${ids.map(() => "?").join(", ")})`
+        )
+        .bind(...ids)
+    );
+  }
+  const keys = new Set<string>();
+  if (statements.length === 0) {
+    return keys;
+  }
+  const results = await db.batch<{ media_type: string; tmdb_id: number; reason: string }>(
+    statements
+  );
+  for (const { results: rows } of results) {
+    for (const row of rows) {
+      keys.add(notifiedKey(row.media_type, row.tmdb_id, row.reason));
+    }
+  }
+  return keys;
+}
+
+// Référence des plateformes d'un titre de la watchlist : même contenu dans
+// un autre ordre = pas de changement, donc pas d'écriture (audit H5).
+export function providersChanged(stored: string | null, current: number[]): boolean {
+  if (stored === null) {
+    return true;
+  }
+  const previous: number[] = JSON.parse(stored);
+  return (
+    previous.length !== current.length ||
+    [...previous].sort((a, b) => a - b).join(",") !== [...current].sort((a, b) => a - b).join(",")
+  );
+}
+
+export function knownProvidersUpdate(
+  db: D1Database,
+  subscriptionId: number,
+  mediaType: string,
+  tmdbId: number,
+  providerIds: number[]
+): D1PreparedStatement {
+  return db
+    .prepare(
+      "UPDATE watchlist_items SET known_providers = ? WHERE subscription_id = ? AND media_type = ? AND tmdb_id = ?"
+    )
+    .bind(JSON.stringify(providerIds), subscriptionId, mediaType, tmdbId);
 }
