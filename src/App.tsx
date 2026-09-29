@@ -75,6 +75,11 @@ export default function App() {
     if (navigationType !== "POP") {
       fadeIn(mainRef.current);
     }
+    // Focus sur le contenu de la nouvelle page (audit H11) : sans ça, il
+    // reste sur le lien cliqué, et un lecteur d'écran n'annonce pas le
+    // changement de page. `preventScroll` : le défilement reste géré par
+    // ScrollToTop et la restauration de scroll.
+    mainRef.current?.focus({ preventScroll: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
@@ -83,7 +88,7 @@ export default function App() {
       <ScrollToTop />
       <RecaptchaBadge />
       <NavBar />
-      <main ref={mainRef}>
+      <main ref={mainRef} tabIndex={-1}>
         <ErrorBoundary resetKey={pathname}>
           <Suspense fallback={<RouteFallback />}>
             <Routes>

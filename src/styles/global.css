@@ -70,6 +70,12 @@ body {
   flex: 1;
 }
 
+/* Focus posé par programme à chaque changement de page (voir App.tsx) : pas
+   de contour autour de toute la page. */
+#root > main:focus {
+  outline: none;
+}
+
 /* Téléchargement d'une page (chunk React.lazy, voir App.tsx) : invisible les
    300 premières ms pour ne pas clignoter quand le chunk arrive vite. */
 .route-fallback {

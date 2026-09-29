@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { PageHeader } from "../../shared/components/index.ts";
 import styles from "./NotFoundPage.module.css";
 
@@ -8,6 +9,7 @@ import styles from "./NotFoundPage.module.css";
  * vide sous le header/footer. */
 export default function NotFoundPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t("pageTitle.notFound"));
   return (
     <div className={styles.page}>
       <PageHeader
