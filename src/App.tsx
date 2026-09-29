@@ -24,6 +24,7 @@ import { LoginPage, VerifyAuthPage, MembersOnlyDialog } from "./modules/auth/ind
 import { TermsPage, PrivacyPolicyPage } from "./modules/legal/index.ts";
 import NotFound from "./modules/not-found/index.ts";
 import { fadeIn } from "./shared/lib/motion.ts";
+import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
 
 export default function App() {
   const { pathname } = useLocation();
@@ -56,24 +57,26 @@ export default function App() {
       <RecaptchaBadge />
       <NavBar />
       <main ref={mainRef}>
-        <Routes>
-          <Route path="/" element={<Discover />} />
-          <Route path="/nouveautes" element={<NewReleases />} />
-          <Route path="/prochainement" element={<ComingSoon />} />
-          <Route path="/media/:mediaType/:id" element={<Detail />} />
-          <Route path="/personne/:id" element={<Person />} />
-          <Route path="/aleatoire" element={<Random />} />
-          <Route path="/ma-liste" element={<Navigate to="/profil?tab=ma-liste" replace />} />
-          <Route path="/profil" element={<Profile />} />
-          <Route path="/u/:slug" element={<PublicProfile />} />
-          <Route path="/recherche" element={<Search />} />
-          <Route path="/liste/:slug" element={<SharedList />} />
-          <Route path="/connexion" element={<LoginPage />} />
-          <Route path="/auth/verify" element={<VerifyAuthPage />} />
-          <Route path="/conditions-utilisation" element={<TermsPage />} />
-          <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <ErrorBoundary resetKey={pathname}>
+          <Routes>
+            <Route path="/" element={<Discover />} />
+            <Route path="/nouveautes" element={<NewReleases />} />
+            <Route path="/prochainement" element={<ComingSoon />} />
+            <Route path="/media/:mediaType/:id" element={<Detail />} />
+            <Route path="/personne/:id" element={<Person />} />
+            <Route path="/aleatoire" element={<Random />} />
+            <Route path="/ma-liste" element={<Navigate to="/profil?tab=ma-liste" replace />} />
+            <Route path="/profil" element={<Profile />} />
+            <Route path="/u/:slug" element={<PublicProfile />} />
+            <Route path="/recherche" element={<Search />} />
+            <Route path="/liste/:slug" element={<SharedList />} />
+            <Route path="/connexion" element={<LoginPage />} />
+            <Route path="/auth/verify" element={<VerifyAuthPage />} />
+            <Route path="/conditions-utilisation" element={<TermsPage />} />
+            <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ErrorBoundary>
       </main>
       <Footer />
       <LegalLinks />

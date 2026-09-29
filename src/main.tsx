@@ -19,7 +19,8 @@ import { ExcludedTitlesProvider } from "./core/context/ExcludedTitlesContext.tsx
 import { ThemeProvider } from "./core/context/ThemeContext.tsx";
 import { LocaleProvider } from "./core/context/LocaleContext.tsx";
 import { LocaleAccountSync } from "./core/context/LocaleAccountSync.tsx";
-import { ensureSentryInit } from "./core/logger.ts";
+import { ensureSentryInit, logError } from "./core/logger.ts";
+import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
 import { isLikelyAutomatedClient } from "./core/botDetection.ts";
 import { setupPwaAutoUpdate } from "./core/pwaUpdate.ts";
@@ -98,7 +99,12 @@ async function resolveInitialRegion(): Promise<string> {
 
 const initialRegion = await resolveInitialRegion();
 
-createRoot(rootElement).render(
+// Erreurs de rendu hors de toute ErrorBoundary (providers, NavBar…) : React
+// démonte alors l'appli, au moins l'erreur remonte dans Sentry. Celles
+// interceptées par ErrorBoundary sont déjà journalisées par elle.
+createRoot(rootElement, {
+  onUncaughtError: (error) => logError("Erreur React non interceptée", error),
+}).render(
   <StrictMode>
     <ThemeProvider>
       <LocaleProvider>
@@ -113,7 +119,9 @@ createRoot(rootElement).render(
                         <MembersOnlyProvider>
                           <LibraryProvider>
                             <RemindersProvider>
-                              <App />
+                              <ErrorBoundary>
+                                <App />
+                              </ErrorBoundary>
                             </RemindersProvider>
                           </LibraryProvider>
                         </MembersOnlyProvider>
