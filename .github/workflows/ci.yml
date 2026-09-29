@@ -91,6 +91,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Budget de taille du bundle initial
+        run: npm run check:bundle-size
+
   secrets-scan:
     name: Scan secrets (gitleaks)
     if: github.event.action != 'closed'

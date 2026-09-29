@@ -23,13 +23,14 @@ import { FavoriteProvidersProvider } from "./core/context/FavoriteProvidersConte
 import { ExcludedGenresProvider } from "./core/context/ExcludedGenresContext.tsx";
 import { ExcludedTitlesProvider } from "./core/context/ExcludedTitlesContext.tsx";
 import { ThemeProvider } from "./core/context/ThemeContext.tsx";
-import { LocaleProvider } from "./core/context/LocaleContext.tsx";
+import { LocaleProvider, loadInitialLocale } from "./core/context/LocaleContext.tsx";
+import { ensureLocaleLoaded } from "./core/i18n/i18n.ts";
 import { LocaleAccountSync } from "./core/context/LocaleAccountSync.tsx";
 import { ensureSentryInit, logError } from "./core/logger.ts";
 import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
 import { isLikelyAutomatedClient } from "./core/botDetection.ts";
-import { setupPwaAutoUpdate } from "./core/pwaUpdate.ts";
+import { setupPwaAutoUpdate, setupStaleChunkReload } from "./core/pwaUpdate.ts";
 import { stripReauthParam } from "./core/api/accessSession.ts";
 import { clearAccountDataFromDevice, hasAccountDataOnDevice } from "./core/lib/accountStorage.ts";
 
@@ -51,6 +52,7 @@ if (!isLikelyAutomatedClient(navigator)) {
 // Recharge l'app installée quand une nouvelle version est déployée, au lieu
 // de garder l'ancien bundle jusqu'à une relance complète (voir pwaUpdate.ts).
 setupPwaAutoUpdate();
+setupStaleChunkReload();
 
 // Retour de la page de connexion Cloudflare Access (voir accessSession.ts).
 stripReauthParam();
@@ -103,7 +105,12 @@ async function resolveInitialRegion(): Promise<string> {
   }
 }
 
-const initialRegion = await resolveInitialRegion();
+// Traductions de la langue initiale chargées en parallèle (chunk séparé hors
+// français, voir i18n.ts), sans allonger l'attente du splash.
+const [initialRegion] = await Promise.all([
+  resolveInitialRegion(),
+  ensureLocaleLoaded(loadInitialLocale()),
+]);
 
 // Erreurs de rendu hors de toute ErrorBoundary (providers, NavBar…) : React
 // démonte alors l'appli, au moins l'erreur remonte dans Sentry. Celles
