@@ -4,6 +4,12 @@ import "./core/lib/legacyStorageMigration.ts";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+// Polices de la DA auto-hébergées (servies depuis l’origine avec le bundle) :
+// plus de Google Fonts, bloqué par la CSP et source d’un transfert d’IP vers
+// Google. Seuls les sous-ensembles Unicode utilisés sont téléchargés.
+import "@fontsource/bebas-neue/400.css";
+import "@fontsource-variable/bricolage-grotesque/opsz.css";
+import "@fontsource-variable/inter/wght.css";
 import "./styles/global.css";
 import App from "./App.tsx";
 import { AuthProvider } from "./core/context/AuthContext.tsx";
