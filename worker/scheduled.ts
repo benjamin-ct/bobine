@@ -2,12 +2,13 @@ import {
   getAllSubscriptions,
   getWatchlistForSubscription,
   getGenrePreferencesForSubscription,
-  updateKnownProviders,
-  wasAlreadyNotified,
   markNotified,
-  wasUserAlreadyNotified,
   markUserNotified,
   getRegionsByUser,
+  getNotifiedKeys,
+  notifiedKey,
+  providersChanged,
+  knownProvidersUpdate,
 } from "./db.ts";
 import {
   getFlatrateProviderIdsCached,
@@ -37,34 +38,30 @@ const REMINDER_RELEASE_GRACE_DAYS = 3;
 // recevoir N fois la même notification in-app), au niveau de l'abonnement
 // sinon. L'historique par abonnement reste consulté pour un compte : un
 // appareil tout juste rattaché ne renotifie pas ce qu'il a déjà reçu.
-async function wasRecipientNotified(
+// Historique chargé une fois par destinataire (getNotifiedKeys), puis
+// complété au fil de l'exécution (audit H5).
+type NotifiedHistory = Set<string>;
+
+function loadNotifiedHistory(
   db: D1Database,
-  recipient: NotificationRecipient,
-  mediaType: string,
-  tmdbId: number,
-  reason: string
-): Promise<boolean> {
-  if (
-    recipient.userId !== null &&
-    (await wasUserAlreadyNotified(db, recipient.userId, mediaType, tmdbId, reason))
-  ) {
-    return true;
-  }
-  for (const subscription of recipient.subscriptions) {
-    if (await wasAlreadyNotified(db, subscription.id, mediaType, tmdbId, reason)) {
-      return true;
-    }
-  }
-  return false;
+  recipient: NotificationRecipient
+): Promise<NotifiedHistory> {
+  return getNotifiedKeys(
+    db,
+    recipient.userId,
+    recipient.subscriptions.map((subscription) => subscription.id)
+  );
 }
 
 async function markRecipientNotified(
   db: D1Database,
   recipient: NotificationRecipient,
+  history: NotifiedHistory,
   mediaType: string,
   tmdbId: number,
   reason: string
 ): Promise<void> {
+  history.add(notifiedKey(mediaType, tmdbId, reason));
   if (recipient.userId !== null) {
     await markUserNotified(db, recipient.userId, mediaType, tmdbId, reason);
     return;
@@ -87,6 +84,9 @@ async function checkWatchlistAvailability(
   tmdbCache: TmdbRunCache
 ): Promise<void> {
   const notifiedThisRun = new Set<string>();
+  // Références mises à jour en un seul batch, et seulement si elles ont
+  // changé : avant, une écriture par titre et par jour (audit H5).
+  const updates: D1PreparedStatement[] = [];
   for (const subscription of recipient.subscriptions) {
     const items = await getWatchlistForSubscription(db, subscription.id);
     for (const item of items) {
@@ -124,14 +124,15 @@ async function checkWatchlistAvailability(
       // (knownProviders === null), on se contente d'enregistrer sans notifier,
       // sinon tout ce qui était déjà là au moment de l'ajout déclencherait une
       // notification.
-      await updateKnownProviders(
-        db,
-        subscription.id,
-        item.media_type,
-        item.tmdb_id,
-        currentProviders
-      );
+      if (providersChanged(item.known_providers, currentProviders)) {
+        updates.push(
+          knownProvidersUpdate(db, subscription.id, item.media_type, item.tmdb_id, currentProviders)
+        );
+      }
     }
+  }
+  if (updates.length > 0) {
+    await db.batch(updates);
   }
 }
 
@@ -140,6 +141,7 @@ async function checkFavoriteGenreReleases(
   env: Env,
   db: D1Database,
   recipient: NotificationRecipient,
+  history: NotifiedHistory,
   tmdbCache: TmdbRunCache
 ): Promise<void> {
   const seen = new Set<string>();
@@ -168,7 +170,7 @@ async function checkFavoriteGenreReleases(
       }
 
       for (const item of results.slice(0, 5)) {
-        if (await wasRecipientNotified(db, recipient, media_type, item.id, "genre")) {
+        if (history.has(notifiedKey(media_type, item.id, "genre"))) {
           continue;
         }
         await notifyUser(env, recipient, {
@@ -176,7 +178,7 @@ async function checkFavoriteGenreReleases(
           mediaTitle: item.title || item.name || "",
           url: `/media/${media_type}/${item.id}`,
         });
-        await markRecipientNotified(db, recipient, media_type, item.id, "genre");
+        await markRecipientNotified(db, recipient, history, media_type, item.id, "genre");
       }
     }
   }
@@ -187,6 +189,7 @@ async function checkTrendingReleases(
   env: Env,
   db: D1Database,
   recipient: NotificationRecipient,
+  history: NotifiedHistory,
   trending: TmdbListItem[]
 ): Promise<void> {
   let sentThisRun = 0;
@@ -198,7 +201,7 @@ async function checkTrendingReleases(
     if (!mediaType) {
       continue;
     }
-    if (await wasRecipientNotified(db, recipient, mediaType, item.id, "trending")) {
+    if (history.has(notifiedKey(mediaType, item.id, "trending"))) {
       continue;
     }
 
@@ -207,7 +210,7 @@ async function checkTrendingReleases(
       mediaTitle: item.title || item.name || "",
       url: `/media/${mediaType}/${item.id}`,
     });
-    await markRecipientNotified(db, recipient, mediaType, item.id, "trending");
+    await markRecipientNotified(db, recipient, history, mediaType, item.id, "trending");
     sentThisRun += 1;
   }
 }
@@ -230,6 +233,7 @@ async function checkReminder(
   env: Env,
   db: D1Database,
   recipient: NotificationRecipient,
+  history: NotifiedHistory,
   reminder: ReminderRow,
   region: string,
   tmdbCache: TmdbRunCache
@@ -255,14 +259,14 @@ async function checkReminder(
 
   if (
     isReleaseDue(reminder.release_date) &&
-    !(await wasRecipientNotified(db, recipient, mediaType, tmdbId, "reminder-release"))
+    !history.has(notifiedKey(mediaType, tmdbId, "reminder-release"))
   ) {
     await notifyUser(env, recipient, {
       kind: "reminderReleased",
       mediaTitle: reminder.title,
       url,
     });
-    await markRecipientNotified(db, recipient, mediaType, tmdbId, "reminder-release");
+    await markRecipientNotified(db, recipient, history, mediaType, tmdbId, "reminder-release");
   } else if (
     currentProviders !== null &&
     knownProviders !== null &&
@@ -275,7 +279,7 @@ async function checkReminder(
     });
   }
 
-  if (currentProviders !== null) {
+  if (currentProviders !== null && providersChanged(reminder.known_providers, currentProviders)) {
     await updateReminderProviders(db, reminder.user_id, mediaType, tmdbId, currentProviders);
   }
 }
@@ -301,12 +305,20 @@ async function checkReminders(
       subscriptions: subscriptions.filter((s) => s.user_id === userId),
       syncHost: reminders.find((r) => r.sync_host)?.sync_host ?? undefined,
     };
+    let history: NotifiedHistory;
+    try {
+      history = await loadNotifiedHistory(db, recipient);
+    } catch (err) {
+      logError(`Historique de notifications illisible pour le compte ${userId} :`, err);
+      continue;
+    }
     for (const reminder of reminders) {
       try {
         await checkReminder(
           env,
           db,
           recipient,
+          history,
           reminder,
           regions.get(userId) ?? DEFAULT_REGION,
           tmdbCache
@@ -355,7 +367,11 @@ export async function runDailyCheck(env: Env): Promise<void> {
   const subscriptions = await getAllSubscriptions(db);
   const tmdbCache = createTmdbRunCache();
   const regions = await getRegionsByUser(db);
-  await checkReminders(env, db, subscriptions, regions, tmdbCache);
+  try {
+    await checkReminders(env, db, subscriptions, regions, tmdbCache);
+  } catch (err) {
+    logError("Cron : rappels en échec :", err);
+  }
   if (subscriptions.length === 0) {
     return;
   }
@@ -369,11 +385,35 @@ export async function runDailyCheck(env: Env): Promise<void> {
     logError("Tendances TMDB indisponibles :", err);
   }
 
+  // Un destinataire en erreur (abonnement push invalide, D1 ponctuellement
+  // indisponible…) ne doit plus interrompre le lot : avant, tous les
+  // destinataires suivants étaient sautés en silence (audit H5). Chaque
+  // vérification est isolée pour la même raison.
   for (const recipient of groupRecipients(subscriptions)) {
+    const label =
+      recipient.userId !== null
+        ? `compte ${recipient.userId}`
+        : `abonnement ${recipient.subscriptions[0]?.id}`;
+    let history: NotifiedHistory;
+    try {
+      history = await loadNotifiedHistory(db, recipient);
+    } catch (err) {
+      logError(`Cron : historique de notifications illisible (${label}) :`, err);
+      continue;
+    }
     const region =
       (recipient.userId !== null ? regions.get(recipient.userId) : undefined) ?? DEFAULT_REGION;
-    await checkWatchlistAvailability(env, db, recipient, region, tmdbCache);
-    await checkFavoriteGenreReleases(env, db, recipient, tmdbCache);
-    await checkTrendingReleases(env, db, recipient, trending);
+    const checks: [string, () => Promise<void>][] = [
+      ["watchlist", () => checkWatchlistAvailability(env, db, recipient, region, tmdbCache)],
+      ["genres", () => checkFavoriteGenreReleases(env, db, recipient, history, tmdbCache)],
+      ["tendances", () => checkTrendingReleases(env, db, recipient, history, trending)],
+    ];
+    for (const [name, check] of checks) {
+      try {
+        await check();
+      } catch (err) {
+        logError(`Cron : vérification « ${name} » en échec (${label}) :`, err);
+      }
+    }
   }
 }
