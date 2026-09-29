@@ -384,7 +384,8 @@
     "typeSeries": "Series",
     "availableOn": "Available on",
     "withSubscription": "included with subscription",
-    "rentOrBuy": "to rent or buy"
+    "rentOrBuy": "to rent or buy",
+    "drawnAnnouncement": "Picked title: {{title}}"
   },
   "searchPage": {
     "resultsFor": "Results for “{{query}}”",
