@@ -9,6 +9,7 @@ import {
   getSubscriptionIdByEndpoint,
   getAllSubscriptions,
   getLibraryForUser,
+  getWatchedKeys,
   replaceLibraryForUser,
   applyLibraryChanges,
   getCustomListsForUser,
@@ -1027,8 +1028,9 @@ async function handlePutTopPicks(request: Request, env: Env): Promise<Response> 
   const keys = [
     ...new Set(sanitizeKeyList(body.topPicks, TOP_PICKS_MAX).map((k) => `${k.mediaType}:${k.id}`)),
   ];
-  const library = await getLibraryForUser(env.DB, user.id);
-  const topPicks = keys.filter((key) => library.watched[key]);
+  // Seules les clés proposées sont vérifiées, pas toute la bibliothèque (audit M6).
+  const watched = await getWatchedKeys(env.DB, user.id, keys);
+  const topPicks = keys.filter((key) => watched.has(key));
   await setTopPicks(env.DB, user.id, topPicks);
   return json({ ok: true, topPicks });
 }
