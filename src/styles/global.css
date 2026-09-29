@@ -70,6 +70,43 @@ body {
   flex: 1;
 }
 
+/* Téléchargement d'une page (chunk React.lazy, voir App.tsx) : invisible les
+   300 premières ms pour ne pas clignoter quand le chunk arrive vite. */
+.route-fallback {
+  display: flex;
+  justify-content: center;
+  padding: 96px 0;
+  opacity: 0;
+  animation: route-fallback-in 0.2s ease 0.3s forwards;
+}
+
+.route-fallback__spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: route-fallback-spin 0.8s linear infinite;
+}
+
+@keyframes route-fallback-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes route-fallback-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-fallback__spinner {
+    animation: none;
+  }
+}
+
 /* Barre d'onglets mobile flottante en bas (NavBar) : on réserve sa hauteur
    et son écart (même calcul que son « bottom ») pour que le pied de page et
    la fin des listes ne restent pas dessous. */

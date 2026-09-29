@@ -1,5 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import i18n, { DEFAULT_LOCALE, SUPPORTED_LOCALES, type Locale } from "../i18n/i18n.ts";
+import i18n, {
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  ensureLocaleLoaded,
+  type Locale,
+} from "../i18n/i18n.ts";
 
 // Langue de l'interface, indépendante du réglage des plateformes de
 // streaming (voir FavoriteProvidersContext, qui reste piloté par
@@ -27,7 +32,9 @@ function detectBrowserLocale(): Locale {
   return DEFAULT_LOCALE;
 }
 
-function loadInitialLocale(): Locale {
+// Exportée pour main.tsx, qui charge les traductions de cette langue avant
+// le premier rendu (voir ensureLocaleLoaded).
+export function loadInitialLocale(): Locale {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && isSupportedLocale(stored)) {
@@ -50,7 +57,14 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>(loadInitialLocale);
 
   useEffect(() => {
-    i18n.changeLanguage(locale);
+    // Traductions chargées à la demande (voir i18n.ts) : on n'active la
+    // langue qu'une fois prête, et seulement si elle est toujours choisie.
+    let cancelled = false;
+    void ensureLocaleLoaded(locale).then(() => {
+      if (!cancelled) {
+        i18n.changeLanguage(locale);
+      }
+    });
     document.documentElement.setAttribute("lang", locale);
     try {
       localStorage.setItem(STORAGE_KEY, locale);
@@ -58,6 +72,9 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       // Repli silencieux : la langue reste appliquée pour cette session,
       // simplement pas mémorisée pour la prochaine visite.
     }
+    return () => {
+      cancelled = true;
+    };
   }, [locale]);
 
   const value = useMemo(() => ({ locale, setLocale }), [locale]);

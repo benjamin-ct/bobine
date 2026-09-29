@@ -5,17 +5,24 @@
 // même logique que la clé "site" reCAPTCHA (RegionContext). Tant qu'aucun
 // DSN n'est renvoyé (dev local, ou avant que le secret Cloudflare ne soit
 // posé), Sentry reste non initialisé et capture*() est un no-op silencieux.
-import * as Sentry from "@sentry/react";
+//
+// Le SDK est chargé à la demande (`import()`), une fois le DSN connu : il
+// n'alourdit plus le bundle initial, et n'est jamais téléchargé sans DSN
+// (audit H6).
+type SentryModule = typeof import("@sentry/react");
 
 let sentryInitPromise: Promise<void> | null = null;
+let sentry: SentryModule | null = null;
 
 export function ensureSentryInit(): Promise<void> {
   if (!sentryInitPromise) {
     sentryInitPromise = fetch("/api/sentry-dsn")
       .then((res) => res.json())
-      .then(({ dsn }: { dsn?: string | null }) => {
+      .then(async ({ dsn }: { dsn?: string | null }) => {
         if (dsn) {
-          Sentry.init({ dsn, tracesSampleRate: 0 });
+          const module = await import("@sentry/react");
+          module.init({ dsn, tracesSampleRate: 0 });
+          sentry = module;
         }
       })
       .catch(() => {
@@ -26,12 +33,29 @@ export function ensureSentryInit(): Promise<void> {
   return sentryInitPromise;
 }
 
+// Une erreur levée avant la fin de l'initialisation est envoyée dès que le
+// SDK est prêt, plutôt que perdue. Sans `ensureSentryInit` préalable (client
+// automatisé, voir main.tsx), rien n'est envoyé.
+function withSentry(send: (module: SentryModule) => void): void {
+  if (sentry) {
+    send(sentry);
+    return;
+  }
+  void sentryInitPromise?.then(() => {
+    if (sentry) {
+      send(sentry);
+    }
+  });
+}
+
 export function logError(message: string, err: unknown): void {
   console.error(message, err);
-  Sentry.captureException(err instanceof Error ? err : new Error(`${message}: ${String(err)}`));
+  const error = err instanceof Error ? err : new Error(`${message}: ${String(err)}`);
+  withSentry((module) => module.captureException(error));
 }
 
 export function logWarn(message: string, err?: unknown): void {
   console.warn(message, err);
-  Sentry.captureMessage(err ? `${message} ${String(err)}` : message, "warning");
+  const text = err ? `${message} ${String(err)}` : message;
+  withSentry((module) => module.captureMessage(text, "warning"));
 }

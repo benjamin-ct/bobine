@@ -65,3 +65,29 @@ export function setupPwaAutoUpdate(): void {
       });
   });
 }
+
+// Pages chargées à la demande (React.lazy, voir App.tsx) : une page restée
+// ouverte pendant un déploiement référence des chunks qui n'existent plus
+// (noms hachés). Vite émet alors « vite:preloadError » ; on recharge pour
+// récupérer la nouvelle version plutôt que d'afficher une erreur. Au plus
+// un rechargement par minute, pour ne jamais boucler si le chunk manque
+// vraiment (ex. hors ligne).
+const CHUNK_RELOAD_KEY = "seancy.chunkReloadAt";
+const CHUNK_RELOAD_MIN_INTERVAL_MS = 60_000;
+
+export function setupStaleChunkReload(): void {
+  window.addEventListener("vite:preloadError", (event) => {
+    try {
+      const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
+      if (Date.now() - last < CHUNK_RELOAD_MIN_INTERVAL_MS) {
+        return;
+      }
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+    } catch {
+      // sessionStorage indisponible : pas de garde-fou, donc pas de reload.
+      return;
+    }
+    event.preventDefault();
+    window.location.reload();
+  });
+}
