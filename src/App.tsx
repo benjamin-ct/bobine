@@ -86,24 +86,24 @@ export default function App() {
       <main ref={mainRef}>
         <ErrorBoundary resetKey={pathname}>
           <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/" element={<Discover />} />
-            <Route path="/nouveautes" element={<NewReleases />} />
-            <Route path="/prochainement" element={<ComingSoon />} />
-            <Route path="/media/:mediaType/:id" element={<Detail />} />
-            <Route path="/personne/:id" element={<Person />} />
-            <Route path="/aleatoire" element={<Random />} />
-            <Route path="/ma-liste" element={<Navigate to="/profil?tab=ma-liste" replace />} />
-            <Route path="/profil" element={<Profile />} />
-            <Route path="/u/:slug" element={<PublicProfile />} />
-            <Route path="/recherche" element={<Search />} />
-            <Route path="/liste/:slug" element={<SharedList />} />
-            <Route path="/connexion" element={<LoginPage />} />
-            <Route path="/auth/verify" element={<VerifyAuthPage />} />
-            <Route path="/conditions-utilisation" element={<TermsPage />} />
-            <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+            <Routes>
+              <Route path="/" element={<Discover />} />
+              <Route path="/nouveautes" element={<NewReleases />} />
+              <Route path="/prochainement" element={<ComingSoon />} />
+              <Route path="/media/:mediaType/:id" element={<Detail />} />
+              <Route path="/personne/:id" element={<Person />} />
+              <Route path="/aleatoire" element={<Random />} />
+              <Route path="/ma-liste" element={<Navigate to="/profil?tab=ma-liste" replace />} />
+              <Route path="/profil" element={<Profile />} />
+              <Route path="/u/:slug" element={<PublicProfile />} />
+              <Route path="/recherche" element={<Search />} />
+              <Route path="/liste/:slug" element={<SharedList />} />
+              <Route path="/connexion" element={<LoginPage />} />
+              <Route path="/auth/verify" element={<VerifyAuthPage />} />
+              <Route path="/conditions-utilisation" element={<TermsPage />} />
+              <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </Suspense>
         </ErrorBoundary>
       </main>
