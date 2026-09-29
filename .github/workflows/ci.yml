@@ -140,6 +140,15 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/preview-d1.ts provision ${{ github.event.pull_request.number }}
 
+      # Bascule Bobine → Seancy : version provisoire du Worker seancy tant
+      # qu'il n'a jamais été déployé, sinon ses réglages restent grisés dans
+      # le dashboard. Sans effet ensuite (voir scripts/seancy-bootstrap-worker.ts).
+      - name: Bootstrap Worker seancy (once)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/seancy-bootstrap-worker.ts
+
       - name: Generate branch slug for preview name
         id: branch-slug
         run: |
