@@ -87,7 +87,6 @@ import { PRODUCTION_HOSTNAME, withSentry } from "./sentry.ts";
 import { logError } from "./logger.ts";
 import { trackEvent } from "./analytics.ts";
 import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
-import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
 import { openSyncSocket, publishToUser } from "./sync.ts";
 import {
@@ -100,6 +99,7 @@ import {
   sniffAvatarType,
 } from "./avatars.ts";
 import { randomShareSlug, normalizeUsername, SHARE_SLUG_PATTERN } from "./share-slug.ts";
+import { fetchReleaseDatesCached, fetchWatchProvidersCached } from "./tmdb-edge-cache.ts";
 import { SECURITY_HEADERS } from "./security-headers.ts";
 import { PAGE_META_ROUTE, servePageWithMeta, serveRobots, serveSitemap } from "./page-meta.ts";
 import {
@@ -1668,47 +1668,6 @@ const WORKER_ONLY_PARAMS = [
   "region_release_date_region",
 ];
 
-// Résout les plateformes de streaming d'un titre en réutilisant EXACTEMENT
-// la même entrée de cache d'edge que l'appel direct /api/tmdb/<type>/<id>/
-// watch/providers (même URL, même TTL 1h) : un titre déjà consulté (fiche
-// détail, ou déjà croisé dans une autre grille) répond sans retaper TMDB.
-async function fetchWatchProvidersCached(
-  origin: string,
-  mediaType: "movie" | "tv",
-  id: number,
-  env: Env,
-  ctx: ExecutionContext
-): Promise<Record<string, { flatrate?: unknown; rent?: unknown; buy?: unknown }> | null> {
-  const cache = caches.default;
-  const cacheKey = new Request(
-    `${origin}/api/tmdb/${mediaType}/${id}/watch/providers?language=fr-FR`
-  );
-  const cached = await cache.match(cacheKey);
-  if (cached) {
-    return cached.ok ? cached.json() : null;
-  }
-  const tmdbUrl = new URL(`https://api.themoviedb.org/3/${mediaType}/${id}/watch/providers`);
-  tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY!);
-  const res = await fetch(tmdbUrl.toString());
-  const body = await res.text();
-  if (!res.ok) {
-    return null;
-  }
-  ctx.waitUntil(
-    cache.put(
-      cacheKey,
-      new Response(body, {
-        status: res.status,
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-          "cache-control": "public, max-age=3600",
-        },
-      })
-    )
-  );
-  return JSON.parse(body).results || {};
-}
-
 // Grilles (Nouveautés...) : plutôt que de laisser chaque carte affichée
 // déclencher son propre appel /watch/providers depuis le navigateur une
 // fois visible (voir MediaCard.tsx), le badge plateforme est résolu ici en
@@ -1727,47 +1686,17 @@ async function enrichDiscoverResultsWithProviders(
 ): Promise<void> {
   await Promise.all(
     (data.results || []).map(async (item) => {
-      const results = await fetchWatchProvidersCached(origin, mediaType, item.id, env, ctx);
+      const results = await fetchWatchProvidersCached(
+        origin,
+        mediaType,
+        item.id,
+        env.TMDB_API_KEY!,
+        caches.default,
+        ctx
+      );
       (item as { watch_providers?: unknown }).watch_providers = results?.[region] ?? null;
     })
   );
-}
-
-// Résout /release_dates d'un film en réutilisant la même entrée de cache
-// d'edge que l'appel direct /api/tmdb/movie/<id>/release_dates (voir
-// fetchWatchProvidersCached ci-dessus, même principe).
-async function fetchReleaseDatesCached(
-  origin: string,
-  id: number,
-  env: Env,
-  ctx: ExecutionContext
-): Promise<ReleaseDatesResponse | null> {
-  const cache = caches.default;
-  const cacheKey = new Request(`${origin}/api/tmdb/movie/${id}/release_dates?language=fr-FR`);
-  const cached = await cache.match(cacheKey);
-  if (cached) {
-    return cached.ok ? cached.json() : null;
-  }
-  const tmdbUrl = new URL(`https://api.themoviedb.org/3/movie/${id}/release_dates`);
-  tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY!);
-  const res = await fetch(tmdbUrl.toString());
-  const body = await res.text();
-  if (!res.ok) {
-    return null;
-  }
-  ctx.waitUntil(
-    cache.put(
-      cacheKey,
-      new Response(body, {
-        status: res.status,
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-          "cache-control": "public, max-age=3600",
-        },
-      })
-    )
-  );
-  return JSON.parse(body);
 }
 
 // Grille Découvrir (films) : `release_date` renvoyé par /discover/movie est
@@ -1793,7 +1722,13 @@ async function enrichDiscoverResultsWithRegionDate(
       // renvoient déjà que des films (pas de media_type par item).
       .filter((item) => item.media_type === undefined || item.media_type === "movie")
       .map(async (item) => {
-        const releaseDates = await fetchReleaseDatesCached(origin, item.id, env, ctx);
+        const releaseDates = await fetchReleaseDatesCached(
+          origin,
+          item.id,
+          env.TMDB_API_KEY!,
+          caches.default,
+          ctx
+        );
         (item as { region_release_date?: string | null }).region_release_date =
           getTheatricalDateFromDetails(
             releaseDates ? { release_dates: releaseDates } : null,
@@ -1933,7 +1868,14 @@ async function handleTmdbProxy(
       "cache-control": `public, max-age=${maxAge}`,
     },
   });
-  if (res.ok) {
+  // Réponse appauvrie pour un crawler (grille sans badges plateforme, voir
+  // shouldEnrichProviders) : la clé de cache ne dépend que de l'URL, donc la
+  // mettre en cache la servirait ensuite aux vrais visiteurs pendant 5 min
+  // (audit H2). Les autres réponses aux crawlers, identiques à celles d'un
+  // humain, restent mises en cache : elles épargnent le quota TMDB.
+  const degradedForCrawler =
+    crawler && discoverMediaType && url.searchParams.get("include_watch_providers_badge") === "1";
+  if (res.ok && !degradedForCrawler) {
     // waitUntil : n'ajoute pas la latence de l'écriture cache à la réponse.
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
   } else if (res.status === 429) {
