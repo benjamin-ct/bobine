@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
@@ -78,6 +79,8 @@ function toDiscoverParams(advanced: AdvancedFiltersState) {
 
 export default function DiscoverPage() {
   const { t, i18n } = useTranslation();
+  // Page d'accueil : titre par défaut de l'appli.
+  useDocumentTitle(null);
   const location = useLocation();
   const navigationType = useNavigationType();
   const restoredFilters = navigationType === "POP" ? filtersMemory.get(location.key) : undefined;

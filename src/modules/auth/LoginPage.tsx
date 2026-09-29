@@ -1,11 +1,13 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { useAuth } from "../../core/context/AuthContext.tsx";
 import LoginForm from "./LoginForm.tsx";
 import styles from "./AuthPages.module.css";
 
 export default function LoginPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t("pageTitle.login"));
   const { status } = useAuth();
   const location = useLocation();
   // Page d'origine quand on arrive ici depuis une page réservée aux membres

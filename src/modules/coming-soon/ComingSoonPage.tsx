@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useNearViewport } from "../../shared/hooks/useNearViewport.ts";
 import { useUpcomingRelease } from "../../shared/hooks/useUpcomingRelease.ts";
@@ -209,6 +210,7 @@ function TimelineItem({ item }: { item: MediaItem }) {
 
 export default function ComingSoonPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t("pageTitle.comingSoon"));
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerIds, setProviderIds] = useState<string[]>([]);

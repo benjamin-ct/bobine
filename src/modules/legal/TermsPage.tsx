@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { PageHeader } from "../../shared/components/index.ts";
 import LegalSection from "./LegalSection.tsx";
 import { LEGAL_CONTACT_URL } from "./contact.ts";
@@ -6,6 +7,7 @@ import styles from "./LegalPage.module.css";
 
 export default function TermsPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t("pageTitle.terms"));
 
   return (
     <div className={styles.page}>

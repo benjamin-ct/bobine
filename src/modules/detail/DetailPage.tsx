@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import type { TFunction } from "i18next";
 import {
   backdropUrl,
@@ -122,6 +123,12 @@ export default function DetailPage() {
   );
   const [error, setError] = useState<Error | null>(null);
   const [preview, setPreview] = useState<MediaPreview | null>(null);
+  // Titre de l'onglet : « Dune (2021) — Seancy », dès l'aperçu si on le connaît.
+  const pageName = details ? details.title || details.name : preview?.title;
+  const pageYear = (details?.release_date || details?.first_air_date)?.slice(0, 4);
+  useDocumentTitle(
+    pageName && pageYear ? t("pageTitle.withYear", { title: pageName, year: pageYear }) : pageName
+  );
   const mainCastCount = useMainCastCount();
   // Nombre de lots de CAST_BATCH révélés en plus des acteurs principaux.
   const [castBatches, setCastBatches] = useState(0);

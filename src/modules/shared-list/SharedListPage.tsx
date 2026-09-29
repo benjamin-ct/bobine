@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import {
   PageHeader,
   MediaCard,
@@ -56,6 +57,13 @@ export default function SharedListPage() {
   const [sortMode, setSortMode] = useState<SortMode>("owner");
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
   const [linkCopied, setLinkCopied] = useState(false);
+  useDocumentTitle(
+    state.status === "success"
+      ? state.list.name
+      : state.status === "not-found"
+        ? t("pageTitle.notFound")
+        : null
+  );
 
   // Noms des genres pour « année · genre » sous les affiches ; en cas
   // d'échec, seule l'année s'affiche.
