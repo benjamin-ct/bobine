@@ -23,8 +23,8 @@ import { FavoriteProvidersProvider } from "./core/context/FavoriteProvidersConte
 import { ExcludedGenresProvider } from "./core/context/ExcludedGenresContext.tsx";
 import { ExcludedTitlesProvider } from "./core/context/ExcludedTitlesContext.tsx";
 import { ThemeProvider } from "./core/context/ThemeContext.tsx";
-import { LocaleProvider, loadInitialLocale } from "./core/context/LocaleContext.tsx";
-import { ensureLocaleLoaded } from "./core/i18n/i18n.ts";
+import { LocaleProvider } from "./core/context/LocaleContext.tsx";
+import { ensureLocaleLoaded, loadInitialLocale } from "./core/i18n/i18n.ts";
 import { LocaleAccountSync } from "./core/context/LocaleAccountSync.tsx";
 import { ensureSentryInit } from "./core/logger.ts";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
