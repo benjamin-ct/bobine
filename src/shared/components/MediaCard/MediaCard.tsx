@@ -6,7 +6,7 @@ import {
   posterSrcSet,
   logoUrl,
   getWatchProviders,
-  getDetails,
+  getTvStatus,
   getSeriesEpisodeBadge,
   formatFullDate,
 } from "../../../core/api/tmdb.ts";
@@ -203,7 +203,7 @@ function MediaCard({
       return;
     }
     let cancelled = false;
-    getDetails("tv", item.id)
+    getTvStatus(item.id)
       .then((details) => {
         if (!cancelled) {
           setEpisodeBadge(getSeriesEpisodeBadge(details));

@@ -228,8 +228,12 @@ export default function DiscoverPage() {
       return;
     }
     let cancelled = false;
+    // Filtre changé ou page quittée : la requête en cours est annulée et
+    // libère sa place dans la file de tmdbFetch (audit M10).
+    const controller = new AbortController();
     setStatus("loading");
     discover(mediaType, {
+      signal: controller.signal,
       page: 1,
       genreId: genreIds,
       excludeGenreIds: excludedGenreIds,
@@ -258,6 +262,7 @@ export default function DiscoverPage() {
       });
     return () => {
       cancelled = true;
+      controller.abort();
     };
     // i18n.language : discover() renvoie titres/synopsis dans la langue
     // active (tmdbClient.ts) ; sans cette dépendance, changer de langue ne

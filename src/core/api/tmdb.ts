@@ -33,6 +33,7 @@ export {
   TmdbConfigError,
 } from "./tmdbClient.ts";
 import { tmdbFetch, IS_DEV, currentTmdbLanguage } from "./tmdbClient.ts";
+import { LruCache } from "../lib/lruCache.ts";
 
 import type {
   Country,
@@ -137,6 +138,8 @@ export interface DiscoverParams {
    * par carte, donc réservé aux pages qui affichent cette date par défaut
    * (Découvrir). Sans effet en dev (Worker pas dans la boucle). */
   includeRegionReleaseDate?: boolean;
+  /** Annulation quand la page ou le filtre change (voir tmdbFetch). */
+  signal?: AbortSignal;
 }
 
 export function discover(
@@ -164,6 +167,7 @@ export function discover(
     runtimeMax,
     includeProviderBadge,
     includeRegionReleaseDate,
+    signal,
   }: DiscoverParams = {}
 ): Promise<PagedResponse<MediaSummary>> {
   const resolvedField: string =
@@ -183,37 +187,42 @@ export function discover(
       ? genreId.join("|")
       : undefined
     : genreId;
-  return tmdbFetch(`/discover/${mediaType}`, {
-    page,
-    with_genres: genreIdParam || undefined,
-    without_genres: excludeGenreIds?.length ? excludeGenreIds.join(",") : undefined,
-    with_watch_providers: providerIds?.length ? providerIds.join("|") : undefined,
-    watch_region: providerIds?.length ? region : undefined,
-    sort_by: `${resolvedField}.${sortDirection}`,
-    // Un plancher explicite (filtre avancé) prend le pas sur celui, implicite,
-    // qu'on applique par défaut quand on trie par note.
-    "vote_count.gte":
-      voteCountMin || (sortField === "vote_average" ? MIN_VOTES_FOR_RATING_SORT : undefined),
-    "vote_average.gte": voteAverageMin || undefined,
-    "vote_average.lte": voteAverageMax || undefined,
-    "with_runtime.gte": runtimeMin || undefined,
-    "with_runtime.lte": runtimeMax || undefined,
-    with_origin_country: originCountry || undefined,
-    with_original_language: originalLanguage || undefined,
-    [`${dateField}.gte`]: dateFrom || (yearMin ? `${yearMin}-01-01` : undefined),
-    [`${dateField}.lte`]: dateLte,
-    [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
-    include_adult: false,
-    // Paramètres propres au Worker (retirés avant l'appel TMDB réel côté
-    // serveur, voir handleTmdbProxy) : region est renvoyée séparément de
-    // watch_region ci-dessus, qui ne part que combinée à un filtre
-    // providerIds et n'a donc pas toujours la bonne valeur pour ce besoin.
-    include_watch_providers_badge: includeProviderBadge ? 1 : undefined,
-    watch_providers_badge_region: includeProviderBadge ? region : undefined,
-    include_region_release_date: includeRegionReleaseDate && mediaType === "movie" ? 1 : undefined,
-    region_release_date_region:
-      includeRegionReleaseDate && mediaType === "movie" ? region : undefined,
-  });
+  return tmdbFetch(
+    `/discover/${mediaType}`,
+    {
+      page,
+      with_genres: genreIdParam || undefined,
+      without_genres: excludeGenreIds?.length ? excludeGenreIds.join(",") : undefined,
+      with_watch_providers: providerIds?.length ? providerIds.join("|") : undefined,
+      watch_region: providerIds?.length ? region : undefined,
+      sort_by: `${resolvedField}.${sortDirection}`,
+      // Un plancher explicite (filtre avancé) prend le pas sur celui, implicite,
+      // qu'on applique par défaut quand on trie par note.
+      "vote_count.gte":
+        voteCountMin || (sortField === "vote_average" ? MIN_VOTES_FOR_RATING_SORT : undefined),
+      "vote_average.gte": voteAverageMin || undefined,
+      "vote_average.lte": voteAverageMax || undefined,
+      "with_runtime.gte": runtimeMin || undefined,
+      "with_runtime.lte": runtimeMax || undefined,
+      with_origin_country: originCountry || undefined,
+      with_original_language: originalLanguage || undefined,
+      [`${dateField}.gte`]: dateFrom || (yearMin ? `${yearMin}-01-01` : undefined),
+      [`${dateField}.lte`]: dateLte,
+      [mediaType === "movie" ? "primary_release_year" : "first_air_date_year"]: year || undefined,
+      include_adult: false,
+      // Paramètres propres au Worker (retirés avant l'appel TMDB réel côté
+      // serveur, voir handleTmdbProxy) : region est renvoyée séparément de
+      // watch_region ci-dessus, qui ne part que combinée à un filtre
+      // providerIds et n'a donc pas toujours la bonne valeur pour ce besoin.
+      include_watch_providers_badge: includeProviderBadge ? 1 : undefined,
+      watch_providers_badge_region: includeProviderBadge ? region : undefined,
+      include_region_release_date:
+        includeRegionReleaseDate && mediaType === "movie" ? 1 : undefined,
+      region_release_date_region:
+        includeRegionReleaseDate && mediaType === "movie" ? region : undefined,
+    },
+    { signal }
+  );
 }
 
 // `labelKey` plutôt qu'un libellé en dur (même raison que STAR_LABEL_KEYS
@@ -298,10 +307,11 @@ export function trending(mediaType: "all" | MediaType = "all", window: "day" | "
 // concurrent pour le même titre pendant que le premier est encore en vol
 // réutilise la requête en cours plutôt que d'en émettre une seconde. En
 // cas d'échec, l'entrée est retirée pour permettre un nouvel essai.
-const detailsCache = new Map<string, Promise<MediaDetails>>();
+// Bornés (LRU) : une longue session ne les fait plus grossir sans fin (audit M10).
+const detailsCache = new LruCache<string, Promise<MediaDetails>>(100);
 // Mêmes réponses, une fois arrivées : lues de façon synchrone par la fiche
 // (peekDetails) pour s'afficher d'emblée, sans passer par son squelette.
-const detailsResolved = new Map<string, MediaDetails>();
+const detailsResolved = new LruCache<string, MediaDetails>(100);
 
 function detailsKey(mediaType: MediaType, id: string | number): string {
   return `${mediaType}:${id}:${currentTmdbLanguage()}`;
@@ -350,7 +360,7 @@ export function getDetails(mediaType: MediaType, id: string | number): Promise<M
 // à l'exclusion ne suffisent (ex. titre exclu depuis un autre appareil).
 // Pas d'append_to_response : contrairement à getDetails, on n'a besoin ni
 // des crédits, ni des vidéos, ni des recommandations pour un simple libellé.
-const summaryCache = new Map<string, Promise<MediaSummary>>();
+const summaryCache = new LruCache<string, Promise<MediaSummary>>(300);
 export function getMediaSummary(mediaType: MediaType, id: string | number): Promise<MediaSummary> {
   const key = `${mediaType}:${id}:${currentTmdbLanguage()}`;
   const cached = summaryCache.get(key);
@@ -365,13 +375,37 @@ export function getMediaSummary(mediaType: MediaType, id: string | number): Prom
   return promise;
 }
 
+// État de diffusion d'une série (dernier/prochain épisode, saisons, chaînes)
+// pour les badges et « Reprendre » : ces champs sont dans la réponse de base
+// de /tv/<id>, sans les crédits, vidéos, recommandations… qu'ajoute
+// getDetails (audit M10). Une fiche complète déjà chargée pendant la session
+// est réutilisée telle quelle.
+const tvStatusCache = new LruCache<string, Promise<MediaDetails>>(300);
+export function getTvStatus(id: string | number): Promise<MediaDetails> {
+  const full = peekDetails("tv", id);
+  if (full) {
+    return Promise.resolve(full);
+  }
+  const key = `${id}:${currentTmdbLanguage()}`;
+  const cached = tvStatusCache.get(key);
+  if (cached) {
+    return cached;
+  }
+  const promise = tmdbFetch<MediaDetails>(`/tv/${id}`).catch((err: unknown) => {
+    tvStatusCache.delete(key);
+    throw err;
+  });
+  tvStatusCache.set(key, promise);
+  return promise;
+}
+
 // Collection/saga (franchise) --------------------------------------------
 // Nouveau : section "La saga" de la fiche détail (repris de la maquette
 // HTML). `belongs_to_collection` sur MediaDetails ne donne que id/nom/
 // affiches — la liste des autres films de la franchise vient de ce second
 // appel, dédié, à la demande (pas systématique sur getDetails : la plupart
 // des titres n'appartiennent à aucune collection).
-const collectionCache = new Map<string, Promise<CollectionDetails>>();
+const collectionCache = new LruCache<string, Promise<CollectionDetails>>(50);
 export function getCollection(collectionId: number): Promise<CollectionDetails> {
   const key = `${collectionId}:${currentTmdbLanguage()}`;
   const cached = collectionCache.get(key);
@@ -491,7 +525,7 @@ export function getSeasonDetails(
 
 // Cache mémoire (même pattern que detailsCache) : évite un second appel
 // réseau si le même titre est demandé deux fois dans la session.
-const watchProvidersCache = new Map<string, Promise<RegionWatchProviders | null>>();
+const watchProvidersCache = new LruCache<string, Promise<RegionWatchProviders | null>>(500);
 export function getWatchProviders(
   mediaType: MediaType,
   id: string | number,
@@ -533,7 +567,7 @@ export function watchProvidersFromDetails(
 // /watch/providers qui ne reflète que ce qui est DÉJÀ disponible.
 
 // Cache mémoire par film : la réponse /release_dates change rarement.
-const movieReleaseDatesCache = new Map<number, ReturnType<typeof tmdbFetch>>();
+const movieReleaseDatesCache = new LruCache<number, ReturnType<typeof tmdbFetch>>(500);
 export function getMovieReleaseDates(movieId: number) {
   const cached = movieReleaseDatesCache.get(movieId);
   if (cached) {
