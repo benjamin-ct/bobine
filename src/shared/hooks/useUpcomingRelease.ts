@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   getMovieReleaseDates,
-  getDetails,
+  getTvStatus,
   getUpcomingMovieRelease,
   getUpcomingSeriesRelease,
 } from "../../core/api/tmdb.ts";
@@ -36,7 +36,7 @@ export function useUpcomingRelease(
         ? getMovieReleaseDates(id).then((data) =>
             getUpcomingMovieRelease(data as ReleaseDatesResponse, region, date)
           )
-        : getDetails("tv", id).then((data) => getUpcomingSeriesRelease(data));
+        : getTvStatus(id).then((data) => getUpcomingSeriesRelease(data));
     fetchUpcoming
       .then((release) => {
         if (!cancelled) {

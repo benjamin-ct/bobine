@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getDetails, getSeriesEpisodeBadge } from "../../core/api/tmdb.ts";
+import { getSeriesEpisodeBadge, getTvStatus } from "../../core/api/tmdb.ts";
 import type { SeriesEpisodeBadge } from "../../core/api/tmdb.ts";
 import type { LibraryItem } from "../../core/types/library.ts";
 
@@ -12,8 +12,15 @@ export interface FeaturedSeries {
 // (entamée ou en watchlist, contrairement à "Reprendre" qui exige un
 // épisode déjà entamé) dont un épisode vient de sortir ou arrive bientôt —
 // voir seriesEpisodeBadge.ts pour les fenêtres exactes.
+// Plafond : une requête par série, et une liste d'envies peut en contenir des
+// centaines. Les plus récemment touchées d'abord (audit M10).
+const MAX_FEATURED_CHECKS = 40;
+
 export function useFeaturedSeries(watchlist: LibraryItem[]): FeaturedSeries[] {
-  const seriesItems = watchlist.filter((item) => item.mediaType === "tv");
+  const seriesItems = watchlist
+    .filter((item) => item.mediaType === "tv")
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, MAX_FEATURED_CHECKS);
   const key = seriesItems.map((item) => item.id).join(",");
 
   const [badges, setBadges] = useState<Record<number, SeriesEpisodeBadge | null>>({});
@@ -21,7 +28,7 @@ export function useFeaturedSeries(watchlist: LibraryItem[]): FeaturedSeries[] {
   useEffect(() => {
     let cancelled = false;
     seriesItems.forEach((item) => {
-      getDetails("tv", item.id)
+      getTvStatus(item.id)
         .then((details) => {
           if (!cancelled) {
             const badge = getSeriesEpisodeBadge(details);

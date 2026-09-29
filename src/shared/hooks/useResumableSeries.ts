@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getDetails, getSeasonDetails } from "../../core/api/tmdb.ts";
+import { getSeasonDetails, getTvStatus } from "../../core/api/tmdb.ts";
 import { isStrictlyFutureDate } from "../../core/api/releaseBadge.ts";
 import type { EpisodeRef, LibraryItem } from "../../core/types/library.ts";
 
@@ -95,7 +95,7 @@ async function findNextEpisode(item: LibraryItem): Promise<ResumableCheck> {
   }
   const lastWatched = lastWatchedEntry(watchedEpisodes);
   try {
-    const details = await getDetails("tv", item.id);
+    const details = await getTvStatus(item.id);
     const seasons = (details.seasons || [])
       .filter((s) => s.episode_count > 0)
       .sort((a, b) => a.season_number - b.season_number);

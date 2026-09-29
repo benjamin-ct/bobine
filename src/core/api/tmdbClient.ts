@@ -90,7 +90,19 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function tmdbFetch<T>(path: string, params: TmdbParams = {}): Promise<T> {
+export interface TmdbFetchOptions {
+  /** Annule la requête quand la page qui l'a demandée n'en veut plus
+   * (audit M10) : elle quitte la file des 6 requêtes simultanées sans partir,
+   * ou est interrompue si elle était déjà en cours. À ne pas passer pour
+   * une promesse partagée entre plusieurs appelants (cache de getDetails…). */
+  signal?: AbortSignal;
+}
+
+export async function tmdbFetch<T>(
+  path: string,
+  params: TmdbParams = {},
+  { signal }: TmdbFetchOptions = {}
+): Promise<T> {
   if (IS_DEV && (!API_KEY || API_KEY === "REMPLACE_MOI_AVEC_TA_CLE_TMDB")) {
     throw new TmdbConfigError(
       "Clé API TMDB manquante. Ajoute VITE_TMDB_API_KEY dans .env.local puis redémarre le serveur."
@@ -113,7 +125,8 @@ export async function tmdbFetch<T>(path: string, params: TmdbParams = {}): Promi
     if (pause > 0) {
       await sleep(pause);
     }
-    const result = await fetchOnce<T>(url);
+    signal?.throwIfAborted();
+    const result = await fetchOnce<T>(url, signal);
     if (result.status !== RATE_LIMITED) {
       return result.data;
     }
@@ -130,13 +143,15 @@ export async function tmdbFetch<T>(path: string, params: TmdbParams = {}): Promi
 type FetchOnceResult<T> =
   { status: "ok"; data: T } | { status: typeof RATE_LIMITED; retryAfter: string | null };
 
-function fetchOnce<T>(url: URL): Promise<FetchOnceResult<T>> {
+function fetchOnce<T>(url: URL, signal?: AbortSignal): Promise<FetchOnceResult<T>> {
   return tmdbRequestLimiter.run(async () => {
+    // Annulée pendant qu'elle attendait son tour : on libère la place.
+    signal?.throwIfAborted();
     let res: Response;
     try {
-      res = await fetch(url.toString());
+      res = await fetch(url.toString(), { signal });
     } catch (err) {
-      if (!isNetworkError(err)) {
+      if (signal?.aborted || !isNetworkError(err)) {
         throw err;
       }
       // Session Access expirée (voir accessSession.ts) : la page repart vers
