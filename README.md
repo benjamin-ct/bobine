@@ -111,9 +111,9 @@ Le projet est configuré pour être déployé sur Cloudflare via `wrangler.jsonc
 | Build       | `npm run build`       |
 | Déploiement | `npx wrangler deploy` |
 
-En parallèle, le job `apply-d1-migrations` de la CI GitHub Actions (`.github/workflows/ci.yml`, déclenché lui aussi sur push `main`) applique automatiquement à la base distante toute migration D1 pas encore jouée (voir `migrations/`) via `npx wrangler d1 migrations apply bobine-notifications --remote`. Aucune migration ne doit jamais être lancée à la main : ajouter un fichier dans `migrations/` (`npx wrangler d1 migrations create bobine-notifications <nom>`) suffit, la CI se charge de l'appliquer au prochain merge sur `main`.
+En parallèle, le job `apply-d1-migrations` de la CI GitHub Actions (`.github/workflows/ci.yml`, déclenché lui aussi sur push `main`) applique automatiquement à la base distante toute migration D1 pas encore jouée (voir `migrations/`) via `npx wrangler d1 migrations apply seancy-notifications --remote`. Aucune migration ne doit jamais être lancée à la main : ajouter un fichier dans `migrations/` (`npx wrangler d1 migrations create seancy-notifications <nom>`) suffit, la CI se charge de l'appliquer au prochain merge sur `main`.
 
-**Avant le premier déploiement**, configure dans le dashboard Cloudflare (Worker `bobine` → **Settings → Variables and Secrets**, type **Secret** obligatoire — voir l'avertissement dans `wrangler.jsonc`) :
+**Avant le premier déploiement**, configure dans le dashboard Cloudflare (Worker `seancy` → **Settings → Variables and Secrets**, type **Secret** obligatoire — voir l'avertissement dans `wrangler.jsonc`) :
 
 | Nom                                    | Obligatoire        | Rôle                                                                                                                                                                                                                                                                     |
 | -------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -126,7 +126,7 @@ En parallèle, le job `apply-d1-migrations` de la CI GitHub Actions (`.github/wo
 
 Pour tester la configuration localement sans rien déployer : `npm run build && npx wrangler deploy --dry-run`.
 
-Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.dev.vars` (jamais commité), puis `npx wrangler d1 migrations apply bobine-notifications --local && npx wrangler dev`.
+Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.dev.vars` (jamais commité), puis `npx wrangler d1 migrations apply seancy-notifications --local && npx wrangler dev`.
 
 ## Observabilité
 
@@ -145,7 +145,7 @@ Pour du développement local avec un Worker complet (D1 + secrets) : crée un `.
 - **Logs & traces natifs Workers** : activés via `wrangler.jsonc` (bloc `observability`, voir le schéma
   `node_modules/wrangler/config-schema.json`) plutôt que depuis le dashboard seul — le dashboard affiche justement un
   avertissement tant que ces réglages ne sont pas mirrorés dans le fichier commité, sinon ils seraient écrasés au
-  prochain déploiement (même mécanisme que `vars`). Consultables dans le dashboard Cloudflare, Worker `bobine` →
+  prochain déploiement (même mécanisme que `vars`). Consultables dans le dashboard Cloudflare, Worker `seancy` →
   onglet **Observability**.
 - **Fréquentation** (pages vues, visiteurs) : Cloudflare **Web Analytics**. À activer une fois depuis le dashboard
   Cloudflare (**Analytics & Logs → Web Analytics → Add site**), puis reporter le token obtenu dans

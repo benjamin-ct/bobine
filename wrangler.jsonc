@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "bobine",
+  "name": "seancy",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-08-09",
   "compatibility_flags": ["nodejs_compat"],
@@ -55,8 +55,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "bobine-notifications",
-      "database_id": "b22c3b3e-0364-4c46-9c01-1bfb61368a45"
+      "database_name": "seancy-notifications",
+      "database_id": "3403301e-2ef9-4f70-9f2e-e10d577beda0"
     }
   ],
   // Synchro temps réel multi-appareils (voir worker/sync.ts) : un Durable
@@ -76,7 +76,7 @@
   // Pages → Analytics Engine) : sans cette activation préalable, Cloudflare
   // rejette purement et simplement tout déploiement déclarant ce binding
   // (erreur API 10089), preview comme prod. Une fois activé, ajouter ici :
-  //   "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "bobine_events" }]
+  //   "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "seancy_events" }]
   // — worker/analytics.ts gère déjà l'absence du binding sans crasher
   // (`env.ANALYTICS?.writeDataPoint`), donc aucun autre changement de code
   // n'est nécessaire pour activer le tracking une fois ce préalable fait.

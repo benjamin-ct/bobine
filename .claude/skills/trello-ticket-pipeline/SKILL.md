@@ -169,7 +169,7 @@ précédente s'est arrêtée en cours de route) et continuer le développement (
      Cibles : la preview de la PR une fois déployée (accessible si `CF_ACCESS_CLIENT_ID` /
      `CF_ACCESS_CLIENT_SECRET` sont définis, sinon on obtient la page de connexion Access), ou
      un `wrangler dev` local lancé depuis un worktree dans `/tmp` (`npm ci`, `npm run build`,
-     `wrangler d1 migrations apply bobine-notifications --local`, `.dev.vars` avec
+     `wrangler d1 migrations apply seancy-notifications --local`, `.dev.vars` avec
      `TMDB_API_KEY` si défini, données de test + ligne `sessions` pour le cookie). Voir
      `infra/trello-claude/README.md`, section « Vérification visuelle ». Si l’outil n’est pas
      disponible, le dire dans le commentaire de la carte.
