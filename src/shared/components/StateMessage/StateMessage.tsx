@@ -11,13 +11,26 @@ export function Loading({ label }: { label?: string }) {
   );
 }
 
-export function ErrorMessage({ error }: { error?: { message?: string } | null }) {
+// `onRetry` : bouton « Réessayer » (audit M11), pour ne jamais laisser
+// l'utilisateur devant une erreur sans issue.
+export function ErrorMessage({
+  error,
+  onRetry,
+}: {
+  error?: { message?: string } | null;
+  onRetry?: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className={`${styles.message} ${styles.error}`} role="alert">
       <p>
         <Icon name="frown" /> {error?.message || t("common.errorGeneric")}
       </p>
+      {onRetry && (
+        <button type="button" className={styles.retry} onClick={onRetry}>
+          {t("common.retry")}
+        </button>
+      )}
     </div>
   );
 }

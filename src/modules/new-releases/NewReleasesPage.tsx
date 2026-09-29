@@ -94,6 +94,12 @@ export default function NewReleasesPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  // Échec du chargement de la page suivante (scroll infini) : affiché sous la
+  // grille avec « Réessayer », au lieu d'un arrêt silencieux, et sans relance
+  // automatique en boucle (audit M11).
+  const [loadMoreError, setLoadMoreError] = useState<Error | null>(null);
+  // Incrémenté par « Réessayer » quand le premier chargement a échoué.
+  const [reloadKey, setReloadKey] = useState(0);
   const { region } = useRegion();
   const { favoriteProviderIds } = useFavoriteProviders();
   const { excludedGenreIds } = useExcludedGenres();
@@ -135,6 +141,7 @@ export default function NewReleasesPage() {
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
+    setLoadMoreError(null);
     discover(mediaType, {
       page: 1,
       genreId: genreIds,
@@ -183,10 +190,11 @@ export default function NewReleasesPage() {
     language,
     windowDays,
     i18n.language,
+    reloadKey,
   ]);
 
   const loadMore = useCallback(() => {
-    if (loadingMore || page >= totalPages) {
+    if (loadingMore || page >= totalPages || loadMoreError) {
       return;
     }
     const nextPage = page + 1;
@@ -214,11 +222,12 @@ export default function NewReleasesPage() {
         });
         setPage(nextPage);
       })
-      .catch((err) => setError(err))
+      .catch((err) => setLoadMoreError(err))
       .finally(() => setLoadingMore(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     loadingMore,
+    loadMoreError,
     page,
     totalPages,
     mediaType,
@@ -303,7 +312,9 @@ export default function NewReleasesPage() {
           ))}
         </div>
       )}
-      {status === "error" && <ErrorMessage error={error} />}
+      {status === "error" && (
+        <ErrorMessage error={error} onRetry={() => setReloadKey((key) => key + 1)} />
+      )}
       {status === "success" && results.length === 0 && (
         <EmptyState label={t("newReleasesPage.emptyState")} />
       )}
@@ -329,6 +340,12 @@ export default function NewReleasesPage() {
             <div ref={sentinelRef} className={gridStyles.loadMore}>
               {loadingMore && <span>{t("common.loading")}</span>}
             </div>
+          )}
+          {loadMoreError && (
+            <ErrorMessage
+              error={{ message: `${t("common.loadMoreError")} ${loadMoreError.message}` }}
+              onRetry={() => setLoadMoreError(null)}
+            />
           )}
         </div>
       )}

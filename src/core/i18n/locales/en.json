@@ -5,6 +5,10 @@
     "errorGeneric": "Something went wrong.",
     "errorNetwork": "Couldn't reach Seancy. Check your connection and try again.",
     "errorRateLimited": "Too many requests right now. Wait a few seconds and try again.",
+    "errorNotFound": "This content could not be found.",
+    "errorTmdb": "The movie catalog is not responding properly (error {{status}}). Please try again in a moment.",
+    "retry": "Try again",
+    "loadMoreError": "The next results could not be loaded.",
     "close": "Close"
   },
   "notFound": {
