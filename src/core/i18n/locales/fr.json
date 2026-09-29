@@ -13,6 +13,13 @@
     "lead": "Cette page n'existe pas ou plus. Vérifiez l'adresse saisie, ou revenez à l'accueil.",
     "backToHome": "Retour à l'accueil"
   },
+  "errorBoundary": {
+    "eyebrow": "Erreur",
+    "title": "Oups, cette page a planté",
+    "lead": "Un problème inattendu est survenu. Il nous a été signalé automatiquement. Vous pouvez réessayer, ou revenir à l’accueil.",
+    "retry": "Réessayer",
+    "backToHome": "Retour à l’accueil"
+  },
   "legalLinks": {
     "ariaLabel": "Informations légales",
     "privacy": "Confidentialité",
