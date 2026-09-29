@@ -32,7 +32,7 @@ jobs:
         run: |
           if [ "${{ inputs.simulate_failure }}" = "true" ]; then
             echo "status=down" >> "$GITHUB_OUTPUT"
-          elif curl -fsS --max-time 10 https://bobine.creusatbenjamin.workers.dev/api/health > /dev/null; then
+          elif curl -fsS --max-time 10 https://seancy.com/api/health > /dev/null; then
             echo "status=up" >> "$GITHUB_OUTPUT"
           else
             echo "status=down" >> "$GITHUB_OUTPUT"
@@ -60,7 +60,7 @@ jobs:
         if: steps.ping.outputs.status == 'down' && steps.previous.outputs.status == 'up'
         run: |
           curl -fsS -X POST -H "Content-Type: application/json" \
-            -d '{"content": "🚨 Seancy (prod) ne répond plus (échec de /api/health). https://bobine.creusatbenjamin.workers.dev"}' \
+            -d '{"content": "🚨 Seancy (prod) ne répond plus (échec de /api/health). https://seancy.com"}' \
             "${{ secrets.DISCORD_WEBHOOK_URL }}"
 
       - name: Notify Discord on recovery

@@ -14,7 +14,7 @@ import { SHARE_SLUG_PATTERN, USERNAME_PATTERN } from "./share-slug.ts";
 import { detectKnownCrawler } from "./bots.ts";
 import { checkRateLimitInMemory } from "./rate-limit-memory.ts";
 import { logError } from "./logger.ts";
-import { PRODUCTION_HOSTNAME } from "./sentry.ts";
+import { isProductionHostname } from "./sentry.ts";
 import type { Env } from "./types.ts";
 
 const SITE_NAME = "Seancy";
@@ -360,7 +360,7 @@ export async function servePageWithMeta(
   const lang = langFromRequest(request);
   const canonical = `${url.origin}${url.pathname.replace(/\/$/, "")}`;
   // Les previews ne doivent jamais être indexées.
-  const noindex = url.hostname !== PRODUCTION_HOSTNAME;
+  const noindex = !isProductionHostname(url.hostname);
   const [, mediaType, mediaId, profileHandle, listSlug] = match;
   try {
     let meta: PageMeta | null = null;
@@ -409,19 +409,18 @@ export async function servePageWithMeta(
 // sans intérêt pour un moteur exclues. /api/ reste autorisé : Google en a
 // besoin pour afficher le contenu des pages qu'il indexe.
 export function serveRobots(url: URL): Response {
-  const body =
-    url.hostname === PRODUCTION_HOSTNAME
-      ? [
-          "User-agent: *",
-          "Disallow: /profil",
-          "Disallow: /connexion",
-          "Disallow: /auth/",
-          "Disallow: /recherche",
-          "",
-          `Sitemap: ${url.origin}/sitemap.xml`,
-          "",
-        ].join("\n")
-      : "User-agent: *\nDisallow: /\n";
+  const body = isProductionHostname(url.hostname)
+    ? [
+        "User-agent: *",
+        "Disallow: /profil",
+        "Disallow: /connexion",
+        "Disallow: /auth/",
+        "Disallow: /recherche",
+        "",
+        `Sitemap: ${url.origin}/sitemap.xml`,
+        "",
+      ].join("\n")
+    : "User-agent: *\nDisallow: /\n";
   return new Response(body, {
     headers: {
       "content-type": "text/plain; charset=utf-8",
