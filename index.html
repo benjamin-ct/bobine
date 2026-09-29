@@ -33,6 +33,9 @@
       content="Découvrez où regarder vos films et séries en streaming, tirez un titre au hasard, et suivez ce que vous avez déjà vu."
     />
     <title>Seancy — Films &amp; séries à regarder</title>
+    <!-- Affiches TMDB : connexion (DNS + TLS) ouverte dès le HTML, avant que le
+         JS ne demande la première image (audit M9). -->
+    <link rel="preconnect" href="https://image.tmdb.org" />
     <style>
       /* Loader affiché avant que React (et global.css/variables.css) ne soit
          chargé : couleurs dupliquées en dur ici (pas d'accès aux custom

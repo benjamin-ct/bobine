@@ -150,7 +150,12 @@ function TimelineItem({ item }: { item: MediaItem }) {
       </div>
       <Link to={`/media/${item.mediaType}/${item.id}`} className={styles.thumb}>
         {item.poster_path ? (
-          <img src={posterUrl(item.poster_path, "w92") ?? undefined} alt={title} />
+          <img
+            src={posterUrl(item.poster_path, "w92") ?? undefined}
+            alt={title}
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <div className={posterStyles[accentKey]} style={{ width: "100%", height: "100%" }} />
         )}
