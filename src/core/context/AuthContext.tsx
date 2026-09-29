@@ -52,7 +52,7 @@ interface AuthContextValue {
   avatarVersion: number | null;
   requestLink: (email: string) => Promise<RequestLinkResult>;
   verify: (token: string) => Promise<VerifyResult>;
-  verifyCode: (code: string) => Promise<VerifyResult>;
+  verifyCode: (email: string, code: string) => Promise<VerifyResult>;
   logout: () => Promise<void>;
   // Déconnecte tous les appareils du compte, celui-ci compris (audit M1).
   logoutAll: () => Promise<void>;
@@ -238,7 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // la session.
   const verifyWith = useCallback(
     async (
-      body: { token?: string; code?: string },
+      body: { token?: string; code?: string; email?: string },
       fallbackError: string
     ): Promise<VerifyResult> => {
       const recaptchaToken = await getRecaptchaToken("verify");
@@ -268,8 +268,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [verifyWith, t]
   );
 
+  // L'adresse accompagne le code : le serveur n'accepte un code que pour
+  // l'adresse à laquelle il a été envoyé (audit M2).
   const verifyCode = useCallback(
-    (code: string) => verifyWith({ code }, t("auth.verify.expiredCode")),
+    (email: string, code: string) => verifyWith({ email, code }, t("auth.verify.expiredCode")),
     [verifyWith, t]
   );
 
