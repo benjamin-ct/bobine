@@ -153,6 +153,27 @@ function json(
   return new Response(JSON.stringify(data), { status, headers });
 }
 
+// Corps JSON attendu sous forme d'objet : `null` pour un JSON invalide, mais
+// aussi pour `null`, un tableau ou un scalaire, sur lesquels un simple
+// `body.champ` lèverait une exception.
+async function readJsonObject(request: Request): Promise<Record<string, unknown> | null> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return null;
+  }
+  return typeof body === "object" && body !== null && !Array.isArray(body)
+    ? (body as Record<string, unknown>)
+    : null;
+}
+
+// Champ texte facultatif d'un corps de requête : toute autre valeur (nombre,
+// objet…) est traitée comme absente plutôt que passée telle quelle.
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 // En-têtes de durcissement HTTP (CSP, HSTS…), appliqués à toute réponse /api/*
 // — voir la fin de fetch() ci-dessous. Définis dans worker/security-headers.ts,
 // source unique partagée avec public/_headers (assets statiques).
@@ -238,10 +259,8 @@ async function handleSubscribe(request: Request, env: Env): Promise<Response> {
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
 
@@ -300,10 +319,8 @@ async function handleSubscribeSync(request: Request, env: Env): Promise<Response
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
 
@@ -343,10 +360,8 @@ async function handleUnsubscribe(request: Request, env: Env): Promise<Response> 
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (typeof body.endpoint !== "string") {
@@ -371,10 +386,8 @@ async function handleLinkSubscriptionAccount(request: Request, env: Env): Promis
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (typeof body.endpoint !== "string") {
@@ -400,10 +413,8 @@ async function handleUpdateSubscriptionLocale(request: Request, env: Env): Promi
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (typeof body.endpoint !== "string") {
@@ -453,12 +464,8 @@ async function handleTestAccountNotification(
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown> = {};
-  try {
-    body = await request.json();
-  } catch {
-    // Corps absent : envoi immédiat.
-  }
+  // Corps absent : envoi immédiat.
+  const body = (await readJsonObject(request)) ?? {};
   const delaySeconds =
     typeof body.delaySeconds === "number" && Number.isFinite(body.delaySeconds)
       ? Math.min(Math.max(Math.round(body.delaySeconds), 0), TEST_NOTIFICATION_MAX_DELAY_S)
@@ -572,10 +579,8 @@ async function handleTestNotification(request: Request, env: Env): Promise<Respo
 // Compte (lien magique) ---------------------------------------------------
 
 async function handleRequestLink(request: Request, env: Env): Promise<Response> {
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const email = String(body?.email || "")
@@ -586,11 +591,7 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
   }
   const locale = sanitizeEmailLocale(body?.locale);
 
-  const recaptcha = await verifyRecaptcha(
-    env,
-    body?.recaptchaToken as string | undefined,
-    "request_link"
-  );
+  const recaptcha = await verifyRecaptcha(env, optionalString(body.recaptchaToken), "request_link");
   if (!recaptcha.ok) {
     return json({ error: "Vérification anti-robot échouée. Réessayez." }, 403);
   }
@@ -646,23 +647,17 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
     return RATE_LIMIT_RESPONSE();
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
-  const token = body?.token as string | undefined;
-  const code = body?.code as string | undefined;
+  const token = optionalString(body.token);
+  const code = optionalString(body.code);
   if (!token && !code) {
     return json({ error: "Jeton ou code manquant." }, 400);
   }
 
-  const recaptcha = await verifyRecaptcha(
-    env,
-    body?.recaptchaToken as string | undefined,
-    "verify"
-  );
+  const recaptcha = await verifyRecaptcha(env, optionalString(body.recaptchaToken), "verify");
   if (!recaptcha.ok) {
     return json({ error: "Vérification anti-robot échouée. Réessayez." }, 403);
   }
@@ -781,10 +776,8 @@ async function handleUpdateDisplayName(request: Request, env: Env): Promise<Resp
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const displayName = sanitizeDisplayName(body?.displayName);
@@ -809,10 +802,8 @@ async function handleRequestEmailChange(request: Request, env: Env): Promise<Res
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const newEmail = String(body?.email || "")
@@ -892,13 +883,11 @@ async function handleConfirmEmailChange(request: Request, env: Env): Promise<Res
       "retry-after": String(retryAfter),
     });
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
-  const result = await confirmEmailChange(env.DB, user.id, body?.code as string | undefined);
+  const result = await confirmEmailChange(env.DB, user.id, optionalString(body.code));
   if (!result.ok) {
     return result.reason === "taken"
       ? json(
@@ -955,10 +944,8 @@ async function handleUpdateUsername(request: Request, env: Env): Promise<Respons
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   // Chaîne vide ou null : retire le pseudo (le lien de partage repasse sur
@@ -993,10 +980,8 @@ async function handleUpdateProfileShare(request: Request, env: Env): Promise<Res
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (typeof body?.enabled !== "boolean") {
@@ -1026,10 +1011,8 @@ async function handlePutTopPicks(request: Request, env: Env): Promise<Response> 
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   if (!Array.isArray(body?.topPicks) || body.topPicks.length > TOP_PICKS_MAX) {
@@ -1088,10 +1071,8 @@ async function handleDeleteReminder(request: Request, env: Env): Promise<Respons
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const [key] = sanitizeKeyList([body?.key], 1);
@@ -1473,10 +1454,8 @@ async function handlePutListShare(request: Request, env: Env): Promise<Response>
   if (!user) {
     return json({ error: "Non connecté." }, 401);
   }
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject(request);
+  if (!body) {
     return json({ error: "JSON invalide." }, 400);
   }
   const listId = body?.listId;
@@ -1990,17 +1969,25 @@ export default withSentry({
     if (!url.pathname.startsWith("/api/")) {
       return env.ASSETS.fetch(request);
     }
-    // Poignée de main WebSocket de la synchro temps réel : la réponse 101
-    // ne doit pas passer par withSecurityHeaders (voir openSyncSocket).
-    if (url.pathname === "/api/sync/socket" && request.method === "GET") {
-      const user = await getUserFromRequest(env.DB, request);
-      if (!user) {
-        return withSecurityHeaders(json({ error: "Non connecté." }, 401));
+    // Filet de sécurité : sans lui, une exception non rattrapée donne une
+    // page d'erreur Cloudflare en HTML (sans en-têtes de sécurité), que le
+    // client ne sait pas lire.
+    try {
+      // Poignée de main WebSocket de la synchro temps réel : la réponse 101
+      // ne doit pas passer par withSecurityHeaders (voir openSyncSocket).
+      if (url.pathname === "/api/sync/socket" && request.method === "GET") {
+        const user = await getUserFromRequest(env.DB, request);
+        if (!user) {
+          return withSecurityHeaders(json({ error: "Non connecté." }, 401));
+        }
+        return await openSyncSocket(request, user.id);
       }
-      return openSyncSocket(request, user.id);
+      const response = await routeRequest(request, env, url, ctx);
+      return withSecurityHeaders(response);
+    } catch (err) {
+      logError(`Erreur non gérée sur ${request.method} ${url.pathname} :`, err);
+      return withSecurityHeaders(json({ error: "Erreur interne du serveur." }, 500));
     }
-    const response = await routeRequest(request, env, url, ctx);
-    return withSecurityHeaders(response);
   },
 
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
