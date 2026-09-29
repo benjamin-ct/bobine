@@ -115,23 +115,22 @@ export async function deleteSubscriptionById(db: D1Database, id: number): Promis
 // Remplace entièrement la liste "envie de voir" connue du serveur pour cet
 // abonnement (le client est la source de vérité ; on synchronise à chaque
 // changement plutôt que de tenter un diff incrémental côté serveur).
+//
+// Tous les remplacements de ce fichier placent le DELETE dans le MÊME
+// db.batch que les INSERT : sur D1, un batch est une transaction, donc si une
+// insertion échoue (limite, timeout, contrainte), la suppression est annulée
+// au lieu d’effacer les données de l’utilisateur (audit C2, carte fQTc1y7a).
 export async function replaceWatchlist(
   db: D1Database,
   subscriptionId: number,
   items: CleanWatchlistItem[]
 ): Promise<void> {
-  await db
-    .prepare("DELETE FROM watchlist_items WHERE subscription_id = ?")
-    .bind(subscriptionId)
-    .run();
-  if (!items.length) {
-    return;
-  }
   const stmt = db.prepare(
     "INSERT INTO watchlist_items (subscription_id, media_type, tmdb_id, title, poster_path, known_providers) VALUES (?, ?, ?, ?, ?, ?)"
   );
-  await db.batch(
-    items.map((item) =>
+  await db.batch([
+    db.prepare("DELETE FROM watchlist_items WHERE subscription_id = ?").bind(subscriptionId),
+    ...items.map((item) =>
       stmt.bind(
         subscriptionId,
         item.mediaType,
@@ -140,8 +139,8 @@ export async function replaceWatchlist(
         item.posterPath || null,
         null
       )
-    )
-  );
+    ),
+  ]);
 }
 
 export async function replaceGenrePreferences(
@@ -149,17 +148,13 @@ export async function replaceGenrePreferences(
   subscriptionId: number,
   genres: CleanGenrePref[]
 ): Promise<void> {
-  await db
-    .prepare("DELETE FROM genre_preferences WHERE subscription_id = ?")
-    .bind(subscriptionId)
-    .run();
-  if (!genres.length) {
-    return;
-  }
   const stmt = db.prepare(
     "INSERT INTO genre_preferences (subscription_id, media_type, genre_id) VALUES (?, ?, ?)"
   );
-  await db.batch(genres.map((g) => stmt.bind(subscriptionId, g.mediaType, g.genreId)));
+  await db.batch([
+    db.prepare("DELETE FROM genre_preferences WHERE subscription_id = ?").bind(subscriptionId),
+    ...genres.map((g) => stmt.bind(subscriptionId, g.mediaType, g.genreId)),
+  ]);
 }
 
 // Résout l'abonnement push depuis son endpoint (seul identifiant que le
@@ -581,8 +576,6 @@ export async function replaceLibraryForUser(
     ),
   };
 
-  await db.prepare("DELETE FROM library_items WHERE user_id = ?").bind(userId).run();
-
   const rows: Array<{
     mediaType: string;
     tmdbId: string;
@@ -602,15 +595,12 @@ export async function replaceLibraryForUser(
       item: item as unknown as CleanLibraryItem,
     });
   }
-  if (rows.length === 0) {
-    return;
-  }
-
   const stmt = db.prepare(
     "INSERT INTO library_items (user_id, media_type, tmdb_id, status, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
   );
-  await db.batch(
-    rows.map(({ mediaType, tmdbId, status, item }) => {
+  await db.batch([
+    db.prepare("DELETE FROM library_items WHERE user_id = ?").bind(userId),
+    ...rows.map(({ mediaType, tmdbId, status, item }) => {
       const { updatedAt, ...rest } = item;
       return stmt.bind(
         userId,
@@ -620,8 +610,8 @@ export async function replaceLibraryForUser(
         JSON.stringify(rest),
         updatedAt || Date.now()
       );
-    })
-  );
+    }),
+  ]);
 }
 
 // Applique uniquement les items ajoutés/modifiés/retirés depuis le dernier
@@ -725,23 +715,17 @@ export async function replaceCustomListsForUser(
   userId: number,
   customLists: CleanCustomListMap
 ): Promise<void> {
-  await db.batch([
-    db.prepare("DELETE FROM custom_list_items WHERE user_id = ?").bind(userId),
-    db.prepare("DELETE FROM custom_lists WHERE user_id = ?").bind(userId),
-  ]);
-
   const lists = Object.values(customLists || {});
-  if (lists.length === 0) {
-    return;
-  }
-
   const listStmt = db.prepare(
     "INSERT INTO custom_lists (id, user_id, name, created_at) VALUES (?, ?, ?, ?)"
   );
   const itemStmt = db.prepare(
     "INSERT INTO custom_list_items (user_id, list_id, media_type, tmdb_id, data, position) VALUES (?, ?, ?, ?, ?, ?)"
   );
-  const statements: D1PreparedStatement[] = [];
+  const statements: D1PreparedStatement[] = [
+    db.prepare("DELETE FROM custom_list_items WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM custom_lists WHERE user_id = ?").bind(userId),
+  ];
   for (const list of lists) {
     statements.push(listStmt.bind(list.id, userId, list.name, list.createdAt));
     list.items.forEach((item: CleanLibraryItem, index: number) => {
@@ -908,12 +892,11 @@ export async function replaceExcludedGenresForUser(
   const finalIds = merge
     ? [...new Set([...(await getExcludedGenresForUser(db, userId)), ...genreIds])]
     : genreIds;
-  await db.prepare("DELETE FROM excluded_genre_prefs WHERE user_id = ?").bind(userId).run();
-  if (finalIds.length === 0) {
-    return;
-  }
   const stmt = db.prepare("INSERT INTO excluded_genre_prefs (user_id, genre_id) VALUES (?, ?)");
-  await db.batch(finalIds.map((id) => stmt.bind(userId, id)));
+  await db.batch([
+    db.prepare("DELETE FROM excluded_genre_prefs WHERE user_id = ?").bind(userId),
+    ...finalIds.map((id) => stmt.bind(userId, id)),
+  ]);
 }
 
 export async function getFavoriteProvidersForUser(
@@ -936,14 +919,13 @@ export async function replaceFavoriteProvidersForUser(
   const finalProviderIds = merge
     ? [...new Set([...(await getFavoriteProvidersForUser(db, userId)), ...providerIds])]
     : providerIds;
-  await db.prepare("DELETE FROM favorite_provider_prefs WHERE user_id = ?").bind(userId).run();
-  if (finalProviderIds.length === 0) {
-    return;
-  }
   const stmt = db.prepare(
     "INSERT INTO favorite_provider_prefs (user_id, provider_id) VALUES (?, ?)"
   );
-  await db.batch(finalProviderIds.map((id) => stmt.bind(userId, id)));
+  await db.batch([
+    db.prepare("DELETE FROM favorite_provider_prefs WHERE user_id = ?").bind(userId),
+    ...finalProviderIds.map((id) => stmt.bind(userId, id)),
+  ]);
 }
 
 export async function getLocaleForUser(db: D1Database, userId: number): Promise<string | null> {
