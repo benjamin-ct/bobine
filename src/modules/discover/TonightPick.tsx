@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { backdropUrl, discover, getGenres, posterUrl } from "../../core/api/tmdb.ts";
+import { backdropUrl, discover, getGenres, posterSrcSet, posterUrl } from "../../core/api/tmdb.ts";
 import { useRegion } from "../../core/context/RegionContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
@@ -136,7 +136,8 @@ export default function TonightPick() {
   const meta = [date?.slice(0, 4), genreName].filter(Boolean).join(" · ");
   const inWatchlist = isInWatchlist("movie", pick.id);
   const accentKey = posterAccentFromGenres(pick.genre_ids, `movie:${pick.id}`);
-  const backdrop = backdropUrl(pick.backdrop_path, "w1280");
+  // w780 suffit : le fond n'est affiché qu'à 35 % d'opacité (audit M9).
+  const backdrop = backdropUrl(pick.backdrop_path, "w780");
   const detailUrl = `/media/movie/${pick.id}`;
 
   return (
@@ -155,7 +156,13 @@ export default function TonightPick() {
       )}
       <Link to={detailUrl} className={styles.poster} tabIndex={-1} aria-hidden="true">
         {pick.poster_path ? (
-          <img src={posterUrl(pick.poster_path) ?? undefined} alt="" />
+          <img
+            src={posterUrl(pick.poster_path) ?? undefined}
+            srcSet={posterSrcSet(pick.poster_path)}
+            sizes="(max-width: 860px) 87px, 180px"
+            alt=""
+            fetchPriority="high"
+          />
         ) : (
           <div className={`${styles.noPoster} ${posterStyles[accentKey]}`} />
         )}

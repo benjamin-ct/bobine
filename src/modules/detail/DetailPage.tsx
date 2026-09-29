@@ -6,6 +6,7 @@ import type { TFunction } from "i18next";
 import {
   backdropUrl,
   posterUrl,
+  posterSrcSet,
   getDetails,
   peekDetails,
   watchProvidersFromDetails,
@@ -27,7 +28,7 @@ import {
 } from "../../shared/components/index.ts";
 import EpisodeTracker from "./components/EpisodeTracker.tsx";
 import CollectionSection from "./components/CollectionSection.tsx";
-import DetailSkeleton from "./components/DetailSkeleton.tsx";
+import DetailSkeleton, { DETAIL_POSTER_SIZES } from "./components/DetailSkeleton.tsx";
 import WhereToWatch from "./components/WhereToWatch.tsx";
 import FollowingActivity from "./components/FollowingActivity.tsx";
 import { airedEpisodesUpTo, useSeasonEpisodes } from "./useSeasonEpisodes.ts";
@@ -523,8 +524,11 @@ export default function DetailPage() {
             {details.poster_path ? (
               <img
                 src={posterUrl(details.poster_path, "w342") ?? undefined}
+                srcSet={posterSrcSet(details.poster_path)}
+                sizes={DETAIL_POSTER_SIZES}
                 alt={title}
                 className={styles.poster}
+                fetchPriority="high"
               />
             ) : (
               <div className={`${styles.poster} ${styles.posterEmpty} ${posterStyles[accentKey]}`}>

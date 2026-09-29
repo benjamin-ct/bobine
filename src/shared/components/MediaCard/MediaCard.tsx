@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   posterUrl,
+  posterSrcSet,
   logoUrl,
   getWatchProviders,
   getDetails,
@@ -64,6 +65,11 @@ interface MediaCardProps {
    * à la place du badge Film / Série. */
   position?: number;
 }
+
+// Largeur affichée des affiches de la grille (voir mediaGrid.module.css : 2,
+// 4 puis 6 colonnes) : sert au navigateur à choisir w185 ou w342 dans le
+// srcset (audit M9).
+const CARD_POSTER_SIZES = "(max-width: 720px) 50vw, (max-width: 1080px) 25vw, 170px";
 
 // `memo` : les grilles (Découvrir, Nouveautés, Ma liste...) affichent des
 // dizaines de cartes dont les props (`item`) restent stables d'un rendu à
@@ -254,7 +260,14 @@ function MediaCard({
       <Link to={`/media/${mediaType}/${item.id}`} className={styles.link}>
         <div className={styles.poster} ref={posterRef}>
           {item.poster_path ? (
-            <img src={posterUrl(item.poster_path) ?? undefined} alt={title} loading="lazy" />
+            <img
+              src={posterUrl(item.poster_path) ?? undefined}
+              srcSet={posterSrcSet(item.poster_path)}
+              sizes={CARD_POSTER_SIZES}
+              alt={title}
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
             <div className={`${styles.noPoster} ${posterStyles[accentKey]}`}>{title}</div>
           )}
@@ -317,6 +330,8 @@ function MediaCard({
                   <img
                     src={logoUrl(provider.logo_path, "w45") ?? undefined}
                     alt={provider.provider_name}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </span>
               )}
