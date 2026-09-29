@@ -33,6 +33,19 @@
       content="Découvrez où regarder vos films et séries en streaming, tirez un titre au hasard, et suivez ce que vous avez déjà vu."
     />
     <title>Seancy — Films &amp; séries à regarder</title>
+    <!-- Aperçu de lien par défaut. Pour les fiches, profils et listes, le
+         Worker remplace ces balises par celles de la page quand c'est un
+         robot qui demande (voir worker/page-meta.ts). L'image doit être une
+         URL absolue : celle de la prod. -->
+    <meta property="og:site_name" content="Seancy" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Seancy — Films &amp; séries à regarder" />
+    <meta
+      property="og:description"
+      content="Découvrez où regarder vos films et séries en streaming, tirez un titre au hasard, et suivez ce que vous avez déjà vu."
+    />
+    <meta property="og:image" content="https://bobine.creusatbenjamin.workers.dev/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
     <!-- Affiches TMDB : connexion (DNS + TLS) ouverte dès le HTML, avant que le
          JS ne demande la première image (audit M9). -->
     <link rel="preconnect" href="https://image.tmdb.org" />
