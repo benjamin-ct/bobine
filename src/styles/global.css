@@ -257,6 +257,26 @@ h4 {
   border: 0;
 }
 
+/* Lien « Aller au contenu » : hors écran tant qu'il n'a pas le focus
+   clavier, puis affiché en haut à gauche, au-dessus de la barre de nav. */
+.skipLink {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: 8px;
+  z-index: 200;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: var(--shadow-lift);
+  transform: translateY(calc(-100% - 60px));
+}
+
+.skipLink:focus {
+  transform: none;
+}
+
 /* Eyebrow : petit libellé monospace au-dessus d'un titre, en texte
    secondaire (jamais en corail). */
 .eyebrow {

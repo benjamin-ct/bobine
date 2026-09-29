@@ -90,8 +90,14 @@ export default function LoginForm() {
             className={styles.codeInput}
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
+            aria-invalid={codeError ? true : undefined}
+            aria-describedby={codeError ? `${idPrefix}-code-error` : undefined}
           />
-          {codeError && <p className={styles.error}>{codeError}</p>}
+          {codeError && (
+            <p id={`${idPrefix}-code-error`} className={styles.error} role="alert">
+              {codeError}
+            </p>
+          )}
           {devCode && (
             <p className={styles.subtitle}>{t("loginPage.devModeCodeLabel", { code: devCode })}</p>
           )}
@@ -114,8 +120,14 @@ export default function LoginForm() {
         placeholder={t("loginPage.emailPlaceholder")}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${idPrefix}-email-error` : undefined}
       />
-      {error && <p className={styles.error}>{error}</p>}
+      {error && (
+        <p id={`${idPrefix}-email-error`} className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
       <button className={styles.primaryBtn} type="submit" disabled={sending}>
         {sending ? t("loginPage.sending") : t("loginPage.submitEmail")}
       </button>

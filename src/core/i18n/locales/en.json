@@ -1,5 +1,6 @@
 {
   "common": {
+    "skipToContent": "Skip to content",
     "unknownTitle": "Unknown title",
     "loading": "Loading…",
     "errorGeneric": "Something went wrong.",
@@ -403,6 +404,8 @@
     "noResults": "No results."
   },
   "myListPage": {
+    "tabsLabel": "My lists",
+    "newListLabel": "New list name",
     "authBannerText": "Sign in to sync this list across your devices: it hasn't disappeared, it stays saved on this device.",
     "login": "Sign in",
     "tabSeen": "Watched",
@@ -727,6 +730,8 @@
     "unknownReleaseStatus": "Release not announced yet",
     "wantToWatch": "Want to watch",
     "markAsWatched": "Mark as watched",
+    "wantToWatchNamed": "Want to watch: {{title}}",
+    "markAsWatchedNamed": "Mark as watched: {{title}}",
     "position": "No. {{position}} in the list",
     "ownerRating": "Owner's rating: {{rating}}/10"
   },
@@ -751,6 +756,7 @@
     "addToListHeading": "Add to a list",
     "noListsYet": "No lists yet.",
     "createListPlaceholder": "Create a list…",
+    "createListLabel": "New list name",
     "create": "Create",
     "similar": "Similar titles",
     "excludeTitleHint": "Stop suggesting this title",

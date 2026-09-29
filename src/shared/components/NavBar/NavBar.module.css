@@ -163,7 +163,8 @@
   transition: background 0.14s ease;
 }
 
-.item:hover {
+.item:hover,
+.item[aria-selected="true"] {
   background: var(--surface-2);
 }
 
@@ -216,7 +217,8 @@
   border-radius: 8px;
 }
 
-.allResults:hover {
+.allResults:hover,
+.allResults[aria-selected="true"] {
   background: var(--surface-2);
 }
 

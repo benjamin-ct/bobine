@@ -264,12 +264,15 @@ function MediaCard({
               src={posterUrl(item.poster_path) ?? undefined}
               srcSet={posterSrcSet(item.poster_path)}
               sizes={CARD_POSTER_SIZES}
-              alt={title}
+              // Décorative : le titre est déjà lu dans le lien, juste dessous.
+              alt=""
               loading="lazy"
               decoding="async"
             />
           ) : (
-            <div className={`${styles.noPoster} ${posterStyles[accentKey]}`}>{title}</div>
+            <div className={`${styles.noPoster} ${posterStyles[accentKey]}`} aria-hidden="true">
+              {title}
+            </div>
           )}
           {rank != null && (
             <span
@@ -358,7 +361,7 @@ function MediaCard({
             toggleWatchlist(libItem);
           }}
           aria-pressed={inWatchlist}
-          aria-label={t("mediaCard.wantToWatch")}
+          aria-label={t("mediaCard.wantToWatchNamed", { title })}
           title={t("mediaCard.wantToWatch")}
         >
           <Icon name="star" size={16} strokeWidth={inWatchlist ? 2 : 1.5} filled={inWatchlist} />
@@ -373,7 +376,7 @@ function MediaCard({
             toggleWatched(libItem);
           }}
           aria-pressed={watched}
-          aria-label={t("mediaCard.markAsWatched")}
+          aria-label={t("mediaCard.markAsWatchedNamed", { title })}
           title={t("mediaCard.markAsWatched")}
         >
           <Icon name="check" size={16} strokeWidth={watched ? 3 : 1.5} />

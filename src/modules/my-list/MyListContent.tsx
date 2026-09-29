@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
@@ -85,6 +86,56 @@ export default function MyListContent() {
   const continuingSeries = useResumableSeries(watchlist);
   const activeCustomList = customLists.find((l) => l.id === tab);
 
+  // Onglets dans l'ordre d'affichage, pour la navigation au clavier.
+  const tabIds: Tab[] = ["want", "seen", "progress", ...customLists.map((l) => l.id)];
+  const idPrefix = useId();
+  const tabDomId = (id: Tab) => `${idPrefix}-tab-${id}`;
+  const panelDomId = `${idPrefix}-panel`;
+  const tabRefs = useRef(new Map<Tab, HTMLButtonElement>());
+
+  // Flèches ←/→ (et Début/Fin) : onglet voisin, sélectionné et focalisé
+  // (modèle « tablist » WAI-ARIA, comme ProfilePage).
+  function onTabKeyDown(e: KeyboardEvent<HTMLButtonElement>, current: Tab) {
+    const index = tabIds.indexOf(current);
+    const next =
+      e.key === "ArrowRight"
+        ? tabIds[(index + 1) % tabIds.length]
+        : e.key === "ArrowLeft"
+          ? tabIds[(index - 1 + tabIds.length) % tabIds.length]
+          : e.key === "Home"
+            ? tabIds[0]
+            : e.key === "End"
+              ? tabIds[tabIds.length - 1]
+              : null;
+    if (!next) {
+      return;
+    }
+    e.preventDefault();
+    setTab(next);
+    tabRefs.current.get(next)?.focus();
+  }
+
+  function tabProps(id: Tab) {
+    return {
+      ref: (el: HTMLButtonElement | null) => {
+        if (el) {
+          tabRefs.current.set(id, el);
+        } else {
+          tabRefs.current.delete(id);
+        }
+      },
+      type: "button" as const,
+      role: "tab",
+      id: tabDomId(id),
+      "aria-selected": tab === id,
+      "aria-controls": panelDomId,
+      tabIndex: tab === id ? 0 : -1,
+      className: `${styles.tab} ${tab === id ? styles.tabActive : ""}`,
+      onClick: () => setTab(id),
+      onKeyDown: (e: KeyboardEvent<HTMLButtonElement>) => onTabKeyDown(e, id),
+    };
+  }
+
   function submitNewList() {
     const id = createList(newListName);
     if (id) {
@@ -117,42 +168,36 @@ export default function MyListContent() {
 
       {/* Onglets fixes puis listes perso, sur une seule ligne (défilement
           horizontal sur mobile). */}
-      <div className={styles.tabs} role="tablist">
-        <button
-          type="button"
-          className={`${styles.tab} ${tab === "want" ? styles.tabActive : ""}`}
-          onClick={() => setTab("want")}
-        >
-          {t("myListPage.tabWant")} <span className={styles.count}>{watchlist.length}</span>
-        </button>
-        <button
-          type="button"
-          className={`${styles.tab} ${tab === "seen" ? styles.tabActive : ""}`}
-          onClick={() => setTab("seen")}
-        >
-          {t("myListPage.tabSeen")} <span className={styles.count}>{watched.length}</span>
-        </button>
-        <button
-          type="button"
-          className={`${styles.tab} ${tab === "progress" ? styles.tabActive : ""}`}
-          onClick={() => setTab("progress")}
-        >
-          {t("myListPage.tabProgress")}{" "}
-          <span className={styles.count}>{continuingSeries.length}</span>
-        </button>
-        {customLists.map((list) => (
-          <button
-            key={list.id}
-            type="button"
-            className={`${styles.tab} ${tab === list.id ? styles.tabActive : ""}`}
-            onClick={() => setTab(list.id)}
-          >
-            {shares[list.id] && <Icon name="link" className={styles.sharedIcon} />}
-            {list.name} <span className={styles.count}>{list.items.length}</span>
-            {shares[list.id] && <span className={styles.srOnly}>{t("myListPage.sharedTab")}</span>}
+      <div className={styles.tabs}>
+        {/* Le bouton « Nouvelle liste » n'est pas un onglet : il reste hors
+            du tablist, sur la même ligne. */}
+        <div className={styles.tabList} role="tablist" aria-label={t("myListPage.tabsLabel")}>
+          <button {...tabProps("want")}>
+            {t("myListPage.tabWant")} <span className={styles.count}>{watchlist.length}</span>
           </button>
-        ))}
-        <button type="button" className={styles.newTab} onClick={() => setCreating((v) => !v)}>
+          <button {...tabProps("seen")}>
+            {t("myListPage.tabSeen")} <span className={styles.count}>{watched.length}</span>
+          </button>
+          <button {...tabProps("progress")}>
+            {t("myListPage.tabProgress")}{" "}
+            <span className={styles.count}>{continuingSeries.length}</span>
+          </button>
+          {customLists.map((list) => (
+            <button key={list.id} {...tabProps(list.id)}>
+              {shares[list.id] && <Icon name="link" className={styles.sharedIcon} />}
+              {list.name} <span className={styles.count}>{list.items.length}</span>
+              {shares[list.id] && (
+                <span className={styles.srOnly}>{t("myListPage.sharedTab")}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className={styles.newTab}
+          aria-expanded={creating}
+          onClick={() => setCreating((v) => !v)}
+        >
           {t("myListPage.newListTab")}
         </button>
       </div>
@@ -167,6 +212,7 @@ export default function MyListContent() {
         >
           <input
             type="text"
+            aria-label={t("myListPage.newListLabel")}
             placeholder={t("myListPage.newListPlaceholder")}
             maxLength={40}
             value={newListName}
@@ -180,31 +226,33 @@ export default function MyListContent() {
         </form>
       )}
 
-      {tab === "seen" &&
-        (watched.length === 0 ? (
-          <EmptyState label={t("myListPage.emptySeen")} />
-        ) : (
-          <StatsPanel watched={watched} />
-        ))}
+      <div id={panelDomId} role="tabpanel" aria-labelledby={tabDomId(tab)}>
+        {tab === "seen" &&
+          (watched.length === 0 ? (
+            <EmptyState label={t("myListPage.emptySeen")} />
+          ) : (
+            <StatsPanel watched={watched} />
+          ))}
 
-      {tab === "want" && <WatchlistPanel items={watchlist} />}
+        {tab === "want" && <WatchlistPanel items={watchlist} />}
 
-      {tab === "progress" &&
-        (continuingSeries.length === 0 ? (
-          <EmptyState label={t("myListPage.emptyProgress")} />
-        ) : (
-          <ContinueWatchingRow items={continuingSeries} />
-        ))}
+        {tab === "progress" &&
+          (continuingSeries.length === 0 ? (
+            <EmptyState label={t("myListPage.emptyProgress")} />
+          ) : (
+            <ContinueWatchingRow items={continuingSeries} />
+          ))}
 
-      {activeCustomList && (
-        <CustomListPanel
-          list={activeCustomList}
-          onDeleted={() => setTab("want")}
-          canShare={authStatus === "authenticated"}
-          shareSlug={shares[activeCustomList.id] ?? null}
-          onShareChange={(slug) => setShare(activeCustomList.id, slug)}
-        />
-      )}
+        {activeCustomList && (
+          <CustomListPanel
+            list={activeCustomList}
+            onDeleted={() => setTab("want")}
+            canShare={authStatus === "authenticated"}
+            shareSlug={shares[activeCustomList.id] ?? null}
+            onShareChange={(slug) => setShare(activeCustomList.id, slug)}
+          />
+        )}
+      </div>
     </div>
   );
 }

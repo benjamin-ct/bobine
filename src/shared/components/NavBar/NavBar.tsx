@@ -1,5 +1,5 @@
 import { NavLink, Link, matchPath, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
@@ -30,6 +30,8 @@ function SearchResults({
   onPick,
   inline,
   onViewAll,
+  listboxId,
+  activeIndex,
 }: {
   results: SearchMultiResult[];
   status: "idle" | "loading" | "success" | "error";
@@ -37,6 +39,10 @@ function SearchResults({
   onPick: (path: string) => void;
   inline?: boolean;
   onViewAll: () => void;
+  /** Liste d'options du combobox (voir comboboxProps dans NavBar). */
+  listboxId: string;
+  /** Option active au clavier (-1 : aucune), le focus restant dans le champ. */
+  activeIndex: number;
 }) {
   const { t } = useTranslation();
   // Alimente le cache de préview (voir mediaPreviewCache) pour que la fiche
@@ -54,77 +60,99 @@ function SearchResults({
   }, [results]);
 
   return (
-    <div className={`${styles.results} ${inline ? styles.resultsInline : ""}`} role="listbox">
-      {status === "loading" && <p className={styles.hint}>{t("navBar.searching")}</p>}
-      {status === "success" && results.length === 0 && (
-        <p className={styles.hint}>{t("navBar.noResults")}</p>
+    <div className={`${styles.results} ${inline ? styles.resultsInline : ""}`}>
+      {status === "loading" && (
+        <p className={styles.hint} role="status">
+          {t("navBar.searching")}
+        </p>
       )}
-      {results.map((item) => {
-        if (item.media_type === "person") {
-          const path = `/personne/${item.id}`;
+      {status === "success" && results.length === 0 && (
+        <p className={styles.hint} role="status">
+          {t("navBar.noResults")}
+        </p>
+      )}
+      <div id={listboxId} role="listbox" aria-label={t("navBar.searchAriaLabel")}>
+        {results.map((item, index) => {
+          // Options atteintes aux flèches depuis le champ (aria-activedescendant),
+          // pas au Tab : le Tab quitte la recherche et referme la liste.
+          const optionProps = {
+            id: `${listboxId}-${index}`,
+            role: "option",
+            "aria-selected": index === activeIndex,
+            tabIndex: -1,
+          };
+          if (item.media_type === "person") {
+            const path = `/personne/${item.id}`;
+            return (
+              <Link
+                key={`person-${item.id}`}
+                {...optionProps}
+                to={path}
+                className={styles.item}
+                onClick={() => onPick(path)}
+              >
+                {item.profile_path ? (
+                  <img
+                    src={posterUrl(item.profile_path, "w92") ?? undefined}
+                    alt=""
+                    className={styles.avatar}
+                  />
+                ) : (
+                  <div className={`${styles.avatar} ${styles.avatarEmpty}`} />
+                )}
+                <div>
+                  <p className={styles.itemTitle}>{item.name}</p>
+                  <p className={styles.itemMeta}>{t("navBar.personRoleHint")}</p>
+                </div>
+              </Link>
+            );
+          }
+          const title = item.title || item.name || "";
+          const date = item.region_release_date || item.release_date || item.first_air_date;
+          const path = `/media/${item.media_type}/${item.id}`;
           return (
             <Link
-              key={`person-${item.id}`}
+              key={`${item.media_type}-${item.id}`}
+              {...optionProps}
               to={path}
               className={styles.item}
               onClick={() => onPick(path)}
             >
-              {item.profile_path ? (
+              {item.poster_path ? (
                 <img
-                  src={posterUrl(item.profile_path, "w92") ?? undefined}
-                  alt={item.name}
-                  className={styles.avatar}
+                  src={posterUrl(item.poster_path, "w92") ?? undefined}
+                  alt=""
+                  className={styles.poster}
                 />
               ) : (
-                <div className={`${styles.avatar} ${styles.avatarEmpty}`} />
+                <div className={`${styles.poster} ${styles.posterEmpty}`} />
               )}
               <div>
-                <p className={styles.itemTitle}>{item.name}</p>
-                <p className={styles.itemMeta}>{t("navBar.personRoleHint")}</p>
+                <p className={styles.itemTitle}>{title}</p>
+                <p className={styles.itemMeta}>
+                  {item.media_type === "movie"
+                    ? t("navBar.mediaTypeMovie")
+                    : t("navBar.mediaTypeSeries")}
+                  {date ? ` · ${date.slice(0, 4)}` : ""}
+                </p>
               </div>
             </Link>
           );
-        }
-        const title = item.title || item.name || "";
-        const date = item.region_release_date || item.release_date || item.first_air_date;
-        const path = `/media/${item.media_type}/${item.id}`;
-        return (
+        })}
+        {results.length > 0 && (
           <Link
-            key={`${item.media_type}-${item.id}`}
-            to={path}
-            className={styles.item}
-            onClick={() => onPick(path)}
+            id={`${listboxId}-${results.length}`}
+            role="option"
+            aria-selected={activeIndex === results.length}
+            tabIndex={-1}
+            to={`/recherche?q=${encodeURIComponent(query)}`}
+            className={styles.allResults}
+            onClick={onViewAll}
           >
-            {item.poster_path ? (
-              <img
-                src={posterUrl(item.poster_path, "w92") ?? undefined}
-                alt={title}
-                className={styles.poster}
-              />
-            ) : (
-              <div className={`${styles.poster} ${styles.posterEmpty}`} />
-            )}
-            <div>
-              <p className={styles.itemTitle}>{title}</p>
-              <p className={styles.itemMeta}>
-                {item.media_type === "movie"
-                  ? t("navBar.mediaTypeMovie")
-                  : t("navBar.mediaTypeSeries")}
-                {date ? ` · ${date.slice(0, 4)}` : ""}
-              </p>
-            </div>
+            {t("navBar.viewAllResults", { query })}
           </Link>
-        );
-      })}
-      {results.length > 0 && (
-        <Link
-          to={`/recherche?q=${encodeURIComponent(query)}`}
-          className={styles.allResults}
-          onClick={onViewAll}
-        >
-          {t("navBar.viewAllResults", { query })}
-        </Link>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -136,6 +164,14 @@ export default function NavBar() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // Option mise en avant aux flèches dans la liste de suggestions (-1 : aucune).
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [prevResults, setPrevResults] = useState(results);
+  if (prevResults !== results) {
+    setPrevResults(results);
+    setActiveIndex(-1);
+  }
+  const listboxIdPrefix = useId();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -260,6 +296,50 @@ export default function NavBar() {
     }
   }
 
+  const hasQuery = query.trim().length >= MIN_QUERY_LENGTH;
+  // Options : les résultats puis « Voir tous les résultats ».
+  const optionCount = results.length > 0 ? results.length + 1 : 0;
+
+  // Champ de recherche en combobox WAI-ARIA (liste de suggestions) : les
+  // flèches parcourent les options sans quitter le champ, Entrée ouvre
+  // l'option active (sinon lance la recherche complète).
+  function comboboxProps(listboxId: string, expanded: boolean) {
+    return {
+      role: "combobox",
+      "aria-autocomplete": "list" as const,
+      "aria-expanded": expanded,
+      "aria-controls": listboxId,
+      "aria-activedescendant":
+        expanded && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined,
+      onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Tab : la liste se referme (sinon le focus entrait dans son
+        // conteneur défilable, que Chrome rend focalisable).
+        if (e.key === "Tab") {
+          setOpen(false);
+          return;
+        }
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          if (optionCount === 0) {
+            return;
+          }
+          e.preventDefault();
+          if (!expanded) {
+            setOpen(true);
+            return;
+          }
+          const step = e.key === "ArrowDown" ? 1 : -1;
+          // Cycle -1 (champ seul) → 0 … optionCount - 1 → -1.
+          setActiveIndex((i) => ((i + 1 + step + optionCount + 1) % (optionCount + 1)) - 1);
+          return;
+        }
+        if (e.key === "Enter" && expanded && activeIndex >= 0) {
+          e.preventDefault();
+          document.getElementById(`${listboxId}-${activeIndex}`)?.click();
+        }
+      },
+    };
+  }
+
   const tabbarLinks = [
     ...NAV_LINKS.map((link) => ({ ...link, label: t(`navBar.tabLinks.${link.key}`) })),
     ...(authenticated
@@ -311,7 +391,16 @@ export default function NavBar() {
             ))}
           </nav>
 
-          <div className={`${styles.search} ${styles.desktopOnly}`} ref={wrapperRef}>
+          <div
+            className={`${styles.search} ${styles.desktopOnly}`}
+            ref={wrapperRef}
+            // Tab (ou tout focus sorti de la recherche) : liste refermée.
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                setOpen(false);
+              }
+            }}
+          >
             <form onSubmit={onSubmit} role="search">
               <Icon name="search" />
               <input
@@ -321,10 +410,13 @@ export default function NavBar() {
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => results.length > 0 && setOpen(true)}
                 aria-label={t("navBar.searchAriaLabel")}
+                {...comboboxProps(`${listboxIdPrefix}-desktop`, open && hasQuery)}
               />
             </form>
-            {open && query.trim().length >= MIN_QUERY_LENGTH && (
+            {open && hasQuery && (
               <SearchResults
+                listboxId={`${listboxIdPrefix}-desktop`}
+                activeIndex={activeIndex}
                 results={results}
                 status={status}
                 query={query.trim()}
@@ -377,10 +469,13 @@ export default function NavBar() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 aria-label={t("navBar.searchAriaLabel")}
+                {...comboboxProps(`${listboxIdPrefix}-mobile`, hasQuery)}
               />
             </form>
-            {query.trim().length >= MIN_QUERY_LENGTH && (
+            {hasQuery && (
               <SearchResults
+                listboxId={`${listboxIdPrefix}-mobile`}
+                activeIndex={activeIndex}
                 results={results}
                 status={status}
                 query={query.trim()}

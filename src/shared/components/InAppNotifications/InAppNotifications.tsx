@@ -102,10 +102,8 @@ export default function InAppNotifications() {
     }
   });
 
-  if (toasts.length === 0) {
-    return null;
-  }
-
+  // Région live toujours montée, même vide : une région insérée en même
+  // temps que son contenu n'est pas annoncée par les lecteurs d'écran.
   return (
     <div className={styles.stack} role="status" aria-live="polite">
       {toasts.map((toast) => (

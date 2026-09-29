@@ -55,6 +55,7 @@ function RouteFallback() {
 }
 
 export default function App() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigationType = useNavigationType();
   const mainRef = useRef<HTMLElement>(null);
@@ -92,8 +93,21 @@ export default function App() {
     <>
       <ScrollToTop />
       <RecaptchaBadge />
+      {/* Lien d'évitement : premier élément au Tab, masqué hors focus. Focus
+          posé à la main plutôt que par l'ancre, qui ajouterait un #hash à
+          l'URL et une entrée d'historique. */}
+      <a
+        href="#contenu"
+        className="skipLink"
+        onClick={(e) => {
+          e.preventDefault();
+          mainRef.current?.focus();
+        }}
+      >
+        {t("common.skipToContent")}
+      </a>
       <NavBar />
-      <main ref={mainRef} tabIndex={-1}>
+      <main id="contenu" ref={mainRef} tabIndex={-1}>
         <ErrorBoundary resetKey={pathname}>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
