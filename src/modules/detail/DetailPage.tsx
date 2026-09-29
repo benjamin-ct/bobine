@@ -687,6 +687,7 @@ export default function DetailPage() {
                 <div className={styles.newListRow}>
                   <input
                     type="text"
+                    aria-label={t("detailPage.createListLabel")}
                     placeholder={t("detailPage.createListPlaceholder")}
                     maxLength={40}
                     value={newListName}

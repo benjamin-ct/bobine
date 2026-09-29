@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { FocusEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { getCountries } from "../../../core/api/tmdb.ts";
@@ -112,6 +112,18 @@ export function AdvancedFilterFields({
     [countries, locale]
   );
 
+  // Identifiants des libellés : chaque plage min/max est un groupe nommé par
+  // son libellé (lu avant « Min » / « Max » au lecteur d'écran), les champs
+  // seuls sont reliés à leur libellé par htmlFor.
+  const idPrefix = useId();
+  const ids = {
+    year: `${idPrefix}-year`,
+    rating: `${idPrefix}-rating`,
+    votes: `${idPrefix}-votes`,
+    runtime: `${idPrefix}-runtime`,
+    country: `${idPrefix}-country`,
+  };
+
   const fieldClass = variant === "panel" ? `${styles.field} ${styles.fieldPanel}` : styles.field;
 
   function update<K extends keyof AdvancedFiltersState>(key: K, value: AdvancedFiltersState[K]) {
@@ -134,9 +146,13 @@ export function AdvancedFilterFields({
     <>
       {fields.includes("year") && (
         <div className={fieldClass}>
-          <label>{t("advancedFilters.releaseYear")}</label>
-          <div className={styles.range}>
+          <label id={`${ids.year}-label`} htmlFor={ids.year}>
+            {t("advancedFilters.releaseYear")}
+          </label>
+          <div className={styles.range} role="group" aria-labelledby={`${ids.year}-label`}>
             <input
+              id={ids.year}
+              aria-label={t("advancedFilters.min")}
               type="number"
               inputMode="numeric"
               placeholder={t("advancedFilters.min")}
@@ -146,8 +162,9 @@ export function AdvancedFilterFields({
               onChange={(e) => update("yearMin", e.target.value)}
               onBlur={clampOnBlur("yearMin", YEAR_MIN, YEAR_MAX)}
             />
-            <span>–</span>
+            <span aria-hidden="true">–</span>
             <input
+              aria-label={t("advancedFilters.max")}
               type="number"
               inputMode="numeric"
               placeholder={t("advancedFilters.max")}
@@ -163,9 +180,13 @@ export function AdvancedFilterFields({
 
       {fields.includes("rating") && (
         <div className={fieldClass}>
-          <label>{t("advancedFilters.ratingOutOf10")}</label>
-          <div className={styles.range}>
+          <label id={`${ids.rating}-label`} htmlFor={ids.rating}>
+            {t("advancedFilters.ratingOutOf10")}
+          </label>
+          <div className={styles.range} role="group" aria-labelledby={`${ids.rating}-label`}>
             <input
+              id={ids.rating}
+              aria-label={t("advancedFilters.min")}
               type="number"
               inputMode="decimal"
               placeholder={t("advancedFilters.min")}
@@ -176,8 +197,9 @@ export function AdvancedFilterFields({
               onChange={(e) => update("voteAverageMin", e.target.value)}
               onBlur={clampOnBlur("voteAverageMin", VOTE_MIN, VOTE_MAX)}
             />
-            <span>–</span>
+            <span aria-hidden="true">–</span>
             <input
+              aria-label={t("advancedFilters.max")}
               type="number"
               inputMode="decimal"
               placeholder={t("advancedFilters.max")}
@@ -194,8 +216,9 @@ export function AdvancedFilterFields({
 
       {fields.includes("votes") && (
         <div className={fieldClass}>
-          <label>{t("advancedFilters.minVoteCount")}</label>
+          <label htmlFor={ids.votes}>{t("advancedFilters.minVoteCount")}</label>
           <input
+            id={ids.votes}
             type="number"
             inputMode="numeric"
             placeholder={t("advancedFilters.minVoteCountPlaceholder")}
@@ -209,9 +232,13 @@ export function AdvancedFilterFields({
 
       {fields.includes("runtime") && (
         <div className={fieldClass}>
-          <label>{t("advancedFilters.runtimeMinutes")}</label>
-          <div className={styles.range}>
+          <label id={`${ids.runtime}-label`} htmlFor={ids.runtime}>
+            {t("advancedFilters.runtimeMinutes")}
+          </label>
+          <div className={styles.range} role="group" aria-labelledby={`${ids.runtime}-label`}>
             <input
+              id={ids.runtime}
+              aria-label={t("advancedFilters.min")}
               type="number"
               inputMode="numeric"
               placeholder={t("advancedFilters.min")}
@@ -220,8 +247,9 @@ export function AdvancedFilterFields({
               onChange={(e) => update("runtimeMin", e.target.value)}
               onBlur={clampOnBlur("runtimeMin", 0)}
             />
-            <span>–</span>
+            <span aria-hidden="true">–</span>
             <input
+              aria-label={t("advancedFilters.max")}
               type="number"
               inputMode="numeric"
               placeholder={t("advancedFilters.max")}
@@ -236,8 +264,9 @@ export function AdvancedFilterFields({
 
       {fields.includes("country") && (
         <div className={fieldClass}>
-          <label>{t("advancedFilters.originCountry")}</label>
+          <label htmlFor={ids.country}>{t("advancedFilters.originCountry")}</label>
           <select
+            id={ids.country}
             value={filters.originCountry}
             onChange={(e) => update("originCountry", e.target.value)}
           >

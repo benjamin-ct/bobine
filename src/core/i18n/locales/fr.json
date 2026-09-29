@@ -1,5 +1,6 @@
 {
   "common": {
+    "skipToContent": "Aller au contenu",
     "loading": "Chargement…",
     "errorGeneric": "Une erreur est survenue.",
     "errorNetwork": "Impossible de joindre Seancy. Vérifiez votre connexion puis réessayez.",
@@ -399,6 +400,8 @@
     "noResults": "Aucun résultat."
   },
   "myListPage": {
+    "tabsLabel": "Mes listes",
+    "newListLabel": "Nom de la nouvelle liste",
     "authBannerText": "Connectez-vous pour synchroniser cette liste entre vos appareils : elle n'a pas disparu, elle reste enregistrée sur cet appareil.",
     "login": "Connexion",
     "tabSeen": "Déjà vu",
@@ -723,6 +726,8 @@
     "unknownReleaseStatus": "Diffusion pas encore annoncée",
     "wantToWatch": "Envie de voir",
     "markAsWatched": "Marquer comme vu",
+    "wantToWatchNamed": "Envie de voir : {{title}}",
+    "markAsWatchedNamed": "Marquer comme vu : {{title}}",
     "position": "N° {{position}} de la liste",
     "ownerRating": "Note du propriétaire : {{rating}}/10"
   },
@@ -747,6 +752,7 @@
     "addToListHeading": "Ajouter à une liste",
     "noListsYet": "Aucune liste pour l'instant.",
     "createListPlaceholder": "Créer une liste…",
+    "createListLabel": "Nom de la nouvelle liste",
     "create": "Créer",
     "similar": "Titres similaires",
     "excludeTitleHint": "Ne plus proposer ce titre dans les suggestions",

@@ -45,6 +45,12 @@
   margin-block: 24px 26px;
 }
 
+.tabList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .tab {
   display: inline-flex;
   align-items: center;
@@ -151,6 +157,11 @@
     margin-inline: calc(-1 * var(--gutter));
     padding-inline: var(--gutter);
     scrollbar-width: none;
+  }
+
+  .tabList {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
   }
 
   .tabs::-webkit-scrollbar {
