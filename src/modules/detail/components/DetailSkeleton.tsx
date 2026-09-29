@@ -1,4 +1,4 @@
-import { posterUrl, formatFullDate } from "../../../core/api/tmdb.ts";
+import { posterUrl, posterSrcSet, formatFullDate } from "../../../core/api/tmdb.ts";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
 import type { MediaPreview } from "../../../shared/lib/mediaPreviewCache.ts";
 import { posterAccentFromSeed } from "../../../shared/lib/posterAccent.ts";
@@ -16,6 +16,11 @@ interface DetailSkeletonProps {
   id: string;
   preview: MediaPreview | null;
 }
+
+// Largeur affichée de l'affiche de la fiche (voir DetailPage.module.css).
+// Partagée avec DetailPage : même srcset et même sizes, donc le navigateur
+// choisit le même fichier et la fiche réutilise l'image du squelette.
+export const DETAIL_POSTER_SIZES = "(max-width: 720px) 120px, 280px";
 
 // Remplace l'ancien écran "Chargement…" plein écran : préaffiche affiche
 // / titre / date si on les connaît déjà (voir mediaPreviewCache — venant de
@@ -38,8 +43,11 @@ export default function DetailSkeleton({ mediaType, id, preview }: DetailSkeleto
             {preview?.posterPath ? (
               <img
                 src={posterUrl(preview.posterPath, "w342") ?? undefined}
+                srcSet={posterSrcSet(preview.posterPath)}
+                sizes={DETAIL_POSTER_SIZES}
                 alt={preview.title}
                 className={pageStyles.poster}
+                fetchPriority="high"
               />
             ) : (
               <div className={`${pageStyles.poster} ${skeletonStyles.block}`} />

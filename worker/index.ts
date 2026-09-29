@@ -88,7 +88,6 @@ import { PRODUCTION_HOSTNAME, withSentry } from "./sentry.ts";
 import { logError } from "./logger.ts";
 import { trackEvent } from "./analytics.ts";
 import { getTheatricalDateFromDetails } from "../src/core/api/movieMeta.ts";
-import type { ReleaseDatesResponse } from "../src/core/types/tmdb.ts";
 import type { Env } from "./types.ts";
 import { openSyncSocket, publishToUser } from "./sync.ts";
 import {
@@ -101,7 +100,13 @@ import {
   sniffAvatarType,
 } from "./avatars.ts";
 import { randomShareSlug, normalizeUsername, SHARE_SLUG_PATTERN } from "./share-slug.ts";
+import {
+  fetchReleaseDatesCached,
+  fetchWatchProvidersCached,
+  type TmdbUsage,
+} from "./tmdb-edge-cache.ts";
 import { SECURITY_HEADERS } from "./security-headers.ts";
+import { PAGE_META_ROUTE, servePageWithMeta, serveRobots, serveSitemap } from "./page-meta.ts";
 import {
   follow,
   unfollow,
@@ -1672,55 +1677,6 @@ async function handleTheatricalIndex(request: Request, env: Env, ctx: ExecutionC
   return response;
 }
 
-// Appels TMDB réellement émis par les enrichissements d'une requête (hors
-// cache), imputés ensuite au plafond du visiteur (audit H3).
-interface TmdbUsage {
-  calls: number;
-}
-
-// Résout les plateformes de streaming d'un titre en réutilisant EXACTEMENT
-// la même entrée de cache d'edge que l'appel direct /api/tmdb/<type>/<id>/
-// watch/providers (même URL, même TTL 1h) : un titre déjà consulté (fiche
-// détail, ou déjà croisé dans une autre grille) répond sans retaper TMDB.
-async function fetchWatchProvidersCached(
-  origin: string,
-  mediaType: "movie" | "tv",
-  id: number,
-  env: Env,
-  ctx: ExecutionContext,
-  usage: TmdbUsage
-): Promise<Record<string, { flatrate?: unknown; rent?: unknown; buy?: unknown }> | null> {
-  const cache = caches.default;
-  const cacheKey = new Request(
-    `${origin}/api/tmdb/${mediaType}/${id}/watch/providers?language=fr-FR`
-  );
-  const cached = await cache.match(cacheKey);
-  if (cached) {
-    return cached.ok ? cached.json() : null;
-  }
-  const tmdbUrl = new URL(`https://api.themoviedb.org/3/${mediaType}/${id}/watch/providers`);
-  tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY!);
-  usage.calls++;
-  const res = await fetch(tmdbUrl.toString());
-  const body = await res.text();
-  if (!res.ok) {
-    return null;
-  }
-  ctx.waitUntil(
-    cache.put(
-      cacheKey,
-      new Response(body, {
-        status: res.status,
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-          "cache-control": "public, max-age=3600",
-        },
-      })
-    )
-  );
-  return JSON.parse(body).results || {};
-}
-
 // Grilles (Nouveautés...) : plutôt que de laisser chaque carte affichée
 // déclencher son propre appel /watch/providers depuis le navigateur une
 // fois visible (voir MediaCard.tsx), le badge plateforme est résolu ici en
@@ -1740,49 +1696,18 @@ async function enrichDiscoverResultsWithProviders(
 ): Promise<void> {
   await Promise.all(
     (data.results || []).map(async (item) => {
-      const results = await fetchWatchProvidersCached(origin, mediaType, item.id, env, ctx, usage);
+      const results = await fetchWatchProvidersCached(
+        origin,
+        mediaType,
+        item.id,
+        env.TMDB_API_KEY!,
+        caches.default,
+        ctx,
+        usage
+      );
       (item as { watch_providers?: unknown }).watch_providers = results?.[region] ?? null;
     })
   );
-}
-
-// Résout /release_dates d'un film en réutilisant la même entrée de cache
-// d'edge que l'appel direct /api/tmdb/movie/<id>/release_dates (voir
-// fetchWatchProvidersCached ci-dessus, même principe).
-async function fetchReleaseDatesCached(
-  origin: string,
-  id: number,
-  env: Env,
-  ctx: ExecutionContext,
-  usage: TmdbUsage
-): Promise<ReleaseDatesResponse | null> {
-  const cache = caches.default;
-  const cacheKey = new Request(`${origin}/api/tmdb/movie/${id}/release_dates?language=fr-FR`);
-  const cached = await cache.match(cacheKey);
-  if (cached) {
-    return cached.ok ? cached.json() : null;
-  }
-  const tmdbUrl = new URL(`https://api.themoviedb.org/3/movie/${id}/release_dates`);
-  tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY!);
-  usage.calls++;
-  const res = await fetch(tmdbUrl.toString());
-  const body = await res.text();
-  if (!res.ok) {
-    return null;
-  }
-  ctx.waitUntil(
-    cache.put(
-      cacheKey,
-      new Response(body, {
-        status: res.status,
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-          "cache-control": "public, max-age=3600",
-        },
-      })
-    )
-  );
-  return JSON.parse(body);
 }
 
 // Grille Découvrir (films) : `release_date` renvoyé par /discover/movie est
@@ -1809,7 +1734,14 @@ async function enrichDiscoverResultsWithRegionDate(
       // renvoient déjà que des films (pas de media_type par item).
       .filter((item) => item.media_type === undefined || item.media_type === "movie")
       .map(async (item) => {
-        const releaseDates = await fetchReleaseDatesCached(origin, item.id, env, ctx, usage);
+        const releaseDates = await fetchReleaseDatesCached(
+          origin,
+          item.id,
+          env.TMDB_API_KEY!,
+          caches.default,
+          ctx,
+          usage
+        );
         (item as { region_release_date?: string | null }).region_release_date =
           getTheatricalDateFromDetails(
             releaseDates ? { release_dates: releaseDates } : null,
@@ -1984,7 +1916,14 @@ async function handleTmdbProxy(
       "cache-control": `public, max-age=${maxAge}`,
     },
   });
-  if (res.ok) {
+  // Réponse appauvrie pour un crawler (grille sans badges plateforme, voir
+  // shouldEnrichProviders) : la clé de cache ne dépend que de l'URL, donc la
+  // mettre en cache la servirait ensuite aux vrais visiteurs pendant 5 min
+  // (audit H2). Les autres réponses aux crawlers, identiques à celles d'un
+  // humain, restent mises en cache : elles épargnent le quota TMDB.
+  const degradedForCrawler =
+    crawler && discoverMediaType && params.get("include_watch_providers_badge") === "1";
+  if (res.ok && !degradedForCrawler) {
     // waitUntil : n'ajoute pas la latence de l'écriture cache à la réponse.
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
   } else if (res.status === 429) {
@@ -2011,14 +1950,29 @@ async function handleTmdbProxy(
 export default withSentry({
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    // `run_worker_first` (wrangler.jsonc) ne route que /api/* ici : les
+    // `run_worker_first` (wrangler.jsonc) route surtout /api/* ici : les
     // assets statiques (dont le service worker /sw.js) sont servis
     // nativement par Cloudflare sans passer par ce Worker — reconstruire
     // leur Response ici (même pour juste ajouter des en-têtes) casse
     // l'enregistrement du service worker. Leurs en-têtes de sécurité sont
     // donc posés nativement via public/_headers (généré depuis
     // worker/security-headers.ts) plutôt qu'ici.
+    // Exceptions : robots.txt, sitemap.xml et les pages partageables (fiche,
+    // profil, liste), qui passent par ici pour leurs balises de partage
+    // (voir page-meta.ts). Réponses reconstruites, d'où withSecurityHeaders.
     if (!url.pathname.startsWith("/api/")) {
+      if (url.pathname === "/robots.txt") {
+        return withSecurityHeaders(serveRobots(url));
+      }
+      if (url.pathname === "/sitemap.xml") {
+        return withSecurityHeaders(serveSitemap(url));
+      }
+      if (
+        PAGE_META_ROUTE.test(url.pathname) &&
+        (request.method === "GET" || request.method === "HEAD")
+      ) {
+        return withSecurityHeaders(await servePageWithMeta(request, env, ctx));
+      }
       return env.ASSETS.fetch(request);
     }
     // Filet de sécurité : sans lui, une exception non rattrapée donne une
@@ -2322,7 +2276,7 @@ async function routeRequest(
     });
   }
 
-  // `run_worker_first` (wrangler.jsonc) ne route ici que /api/*, mais on
+  // `run_worker_first` (wrangler.jsonc) ne route ici que des /api/*, mais on
   // garde un filet : toute autre requête retombe sur les assets statiques.
   return env.ASSETS.fetch(request);
 }

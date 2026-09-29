@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import {
   PageHeader,
   MediaCard,
@@ -112,6 +113,13 @@ export default function PublicProfilePage() {
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
   const [linkCopied, setLinkCopied] = useState(false);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  useDocumentTitle(
+    state.status === "success"
+      ? state.profile.displayName || t("publicProfile.anonymousName")
+      : state.status === "not-found"
+        ? t("pageTitle.notFound")
+        : null
+  );
 
   // Noms des genres pour « année · genre » sous les affiches (les items ne
   // portent que les ids TMDB). En cas d'échec, seule l'année s'affiche.

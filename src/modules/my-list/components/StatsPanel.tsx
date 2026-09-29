@@ -250,7 +250,12 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
                 title={item.title}
               >
                 {item.posterPath ? (
-                  <img src={posterUrl(item.posterPath, "w185") ?? undefined} alt={item.title} />
+                  <img
+                    src={posterUrl(item.posterPath, "w185") ?? undefined}
+                    alt={item.title}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
                   <div className={`${styles.recentEmpty} ${posterStyles[accentKey]}`} />
                 )}

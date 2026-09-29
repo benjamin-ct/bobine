@@ -87,6 +87,7 @@ jobs:
           npm run verify:rate-limit-memory
           npm run verify:tmdb-proxy-policy
           npm run verify:tmdb-retry-after
+          npm run verify:tmdb-edge-cache
           npm run verify:security-headers
 
       - name: Build

@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import {
   discover,
   getGenres,
@@ -181,6 +182,7 @@ function hasAnyProvider(providers: RegionWatchProviders | null, ids: string[]): 
 
 export default function RandomPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t("pageTitle.random"));
   const [typeChoice, setTypeChoice] = useState<TypeChoice>("movie");
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerIds, setProviderIds] = useState<string[]>([]);

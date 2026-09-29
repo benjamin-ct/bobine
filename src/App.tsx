@@ -1,4 +1,4 @@
-import { lazy, Suspense, useLayoutEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import {
@@ -17,6 +17,7 @@ import {
 import Discover from "./modules/discover/index.ts";
 import { MembersOnlyDialog } from "./modules/auth/index.ts";
 import { fadeIn } from "./shared/lib/motion.ts";
+import { hideInitialLoader } from "./core/initialLoader.ts";
 import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
 
 const NewReleases = lazy(() => import("./modules/new-releases/index.ts"));
@@ -59,6 +60,10 @@ export default function App() {
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
 
+  useEffect(() => {
+    hideInitialLoader();
+  }, []);
+
   // Fondu court à chaque changement de page (pas au premier affichage,
   // couvert par le splash, ni quand seuls les paramètres changent : onglets
   // du profil, filtres). En layout effect pour partir de l'opacité 0 avant
@@ -75,6 +80,11 @@ export default function App() {
     if (navigationType !== "POP") {
       fadeIn(mainRef.current);
     }
+    // Focus sur le contenu de la nouvelle page (audit H11) : sans ça, il
+    // reste sur le lien cliqué, et un lecteur d'écran n'annonce pas le
+    // changement de page. `preventScroll` : le défilement reste géré par
+    // ScrollToTop et la restauration de scroll.
+    mainRef.current?.focus({ preventScroll: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
@@ -83,7 +93,7 @@ export default function App() {
       <ScrollToTop />
       <RecaptchaBadge />
       <NavBar />
-      <main ref={mainRef}>
+      <main ref={mainRef} tabIndex={-1}>
         <ErrorBoundary resetKey={pathname}>
           <Suspense fallback={<RouteFallback />}>
             <Routes>

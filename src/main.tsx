@@ -16,21 +16,28 @@ import { AuthProvider } from "./core/context/AuthContext.tsx";
 import { LibraryProvider } from "./core/context/LibraryContext.tsx";
 import { MembersOnlyProvider } from "./core/context/MembersOnlyContext.tsx";
 import { RemindersProvider } from "./core/context/RemindersContext.tsx";
-import { RegionProvider, loadStoredRegion } from "./core/context/RegionContext.tsx";
+import { RegionProvider, fetchRegion, loadStoredRegion } from "./core/context/RegionContext.tsx";
 import { RegionAccountSync } from "./core/context/RegionAccountSync.tsx";
 import { DEFAULT_REGION } from "./core/api/releaseBadge.ts";
 import { FavoriteProvidersProvider } from "./core/context/FavoriteProvidersContext.tsx";
 import { ExcludedGenresProvider } from "./core/context/ExcludedGenresContext.tsx";
 import { ExcludedTitlesProvider } from "./core/context/ExcludedTitlesContext.tsx";
 import { ThemeProvider } from "./core/context/ThemeContext.tsx";
-import { LocaleProvider, loadInitialLocale } from "./core/context/LocaleContext.tsx";
-import { ensureLocaleLoaded } from "./core/i18n/i18n.ts";
+import { LocaleProvider } from "./core/context/LocaleContext.tsx";
+import {
+  applyInitialLocale,
+  ensureLocaleLoaded,
+  isSupportedLocale,
+  loadInitialLocale,
+  type Locale,
+} from "./core/i18n/i18n.ts";
 import { LocaleAccountSync } from "./core/context/LocaleAccountSync.tsx";
 import { ensureSentryInit, logError } from "./core/logger.ts";
 import ErrorBoundary from "./shared/components/ErrorBoundary/ErrorBoundary.tsx";
 import { injectWebAnalytics } from "./core/webAnalytics.ts";
 import { isLikelyAutomatedClient } from "./core/botDetection.ts";
 import { setupPwaAutoUpdate, setupStaleChunkReload } from "./core/pwaUpdate.ts";
+import { hideInitialLoader } from "./core/initialLoader.ts";
 import { stripReauthParam } from "./core/api/accessSession.ts";
 import { clearAccountDataFromDevice, hasAccountDataOnDevice } from "./core/lib/accountStorage.ts";
 
@@ -79,38 +86,69 @@ if (!rootElement) {
 // l'impression que l'appli clignotait au premier affichage d'une page.
 // Le splash statique de index.html couvre cette attente ; le délai est
 // borné pour ne jamais bloquer indéfiniment (ex. Worker indisponible).
+//
+// Un choix manuel déjà stocké sur cet appareil (réglages du profil) fait
+// autorité et évite tout appel réseau : /api/region ne sert que de repli
+// tant qu'aucun choix explicite n'existe (voir RegionContext.tsx). La
+// requête est partagée avec RegionProvider, qui en reprend le résultat si
+// elle arrive après le délai, au lieu d'en refaire une (audit M8).
+const INITIAL_REGION_TIMEOUT_MS = 1500;
+const storedRegion = loadStoredRegion();
+const regionRequest = storedRegion ? null : fetchRegion();
+
 async function resolveInitialRegion(): Promise<string> {
-  // Un choix manuel déjà stocké sur cet appareil (réglages du profil) fait
-  // autorité et évite tout appel réseau : /api/region ne sert que de repli
-  // tant qu'aucun choix explicite n'existe (voir RegionContext.tsx).
-  const stored = loadStoredRegion();
-  if (stored) {
-    return stored;
+  if (!regionRequest) {
+    return storedRegion ?? DEFAULT_REGION;
+  }
+  const timeout = new Promise<null>((resolve) =>
+    setTimeout(() => resolve(null), INITIAL_REGION_TIMEOUT_MS)
+  );
+  return (await Promise.race([regionRequest, timeout])) ?? DEFAULT_REGION;
+}
+
+// Langue enregistrée sur le compte, lue avant le premier rendu pour la même
+// raison que la région : sans elle, un compte réglé en anglais sur un
+// appareil qui n'a encore rien mémorisé (nouvelle connexion, preview) ou qui
+// a gardé une autre langue affichait l'accueil en français, puis tout
+// rebasculait en anglais à la réponse de LocaleAccountSync (review H8).
+// Seulement si connecté, et borné comme /api/region.
+async function fetchAccountLocale(): Promise<Locale | null> {
+  if (!document.cookie.includes("bobine_auth=1")) {
+    return null;
   }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1500);
   try {
-    const res = await fetch("/api/region", { signal: controller.signal });
+    const res = await fetch("/api/locale", { signal: controller.signal });
     if (!res.ok) {
-      return DEFAULT_REGION;
+      return null;
     }
-    const data: { country?: string } = await res.json();
-    return data.country || DEFAULT_REGION;
+    const data: { locale?: string | null } = await res.json();
+    return data.locale && isSupportedLocale(data.locale) ? data.locale : null;
   } catch {
-    // Repli sur DEFAULT_REGION (timeout, offline, dev local sans Worker) —
-    // RegionProvider retente cet appel en tâche de fond après le montage.
-    return DEFAULT_REGION;
+    // Repli sur la langue de l'appareil ; LocaleAccountSync resynchronise
+    // après le montage.
+    return null;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-// Traductions de la langue initiale chargées en parallèle (chunk séparé hors
-// français, voir i18n.ts), sans allonger l'attente du splash.
-const [initialRegion] = await Promise.all([
-  resolveInitialRegion(),
-  ensureLocaleLoaded(loadInitialLocale()),
-]);
+// Traductions de la langue de l'appareil chargées en parallèle (chunk séparé
+// hors français, voir i18n.ts), sans allonger l'attente du splash.
+async function resolveInitialLocale(): Promise<void> {
+  const deviceLocale = loadInitialLocale();
+  const [accountLocale] = await Promise.all([
+    fetchAccountLocale(),
+    ensureLocaleLoaded(deviceLocale),
+  ]);
+  if (accountLocale && accountLocale !== deviceLocale) {
+    await ensureLocaleLoaded(accountLocale);
+    applyInitialLocale(accountLocale);
+  }
+}
+
+const [initialRegion] = await Promise.all([resolveInitialRegion(), resolveInitialLocale()]);
 
 // Erreurs de rendu hors de toute ErrorBoundary (providers, NavBar…) : React
 // démonte alors l'appli, au moins l'erreur remonte dans Sentry. Celles
@@ -122,7 +160,7 @@ createRoot(rootElement, {
     <ThemeProvider>
       <LocaleProvider>
         <BrowserRouter>
-          <RegionProvider initialRegion={initialRegion}>
+          <RegionProvider initialRegion={initialRegion} regionRequest={regionRequest}>
             <AuthProvider>
               <LocaleAccountSync>
                 <RegionAccountSync>
@@ -151,20 +189,7 @@ createRoot(rootElement, {
   </StrictMode>
 );
 
-// Retire le loader statique de index.html une fois la page entièrement
-// chargée (fonts, images, styles), pas seulement une fois React monté :
-// les ressources externes (polices Google Fonts, images) peuvent encore
-// être en cours de chargement à ce moment-là.
-const initialLoader = document.getElementById("app-loader");
-if (initialLoader) {
-  const hideInitialLoader = () => {
-    initialLoader.addEventListener("transitionend", () => initialLoader.remove(), { once: true });
-    initialLoader.classList.add("app-loader--hidden");
-  };
-
-  if (document.readyState === "complete") {
-    hideInitialLoader();
-  } else {
-    window.addEventListener("load", hideInitialLoader, { once: true });
-  }
-}
+// Normalement retiré par App juste après le premier rendu (voir
+// initialLoader.ts) ; ce délai reste un filet si App ne se monte jamais
+// (erreur rattrapée plus haut par ErrorBoundary).
+setTimeout(hideInitialLoader, 3000);

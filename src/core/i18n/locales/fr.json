@@ -1123,5 +1123,20 @@
   "readOnlyBanner": {
     "cta": "Créer mon compte",
     "ctaMobile": "Créer mon compte gratuit"
+  },
+  "pageTitle": {
+    "default": "Seancy — Films & séries à regarder",
+    "withSuffix": "{{page}} — Seancy",
+    "newReleases": "Nouveautés",
+    "comingSoon": "Prochainement",
+    "random": "Aléatoire",
+    "profile": "Profil",
+    "search": "Recherche",
+    "searchQuery": "Recherche : {{query}}",
+    "login": "Connexion",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Politique de confidentialité",
+    "notFound": "Page introuvable",
+    "withYear": "{{title}} ({{year}})"
   }
 }
