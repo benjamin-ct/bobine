@@ -37,15 +37,17 @@ function pruneExpiredCounters(now: number): void {
   }
 }
 
+// `cost` : nombre d'unités consommées par cet appel (1 par défaut). Sert à
+// imputer après coup des sous-requêtes (enrichissement du proxy TMDB, audit H3).
 export function checkRateLimitInMemory(
   key: string,
-  { limit, windowMs }: { limit: number; windowMs: number },
+  { limit, windowMs, cost = 1 }: { limit: number; windowMs: number; cost?: number },
   now = Date.now()
 ): boolean {
   pruneExpiredCounters(now);
   const windowStart = Math.floor(now / windowMs) * windowMs;
   const existing = inMemoryCounters.get(key);
-  const count = existing && existing.windowStart === windowStart ? existing.count + 1 : 1;
+  const count = (existing && existing.windowStart === windowStart ? existing.count : 0) + cost;
   inMemoryCounters.set(key, { windowStart, count });
   return count <= limit;
 }

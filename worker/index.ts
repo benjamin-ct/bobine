@@ -69,6 +69,7 @@ function sanitizeEmailLocale(value: unknown): EmailLocale {
 }
 import { checkRateLimit, getClientIp, secondsUntilWindowEnd } from "./rate-limit.ts";
 import { checkRateLimitInMemory } from "./rate-limit-memory.ts";
+import { WORKER_ONLY_PARAMS, isValidRegion, parseTmdbProxyRequest } from "./tmdb-proxy-policy.ts";
 import { detectKnownCrawler } from "./bots.ts";
 import {
   sanitizeLibraryPayload,
@@ -1645,11 +1646,25 @@ async function handlePutRegion(request: Request, env: Env): Promise<Response> {
 async function handleTheatricalIndex(request: Request, env: Env, ctx: ExecutionContext) {
   const url = new URL(request.url);
   const region = url.searchParams.get("region") || "FR";
+  // Chaque région inédite coûte ~20 appels TMDB : format validé (audit H3).
+  if (!isValidRegion(region)) {
+    return json({ error: "Région invalide." }, 400);
+  }
   const cache = caches.default;
   const cacheKey = new Request(`${url.origin}/api/theatrical-index?region=${region}`);
   const cached = await cache.match(cacheKey);
   if (cached) {
     return cached;
+  }
+  // Après le cache, comme pour le proxy : un visiteur n'en a besoin qu'une
+  // fois par session et par région.
+  if (
+    !checkRateLimitInMemory(`theatrical:ip:${getClientIp(request)}`, {
+      limit: 10,
+      windowMs: 5 * 60_000,
+    })
+  ) {
+    return TMDB_RATE_LIMIT_RESPONSE();
   }
   const index = await getTheatricalIndex(env, region);
   const response = json(index, 200, { "cache-control": "public, max-age=3600" });
@@ -1657,15 +1672,11 @@ async function handleTheatricalIndex(request: Request, env: Env, ctx: ExecutionC
   return response;
 }
 
-// Paramètres reconnus par ce Worker mais absents de l'API TMDB : jamais
-// transmis à TMDB (voir handleTmdbProxy), seulement lus pour piloter
-// l'enrichissement des grilles ci-dessous.
-const WORKER_ONLY_PARAMS = [
-  "include_watch_providers_badge",
-  "watch_providers_badge_region",
-  "include_region_release_date",
-  "region_release_date_region",
-];
+// Appels TMDB réellement émis par les enrichissements d'une requête (hors
+// cache), imputés ensuite au plafond du visiteur (audit H3).
+interface TmdbUsage {
+  calls: number;
+}
 
 // Résout les plateformes de streaming d'un titre en réutilisant EXACTEMENT
 // la même entrée de cache d'edge que l'appel direct /api/tmdb/<type>/<id>/
@@ -1676,7 +1687,8 @@ async function fetchWatchProvidersCached(
   mediaType: "movie" | "tv",
   id: number,
   env: Env,
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
+  usage: TmdbUsage
 ): Promise<Record<string, { flatrate?: unknown; rent?: unknown; buy?: unknown }> | null> {
   const cache = caches.default;
   const cacheKey = new Request(
@@ -1688,6 +1700,7 @@ async function fetchWatchProvidersCached(
   }
   const tmdbUrl = new URL(`https://api.themoviedb.org/3/${mediaType}/${id}/watch/providers`);
   tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY!);
+  usage.calls++;
   const res = await fetch(tmdbUrl.toString());
   const body = await res.text();
   if (!res.ok) {
@@ -1722,11 +1735,12 @@ async function enrichDiscoverResultsWithProviders(
   region: string,
   origin: string,
   env: Env,
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
+  usage: TmdbUsage
 ): Promise<void> {
   await Promise.all(
     (data.results || []).map(async (item) => {
-      const results = await fetchWatchProvidersCached(origin, mediaType, item.id, env, ctx);
+      const results = await fetchWatchProvidersCached(origin, mediaType, item.id, env, ctx, usage);
       (item as { watch_providers?: unknown }).watch_providers = results?.[region] ?? null;
     })
   );
@@ -1739,7 +1753,8 @@ async function fetchReleaseDatesCached(
   origin: string,
   id: number,
   env: Env,
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
+  usage: TmdbUsage
 ): Promise<ReleaseDatesResponse | null> {
   const cache = caches.default;
   const cacheKey = new Request(`${origin}/api/tmdb/movie/${id}/release_dates?language=fr-FR`);
@@ -1749,6 +1764,7 @@ async function fetchReleaseDatesCached(
   }
   const tmdbUrl = new URL(`https://api.themoviedb.org/3/movie/${id}/release_dates`);
   tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY!);
+  usage.calls++;
   const res = await fetch(tmdbUrl.toString());
   const body = await res.text();
   if (!res.ok) {
@@ -1782,7 +1798,8 @@ async function enrichDiscoverResultsWithRegionDate(
   region: string,
   origin: string,
   env: Env,
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
+  usage: TmdbUsage
 ): Promise<void> {
   await Promise.all(
     (data.results || [])
@@ -1792,7 +1809,7 @@ async function enrichDiscoverResultsWithRegionDate(
       // renvoient déjà que des films (pas de media_type par item).
       .filter((item) => item.media_type === undefined || item.media_type === "movie")
       .map(async (item) => {
-        const releaseDates = await fetchReleaseDatesCached(origin, item.id, env, ctx);
+        const releaseDates = await fetchReleaseDatesCached(origin, item.id, env, ctx, usage);
         (item as { region_release_date?: string | null }).region_release_date =
           getTheatricalDateFromDetails(
             releaseDates ? { release_dates: releaseDates } : null,
@@ -1818,6 +1835,13 @@ async function handleTmdbProxy(
   }
 
   const url = new URL(request.url);
+  // Liste blanche (voir tmdb-proxy-policy.ts) : chemin autorisé, paramètres
+  // filtrés, validés et triés, qui forment aussi la clé de cache.
+  const parsed = parseTmdbProxyRequest(url.pathname, url.searchParams);
+  if (!parsed.ok) {
+    return json({ error: parsed.error }, parsed.status);
+  }
+  const { tmdbPath, params } = parsed;
 
   // Cache d'edge Cloudflare : l'en-tête cache-control posé plus bas ne
   // suffit PAS à lui seul à faire mettre une réponse de Worker en cache —
@@ -1826,9 +1850,14 @@ async function handleTmdbProxy(
   // différents) repart taper l'API TMDB. Sous charge, ça épuise le quota de
   // la clé API partagée côté serveur (429 TMDB observé en prod). La clé de
   // cache se base sur l'URL entrante (sans api_key, jamais transmise par le
-  // client de toute façon) pour rester stable quel que soit le visiteur.
+  // client de toute façon) pour rester stable quel que soit le visiteur,
+  // normalisée pour qu'un paramètre en plus ou dans un autre ordre ne la
+  // contourne pas (audit H3).
   const cache = caches.default;
-  const cacheKey = new Request(url.toString(), request);
+  const normalizedQuery = params.toString();
+  const cacheKey = new Request(
+    `${url.origin}/api/tmdb${tmdbPath}${normalizedQuery ? `?${normalizedQuery}` : ""}`
+  );
   const cached = await cache.match(cacheKey);
   if (cached) {
     return cached;
@@ -1853,17 +1882,17 @@ async function handleTmdbProxy(
   // cette seconde limite, partagée par famille de bot plutôt que par IP,
   // plafonne le volume agrégé sans jamais bloquer un visiteur humain qui
   // partagerait la même IP sortante (proxy, 4G...).
-  if (crawler && !checkRateLimitInMemory(`tmdb:bot:${crawler}`, { limit: 60, windowMs: 60_000 })) {
+  const botLimit = { limit: 60, windowMs: 60_000 };
+  if (crawler && !checkRateLimitInMemory(`tmdb:bot:${crawler}`, botLimit)) {
     return TMDB_RATE_LIMIT_RESPONSE();
   }
 
-  const tmdbPath = url.pathname.replace(/^\/api\/tmdb/, "");
   const tmdbUrl = new URL(`https://api.themoviedb.org/3${tmdbPath}`);
-  for (const [key, value] of url.searchParams) {
-    if (key === "api_key" || WORKER_ONLY_PARAMS.includes(key)) {
-      continue;
-    } // ignorés : jamais transmis à TMDB (clé serveur / paramètres internes)
-    tmdbUrl.searchParams.set(key, value);
+  for (const [key, value] of params) {
+    // Paramètres internes : jamais transmis à TMDB.
+    if (!WORKER_ONLY_PARAMS.includes(key)) {
+      tmdbUrl.searchParams.set(key, value);
+    }
   }
   tmdbUrl.searchParams.set("api_key", env.TMDB_API_KEY);
 
@@ -1884,10 +1913,10 @@ async function handleTmdbProxy(
   // connus, qui sinon multiplient les appels sortants TMDB par titre affiché
   // sans aucun bénéfice pour eux (voir ticket "Milliers de calls workers").
   const shouldEnrichProviders =
-    discoverMediaType && url.searchParams.get("include_watch_providers_badge") === "1" && !crawler;
+    discoverMediaType && params.get("include_watch_providers_badge") === "1" && !crawler;
   const shouldEnrichRegionDate =
     (discoverMediaType === "movie" || isRegionDateEligibleSearch) &&
-    url.searchParams.get("include_region_release_date") === "1";
+    params.get("include_region_release_date") === "1";
 
   // Ces routes sont appelées une fois PAR CARTE (badge plateforme sur
   // Nouveautés, badge prochaine sortie/diffusion sur Prochainement) :
@@ -1904,24 +1933,47 @@ async function handleTmdbProxy(
   const isGenreListRoute = /^\/genre\/(movie|tv)\/list$/.test(tmdbPath);
   const maxAge = isPerTitleRoute ? 3600 : isGenreListRoute ? 86400 : 300;
 
+  // Une grille enrichie coûte jusqu'à ~40 appels TMDB (un par carte et par
+  // enrichissement) quand le cache est froid : budget à part, plus large que
+  // les 120 requêtes/min ci-dessus pour ne pas gêner un visiteur qui fait
+  // défiler quelques pages, mais qui borne ce qu'un seul client peut coûter
+  // (audit H3). cost 0 : simple lecture du compteur.
+  const enrichLimit = { limit: 400, windowMs: 60_000 };
+  if (
+    (shouldEnrichProviders || shouldEnrichRegionDate) &&
+    !checkRateLimitInMemory(`tmdb-enrich:ip:${ip}`, { ...enrichLimit, cost: 0 })
+  ) {
+    return TMDB_RATE_LIMIT_RESPONSE();
+  }
+
   const res = await fetch(tmdbUrl.toString());
   let body = await res.text();
   if (res.ok && (shouldEnrichProviders || shouldEnrichRegionDate)) {
     const data = JSON.parse(body);
+    const usage: TmdbUsage = { calls: 0 };
     if (shouldEnrichProviders) {
-      const region = url.searchParams.get("watch_providers_badge_region") || "FR";
+      const region = params.get("watch_providers_badge_region") || "FR";
       await enrichDiscoverResultsWithProviders(
         data,
         discoverMediaType,
         region,
         url.origin,
         env,
-        ctx
+        ctx,
+        usage
       );
     }
     if (shouldEnrichRegionDate) {
-      const region = url.searchParams.get("region_release_date_region") || "FR";
-      await enrichDiscoverResultsWithRegionDate(data, region, url.origin, env, ctx);
+      const region = params.get("region_release_date_region") || "FR";
+      await enrichDiscoverResultsWithRegionDate(data, region, url.origin, env, ctx, usage);
+    }
+    // Imputés après coup (on ne connaît qu'ici le nombre d'appels hors cache) :
+    // la requête en cours est servie, les suivantes seront refusées.
+    if (usage.calls > 0) {
+      checkRateLimitInMemory(`tmdb-enrich:ip:${ip}`, { ...enrichLimit, cost: usage.calls });
+      if (crawler) {
+        checkRateLimitInMemory(`tmdb:bot:${crawler}`, { ...botLimit, cost: usage.calls });
+      }
     }
     body = JSON.stringify(data);
   }

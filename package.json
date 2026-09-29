@@ -25,6 +25,7 @@
     "verify:bot-detection": "node scripts/verify-bot-detection.ts",
     "verify:bot-detection-client": "node scripts/verify-bot-detection-client.ts",
     "verify:rate-limit-memory": "node scripts/verify-rate-limit-memory.ts",
+    "verify:tmdb-proxy-policy": "node scripts/verify-tmdb-proxy-policy.ts",
     "verify:tmdb-retry-after": "node scripts/verify-tmdb-retry-after.ts",
     "verify:security-headers": "node scripts/security-headers.ts --check",
     "check:bundle-size": "node scripts/check-bundle-size.ts",
