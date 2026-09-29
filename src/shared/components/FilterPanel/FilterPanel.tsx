@@ -1,8 +1,9 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Dropdown from "../Dropdown/Dropdown.tsx";
 import Icon from "../Icon/Icon.tsx";
 import SlidingIndicator from "../SlidingIndicator/SlidingIndicator.tsx";
+import { useFocusTrap } from "../../hooks/useFocusTrap.ts";
 import {
   AdvancedFilterFields,
   EMPTY_ADVANCED_FILTERS,
@@ -148,6 +149,9 @@ export default function FilterPanel({
   const { t } = useTranslation();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
+  // Feuille modale (mobile) plutôt que panneau dans le flux (desktop).
+  const [isSheet, setIsSheet] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
   const hasFavorites = favoriteProviderIds.length > 0;
   const rangeError = advanced ? getAdvancedFiltersRangeError(advanced) : null;
@@ -194,18 +198,24 @@ export default function FilterPanel({
       }
     }
     document.addEventListener("keydown", onKeyDown);
-    const isSheet = window.matchMedia(MOBILE_QUERY).matches;
+    const sheet = window.matchMedia(MOBILE_QUERY).matches;
+    setIsSheet(sheet);
     const previousOverflow = document.body.style.overflow;
-    if (isSheet) {
+    if (sheet) {
       document.body.style.overflow = "hidden";
     }
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      if (isSheet) {
+      if (sheet) {
         document.body.style.overflow = previousOverflow;
       }
     };
   }, [open]);
+
+  // Feuille mobile : focus dans la feuille, Tab qui y reste, puis retour au
+  // bouton Filtres à la fermeture (audit H14). Sur desktop, le panneau suit
+  // le bouton dans l'ordre de tabulation : pas de piège.
+  useFocusTrap(panelRef, open && isSheet);
 
   function toggleGenre(id: number) {
     setGenreIds(genreIds.includes(id) ? genreIds.filter((g) => g !== id) : [...genreIds, id]);
@@ -487,9 +497,11 @@ export default function FilterPanel({
         <>
           <div className={styles.backdrop} onClick={() => setOpen(false)} aria-hidden="true" />
           <div
+            ref={panelRef}
             id={panelId}
             className={styles.panel}
             role="dialog"
+            aria-modal={isSheet || undefined}
             aria-label={t("filterPanel.filters")}
           >
             <div className={styles.sheetHead}>

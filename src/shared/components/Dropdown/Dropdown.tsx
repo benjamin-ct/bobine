@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
+import { focusableIn, useFocusTrap } from "../../hooks/useFocusTrap.ts";
 import styles from "./Dropdown.module.css";
 
 // Doit rester aligné sur .panel { max-height } dans Dropdown.module.css.
@@ -63,6 +73,8 @@ export default function Dropdown({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerId = useId();
+  const [isMenu, setIsMenu] = useState(false);
 
   const updatePosition = useCallback(() => {
     const trigger = triggerRef.current;
@@ -113,6 +125,47 @@ export default function Dropdown({
     }
   }, [panelMounted, updatePosition]);
 
+  // Clavier (audit H14) : le panneau est en portail à la fin de <body>, donc
+  // hors de l'ordre de tabulation naturel. À l'ouverture, le focus va sur
+  // la première option et Tab reste dans le panneau ; à la fermeture, il
+  // revient au déclencheur.
+  useFocusTrap(panelRef, panelMounted);
+
+  // role="menu" seulement si les options en sont (menuitemcheckbox…) : le
+  // même composant sert aussi à des panneaux libres.
+  useLayoutEffect(() => {
+    if (panelMounted) {
+      setIsMenu(Boolean(panelRef.current?.querySelector('[role^="menuitem"]')));
+    }
+  }, [panelMounted]);
+
+  function onPanelKeyDown(e: ReactKeyboardEvent<HTMLDivElement>) {
+    const panel = panelRef.current;
+    if (!panel || !["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+      return;
+    }
+    // Début/Fin gardent leur rôle dans un champ de saisie (ex. recherche).
+    const inField = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+    if (inField && (e.key === "Home" || e.key === "End")) {
+      return;
+    }
+    const items = focusableIn(panel);
+    if (items.length === 0) {
+      return;
+    }
+    const index = items.indexOf(document.activeElement as HTMLElement);
+    const next =
+      e.key === "Home"
+        ? 0
+        : e.key === "End"
+          ? items.length - 1
+          : e.key === "ArrowDown"
+            ? (index + 1) % items.length
+            : (index - 1 + items.length) % items.length;
+    e.preventDefault();
+    items[next].focus();
+  }
+
   useEffect(() => {
     if (!open) {
       return;
@@ -124,8 +177,12 @@ export default function Dropdown({
       }
       setOpen(false);
     }
+    // En capture et sans propagation : Échap ferme ce menu seulement, pas
+    // aussi la feuille de filtres qui le contient (même touche, voir
+    // FilterPanel).
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
+        e.stopPropagation();
         setOpen(false);
       }
     }
@@ -133,12 +190,12 @@ export default function Dropdown({
     // défilant, pas seulement `window` — le panneau suit sinon son
     // déclencheur avec du retard (ou pas du tout) pendant le défilement.
     document.addEventListener("mousedown", onClickOutside);
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("scroll", updatePosition, { capture: true, passive: true });
     window.addEventListener("resize", updatePosition);
     return () => {
       document.removeEventListener("mousedown", onClickOutside);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("scroll", updatePosition, { capture: true });
       window.removeEventListener("resize", updatePosition);
     };
@@ -150,7 +207,14 @@ export default function Dropdown({
         type="button"
         ref={triggerRef}
         className={`${styles.trigger} ${pill ? styles.pill : ""} ${active ? styles.active : ""}`}
+        id={triggerId}
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown" && !open) {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
         disabled={disabled}
         aria-haspopup="true"
         aria-expanded={open}
@@ -177,6 +241,9 @@ export default function Dropdown({
           <div
             ref={panelRef}
             className={styles.panel}
+            role={isMenu ? "menu" : undefined}
+            aria-labelledby={isMenu ? triggerId : undefined}
+            onKeyDown={onPanelKeyDown}
             onClick={
               closeOnSelect
                 ? (e) => {
