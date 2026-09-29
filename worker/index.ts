@@ -100,6 +100,7 @@ import {
   sniffAvatarType,
 } from "./avatars.ts";
 import { randomShareSlug, normalizeUsername, SHARE_SLUG_PATTERN } from "./share-slug.ts";
+import { SECURITY_HEADERS } from "./security-headers.ts";
 import {
   follow,
   unfollow,
@@ -152,48 +153,9 @@ function json(
   return new Response(JSON.stringify(data), { status, headers });
 }
 
-// En-têtes de durcissement HTTP, appliqués à TOUTE réponse (API et assets
-// statiques) — voir la fin de fetch() ci-dessous. `frame-src` autorise les
-// bandes-annonces YouTube embarquées (TrailerButton) et l'iframe invisible
-// de reCAPTCHA v3 ; `script-src`/`connect-src` autorisent le script
-// reCAPTCHA et ses appels réseau ; `style-src 'unsafe-inline'` est
-// nécessaire pour les styles inline posés par React (style={{...}}),
-// largement utilisés dans l'app. `connect-src` inclut aussi
-// https://image.tmdb.org : le service worker (src/sw.ts) met les affiches
-// en cache via un fetch() interne (Workbox CacheFirst), classifié sous
-// connect-src (pas img-src, qui ne couvre que les <img> natifs) — sans ça,
-// les affiches se chargent au premier accès mais disparaissent partout dès
-// qu'on recharge la page (SW actif, requêtes interceptées et bloquées).
-// `static.cloudflareinsights.com` sert le script du beacon Web Analytics
-// (src/core/webAnalytics.ts) ; le beacon envoie ensuite ses données RUM en
-// XHR vers `cloudflareinsights.com` (sans le sous-domaine `static.`), d'où
-// les deux domaines en connect-src. `*.ingest.de.sentry.io` reçoit les
-// rapports d'erreur du SDK Sentry client (src/core/logger.ts, région EU).
-// `wss://*.creusatbenjamin.workers.dev` : WebSocket de synchro temps réel
-// (worker/sync.ts) — explicite car Safari ne couvre pas wss: par 'self' ;
-// le joker couvre la prod comme les previews `<slug>-bobine.…`.
-// ⚠️ Cette CSP est DUPLIQUÉE dans public/_headers (voir plus bas dans ce
-// fichier, "posés nativement via public/_headers") : toute modification ici
-// doit être répercutée là-bas, sinon les assets statiques (dont `/`) restent
-// sur l'ancienne policy.
-const SECURITY_HEADERS: Record<string, string> = {
-  "content-security-policy": [
-    "default-src 'self'",
-    "script-src 'self' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' https://image.tmdb.org https://i.ytimg.com data:",
-    "connect-src 'self' https://www.google.com https://image.tmdb.org https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.ingest.de.sentry.io wss://*.creusatbenjamin.workers.dev",
-    "frame-src https://www.youtube.com https://www.google.com",
-    "worker-src 'self'",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join("; "),
-  "x-frame-options": "DENY",
-  "referrer-policy": "strict-origin-when-cross-origin",
-  "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=()",
-};
-
+// En-têtes de durcissement HTTP (CSP, HSTS…), appliqués à toute réponse /api/*
+// — voir la fin de fetch() ci-dessous. Définis dans worker/security-headers.ts,
+// source unique partagée avec public/_headers (assets statiques).
 function withSecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
@@ -2023,7 +1985,8 @@ export default withSentry({
     // nativement par Cloudflare sans passer par ce Worker — reconstruire
     // leur Response ici (même pour juste ajouter des en-têtes) casse
     // l'enregistrement du service worker. Leurs en-têtes de sécurité sont
-    // donc posés nativement via public/_headers plutôt qu'ici.
+    // donc posés nativement via public/_headers (généré depuis
+    // worker/security-headers.ts) plutôt qu'ici.
     if (!url.pathname.startsWith("/api/")) {
       return env.ASSETS.fetch(request);
     }
