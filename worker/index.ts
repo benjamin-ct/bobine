@@ -87,6 +87,7 @@ import { getTheatricalIndex } from "./tmdb.ts";
 import {
   LEGACY_PRODUCTION_HOSTNAME,
   PRODUCTION_HOSTNAME,
+  REDIRECTED_TO_PRODUCTION_HOSTNAMES,
   isProductionHostname,
   withSentry,
 } from "./sentry.ts";
@@ -1979,6 +1980,9 @@ async function handleTmdbProxy(
 export default withSentry({
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    if (REDIRECTED_TO_PRODUCTION_HOSTNAMES.includes(url.hostname)) {
+      return Response.redirect(`https://${PRODUCTION_HOSTNAME}${url.pathname}${url.search}`, 301);
+    }
     // `run_worker_first` (wrangler.jsonc) route surtout /api/* ici : les
     // assets statiques (dont le service worker /sw.js) sont servis
     // nativement par Cloudflare sans passer par ce Worker — reconstruire
