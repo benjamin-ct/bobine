@@ -127,7 +127,9 @@ export function useLiveSyncConnection(enabled: boolean, onRevoked?: () => Promis
         `${protocol}//${location.host}/api/sync/socket?client=${encodeURIComponent(CLIENT_ID)}&visible=1`
       );
       socket = ws;
+      let opened = false;
       ws.onopen = () => {
+        opened = true;
         attempts = 0;
         // Première connexion : les contextes viennent tout juste de charger
         // leurs données. Reconnexion : on a pu manquer des événements.
@@ -163,8 +165,13 @@ export function useLiveSyncConnection(enabled: boolean, onRevoked?: () => Promis
         if (socket === ws) {
           socket = null;
         }
+        // Poignée de main refusée (socket jamais ouverte) : la session a pu
+        // être révoquée pendant que la connexion était coupée (appareil en
+        // veille, app en arrière-plan), et le 401 du serveur est invisible
+        // pour WebSocket. Sans cette vérification, l'appareil retentait en
+        // boucle et restait affiché connecté jusqu'au rechargement (review M1).
         const handleRevoked = onRevokedRef.current;
-        if (event.code === SESSION_REVOKED_CLOSE_CODE && handleRevoked) {
+        if (handleRevoked && (event.code === SESSION_REVOKED_CLOSE_CODE || !opened)) {
           void handleRevoked().then((stillValid) => {
             if (stillValid) {
               scheduleReconnect();
