@@ -89,6 +89,30 @@ alertes avec les notifications de fin de pipeline Trello.
    new issue is created") > action "Send a notification via a webhook" > URL =
    `https://<host-du-listener>:29000/sentry-webhook?secret=<SENTRY_WEBHOOK_SECRET>`.
 
+## Limite d'usage Claude : relance automatique
+
+Quand une exécution s'arrête sur la limite d'usage Claude, le listener ne se contente plus d'un
+message Discord. Il reconnaît le message du CLI (« You've hit your … limit · resets 5:10pm (UTC) »)
+ou le marqueur `USAGE_LIMIT_REACHED resets …`, que le skill écrit quand c'est le développeur
+délégué (« Modèle et effort par ticket ») qui atteint la limite. Ensuite, il :
+
+1. lit l'heure de reset, y compris son fuseau éventuel (`(Europe/Paris)`, `(America/New_York)`…,
+   UTC par défaut) et l'heure d'été ;
+2. programme une relance à reset + 2 min, ou dans 30 min si l'heure est illisible, et l'annonce
+   sur Discord (⏸️) ;
+3. ignore d'ici là les webhooks Trello et Sentry (l'alerte Sentry part quand même sur Discord) :
+   la relance traitera tout le board ;
+4. relance avec le prompt habituel suivi d'une note « RELANCE AUTOMATIQUE (n/6) ». Le travail
+   interrompu est retrouvé grâce aux commits `wip:` et à la note « REPRISE » de
+   `bobine-claude-run`. Si une exécution tient encore le verrou, la relance est retentée 5 min
+   plus tard ;
+5. abandonne après 6 relances consécutives qui retombent sur la limite et prévient sur Discord
+   (🚨) : il faut alors relancer à la main, par exemple en déplaçant une carte.
+
+L'état de la relance vit dans `/tmp/claude-resume.json` (`/tmp` de l'hôte). Il survit donc à un
+`bobine-rebuild listener`, qui reprogramme la relance au démarrage. Pour annuler une relance
+programmée : supprimer ce fichier puis `bobine-rebuild listener`.
+
 ## Vérification visuelle par Claude (navigateur headless)
 
 L'image `bobine-repo` embarque Chromium (via Playwright) et un script `bobine-screenshot` :
