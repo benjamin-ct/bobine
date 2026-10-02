@@ -231,8 +231,8 @@ carte de `En cours` sans label en traitement actif : l'exécution est terminée.
 
 ## Modèle et effort par ticket
 
-Par défaut, tout le ticket est développé dans la session courante (modèle `CLAUDE_MODEL` du listener, effort par
-défaut). Une carte peut demander autre chose :
+Par défaut, tout le ticket est développé dans la session courante (modèle `CLAUDE_MODEL`/effort `CLAUDE_EFFORT` du
+listener, `claude-sonnet-5`/`medium` par défaut). Une carte peut demander autre chose :
 
 - **Étiquettes** (prioritaires, insensibles à la casse) : `model:sonnet` / `model:opus`, et
   `effort:low|medium|high|xhigh|max`.
@@ -260,8 +260,9 @@ garde tout le reste : branche (2c.1), lecture de la carte, PR, attente CI, previ
      > /tmp/claude-dev.log 2>&1 < /dev/null &
    echo $! > /tmp/claude-dev.pid
    ```
-   Omettre `--model` ou `--effort` s'il n'est pas demandé : le modèle par défaut est alors `$CLAUDE_MODEL`, et
-   l'effort celui par défaut du CLI. Toujours passer par `bobine-claude-dev`, jamais `claude` directement : Claude
+   Omettre `--model` ou `--effort` s'il n'est pas demandé : `bobine-claude-dev` ne fixe aucun défaut, donc `claude`
+   utilise son modèle et son effort par défaut (pas `$CLAUDE_MODEL`/`$CLAUDE_EFFORT` de la session courante).
+   Toujours passer par `bobine-claude-dev`, jamais `claude` directement : Claude
    Code retire `CLAUDE_CODE_OAUTH_TOKEN` de l'environnement de ses commandes, et le wrapper le relit dans le fichier
    écrit par `bobine-claude-run` (sinon « OAuth session expired »). Code de sortie 78 si ce fichier manque.
 3. Surveiller toutes les 30 s (`ps -o stat= -p $(cat /tmp/claude-dev.pid)` : terminé si vide ou `Z`, car `kill -0`
