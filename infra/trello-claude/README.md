@@ -50,6 +50,12 @@ la stack sans attendre qu'il ait fini, ni le retrouver sur une branche de ticket
      s'est interrompue (modifications mises de côté, commits locaux non poussés sur une branche
      de ticket), pour que Claude reparte de ce travail plutôt que de zéro.
 
+- Reprise après coupure (courant, crédits épuisés, `bobine-rebuild --force`…) : la carte reste en
+  `En cours` sans label, la prochaine exécution la reprend (étape 2b du skill) à partir de la
+  branche/PR poussée, des commits locaux et du stash signalés dans la note. Seul le travail non
+  committé d'un worktree de validation `/tmp` est perdu (il ne sert qu'aux tests locaux).
+- `bobine-rebuild` lit ce même verrou avant de recréer `bobine-repo` (voir « Commandes serveur »).
+
 Cette session orchestratrice (Trello, GitHub, CI, Discord) tourne par défaut en `claude-sonnet-5`,
 effort `medium` (`CLAUDE_MODEL`/`CLAUDE_EFFORT`) : elle ne fait que lire/écrire sur ces API, pas
 besoin d'un gros modèle. Le développement effectif d'un ticket est toujours délégué au développeur
@@ -58,12 +64,6 @@ besoin d'un gros modèle. Le développement effectif d'un ticket est toujours d�
 `trello-ticket-pipeline` pour les surcharger par carte. Pour changer un défaut globalement,
 modifier le `.env` du serveur puis relancer `bobine-deploy` (`listener` et `bobine-repo` lisent
 tous les deux ces variables).
-
-- Reprise après coupure (courant, crédits épuisés, `bobine-rebuild --force`…) : la carte reste en
-  `En cours` sans label, la prochaine exécution la reprend (étape 2b du skill) à partir de la
-  branche/PR poussée, des commits locaux et du stash signalés dans la note. Seul le travail non
-  committé d'un worktree de validation `/tmp` est perdu (il ne sert qu'aux tests locaux).
-- `bobine-rebuild` lit ce même verrou avant de recréer `bobine-repo` (voir « Commandes serveur »).
 
 Migration (une fois) : `bobine-pull`, recharger les fonctions (`source ~/.bashrc`), puis
 `bobine-rebuild` (le Dockerfile, le compose et le listener changent). Si le checkout serveur
