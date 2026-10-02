@@ -510,6 +510,22 @@
     "loadError": "Impossible de charger la liste des plateformes.",
     "searchPlaceholder": "Rechercher une plateforme…"
   },
+  "favoriteLanguagesSettings": {
+    "title": "Mes langues",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} actives",
+    "description": "Cochez vos langues préférées pour pré-remplir le filtre « Langue » de Nouveautés et Prochainement.",
+    "loadError": "Impossible de charger la liste des langues.",
+    "searchPlaceholder": "Rechercher une langue…"
+  },
+  "favoriteCountriesSettings": {
+    "title": "Mes pays",
+    "activeCount_one": "{{count}} actif",
+    "activeCount_other": "{{count}} actifs",
+    "description": "Cochez vos pays préférés pour pré-remplir le filtre « Pays » de Nouveautés et Prochainement.",
+    "loadError": "Impossible de charger la liste des pays.",
+    "searchPlaceholder": "Rechercher un pays…"
+  },
   "excludedTitlesSettings": {
     "title": "Titres exclus",
     "excludedCount_one": "{{count}} exclu",
@@ -1133,6 +1149,10 @@
     "minutes": "min",
     "country": "Pays",
     "language": "Langue",
+    "countriesCount_one": "{{count}} pays",
+    "countriesCount_other": "{{count}} pays",
+    "languagesCount_one": "{{count}} langue",
+    "languagesCount_other": "{{count}} langues",
     "chip": "{{label}} : {{value}}"
   },
   "readOnlyBanner": {

@@ -913,6 +913,64 @@ export async function replaceFavoriteProvidersForUser(
   ]);
 }
 
+export async function getFavoriteLanguagesForUser(
+  db: D1Database,
+  userId: number
+): Promise<string[]> {
+  const { results } = await db
+    .prepare("SELECT language_code FROM favorite_language_prefs WHERE user_id = ?")
+    .bind(userId)
+    .all<{ language_code: string }>();
+  return results.map((row) => row.language_code);
+}
+
+export async function replaceFavoriteLanguagesForUser(
+  db: D1Database,
+  userId: number,
+  languageCodes: string[],
+  merge = false
+): Promise<void> {
+  const finalLanguageCodes = merge
+    ? [...new Set([...(await getFavoriteLanguagesForUser(db, userId)), ...languageCodes])]
+    : languageCodes;
+  const stmt = db.prepare(
+    "INSERT INTO favorite_language_prefs (user_id, language_code) VALUES (?, ?)"
+  );
+  await db.batch([
+    db.prepare("DELETE FROM favorite_language_prefs WHERE user_id = ?").bind(userId),
+    ...finalLanguageCodes.map((code) => stmt.bind(userId, code)),
+  ]);
+}
+
+export async function getFavoriteCountriesForUser(
+  db: D1Database,
+  userId: number
+): Promise<string[]> {
+  const { results } = await db
+    .prepare("SELECT country_code FROM favorite_country_prefs WHERE user_id = ?")
+    .bind(userId)
+    .all<{ country_code: string }>();
+  return results.map((row) => row.country_code);
+}
+
+export async function replaceFavoriteCountriesForUser(
+  db: D1Database,
+  userId: number,
+  countryCodes: string[],
+  merge = false
+): Promise<void> {
+  const finalCountryCodes = merge
+    ? [...new Set([...(await getFavoriteCountriesForUser(db, userId)), ...countryCodes])]
+    : countryCodes;
+  const stmt = db.prepare(
+    "INSERT INTO favorite_country_prefs (user_id, country_code) VALUES (?, ?)"
+  );
+  await db.batch([
+    db.prepare("DELETE FROM favorite_country_prefs WHERE user_id = ?").bind(userId),
+    ...finalCountryCodes.map((code) => stmt.bind(userId, code)),
+  ]);
+}
+
 export async function getLocaleForUser(db: D1Database, userId: number): Promise<string | null> {
   const row = await db
     .prepare("SELECT locale FROM users WHERE id = ?")

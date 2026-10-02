@@ -79,10 +79,18 @@ interface AllTypesOption {
 }
 
 interface CountryLanguageState {
-  country: string;
-  setCountry: (v: string) => void;
-  language: string;
-  setLanguage: (v: string) => void;
+  /** Plusieurs pays/langues sélectionnables à la fois, pré-remplis depuis les
+   * préférences du compte (FavoriteCountriesContext/FavoriteLanguagesContext)
+   * puis modifiables ponctuellement sans écraser ces préférences — même
+   * principe que `useMyPlatforms`, qui ne modifie jamais
+   * `favoriteProviderIds`. L'API TMDB discover n'accepte qu'un seul pays/
+   * qu'une seule langue par requête : seule la première valeur sélectionnée
+   * est transmise à `discover()` côté appelant (voir NewReleasesPage/
+   * ComingSoonPage), les suivantes ne font qu'élargir le pré-réglage affiché. */
+  countries: string[];
+  setCountries: (v: string[]) => void;
+  languages: string[];
+  setLanguages: (v: string[]) => void;
 }
 
 interface PeriodOptions {
@@ -227,6 +235,26 @@ export default function FilterPanel({
     );
   }
 
+  function toggleCountry(code: string) {
+    if (!countryLanguage) {
+      return;
+    }
+    const { countries, setCountries } = countryLanguage;
+    setCountries(
+      countries.includes(code) ? countries.filter((c) => c !== code) : [...countries, code]
+    );
+  }
+
+  function toggleLanguage(code: string) {
+    if (!countryLanguage) {
+      return;
+    }
+    const { languages, setLanguages } = countryLanguage;
+    setLanguages(
+      languages.includes(code) ? languages.filter((l) => l !== code) : [...languages, code]
+    );
+  }
+
   function clearAdvanced(...keys: (keyof AdvancedFiltersState)[]) {
     setAdvanced?.((prev) => {
       const next = { ...prev };
@@ -242,8 +270,8 @@ export default function FilterPanel({
     setSortField?.(DEFAULT_SORT_FIELD);
     setSortDirection?.(DEFAULT_SORT_DIRECTION);
     setAdvanced?.(() => EMPTY_ADVANCED_FILTERS);
-    countryLanguage?.setCountry("");
-    countryLanguage?.setLanguage("");
+    countryLanguage?.setCountries([]);
+    countryLanguage?.setLanguages([]);
     switches.forEach((s) => s.onChange(false));
   }
 
@@ -339,32 +367,21 @@ export default function FilterPanel({
           },
         ]
       : []),
-    ...(countryLanguage?.country
-      ? [
-          {
-            key: "origin-country",
-            label: chip(
-              t("filterPanel.country"),
-              regionName(countryLanguage.country, locale) || countryLanguage.country
-            ),
-            remove: () => countryLanguage.setCountry(""),
-          },
-        ]
-      : []),
-    ...(countryLanguage?.language
-      ? [
-          {
-            key: "language",
-            label: chip(
-              t("filterPanel.language"),
-              languages.find((l) => l.iso_639_1 === countryLanguage.language)?.name ||
-                languages.find((l) => l.iso_639_1 === countryLanguage.language)?.english_name ||
-                countryLanguage.language
-            ),
-            remove: () => countryLanguage.setLanguage(""),
-          },
-        ]
-      : []),
+    ...(countryLanguage?.countries || []).map((code) => ({
+      key: `origin-country-${code}`,
+      label: chip(t("filterPanel.country"), regionName(code, locale) || code),
+      remove: () => toggleCountry(code),
+    })),
+    ...(countryLanguage?.languages || []).map((code) => ({
+      key: `language-${code}`,
+      label: chip(
+        t("filterPanel.language"),
+        languages.find((l) => l.iso_639_1 === code)?.name ||
+          languages.find((l) => l.iso_639_1 === code)?.english_name ||
+          code
+      ),
+      remove: () => toggleLanguage(code),
+    })),
     ...switches
       .filter((s) => s.checked)
       .map((s) => ({ key: s.key, label: s.text, remove: () => s.onChange(false) })),
@@ -635,36 +652,76 @@ export default function FilterPanel({
 
               {countryLanguage && (
                 <>
-                  <label className={styles.field}>
+                  <div className={styles.field}>
                     <span className={styles.label}>{t("filterPanel.country")}</span>
-                    <select
-                      className={styles.select}
-                      value={countryLanguage.country}
-                      onChange={(e) => countryLanguage.setCountry(e.target.value)}
+                    <Dropdown
+                      className={styles.control}
+                      label={
+                        <span className={styles.controlLabel}>
+                          {countryLanguage.countries.length === 0
+                            ? t("countryLanguageFilter.allCountries")
+                            : countryLanguage.countries.length === 1
+                              ? regionName(countryLanguage.countries[0], locale) ||
+                                countryLanguage.countries[0]
+                              : t("filterPanel.countriesCount", {
+                                  count: countryLanguage.countries.length,
+                                })}
+                        </span>
+                      }
+                      active={countryLanguage.countries.length > 0}
                     >
-                      <option value="">{t("countryLanguageFilter.allCountries")}</option>
+                      <div className={dropdownStyles.head}>{t("filterPanel.country")}</div>
                       {localizedCountries.map((c) => (
-                        <option key={c.iso_3166_1} value={c.iso_3166_1}>
-                          {c.displayName}
-                        </option>
+                        <button
+                          key={c.iso_3166_1}
+                          type="button"
+                          className={`${dropdownStyles.option} ${countryLanguage.countries.includes(c.iso_3166_1) ? dropdownStyles.optionOn : ""}`}
+                          role="menuitemcheckbox"
+                          aria-checked={countryLanguage.countries.includes(c.iso_3166_1)}
+                          onClick={() => toggleCountry(c.iso_3166_1)}
+                        >
+                          <span className={dropdownStyles.check}>{CHECK_SVG}</span> {c.displayName}
+                        </button>
                       ))}
-                    </select>
-                  </label>
-                  <label className={styles.field}>
+                    </Dropdown>
+                  </div>
+                  <div className={styles.field}>
                     <span className={styles.label}>{t("filterPanel.language")}</span>
-                    <select
-                      className={styles.select}
-                      value={countryLanguage.language}
-                      onChange={(e) => countryLanguage.setLanguage(e.target.value)}
+                    <Dropdown
+                      className={styles.control}
+                      label={
+                        <span className={styles.controlLabel}>
+                          {countryLanguage.languages.length === 0
+                            ? t("countryLanguageFilter.allLanguages")
+                            : countryLanguage.languages.length === 1
+                              ? languages.find((l) => l.iso_639_1 === countryLanguage.languages[0])
+                                  ?.name ||
+                                languages.find((l) => l.iso_639_1 === countryLanguage.languages[0])
+                                  ?.english_name ||
+                                countryLanguage.languages[0]
+                              : t("filterPanel.languagesCount", {
+                                  count: countryLanguage.languages.length,
+                                })}
+                        </span>
+                      }
+                      active={countryLanguage.languages.length > 0}
                     >
-                      <option value="">{t("countryLanguageFilter.allLanguages")}</option>
+                      <div className={dropdownStyles.head}>{t("filterPanel.language")}</div>
                       {languages.map((l) => (
-                        <option key={l.iso_639_1} value={l.iso_639_1}>
+                        <button
+                          key={l.iso_639_1}
+                          type="button"
+                          className={`${dropdownStyles.option} ${countryLanguage.languages.includes(l.iso_639_1) ? dropdownStyles.optionOn : ""}`}
+                          role="menuitemcheckbox"
+                          aria-checked={countryLanguage.languages.includes(l.iso_639_1)}
+                          onClick={() => toggleLanguage(l.iso_639_1)}
+                        >
+                          <span className={dropdownStyles.check}>{CHECK_SVG}</span>{" "}
                           {l.name || l.english_name}
-                        </option>
+                        </button>
                       ))}
-                    </select>
-                  </label>
+                    </Dropdown>
+                  </div>
                 </>
               )}
 

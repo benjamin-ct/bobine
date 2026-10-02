@@ -17,6 +17,8 @@ import {
 import { useRegion } from "../../core/context/RegionContext.tsx";
 import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { useFavoriteProviders } from "../../core/context/FavoriteProvidersContext.tsx";
+import { useFavoriteCountries } from "../../core/context/FavoriteCountriesContext.tsx";
+import { useFavoriteLanguages } from "../../core/context/FavoriteLanguagesContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
 import { useExcludedTitles } from "../../core/context/ExcludedTitlesContext.tsx";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
@@ -220,8 +222,14 @@ export default function ComingSoonPage() {
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [providerIds, setProviderIds] = useState<string[]>([]);
   const [useMyPlatforms, setUseMyPlatforms] = useState(false);
-  const [country, setCountry] = useState("");
-  const [language, setLanguage] = useState("");
+  const { favoriteCountryCodes } = useFavoriteCountries();
+  const { favoriteLanguageCodes } = useFavoriteLanguages();
+  // Pré-rempli depuis les pays/langues favoris du compte (réglage du
+  // profil), modifiable ensuite pour cette page sans toucher à la
+  // préférence enregistrée — même principe que `useMyPlatforms`, qui ne
+  // modifie jamais `favoriteProviderIds`.
+  const [countries, setCountries] = useState<string[]>(favoriteCountryCodes);
+  const [languages, setLanguages] = useState<string[]>(favoriteLanguageCodes);
   const [windowDays, setWindowDays] = useState(30);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
@@ -271,8 +279,8 @@ export default function ComingSoonPage() {
     excludeGenreIds: excludedGenreIds,
     providerIds: activeProviderIds,
     region,
-    originCountry: country || undefined,
-    originalLanguage: language || undefined,
+    originCountry: countries[0] || undefined,
+    originalLanguage: languages[0] || undefined,
     sortField: "popularity",
     sortDirection: "desc",
     ...dateRangeFor(windowDays),
@@ -426,7 +434,7 @@ export default function ComingSoonPage() {
         favoriteProviderIds={favoriteProviderIds}
         useMyPlatforms={useMyPlatforms}
         setUseMyPlatforms={setUseMyPlatforms}
-        countryLanguage={{ country, setCountry, language, setLanguage }}
+        countryLanguage={{ countries, setCountries, languages, setLanguages }}
         periods={{
           label: t("comingSoonPage.windowsLabel"),
           options: WINDOWS.map((w) => ({

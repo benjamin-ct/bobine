@@ -30,6 +30,10 @@ import {
   replaceExcludedGenresForUser,
   getFavoriteProvidersForUser,
   replaceFavoriteProvidersForUser,
+  getFavoriteLanguagesForUser,
+  replaceFavoriteLanguagesForUser,
+  getFavoriteCountriesForUser,
+  replaceFavoriteCountriesForUser,
   getLocaleForUser,
   setLocaleForUser,
   getRegionForUser,
@@ -80,6 +84,9 @@ import {
   sanitizeCustomListsPayload,
   sanitizeDisplayName,
   sanitizeIdList,
+  sanitizeIsoCodeList,
+  LANGUAGE_CODE_PATTERN,
+  COUNTRY_CODE_PATTERN,
   sanitizeReminder,
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
@@ -1595,6 +1602,74 @@ async function handlePutFavoriteProviders(request: Request, env: Env): Promise<R
   return json({ ok: true });
 }
 
+// Langues favorites synchronisées -----------------------------------------
+//
+// Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête.
+async function handleGetFavoriteLanguages(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const languageCodes = await getFavoriteLanguagesForUser(env.DB, user.id);
+  return json({ languageCodes });
+}
+
+async function handlePutFavoriteLanguages(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const languageCodes = sanitizeIsoCodeList(
+    (body as { languageCodes?: unknown })?.languageCodes,
+    LANGUAGE_CODE_PATTERN
+  );
+  const merge = (body as { merge?: unknown })?.merge === true;
+  await replaceFavoriteLanguagesForUser(env.DB, user.id, languageCodes, merge);
+  publishToUser(request, user.id, { type: "favorite-languages" });
+  return json({ ok: true });
+}
+
+// Pays favoris synchronisés -------------------------------------------------
+//
+// Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête.
+async function handleGetFavoriteCountries(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const countryCodes = await getFavoriteCountriesForUser(env.DB, user.id);
+  return json({ countryCodes });
+}
+
+async function handlePutFavoriteCountries(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const countryCodes = sanitizeIsoCodeList(
+    (body as { countryCodes?: unknown })?.countryCodes,
+    COUNTRY_CODE_PATTERN
+  );
+  const merge = (body as { merge?: unknown })?.merge === true;
+  await replaceFavoriteCountriesForUser(env.DB, user.id, countryCodes, merge);
+  publishToUser(request, user.id, { type: "favorite-countries" });
+  return json({ ok: true });
+}
+
 // Langue d'interface synchronisée par compte -------------------------------
 //
 // Même garde IDOR que les autres réglages de compte : user.id vient
@@ -2278,6 +2353,22 @@ async function routeRequest(
 
   if (url.pathname === "/api/favorite-providers" && request.method === "PUT") {
     return handlePutFavoriteProviders(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-languages" && request.method === "GET") {
+    return handleGetFavoriteLanguages(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-languages" && request.method === "PUT") {
+    return handlePutFavoriteLanguages(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-countries" && request.method === "GET") {
+    return handleGetFavoriteCountries(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-countries" && request.method === "PUT") {
+    return handlePutFavoriteCountries(request, env);
   }
 
   if (url.pathname === "/api/locale" && request.method === "GET") {
