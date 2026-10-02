@@ -277,6 +277,37 @@ export function searchMulti(
   });
 }
 
+// TMDB classe chaque page de /search/multi par pertinence texte, pas par
+// popularité : pour une requête courte ("Bat"), un titre bien plus populaire
+// ("Batman") peut se retrouver au-delà de la page 1 et donc hors du tri par
+// popularité fait côté client, qui ne reclasse que ce que TMDB a renvoyé.
+// On agrège plusieurs pages avant de trier pour éviter de le manquer.
+const SEARCH_MULTI_PAGES_TO_MERGE = 3;
+
+export async function searchMultiRanked(
+  query: string,
+  region: string = DEFAULT_REGION
+): Promise<SearchMultiResult[]> {
+  const first = await searchMulti(query, 1, region);
+  const pagesToFetch = Math.min(SEARCH_MULTI_PAGES_TO_MERGE, first.total_pages);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pagesToFetch - 1) }, (_, i) =>
+      searchMulti(query, i + 2, region)
+    )
+  );
+  const merged = [first, ...rest].flatMap((p) => p.results || []);
+  const seen = new Set<string>();
+  const deduped = merged.filter((item) => {
+    const key = `${item.media_type}:${item.id}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+  return deduped.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
+}
+
 // Personnes (acteurs, réalisateurs) --------------------------------------
 
 export function searchPerson(query: string, page = 1) {
