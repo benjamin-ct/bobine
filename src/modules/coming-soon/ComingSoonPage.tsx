@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
+import { usePrefillFromFavorites } from "../../shared/hooks/usePrefillFromFavorites.ts";
 import { useNearViewport } from "../../shared/hooks/useNearViewport.ts";
 import { useUpcomingRelease } from "../../shared/hooks/useUpcomingRelease.ts";
 import {
@@ -227,9 +228,10 @@ export default function ComingSoonPage() {
   // Pré-rempli depuis les pays/langues favoris du compte (réglage du
   // profil), modifiable ensuite pour cette page sans toucher à la
   // préférence enregistrée — même principe que `useMyPlatforms`, qui ne
-  // modifie jamais `favoriteProviderIds`.
-  const [countries, setCountries] = useState<string[]>(favoriteCountryCodes);
-  const [languages, setLanguages] = useState<string[]>(favoriteLanguageCodes);
+  // modifie jamais `favoriteProviderIds` (voir usePrefillFromFavorites pour
+  // la synchronisation asynchrone de ce pré-réglage).
+  const [countries, setCountries] = usePrefillFromFavorites(favoriteCountryCodes);
+  const [languages, setLanguages] = usePrefillFromFavorites(favoriteLanguageCodes);
   const [windowDays, setWindowDays] = useState(30);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
