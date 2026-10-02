@@ -140,7 +140,6 @@ export default function DetailPage() {
   const [newListName, setNewListName] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
   const [markingSeries, setMarkingSeries] = useState(false);
-  const watchDateInputRef = useRef<HTMLInputElement>(null);
   const { episodesBySeason, loadSeason } = useSeasonEpisodes(Number(id));
   const {
     isWatched,
@@ -668,23 +667,16 @@ export default function DetailPage() {
               </button>
               {!watched && (
                 <span className={styles.watchDateWrap}>
-                  <button
-                    type="button"
-                    className={`${styles.actionBtn} ${styles.watchDateBtn}`}
-                    aria-label={t("detailPage.watchDateAriaLabel")}
-                    title={t("detailPage.watchDateAriaLabel")}
-                    disabled={markingSeries}
-                    onClick={() => watchDateInputRef.current?.showPicker?.()}
-                  >
+                  <span className={`${styles.actionBtn} ${styles.watchDateBtn}`} aria-hidden="true">
                     <Icon name="calendar" />
-                  </button>
+                  </span>
                   <input
-                    ref={watchDateInputRef}
                     type="date"
                     className={styles.watchDateInput}
                     max={new Date().toISOString().slice(0, 10)}
-                    tabIndex={-1}
-                    aria-hidden="true"
+                    aria-label={t("detailPage.watchDateAriaLabel")}
+                    title={t("detailPage.watchDateAriaLabel")}
+                    disabled={markingSeries}
                     onChange={handleWatchDateChange}
                   />
                 </span>
