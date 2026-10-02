@@ -52,8 +52,21 @@ async function fetchPopularPage(
   return data.results || [];
 }
 
+// Beaucoup de titres commencent par un article ("The Batman", "La Casa de
+// Papel") : un filtre "commence par" strict sur le titre complet raterait
+// justement le cas d'origine du ticket ("bat" ne matche pas "The Batman").
+// Les recherches média usuelles (iTunes, Netflix...) ignorent cet article en
+// tête — on fait pareil ici, des deux côtés (titre indexé et requête, voir
+// searchLocalIndex) grâce à normalizeSearchText.
+const LEADING_ARTICLE_RE = /^(the|les?|une?|des)\s+|^l['’]\s*/;
+
 export function normalizeSearchText(value: string): string {
-  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(LEADING_ARTICLE_RE, "");
 }
 
 // "!" comme caractère d'échappement (voir ESCAPE ci-dessous) : évite les
@@ -117,9 +130,14 @@ export async function syncPopularTitles(env: Env): Promise<void> {
   const now = Date.now();
   const statements = [
     env.DB.prepare("DELETE FROM popular_titles"),
+    // OR REPLACE plutôt qu'un simple INSERT : le classement /popular de TMDB
+    // peut bouger pendant qu'on le paginera en parallèle, un même titre se
+    // retrouvant alors sur deux pages consécutives (vu en pratique :
+    // SQLITE_CONSTRAINT_PRIMARYKEY sur tmdb_id+media_type) — sans impact ici
+    // puisque le dernier remplace juste le précédent avec les mêmes données.
     ...rows.map((row) =>
       env.DB.prepare(
-        `INSERT INTO popular_titles
+        `INSERT OR REPLACE INTO popular_titles
              (tmdb_id, media_type, title, normalized_title, release_date, poster_path, popularity, vote_average, genre_ids, original_language, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
