@@ -49,6 +49,16 @@ la stack sans attendre qu'il ait fini, ni le retrouver sur une branche de ticket
   6. lance `claude -p`, en ajoutant au prompt une note « REPRISE » si l'exécution précédente
      s'est interrompue (modifications mises de côté, commits locaux non poussés sur une branche
      de ticket), pour que Claude reparte de ce travail plutôt que de zéro.
+
+Cette session orchestratrice (Trello, GitHub, CI, Discord) tourne par défaut en `claude-sonnet-5`,
+effort `medium` (`CLAUDE_MODEL`/`CLAUDE_EFFORT`) : elle ne fait que lire/écrire sur ces API, pas
+besoin d'un gros modèle. Le développement effectif d'un ticket est toujours délégué au développeur
+(`bobine-claude-dev`), qui tourne par défaut en `claude-opus-5-5`, effort par défaut du CLI
+(`CLAUDE_DEV_MODEL`/`CLAUDE_DEV_EFFORT`) — voir « Modèle et effort par ticket » dans le skill
+`trello-ticket-pipeline` pour les surcharger par carte. Pour changer un défaut globalement,
+modifier le `.env` du serveur puis relancer `bobine-deploy` (`listener` et `bobine-repo` lisent
+tous les deux ces variables).
+
 - Reprise après coupure (courant, crédits épuisés, `bobine-rebuild --force`…) : la carte reste en
   `En cours` sans label, la prochaine exécution la reprend (étape 2b du skill) à partir de la
   branche/PR poussée, des commits locaux et du stash signalés dans la note. Seul le travail non

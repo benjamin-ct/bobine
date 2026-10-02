@@ -162,8 +162,8 @@ précédente s'est arrêtée en cours de route) et continuer le développement (
    fois là-dedans. Format : `<type>/<description-courte-en-mots-clés>`, ex. `feature/watchlist-films`,
    `fix/filtre-plateformes-streaming`. Éviter les IDs/hash illisibles ; le numéro de ticket peut être ajouté en suffixe
    si utile (`feature/watchlist-films-42`), mais jamais en tête ou seul.
-2. Développer ce qui est demandé, commiter au fur et à mesure. Si la carte demande un modèle ou un effort précis
-   (voir « Modèle et effort par ticket »), cette étape — et elle seule — est déléguée à un `claude -p` dédié.
+2. Développer ce qui est demandé, commiter au fur et à mesure. Le développement (voir « Modèle et effort par
+   ticket ») — et lui seul — est toujours délégué à un `claude -p` dédié.
    - **Vérification visuelle** (tout changement d’interface) : le conteneur fournit
      `bobine-screenshot <url> <sortie.png> --both [--full] [--cookie bobine_session=<jeton>]`
      (Chromium headless, desktop 1440×900 + mobile iPhone 13), puis lire les PNG avec Read.
@@ -231,17 +231,17 @@ carte de `En cours` sans label en traitement actif : l'exécution est terminée.
 
 ## Modèle et effort par ticket
 
-Par défaut, tout le ticket est développé dans la session courante (modèle `CLAUDE_MODEL` du listener, effort par
-défaut). Une carte peut demander autre chose :
+Le développement (étape 2c.2) est toujours délégué à `bobine-claude-dev`, qui applique par défaut
+`CLAUDE_DEV_MODEL`/`CLAUDE_DEV_EFFORT` (opus, effort par défaut du CLI). Une carte peut demander autre chose :
 
 - **Étiquettes** (prioritaires, insensibles à la casse) : `model:sonnet` / `model:opus`, et
   `effort:low|medium|high|xhigh|max`.
 - **Sinon, une ligne dans la description** : `Modèle: opus` (ou `Modele:`), `Effort: high`.
-- **Aucune des deux** : comportement inchangé, pas de délégation.
+- **Aucune des deux** : omettre `--model`/`--effort`, le wrapper applique `CLAUDE_DEV_MODEL`/`CLAUDE_DEV_EFFORT`.
 - Une valeur inconnue (ex. `effort:extreme`) est ignorée et signalée dans le commentaire de fin de ticket.
 
-Si au moins un des deux paramètres est demandé, seul le développement (étape 2c.2) est délégué. La session courante
-garde tout le reste : branche (2c.1), lecture de la carte, PR, attente CI, preview, Trello, Discord.
+La session courante (modèle `CLAUDE_MODEL`/effort `CLAUDE_EFFORT` du listener, sonnet/medium par défaut) ne fait
+qu'orchestrer : branche (2c.1), lecture de la carte, PR, attente CI, preview, Trello, Discord.
 
 1. Se placer sur la branche du ticket (2c.1), puis écrire le prompt du développeur dans `/tmp/claude-dev-prompt.md`.
    Ce prompt contient :
@@ -260,8 +260,9 @@ garde tout le reste : branche (2c.1), lecture de la carte, PR, attente CI, previ
      > /tmp/claude-dev.log 2>&1 < /dev/null &
    echo $! > /tmp/claude-dev.pid
    ```
-   Omettre `--model` ou `--effort` s'il n'est pas demandé : le modèle par défaut est alors `$CLAUDE_MODEL`, et
-   l'effort celui par défaut du CLI. Toujours passer par `bobine-claude-dev`, jamais `claude` directement : Claude
+   Omettre `--model` ou `--effort` s'il n'est pas demandé : le wrapper applique alors `CLAUDE_DEV_MODEL`
+   (`claude-opus-5-5` par défaut), et l'effort `CLAUDE_DEV_EFFORT` (vide par défaut, donc celui par défaut du CLI).
+   Toujours passer par `bobine-claude-dev`, jamais `claude` directement : Claude
    Code retire `CLAUDE_CODE_OAUTH_TOKEN` de l'environnement de ses commandes, et le wrapper le relit dans le fichier
    écrit par `bobine-claude-run` (sinon « OAuth session expired »). Code de sortie 78 si ce fichier manque.
 3. Surveiller toutes les 30 s (`ps -o stat= -p $(cat /tmp/claude-dev.pid)` : terminé si vide ou `Z`, car `kill -0`
