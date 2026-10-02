@@ -58,8 +58,6 @@ services:
       - TMDB_API_KEY=${TMDB_API_KEY:-}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-5}
       - CLAUDE_EFFORT=${CLAUDE_EFFORT:-medium}
-      - CLAUDE_DEV_MODEL=${CLAUDE_DEV_MODEL:-claude-opus-5-5}
-      - CLAUDE_DEV_EFFORT=${CLAUDE_DEV_EFFORT:-}
     restart: unless-stopped
 
 volumes:

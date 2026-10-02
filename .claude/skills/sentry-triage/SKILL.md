@@ -54,9 +54,7 @@ terminer.
    - **4a. Corriger directement** : suivre exactement le flux de développement du skill
      `trello-ticket-pipeline` (étape 2c) — créer une branche nommée clairement
      (`fix/<description-courte>`), corriger, committer, ouvrir une PR avec un lien vers l'issue
-     Sentry en description. Pour un correctif non trivial, déléguer le développement à
-     `bobine-claude-dev` comme dans `trello-ticket-pipeline` (« Modèle et effort par ticket »).
-     Ne pas créer de carte Trello dans ce cas (la PR suffit ; un humain la
+     Sentry en description. Ne pas créer de carte Trello dans ce cas (la PR suffit ; un humain la
      review normalement via GitHub). Commenter sur l'issue Sentry (`POST
 .../issues/{issue_id}/comments/`) avec un lien vers la PR ouverte.
    - **4b. Créer un ticket Trello** : ajouter une carte dans la liste "A faire" du board Bobine,
