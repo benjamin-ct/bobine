@@ -1,6 +1,7 @@
 const http = require("http");
 const { execFile } = require("child_process");
 const fs = require("fs");
+const crypto = require("crypto");
 
 const PORT = process.env.PORT || 8080;
 const DOCKER_CONTAINER = process.env.DOCKER_CONTAINER || "bobine-repo";
@@ -11,6 +12,18 @@ const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5";
 const CLAUDE_EFFORT = process.env.CLAUDE_EFFORT || "medium";
 // Code de sortie de bobine-claude-run quand une exécution tourne déjà dans bobine-repo.
 const EXIT_BUSY = 75;
+
+// Dashboard de suivi (lecture seule, protégé par Basic Auth) : voir README, « Dashboard de
+// suivi ». Non configuré par défaut (DASHBOARD_TOKEN vide) pour ne jamais exposer la route sans
+// secret. N'appelle jamais `claude -p` : aucune consommation de tokens à la consultation.
+const DASHBOARD_TOKEN = process.env.DASHBOARD_TOKEN;
+// Dernier run déclenché par ce listener (label, etc.) ; le flock Docker ci-dessous reste la
+// seule source fiable pour savoir si une exécution tourne vraiment (il couvre aussi les
+// lancements manuels via SSH, que ce fichier ne voit pas).
+const CLAUDE_STATUS_FILE = "/tmp/claude-status.json";
+const LAST_RUN_LOG_FILE = "/tmp/claude-last-run.log";
+const DELEGATED_DEV_LOG_FILE = "/tmp/claude-dev.log";
+const BOBINE_CLAUDE_LOCK = "/tmp/bobine-claude-run.lock";
 
 // Relance automatique après la limite d'usage Claude. L'état vit dans /tmp, monté depuis l'hôte :
 // il survit à un rebuild/redémarrage du listener, qui reprogramme la relance au démarrage.
@@ -97,6 +110,22 @@ function isLocked() {
   return fs.existsSync(LOCK_FILE);
 }
 
+function writeClaudeStatus(status) {
+  try {
+    fs.writeFileSync(CLAUDE_STATUS_FILE, JSON.stringify(status, null, 2));
+  } catch (e) {
+    console.error(`[${ts()}] [dashboard] echec ecriture statut : ${e.message}`);
+  }
+}
+
+function readClaudeStatus() {
+  try {
+    return JSON.parse(fs.readFileSync(CLAUDE_STATUS_FILE, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
 async function postTrelloComment(cardId, text) {
   if (!TRELLO_API_KEY || !TRELLO_TOKEN) {
     return;
@@ -136,6 +165,13 @@ function runClaude(label, prompt, notify, relaunch = 0) {
   console.log(`[${ts()}] Declenchement pour ${label}${relaunch ? ` (relance ${relaunch})` : ""}`);
   const onError = (errorMsg) => notifyError(notify, errorMsg);
   const runPrompt = relaunch ? `${prompt} ${relaunchNote(relaunch)}` : prompt;
+
+  // Statut best-effort pour le dashboard (voir README, « Dashboard de suivi ») : ne couvre que
+  // les déclenchements passés par ce listener (pas un `claude -p` lancé à la main en SSH), d'où
+  // le flock Docker en complément dans l'API du dashboard pour savoir si une exécution tourne
+  // *vraiment* en ce moment.
+  const startedAt = ts();
+  writeClaudeStatus({ running: true, label, relaunch, startedAt });
 
   // bobine-claude-run (voir bobine-repo/) prépare le clone de travail dédié de Claude puis lance
   // `claude -p`. execFile : le prompt (payload Sentry compris) est passé tel quel, sans shell.
@@ -185,6 +221,14 @@ function runClaude(label, prompt, notify, relaunch = 0) {
       // Limite d'usage Claude : relance programmée après le reset au lieu d'un simple message.
       const output = `${stdout || ""}\n${stderr || ""}`;
       if (USAGE_LIMIT_RE.test(output)) {
+        writeClaudeStatus({
+          running: false,
+          label,
+          relaunch,
+          startedAt,
+          finishedAt: ts(),
+          outcome: "usage_limit",
+        });
         await handleUsageLimit({ label, prompt, notify, relaunch, output });
         return;
       }
@@ -193,6 +237,14 @@ function runClaude(label, prompt, notify, relaunch = 0) {
         console.log(
           `[${ts()}] Execution Claude deja en cours dans ${DOCKER_CONTAINER}, declenchement ignore`
         );
+        writeClaudeStatus({
+          running: false,
+          label,
+          relaunch,
+          startedAt,
+          finishedAt: ts(),
+          outcome: "busy",
+        });
         return;
       }
 
@@ -201,6 +253,14 @@ function runClaude(label, prompt, notify, relaunch = 0) {
       if (err && hasStderr) {
         console.error(`[${ts()}] Echec execution : ${stderr.slice(0, 1000)}`);
         const errorMsg = `🤖 [Claude] Echec de l'execution : ${stderr.slice(0, 1000)}`;
+        writeClaudeStatus({
+          running: false,
+          label,
+          relaunch,
+          startedAt,
+          finishedAt: ts(),
+          outcome: "error",
+        });
         try {
           await onError(errorMsg);
         } catch (e) {}
@@ -210,6 +270,14 @@ function runClaude(label, prompt, notify, relaunch = 0) {
       if (err) {
         console.error(`[${ts()}] Echec execution : ${err.message || "erreur inconnue"}`);
         const errorMsg = `🤖 [Claude] Echec de l'execution : ${err.message || "erreur inconnue"}`;
+        writeClaudeStatus({
+          running: false,
+          label,
+          relaunch,
+          startedAt,
+          finishedAt: ts(),
+          outcome: "error",
+        });
         try {
           await onError(errorMsg);
         } catch (e) {}
@@ -217,6 +285,14 @@ function runClaude(label, prompt, notify, relaunch = 0) {
       }
 
       console.log(`[${ts()}] Execution terminee avec succes`);
+      writeClaudeStatus({
+        running: false,
+        label,
+        relaunch,
+        startedAt,
+        finishedAt: ts(),
+        outcome: "success",
+      });
       if (relaunch) {
         await postDiscordMessage(
           `▶️ Relance automatique ${relaunch}/${MAX_AUTO_RELAUNCHES} terminée (${label}) : le pipeline a repris normalement.`
@@ -471,10 +547,299 @@ async function handleUsageLimit({ label, prompt, notify, relaunch, output }) {
   await discord(msg);
 }
 
+// --- Dashboard de suivi (lecture seule) ---------------------------------------------------
+
+function tailFile(path, maxLines) {
+  let content;
+  try {
+    content = fs.readFileSync(path, "utf8");
+  } catch {
+    return null;
+  }
+  const lines = content.split("\n");
+  return lines.slice(-maxLines).join("\n");
+}
+
+// flock du même verrou que `bobine-claude-busy` (voir bobine-shell.sh) : seule source fiable
+// pour savoir si une exécution tourne *vraiment*, y compris un `claude -p` lancé à la main en
+// SSH (que CLAUDE_STATUS_FILE ne voit pas). null = conteneur bobine-repo inaccessible.
+function checkClaudeBusy() {
+  return new Promise((resolve) => {
+    execFile(
+      "docker",
+      [
+        "exec",
+        "--user",
+        "claudeuser",
+        DOCKER_CONTAINER,
+        "flock",
+        "-n",
+        "-E",
+        "75",
+        BOBINE_CLAUDE_LOCK,
+        "true",
+      ],
+      { timeout: 5000 },
+      (err) => {
+        if (!err) {
+          return resolve(false);
+        }
+        if (err.code === 75) {
+          return resolve(true);
+        }
+        resolve(null);
+      }
+    );
+  });
+}
+
+// Branche/commit du clone de travail de Claude (volume `claude-workspace`, pas monté dans ce
+// conteneur) : best-effort, ne doit jamais faire échouer le dashboard.
+function getWorkspaceGitInfo() {
+  return new Promise((resolve) => {
+    execFile(
+      "docker",
+      [
+        "exec",
+        "--user",
+        "claudeuser",
+        DOCKER_CONTAINER,
+        "bash",
+        "-lc",
+        "cd /workspace && git branch --show-current && git log -1 --format=%h\\ %s",
+      ],
+      { timeout: 5000 },
+      (err, stdout) => {
+        if (err || !stdout) {
+          return resolve(null);
+        }
+        const [branch, ...rest] = stdout.trim().split("\n");
+        resolve({ branch: branch || null, commit: rest.join(" ").trim() || null });
+      }
+    );
+  });
+}
+
+async function buildDashboardStatus() {
+  const [busy, workspace] = await Promise.all([checkClaudeBusy(), getWorkspaceGitInfo()]);
+  return {
+    generatedAt: ts(),
+    running: busy,
+    current: readClaudeStatus(),
+    resume: readResumeState(),
+    workspace,
+    lastRunLog: tailFile(LAST_RUN_LOG_FILE, 200),
+    delegatedDevLog: tailFile(DELEGATED_DEV_LOG_FILE, 200),
+  };
+}
+
+// Basic Auth : utilisateur fixe "claude", mot de passe = DASHBOARD_TOKEN. Pas configuré par
+// défaut (voir .env.example) : la route renvoie alors 503 plutôt que de s'ouvrir sans secret.
+function isDashboardAuthorized(req) {
+  const header = req.headers.authorization || "";
+  const expected = `Basic ${Buffer.from(`claude:${DASHBOARD_TOKEN}`).toString("base64")}`;
+  const headerBuf = Buffer.from(header);
+  const expectedBuf = Buffer.from(expected);
+  // Comparaison à temps constant (longueur comprise) : évite de fuiter le secret par timing.
+  return headerBuf.length === expectedBuf.length && crypto.timingSafeEqual(headerBuf, expectedBuf);
+}
+
+function requireDashboardAuth(req, res) {
+  if (!DASHBOARD_TOKEN) {
+    res.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("Dashboard non configuré : DASHBOARD_TOKEN manquant côté serveur.");
+    return false;
+  }
+  if (!isDashboardAuthorized(req)) {
+    res.writeHead(401, {
+      "WWW-Authenticate": 'Basic realm="Dashboard Claude"',
+      "Content-Type": "text/plain; charset=utf-8",
+    });
+    res.end("Authentification requise.");
+    return false;
+  }
+  return true;
+}
+
+const DASHBOARD_HTML = `<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Dashboard Claude — Bobine</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted: #898781;
+    --border: rgba(255, 255, 255, 0.1);
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #e66767;
+    --info: #3987e5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .tile .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .tile .value { font-size: 16px; margin-top: 6px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .dot.good { background: var(--good); }
+  .dot.warning { background: var(--warning); }
+  .dot.critical { background: var(--critical); }
+  .dot.info { background: var(--info); }
+  .tile .detail { color: var(--text-secondary); font-size: 12px; margin-top: 6px; }
+  .logs { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+  .log-block h2 { font-size: 13px; color: var(--text-secondary); margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  pre {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 420px;
+    overflow: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+  }
+  .empty { color: var(--muted); }
+  footer { color: var(--muted); font-size: 11px; margin-top: 20px; }
+</style>
+</head>
+<body>
+  <h1>Dashboard Claude — Bobine</h1>
+  <div class="sub">Suivi en lecture seule du pipeline Trello → Claude. Rafraîchi toutes les 5 s. Aucune action déclenchée ici ne consomme de tokens.</div>
+  <div class="tiles" id="tiles"></div>
+  <div class="logs">
+    <div class="log-block">
+      <h2>Dernière exécution (session principale)</h2>
+      <pre id="lastRunLog" class="empty">Aucun run enregistré pour l'instant.</pre>
+    </div>
+    <div class="log-block">
+      <h2>Développeur délégué (si en cours)</h2>
+      <pre id="devLog" class="empty">Aucune délégation en cours.</pre>
+    </div>
+  </div>
+  <footer id="generatedAt"></footer>
+  <script>
+    function esc(s) {
+      return (s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    }
+    function tile(label, dotClass, value, detail) {
+      return '<div class="tile"><div class="label">' + esc(label) + '</div>' +
+        '<div class="value"><span class="dot ' + dotClass + '"></span>' + esc(value) + '</div>' +
+        (detail ? '<div class="detail">' + esc(detail) + '</div>' : '') + '</div>';
+    }
+    async function refresh() {
+      let data;
+      try {
+        // location.origin (sans les identifiants) : si la page a été ouverte via une URL du
+        // type http://user:pass@hote/dashboard (pratique courante pour une Basic Auth mise en
+        // favori), un chemin relatif résolu contre location.href échoue — le Fetch standard
+        // interdit de construire une requête depuis une URL contenant des identifiants.
+        const res = await fetch(location.origin + '/dashboard/api/status', { cache: 'no-store' });
+        if (res.status === 401) {
+          document.body.innerHTML = '<p>Authentification requise — rechargez la page.</p>';
+          return;
+        }
+        data = await res.json();
+      } catch (e) {
+        document.getElementById('tiles').innerHTML = tile('Dashboard', 'critical', '⚠ injoignable', String(e));
+        return;
+      }
+
+      const tiles = [];
+      if (data.running === true) {
+        tiles.push(tile('Statut', 'info', '▶ En cours', data.current ? data.current.label : 'Exécution active (déclenchée manuellement)'));
+      } else if (data.running === false) {
+        tiles.push(tile('Statut', 'good', '✓ Inactif', 'Prêt à traiter le prochain événement.'));
+      } else {
+        tiles.push(tile('Statut', 'critical', '⚠ Infra inaccessible', 'docker exec vers bobine-repo a échoué.'));
+      }
+
+      if (data.resume) {
+        tiles.push(tile(
+          'Relance programmée',
+          'warning',
+          '⏸ Limite d\\'usage',
+          'Relance ' + data.resume.relaunch + '/6 prévue à ' + data.resume.resumeAt
+        ));
+      }
+
+      if (data.current && data.current.outcome) {
+        const outcomeDot = data.current.outcome === 'success' ? 'good' : (data.current.outcome === 'usage_limit' ? 'warning' : 'critical');
+        const outcomeIcon = data.current.outcome === 'success' ? '✓' : (data.current.outcome === 'usage_limit' ? '⏸' : '✗');
+        tiles.push(tile('Dernier résultat', outcomeDot, outcomeIcon + ' ' + data.current.outcome, data.current.label + ' — ' + (data.current.finishedAt || '')));
+      }
+
+      if (data.workspace) {
+        tiles.push(tile('Espace de travail', 'info', data.workspace.branch || '?', data.workspace.commit || ''));
+      }
+
+      document.getElementById('tiles').innerHTML = tiles.join('');
+
+      const lastRunEl = document.getElementById('lastRunLog');
+      lastRunEl.textContent = data.lastRunLog || 'Aucun run enregistré pour l\\'instant.';
+      lastRunEl.classList.toggle('empty', !data.lastRunLog);
+
+      const devEl = document.getElementById('devLog');
+      devEl.textContent = data.delegatedDevLog || 'Aucune délégation en cours.';
+      devEl.classList.toggle('empty', !data.delegatedDevLog);
+
+      document.getElementById('generatedAt').textContent = 'Dernière actualisation : ' + data.generatedAt;
+    }
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>`;
+
 const server = http.createServer((req, res) => {
   if (req.method === "HEAD") {
     res.writeHead(200);
     return res.end();
+  }
+  if (req.method === "GET" && req.url === "/dashboard") {
+    if (!requireDashboardAuth(req, res)) {
+      return;
+    }
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    return res.end(DASHBOARD_HTML);
+  }
+  if (req.method === "GET" && req.url === "/dashboard/api/status") {
+    if (!requireDashboardAuth(req, res)) {
+      return;
+    }
+    buildDashboardStatus().then((status) => {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify(status));
+    });
+    return;
   }
   if (req.method === "POST" && req.url === "/trello-webhook") {
     let body = "";

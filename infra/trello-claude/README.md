@@ -94,6 +94,45 @@ alertes avec les notifications de fin de pipeline Trello.
    new issue is created") > action "Send a notification via a webhook" > URL =
    `https://<host-du-listener>:29000/sentry-webhook?secret=<SENTRY_WEBHOOK_SECRET>`.
 
+## Dashboard de suivi (temps réel)
+
+Le listener expose `GET /dashboard` (page HTML) et `GET /dashboard/api/status` (JSON), protégés
+par Basic Auth (utilisateur `claude`, mot de passe = `DASHBOARD_TOKEN`). Sans `DASHBOARD_TOKEN`
+configuré, les deux routes répondent 503 : jamais exposées sans secret.
+
+Ce que la page affiche, rafraîchi toutes les 5 s :
+
+- **Statut courant** : en cours / inactif / infra inaccessible, déterminé par le même verrou que
+  `bobine-claude-busy` (`docker exec bobine-repo flock -n ... /tmp/bobine-claude-run.lock`) — donc
+  fiable même pour une exécution lancée à la main en SSH, pas seulement celles du listener.
+- **Dernier résultat** (succès / erreur / limite d'usage) et la carte concernée, lue dans
+  `/tmp/claude-status.json` (écrit par le listener à chaque déclenchement — ce fichier ne couvre
+  que les déclenchements passés par lui).
+- **Relance programmée**, si une limite d'usage est en attente de reset (voir section
+  précédente).
+- **Branche/commit courants** du clone de travail de Claude (`docker exec bobine-repo git -C
+/workspace ...`).
+- Le **tail des logs** : `/tmp/claude-last-run.log` (dernière exécution de la session
+  principale) et `/tmp/claude-dev.log` (développeur délégué, si une délégation est en cours — voir
+  skill, « Modèle et effort par ticket »).
+
+Aucune de ces routes ne déclenche `claude -p` : consultation sans consommation de tokens.
+
+**Accès depuis l'extérieur** : la page suit l'exposition déjà en place pour `/trello-webhook` et
+`/sentry-webhook` (le port `29000` du listener doit déjà être joignable depuis l'extérieur,
+puisque Trello et Sentry y envoient leurs webhooks) — aucune étape réseau supplémentaire
+nécessaire si c'est déjà le cas. Si ce port n'est pas accessible depuis l'extérieur chez vous (changement de
+box/pare-feu/reverse proxy), il faut l'exposer comme pour les webhooks existants avant de pouvoir
+ouvrir `https://<hôte>:29000/dashboard` depuis un navigateur. Le navigateur affiche alors un
+prompt Basic Auth natif (pas de formulaire à construire) ; une fois les identifiants saisis, il
+les réutilise automatiquement pour les appels à `/dashboard/api/status`.
+
+Activer :
+
+1. `DASHBOARD_TOKEN=...` dans `.env` (valeur aléatoire longue, ex. `openssl rand -hex 32`).
+2. `bobine-rebuild listener` (seul le listener change, toujours sans risque — voir « Commandes
+   serveur »).
+
 ## Limite d'usage Claude : relance automatique
 
 Quand une exécution s'arrête sur la limite d'usage Claude, le listener ne se contente plus d'un

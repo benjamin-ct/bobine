@@ -18,6 +18,7 @@ services:
       - SENTRY_WEBHOOK_SECRET=${SENTRY_WEBHOOK_SECRET}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-5}
       - CLAUDE_EFFORT=${CLAUDE_EFFORT:-medium}
+      - DASHBOARD_TOKEN=${DASHBOARD_TOKEN:-}
     restart: unless-stopped
 
   bobine-repo:
