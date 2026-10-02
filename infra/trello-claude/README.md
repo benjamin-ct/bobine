@@ -123,7 +123,8 @@ Aucune de ces routes ne déclenche `claude -p` : consultation sans consommation 
 puisque Trello et Sentry y envoient leurs webhooks) — aucune étape réseau supplémentaire
 nécessaire si c'est déjà le cas. Si ce port n'est pas accessible depuis l'extérieur chez vous (changement de
 box/pare-feu/reverse proxy), il faut l'exposer comme pour les webhooks existants avant de pouvoir
-ouvrir `https://<hôte>:29000/dashboard` depuis un navigateur. Le navigateur affiche alors un
+ouvrir `https://<hôte>:29000/dashboard` depuis un navigateur — ou passer par un tunnel Cloudflare
+(voir section suivante), qui évite toute redirection de port. Le navigateur affiche alors un
 prompt Basic Auth natif (pas de formulaire à construire) ; une fois les identifiants saisis, il
 les réutilise automatiquement pour les appels à `/dashboard/api/status`.
 
@@ -132,6 +133,35 @@ Activer :
 1. `DASHBOARD_TOKEN=...` dans `.env` (valeur aléatoire longue, ex. `openssl rand -hex 32`).
 2. `bobine-rebuild listener` (seul le listener change, toujours sans risque — voir « Commandes
    serveur »).
+
+## Exposition externe via Cloudflare Tunnel (recommandé)
+
+Alternative à la redirection de port (29000) sur le routeur/NAS pour joindre `/trello-webhook`,
+`/sentry-webhook` et `/dashboard` depuis l'extérieur : un tunnel Cloudflare, qui n'ouvre aucun port
+entrant (connexion sortante uniquement depuis le conteneur `cloudflared`) et termine le TLS côté
+Cloudflare.
+
+1. Zero Trust > **Networks > Tunnels** > _Create a tunnel_ > type **Cloudflared** > nommer (ex.
+   `bobine-webhooks`) > dans l'étape d'installation du connecteur, choisir **Docker** et copier le
+   jeton affiché après `cloudflared tunnel run --token`.
+2. Renseigner ce jeton dans `.env` : `CLOUDFLARE_TUNNEL_TOKEN=...`.
+3. Dans l'onglet **Public Hostnames** du tunnel, ajouter un hostname (ex.
+   `bobine.exemple.com`) pointant vers le service `http://webhook-listener:8080` (nom du service
+   Docker Compose, résolu sur le réseau interne créé par `docker-compose-bobine.yml` — pas besoin
+   d'une entrée par route, un hostname suffit pour `/trello-webhook`, `/sentry-webhook` et
+   `/dashboard`, cloudflared transmet le chemin tel quel).
+4. `bobine-rebuild tunnel` (démarre uniquement le conteneur `cloudflared`, profil `tunnel` du
+   compose, jamais inclus dans `bobine-rebuild all` — voir « Commandes serveur »).
+5. Mettre à jour les URLs de webhook (Power-Up Trello, règle d'alerte Sentry) et l'URL ouverte pour
+   `/dashboard` vers `https://bobine.exemple.com/...` à la place de `https://<hôte>:29000/...`. Le
+   port 29000 peut ensuite être refermé côté routeur/pare-feu si sa seule raison d'être était cette
+   exposition.
+
+Point sécurité : `/trello-webhook` et `/sentry-webhook` doivent rester joignables sans
+authentification Cloudflare Access (Trello/Sentry ne savent pas s'authentifier contre Access) — ne
+pas appliquer de policy Access sur ce hostname à moins d'y ajouter une règle de contournement
+(_bypass_) explicite pour ces deux chemins. `/dashboard` reste protégé par sa propre Basic Auth
+(`DASHBOARD_TOKEN`) quel que soit le chemin réseau emprunté.
 
 ## Limite d'usage Claude : relance automatique
 
@@ -225,14 +255,14 @@ echo "source /Volume2/config/trello-claude/bobine/infra/trello-claude/bobine-she
 source ~/.bashrc
 ```
 
-| Commande                                 | Effet                                                                                                                        |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `bobine-pull`                            | Vérifie que le checkout serveur est propre, puis `git fetch` et `git pull --ff-only` sur sa branche                          |
-| `bobine-main`                            | Vérifie que le checkout serveur est propre et que tous ses commits sont poussés, puis bascule sur `main` et le met à jour    |
-| `bobine-rebuild [all\|listener\|claude]` | Rebuild + recréation (`up -d --build --force-recreate`) des deux conteneurs (`all`, défaut), du listener ou de `bobine-repo` |
-| `bobine-deploy [all\|listener\|claude]`  | Lance `bobine-pull`, puis `bobine-rebuild` avec les mêmes arguments s'il a réussi                                            |
-| `bobine-status`                          | Branche et commit du checkout serveur et du clone de Claude, exécution Claude en cours ou non, état Docker                   |
-| `bobine-logs`                            | Suit les logs du listener Trello/Sentry                                                                                      |
+| Commande                                         | Effet                                                                                                                                                                                                                                                      |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bobine-pull`                                    | Vérifie que le checkout serveur est propre, puis `git fetch` et `git pull --ff-only` sur sa branche                                                                                                                                                        |
+| `bobine-main`                                    | Vérifie que le checkout serveur est propre et que tous ses commits sont poussés, puis bascule sur `main` et le met à jour                                                                                                                                  |
+| `bobine-rebuild [all\|listener\|claude\|tunnel]` | Rebuild + recréation (`up -d --build --force-recreate`) de `bobine-repo` + `webhook-listener` (`all`, défaut), du listener, de `bobine-repo`, ou de `cloudflared` (`tunnel`, jamais inclus dans `all` — voir « Exposition externe via Cloudflare Tunnel ») |
+| `bobine-deploy [all\|listener\|claude]`          | Lance `bobine-pull`, puis `bobine-rebuild` avec les mêmes arguments s'il a réussi                                                                                                                                                                          |
+| `bobine-status`                                  | Branche et commit du checkout serveur et du clone de Claude, exécution Claude en cours ou non, état Docker                                                                                                                                                 |
+| `bobine-logs`                                    | Suit les logs du listener Trello/Sentry                                                                                                                                                                                                                    |
 
 Avant de recréer `bobine-repo` (`all` ou `claude`), `bobine-rebuild` vérifie qu'aucune exécution
 Claude n'est en cours et s'arrête sinon (`--force` pour passer outre, ce qui l'interrompt).

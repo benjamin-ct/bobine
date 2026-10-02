@@ -5,8 +5,10 @@
 #
 # bobine-pull    checkout serveur propre ? puis git fetch + git pull --ff-only
 # bobine-main    checkout serveur propre et tout poussé ? puis bascule sur main à jour
-# bobine-rebuild [all|listener|claude] rebuild + recréation (vérifie qu'aucune exécution
+# bobine-rebuild [all|listener|claude|tunnel] rebuild + recréation (vérifie qu'aucune exécution
 #                Claude n'est en cours avant de toucher à bobine-repo ; --force pour passer outre)
+#                "tunnel" (cloudflared, voir README « Exposition externe via Cloudflare Tunnel »)
+#                n'est jamais inclus dans "all" : à démarrer explicitement une fois configuré.
 # bobine-deploy  bobine-pull, puis bobine-rebuild (mêmes arguments)
 # bobine-status  branches/commits (checkout serveur et clone de Claude), exécution en cours, Docker
 # bobine-logs    suit les logs du listener Trello/Sentry
@@ -106,20 +108,21 @@ bobine-claude-busy() {
   [ $? -eq 75 ]
 }
 
-# bobine-rebuild [all|listener|claude] [--force]
+# bobine-rebuild [all|listener|claude|tunnel] [--force]
 #   listener : toujours sans risque, une exécution Claude en cours continue dans bobine-repo
 #              (seul son log /tmp/claude-last-run.log est perdu).
 #   claude   : bobine-repo seul ; refusé si une exécution Claude est en cours.
-#   all      : les deux (défaut) ; même vérification.
+#   tunnel   : cloudflared seul (profil "tunnel", voir README) ; jamais inclus dans "all".
+#   all      : bobine-repo + webhook-listener (défaut) ; même vérification.
 bobine-rebuild() {
   local target="all" force=""
   local arg
   for arg in "$@"; do
     case "$arg" in
-      all | listener | claude) target="$arg" ;;
+      all | listener | claude | tunnel) target="$arg" ;;
       --force) force=1 ;;
       *)
-        echo "Usage : bobine-rebuild [all|listener|claude] [--force]" >&2
+        echo "Usage : bobine-rebuild [all|listener|claude|tunnel] [--force]" >&2
         return 64
         ;;
     esac
@@ -129,10 +132,11 @@ bobine-rebuild() {
   case "$target" in
     listener) services="webhook-listener" ;;
     claude) services="bobine-repo" ;;
+    tunnel) services="cloudflared" ;;
     all) services="bobine-repo webhook-listener" ;;
   esac
 
-  if [ "$target" != "listener" ] && [ -z "$force" ] && bobine-claude-busy; then
+  if [ "$target" != "listener" ] && [ "$target" != "tunnel" ] && [ -z "$force" ] && bobine-claude-busy; then
     echo "ABANDON : une execution Claude est en cours dans bobine-repo."
     echo "Relance plus tard, ou 'bobine-rebuild listener' pour ne mettre a jour que le listener."
     echo "(--force pour recreer quand meme et interrompre Claude.)"
