@@ -95,6 +95,10 @@ export default function NewReleasesPage() {
   // la synchronisation asynchrone de ce pré-réglage).
   const [countries, setCountries] = usePrefillFromFavorites(favoriteCountryCodes);
   const [languages, setLanguages] = usePrefillFromFavorites(favoriteLanguageCodes);
+  const [useMyCountries, setUseMyCountries] = useState(false);
+  const [useMyLanguages, setUseMyLanguages] = useState(false);
+  const activeCountries = useMyCountries ? favoriteCountryCodes : countries;
+  const activeLanguages = useMyLanguages ? favoriteLanguageCodes : languages;
   const [windowDays, setWindowDays] = useState(30);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
@@ -133,7 +137,15 @@ export default function NewReleasesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [mediaType, genreIds, providerIds, useMyPlatforms, countries, languages, windowDays]);
+  }, [
+    mediaType,
+    genreIds,
+    providerIds,
+    useMyPlatforms,
+    activeCountries,
+    activeLanguages,
+    windowDays,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,8 +174,8 @@ export default function NewReleasesPage() {
       excludeGenreIds: excludedGenreIds,
       providerIds: activeProviderIds,
       region,
-      originCountry: countries[0] || undefined,
-      originalLanguage: languages[0] || undefined,
+      originCountry: activeCountries[0] || undefined,
+      originalLanguage: activeLanguages[0] || undefined,
       sortField: "popularity",
       sortDirection: "desc",
       includeProviderBadge: true,
@@ -201,8 +213,8 @@ export default function NewReleasesPage() {
     useMyPlatforms,
     favoriteProviderIds,
     region,
-    countries,
-    languages,
+    activeCountries,
+    activeLanguages,
     windowDays,
     i18n.language,
     reloadKey,
@@ -220,8 +232,8 @@ export default function NewReleasesPage() {
       excludeGenreIds: excludedGenreIds,
       providerIds: activeProviderIds,
       region,
-      originCountry: countries[0] || undefined,
-      originalLanguage: languages[0] || undefined,
+      originCountry: activeCountries[0] || undefined,
+      originalLanguage: activeLanguages[0] || undefined,
       sortField: "popularity",
       sortDirection: "desc",
       includeProviderBadge: true,
@@ -252,8 +264,8 @@ export default function NewReleasesPage() {
     useMyPlatforms,
     favoriteProviderIds,
     region,
-    countries,
-    languages,
+    activeCountries,
+    activeLanguages,
     windowDays,
     i18n.language,
   ]);
@@ -308,7 +320,18 @@ export default function NewReleasesPage() {
         favoriteProviderIds={favoriteProviderIds}
         useMyPlatforms={useMyPlatforms}
         setUseMyPlatforms={setUseMyPlatforms}
-        countryLanguage={{ countries, setCountries, languages, setLanguages }}
+        countryLanguage={{
+          countries,
+          setCountries,
+          languages,
+          setLanguages,
+          favoriteCountryCodes,
+          useMyCountries,
+          setUseMyCountries,
+          favoriteLanguageCodes,
+          useMyLanguages,
+          setUseMyLanguages,
+        }}
         periods={{
           label: t("newReleasesPage.windowsLabel"),
           options: WINDOWS.map((w) => ({

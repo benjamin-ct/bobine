@@ -1153,6 +1153,12 @@
     "countriesCount_other": "{{count}} pays",
     "languagesCount_one": "{{count}} langue",
     "languagesCount_other": "{{count}} langues",
+    "myCountries": "Mes pays",
+    "onlyMyCountries": "Seulement mes pays favoris",
+    "noFavoriteCountries": "Choisissez vos pays dans votre profil",
+    "myLanguages": "Mes langues",
+    "onlyMyLanguages": "Seulement mes langues favorites",
+    "noFavoriteLanguages": "Choisissez vos langues dans votre profil",
     "chip": "{{label}} : {{value}}"
   },
   "readOnlyBanner": {

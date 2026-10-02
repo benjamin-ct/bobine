@@ -232,6 +232,10 @@ export default function ComingSoonPage() {
   // la synchronisation asynchrone de ce pré-réglage).
   const [countries, setCountries] = usePrefillFromFavorites(favoriteCountryCodes);
   const [languages, setLanguages] = usePrefillFromFavorites(favoriteLanguageCodes);
+  const [useMyCountries, setUseMyCountries] = useState(false);
+  const [useMyLanguages, setUseMyLanguages] = useState(false);
+  const activeCountries = useMyCountries ? favoriteCountryCodes : countries;
+  const activeLanguages = useMyLanguages ? favoriteLanguageCodes : languages;
   const [windowDays, setWindowDays] = useState(30);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
@@ -281,8 +285,8 @@ export default function ComingSoonPage() {
     excludeGenreIds: excludedGenreIds,
     providerIds: activeProviderIds,
     region,
-    originCountry: countries[0] || undefined,
-    originalLanguage: languages[0] || undefined,
+    originCountry: activeCountries[0] || undefined,
+    originalLanguage: activeLanguages[0] || undefined,
     sortField: "popularity",
     sortDirection: "desc",
     ...dateRangeFor(windowDays),
@@ -436,7 +440,18 @@ export default function ComingSoonPage() {
         favoriteProviderIds={favoriteProviderIds}
         useMyPlatforms={useMyPlatforms}
         setUseMyPlatforms={setUseMyPlatforms}
-        countryLanguage={{ countries, setCountries, languages, setLanguages }}
+        countryLanguage={{
+          countries,
+          setCountries,
+          languages,
+          setLanguages,
+          favoriteCountryCodes,
+          useMyCountries,
+          setUseMyCountries,
+          favoriteLanguageCodes,
+          useMyLanguages,
+          setUseMyLanguages,
+        }}
         periods={{
           label: t("comingSoonPage.windowsLabel"),
           options: WINDOWS.map((w) => ({

@@ -91,6 +91,16 @@ interface CountryLanguageState {
   setCountries: (v: string[]) => void;
   languages: string[];
   setLanguages: (v: string[]) => void;
+  /** Pays/langues favoris du compte, et bascule « Mes pays »/« Mes langues »
+   * — même principe que `useMyPlatforms` : force `countries`/`languages` sur
+   * ce pré-réglage et désactive le menu déroulant correspondant tant qu'elle
+   * est active. */
+  favoriteCountryCodes: string[];
+  useMyCountries: boolean;
+  setUseMyCountries: (v: boolean) => void;
+  favoriteLanguageCodes: string[];
+  useMyLanguages: boolean;
+  setUseMyLanguages: (v: boolean) => void;
 }
 
 interface PeriodOptions {
@@ -162,6 +172,8 @@ export default function FilterPanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
   const hasFavorites = favoriteProviderIds.length > 0;
+  const hasFavoriteCountries = (countryLanguage?.favoriteCountryCodes.length ?? 0) > 0;
+  const hasFavoriteLanguages = (countryLanguage?.favoriteLanguageCodes.length ?? 0) > 0;
   const rangeError = advanced ? getAdvancedFiltersRangeError(advanced) : null;
   const hasSort = !!(sortField && sortDirection && setSortField && setSortDirection);
   const [countries, setCountries] = useState<Country[]>([]);
@@ -272,6 +284,8 @@ export default function FilterPanel({
     setAdvanced?.(() => EMPTY_ADVANCED_FILTERS);
     countryLanguage?.setCountries([]);
     countryLanguage?.setLanguages([]);
+    countryLanguage?.setUseMyCountries(false);
+    countryLanguage?.setUseMyLanguages(false);
     switches.forEach((s) => s.onChange(false));
   }
 
@@ -367,21 +381,37 @@ export default function FilterPanel({
           },
         ]
       : []),
-    ...(countryLanguage?.countries || []).map((code) => ({
-      key: `origin-country-${code}`,
-      label: chip(t("filterPanel.country"), regionName(code, locale) || code),
-      remove: () => toggleCountry(code),
-    })),
-    ...(countryLanguage?.languages || []).map((code) => ({
-      key: `language-${code}`,
-      label: chip(
-        t("filterPanel.language"),
-        languages.find((l) => l.iso_639_1 === code)?.name ||
-          languages.find((l) => l.iso_639_1 === code)?.english_name ||
-          code
-      ),
-      remove: () => toggleLanguage(code),
-    })),
+    ...(countryLanguage?.useMyCountries
+      ? [
+          {
+            key: "my-countries",
+            label: t("filterPanel.onlyMyCountries"),
+            remove: () => countryLanguage.setUseMyCountries(false),
+          },
+        ]
+      : (countryLanguage?.countries || []).map((code) => ({
+          key: `origin-country-${code}`,
+          label: chip(t("filterPanel.country"), regionName(code, locale) || code),
+          remove: () => toggleCountry(code),
+        }))),
+    ...(countryLanguage?.useMyLanguages
+      ? [
+          {
+            key: "my-languages",
+            label: t("filterPanel.onlyMyLanguages"),
+            remove: () => countryLanguage.setUseMyLanguages(false),
+          },
+        ]
+      : (countryLanguage?.languages || []).map((code) => ({
+          key: `language-${code}`,
+          label: chip(
+            t("filterPanel.language"),
+            languages.find((l) => l.iso_639_1 === code)?.name ||
+              languages.find((l) => l.iso_639_1 === code)?.english_name ||
+              code
+          ),
+          remove: () => toggleLanguage(code),
+        }))),
     ...switches
       .filter((s) => s.checked)
       .map((s) => ({ key: s.key, label: s.text, remove: () => s.onChange(false) })),
@@ -668,7 +698,10 @@ export default function FilterPanel({
                                 })}
                         </span>
                       }
-                      active={countryLanguage.countries.length > 0}
+                      active={
+                        !countryLanguage.useMyCountries && countryLanguage.countries.length > 0
+                      }
+                      disabled={countryLanguage.useMyCountries}
                     >
                       <div className={dropdownStyles.head}>{t("filterPanel.country")}</div>
                       {localizedCountries.map((c) => (
@@ -684,6 +717,35 @@ export default function FilterPanel({
                         </button>
                       ))}
                     </Dropdown>
+                  </div>
+                  <div className={styles.field}>
+                    <span className={styles.label} id={`${panelId}-mine-countries`}>
+                      {t("filterPanel.myCountries")}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={countryLanguage.useMyCountries}
+                      aria-labelledby={`${panelId}-mine-countries`}
+                      className={styles.switchRow}
+                      disabled={!hasFavoriteCountries}
+                      title={
+                        hasFavoriteCountries ? undefined : t("filterPanel.noFavoriteCountries")
+                      }
+                      onClick={() =>
+                        countryLanguage.setUseMyCountries(!countryLanguage.useMyCountries)
+                      }
+                    >
+                      <span className={styles.switchText}>
+                        {hasFavoriteCountries
+                          ? t("filterPanel.onlyMyCountries")
+                          : t("filterPanel.noFavoriteCountries")}
+                      </span>
+                      <span
+                        className={`${styles.switch} ${countryLanguage.useMyCountries ? styles.switchOn : ""}`}
+                        aria-hidden="true"
+                      />
+                    </button>
                   </div>
                   <div className={styles.field}>
                     <span className={styles.label}>{t("filterPanel.language")}</span>
@@ -704,7 +766,10 @@ export default function FilterPanel({
                                 })}
                         </span>
                       }
-                      active={countryLanguage.languages.length > 0}
+                      active={
+                        !countryLanguage.useMyLanguages && countryLanguage.languages.length > 0
+                      }
+                      disabled={countryLanguage.useMyLanguages}
                     >
                       <div className={dropdownStyles.head}>{t("filterPanel.language")}</div>
                       {languages.map((l) => (
@@ -721,6 +786,35 @@ export default function FilterPanel({
                         </button>
                       ))}
                     </Dropdown>
+                  </div>
+                  <div className={styles.field}>
+                    <span className={styles.label} id={`${panelId}-mine-languages`}>
+                      {t("filterPanel.myLanguages")}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={countryLanguage.useMyLanguages}
+                      aria-labelledby={`${panelId}-mine-languages`}
+                      className={styles.switchRow}
+                      disabled={!hasFavoriteLanguages}
+                      title={
+                        hasFavoriteLanguages ? undefined : t("filterPanel.noFavoriteLanguages")
+                      }
+                      onClick={() =>
+                        countryLanguage.setUseMyLanguages(!countryLanguage.useMyLanguages)
+                      }
+                    >
+                      <span className={styles.switchText}>
+                        {hasFavoriteLanguages
+                          ? t("filterPanel.onlyMyLanguages")
+                          : t("filterPanel.noFavoriteLanguages")}
+                      </span>
+                      <span
+                        className={`${styles.switch} ${countryLanguage.useMyLanguages ? styles.switchOn : ""}`}
+                        aria-hidden="true"
+                      />
+                    </button>
                   </div>
                 </>
               )}

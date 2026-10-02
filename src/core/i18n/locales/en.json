@@ -1153,6 +1153,12 @@
     "countriesCount_other": "{{count}} countries",
     "languagesCount_one": "{{count}} language",
     "languagesCount_other": "{{count}} languages",
+    "myCountries": "My countries",
+    "onlyMyCountries": "Only my favorite countries",
+    "noFavoriteCountries": "Choose your countries in your profile",
+    "myLanguages": "My languages",
+    "onlyMyLanguages": "Only my favorite languages",
+    "noFavoriteLanguages": "Choose your languages in your profile",
     "chip": "{{label}}: {{value}}"
   },
   "readOnlyBanner": {
