@@ -11,6 +11,20 @@ const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 // Code de sortie de bobine-claude-run quand une exécution tourne déjà dans bobine-repo.
 const EXIT_BUSY = 75;
 
+// Relance automatique après la limite d'usage Claude. L'état vit dans /tmp, monté depuis l'hôte :
+// il survit à un rebuild/redémarrage du listener, qui reprogramme la relance au démarrage.
+const RESUME_STATE_FILE = "/tmp/claude-resume.json";
+// Marge après l'heure de reset annoncée, et délai par défaut si cette heure est illisible.
+const RESUME_MARGIN_MS = 2 * 60 * 1000;
+const RESUME_FALLBACK_MS = 30 * 60 * 1000;
+// Relance prévue mais une exécution (lancée à la main) tient encore le verrou : on retente.
+const RESUME_BUSY_RETRY_MS = 5 * 60 * 1000;
+// Au-delà de ce nombre de relances consécutives qui retombent sur la limite : abandon + alerte.
+const MAX_AUTO_RELAUNCHES = 6;
+// Message du CLI (« You've hit your session limit · resets 5:10pm (UTC) », variantes usage/weekly)
+// ou marqueur écrit par le skill quand c'est le sous-processus de développement qui l'a atteinte.
+const USAGE_LIMIT_RE = /hit your (?:\w+ )?limit|usage limit reached|USAGE_LIMIT_REACHED/i;
+
 const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || "1543573331335315497";
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 // Webhook dédié au salon "erreurs-prod" (id 1544711290273140877), utilisé uniquement pour les
@@ -114,8 +128,13 @@ async function postDiscordMessage(text, webhookUrl = DISCORD_WEBHOOK_URL) {
   return JSON.parse(raw);
 }
 
-function runClaude(label, prompt, onError) {
-  console.log(`[${ts()}] Declenchement pour ${label}`);
+// notify : à qui signaler un échec ({ type: "trello", cardId } ou { type: "sentry", issueLabel }),
+// sérialisable pour être rejoué par une relance automatique. relaunch : numéro de la relance
+// automatique (0 pour un déclenchement normal).
+function runClaude(label, prompt, notify, relaunch = 0) {
+  console.log(`[${ts()}] Declenchement pour ${label}${relaunch ? ` (relance ${relaunch})` : ""}`);
+  const onError = (errorMsg) => notifyError(notify, errorMsg);
+  const runPrompt = relaunch ? `${prompt} ${relaunchNote(relaunch)}` : prompt;
 
   // bobine-claude-run (voir bobine-repo/) prépare le clone de travail dédié de Claude puis lance
   // `claude -p`. execFile : le prompt (payload Sentry compris) est passé tel quel, sans shell.
@@ -127,7 +146,7 @@ function runClaude(label, prompt, onError) {
     `CLAUDE_MODEL=${CLAUDE_MODEL}`,
     DOCKER_CONTAINER,
     "bobine-claude-run",
-    prompt,
+    runPrompt,
   ];
 
   const child = execFile(
@@ -160,55 +179,10 @@ function runClaude(label, prompt, onError) {
       console.log(`[${ts()}] [debug] err.signal: ${err?.signal || "null"}`);
       console.log(`[${ts()}] [debug] err.cmd: ${err?.cmd || "null"}`);
 
-      // Gestion explicite de la limite de sessions Claude
-      if (stdout && /You've hit your session limit/.test(stdout)) {
-        // Ex: "You've hit your session limit · resets 5:10pm (UTC)"
-        const match = /resets\s+(\d{1,2}):(\d{2})\s*(am|pm)?\s*(?:\(UTC\))?/i.exec(stdout);
-        let resetText = "dans quelques minutes";
-
-        if (match) {
-          let hour = parseInt(match[1], 10);
-          const minute = parseInt(match[2], 10);
-          const ampm = (match[3] || "").toLowerCase();
-
-          // Convertir en heure 24h UTC
-          if (ampm === "pm" && hour !== 12) {
-            hour += 12;
-          } else if (ampm === "am" && hour === 12) {
-            hour = 0;
-          }
-
-          const now = new Date();
-          const resetUtc = new Date(
-            Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour, minute, 0)
-          );
-
-          // Si l'heure est déjà passée (en UTC), on suppose que c'est demain (UTC)
-          if (resetUtc.getTime() < now.getTime()) {
-            resetUtc.setUTCDate(resetUtc.getUTCDate() + 1);
-          }
-
-          // Formater en heure Europe/Paris, 24h, avec minutes
-          const resetParis = new Intl.DateTimeFormat("fr-FR", {
-            timeZone: "Europe/Paris",
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: false,
-          }).format(resetUtc);
-
-          resetText = `après ${resetParis} (heure de Paris)`;
-        }
-
-        const logMsg = `Limite de sessions Claude atteinte. Réessaie ${resetText}.`;
-        console.log(`[${ts()}] ${logMsg}`);
-
-        // Notification Discord uniquement
-        try {
-          await postDiscordMessage(logMsg);
-        } catch (e) {
-          console.error(`[${ts()}] [discord] echec notification limite : ${e.message}`);
-        }
-
+      // Limite d'usage Claude : relance programmée après le reset au lieu d'un simple message.
+      const output = `${stdout || ""}\n${stderr || ""}`;
+      if (USAGE_LIMIT_RE.test(output)) {
+        await handleUsageLimit({ label, prompt, notify, relaunch, output });
         return;
       }
 
@@ -240,10 +214,27 @@ function runClaude(label, prompt, onError) {
       }
 
       console.log(`[${ts()}] Execution terminee avec succes`);
+      if (relaunch) {
+        await postDiscordMessage(
+          `▶️ Relance automatique ${relaunch}/${MAX_AUTO_RELAUNCHES} terminée (${label}) : le pipeline a repris normalement.`
+        ).catch((e) =>
+          console.error(`[${ts()}] [discord] echec notification reprise : ${e.message}`)
+        );
+      }
     }
   );
 
   fs.writeFileSync(LOCK_FILE, String(child.pid));
+}
+
+function notifyError(notify, errorMsg) {
+  if (notify?.type === "trello") {
+    return postTrelloComment(notify.cardId, errorMsg);
+  }
+  return postDiscordMessage(
+    `${errorMsg}\n(déclenché par l'alerte Sentry : ${notify?.issueLabel})`,
+    DISCORD_SENTRY_WEBHOOK_URL
+  );
 }
 
 function triggerClaude(action) {
@@ -253,18 +244,228 @@ function triggerClaude(action) {
     console.log(`[${ts()}] [debug] action sans carte, skip`);
     return;
   }
-  runClaude(`"${cardName}" (ID: ${cardId})`, PROMPT, (errorMsg) =>
-    postTrelloComment(cardId, errorMsg)
-  );
+  runClaude(`"${cardName}" (ID: ${cardId})`, PROMPT, { type: "trello", cardId });
 }
 
 function triggerClaudeForSentry(rawPayload, issueLabel) {
-  runClaude(`alerte Sentry (${issueLabel})`, sentryPrompt(rawPayload), (errorMsg) =>
-    postDiscordMessage(
-      `${errorMsg}\n(déclenché par l'alerte Sentry : ${issueLabel})`,
-      DISCORD_SENTRY_WEBHOOK_URL
-    )
+  runClaude(`alerte Sentry (${issueLabel})`, sentryPrompt(rawPayload), {
+    type: "sentry",
+    issueLabel,
+  });
+}
+
+// --- Limite d'usage : lecture de l'heure de reset ---------------------------------------------
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+// Décalage (ms) du fuseau timeZone par rapport à UTC à l'instant utcMs (heure d'été comprise).
+function tzOffsetMs(utcMs, timeZone) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+    })
+      .formatToParts(new Date(utcMs))
+      .map((p) => [p.type, Number(p.value)])
   );
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second
+  );
+  return asUtc - Math.floor(utcMs / 1000) * 1000;
+}
+
+// Heure murale (année, mois 0-11, jour, h, min) dans timeZone → instant UTC (ms). Deux passes :
+// le décalage peut changer entre l'estimation et l'heure visée (jour de passage à l'heure d'été).
+function zonedTimeToUtc(year, month, day, hour, minute, timeZone) {
+  const wall = Date.UTC(year, month, day, hour, minute);
+  const estimate = wall - tzOffsetMs(wall, timeZone);
+  return wall - tzOffsetMs(estimate, timeZone);
+}
+
+function todayIn(timeZone, now) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    })
+      .formatToParts(now)
+      .map((p) => [p.type, Number(p.value)])
+  );
+  return { year: parts.year, month: parts.month - 1, day: parts.day };
+}
+
+// Lit l'heure de reset dans la sortie du CLI, ex. « resets 5:10pm (UTC) », « resets 3am
+// (Europe/Paris) », « resets Oct 3, 5pm (America/New_York) ». Sans fuseau : UTC. Renvoie
+// l'instant UTC (ms) du prochain reset, ou null si illisible.
+function parseResetTime(output, now = new Date()) {
+  const match =
+    /resets\s+(?:at\s+)?(?:([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(?:at\s+)?)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:\(([^)]+)\))?/i.exec(
+      output
+    );
+  if (!match) {
+    return null;
+  }
+  const [, monthName, dayText, hourText, minuteText, ampm, tzText] = match;
+  let hour = parseInt(hourText, 10);
+  const minute = minuteText ? parseInt(minuteText, 10) : 0;
+  if (ampm) {
+    if (hour < 1 || hour > 12) {
+      return null;
+    }
+    hour = (hour % 12) + (ampm.toLowerCase() === "pm" ? 12 : 0);
+  }
+  if (hour > 23 || minute > 59) {
+    return null;
+  }
+  const timeZone = !tzText || /^utc$/i.test(tzText.trim()) ? "UTC" : tzText.trim();
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+  } catch {
+    return null;
+  }
+
+  if (monthName) {
+    const month = MONTHS.indexOf(monthName.slice(0, 3).toLowerCase());
+    if (month < 0) {
+      return null;
+    }
+    const { year } = todayIn(timeZone, now);
+    let reset = zonedTimeToUtc(year, month, parseInt(dayText, 10), hour, minute, timeZone);
+    // Date de janvier lue en décembre : c'est l'année suivante.
+    if (reset < now.getTime() - 24 * 3600 * 1000) {
+      reset = zonedTimeToUtc(year + 1, month, parseInt(dayText, 10), hour, minute, timeZone);
+    }
+    return reset;
+  }
+
+  // Heure seule : aujourd'hui dans ce fuseau, ou demain si elle est déjà passée.
+  const today = todayIn(timeZone, now);
+  let reset = zonedTimeToUtc(today.year, today.month, today.day, hour, minute, timeZone);
+  if (reset <= now.getTime()) {
+    reset = zonedTimeToUtc(today.year, today.month, today.day + 1, hour, minute, timeZone);
+  }
+  return reset;
+}
+
+function formatParis(utcMs) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(utcMs));
+}
+
+// --- Limite d'usage : relance programmée --------------------------------------------------------
+
+let resumeTimer = null;
+
+function readResumeState() {
+  try {
+    return JSON.parse(fs.readFileSync(RESUME_STATE_FILE, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeResumeState(state) {
+  fs.writeFileSync(RESUME_STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+function clearResumeState() {
+  if (resumeTimer) {
+    clearTimeout(resumeTimer);
+    resumeTimer = null;
+  }
+  fs.rmSync(RESUME_STATE_FILE, { force: true });
+}
+
+// Vrai tant qu'une relance est programmée : les webhooks Trello/Sentry ne relancent pas Claude
+// (ils retomberaient sur la limite), la relance traitera tout le board de toute façon.
+function isWaitingForReset() {
+  return resumeTimer !== null || fs.existsSync(RESUME_STATE_FILE);
+}
+
+function relaunchNote(relaunch) {
+  return [
+    `RELANCE AUTOMATIQUE (${relaunch}/${MAX_AUTO_RELAUNCHES}) : l'exécution précédente s'est arrêtée sur la limite d'usage Claude.`,
+    "Reprends le travail là où il s'est arrêté (carte restée en En cours, commits wip: sur sa branche, note REPRISE éventuelle) au lieu de repartir de zéro, puis continue le board normalement.",
+  ].join(" ");
+}
+
+function scheduleResume(state) {
+  if (resumeTimer) {
+    clearTimeout(resumeTimer);
+  }
+  const delay = Math.max(new Date(state.resumeAt).getTime() - Date.now(), 0);
+  console.log(
+    `[${ts()}] Relance ${state.relaunch}/${MAX_AUTO_RELAUNCHES} programmee a ${state.resumeAt}`
+  );
+  resumeTimer = setTimeout(() => {
+    resumeTimer = null;
+    if (isLocked()) {
+      const retryAt = new Date(Date.now() + RESUME_BUSY_RETRY_MS).toISOString();
+      console.log(
+        `[${ts()}] Relance reportee : execution deja en cours, nouvel essai a ${retryAt}`
+      );
+      const next = { ...state, resumeAt: retryAt };
+      writeResumeState(next);
+      scheduleResume(next);
+      return;
+    }
+    // L'état est retiré au lancement : si la relance retombe sur la limite, handleUsageLimit en
+    // réécrit un avec le compteur incrémenté.
+    clearResumeState();
+    runClaude(state.label, state.prompt, state.notify, state.relaunch);
+  }, delay);
+}
+
+async function handleUsageLimit({ label, prompt, notify, relaunch, output }) {
+  const discord = (text) =>
+    postDiscordMessage(text).catch((e) =>
+      console.error(`[${ts()}] [discord] echec notification limite : ${e.message}`)
+    );
+
+  if (relaunch >= MAX_AUTO_RELAUNCHES) {
+    clearResumeState();
+    const msg = `🚨 Limite d'usage Claude toujours atteinte après ${MAX_AUTO_RELAUNCHES} relances automatiques consécutives (${label}). Abandon : relancer à la main (déplacer une carte ou bobine-logs pour le détail).`;
+    console.error(`[${ts()}] ${msg}`);
+    await discord(msg);
+    return;
+  }
+
+  const resetAt = parseResetTime(output);
+  const resumeAt = resetAt ? resetAt + RESUME_MARGIN_MS : Date.now() + RESUME_FALLBACK_MS;
+  const state = {
+    label,
+    prompt,
+    notify,
+    relaunch: relaunch + 1,
+    resetAt: resetAt ? new Date(resetAt).toISOString() : null,
+    resumeAt: new Date(resumeAt).toISOString(),
+  };
+  writeResumeState(state);
+  scheduleResume(state);
+
+  const resetText = resetAt
+    ? `reset à ${formatParis(resetAt)} (heure de Paris)`
+    : "heure de reset illisible";
+  const msg = `⏸️ Limite d'usage Claude atteinte (${label}) : ${resetText}. Relance automatique ${state.relaunch}/${MAX_AUTO_RELAUNCHES} prévue à ${formatParis(resumeAt)} ; les webhooks Trello/Sentry sont ignorés d'ici là.`;
+  console.log(`[${ts()}] ${msg}`);
+  await discord(msg);
 }
 
 const server = http.createServer((req, res) => {
@@ -290,6 +491,10 @@ const server = http.createServer((req, res) => {
         return;
       }
       if (isLocked()) {
+        return;
+      }
+      if (isWaitingForReset()) {
+        console.log(`[${ts()}] Relance apres limite d'usage programmee, webhook Trello ignore`);
         return;
       }
       triggerClaude(action);
@@ -332,6 +537,12 @@ const server = http.createServer((req, res) => {
         );
         return;
       }
+      if (isWaitingForReset()) {
+        console.log(
+          `[${ts()}] /sentry-webhook: relance apres limite d'usage programmee, alerte ignoree pour Claude (Discord seul)`
+        );
+        return;
+      }
       triggerClaudeForSentry(JSON.stringify(payload), issueLabel);
     });
   } else {
@@ -340,6 +551,17 @@ const server = http.createServer((req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`[${ts()}] Webhook listener Trello → Claude en ecoute sur :${PORT}`);
-});
+// Exporté pour les tests (node -e "require('./server.js')" ne démarre pas le serveur).
+module.exports = { parseResetTime, USAGE_LIMIT_RE };
+
+if (require.main === module) {
+  // Relance programmée avant un redémarrage/rebuild du listener : on la reprend.
+  const pending = readResumeState();
+  if (pending?.resumeAt && pending.prompt) {
+    scheduleResume(pending);
+  }
+
+  server.listen(PORT, () => {
+    console.log(`[${ts()}] Webhook listener Trello → Claude en ecoute sur :${PORT}`);
+  });
+}

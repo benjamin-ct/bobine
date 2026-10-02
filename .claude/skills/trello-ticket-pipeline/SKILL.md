@@ -162,7 +162,8 @@ précédente s'est arrêtée en cours de route) et continuer le développement (
    fois là-dedans. Format : `<type>/<description-courte-en-mots-clés>`, ex. `feature/watchlist-films`,
    `fix/filtre-plateformes-streaming`. Éviter les IDs/hash illisibles ; le numéro de ticket peut être ajouté en suffixe
    si utile (`feature/watchlist-films-42`), mais jamais en tête ou seul.
-2. Développer ce qui est demandé, commiter au fur et à mesure.
+2. Développer ce qui est demandé, commiter au fur et à mesure. Si la carte demande un modèle ou un effort précis
+   (voir « Modèle et effort par ticket »), cette étape — et elle seule — est déléguée à un `claude -p` dédié.
    - **Vérification visuelle** (tout changement d’interface) : le conteneur fournit
      `bobine-screenshot <url> <sortie.png> --both [--full] [--cookie bobine_session=<jeton>]`
      (Chromium headless, desktop 1440×900 + mobile iPhone 13), puis lire les PNG avec Read.
@@ -193,7 +194,7 @@ précédente s'est arrêtée en cours de route) et continuer le développement (
    3. Déplacer la carte vers `A valider`.
    4. Ajouter un commentaire sur la carte avec le lien de la preview (et le lien de la PR).
       **Toujours préfixer le commentaire par `🤖 [Claude]`** pour indiquer clairement qu'il s'agit d'un message
-      automatisé.
+      automatisé. Si le développement a été délégué, y indiquer le modèle et l'effort réellement utilisés.
 5. **Vérifier la fraîcheur des CGU / politique de confidentialité** (`src/modules/legal/`, routes
    `/conditions-utilisation` et `/confidentialite`) dès que le ticket traité change l'un des points suivants :
    - les données personnelles collectées (nouvelle table/colonne stockant des données utilisateur, nouveau champ de
@@ -227,6 +228,78 @@ liste :
 
 Si `To merge` et `A faire` sont vides, qu'aucune carte débloquée/renvoyée n'attend en `En cours`, et qu'il n'y a aucune
 carte de `En cours` sans label en traitement actif : l'exécution est terminée. Attendre la prochaine exécution.
+
+## Modèle et effort par ticket
+
+Par défaut, tout le ticket est développé dans la session courante (modèle `CLAUDE_MODEL` du listener, effort par
+défaut). Une carte peut demander autre chose :
+
+- **Étiquettes** (prioritaires, insensibles à la casse) : `model:sonnet` / `model:opus`, et
+  `effort:low|medium|high|xhigh|max`.
+- **Sinon, une ligne dans la description** : `Modèle: opus` (ou `Modele:`), `Effort: high`.
+- **Aucune des deux** : comportement inchangé, pas de délégation.
+- Une valeur inconnue (ex. `effort:extreme`) est ignorée et signalée dans le commentaire de fin de ticket.
+
+Si au moins un des deux paramètres est demandé, seul le développement (étape 2c.2) est délégué. La session courante
+garde tout le reste : branche (2c.1), lecture de la carte, PR, attente CI, preview, Trello, Discord.
+
+1. Se placer sur la branche du ticket (2c.1), puis écrire le prompt du développeur dans `/tmp/claude-dev-prompt.md`.
+   Ce prompt contient :
+   - le titre, la description, les checklists et un résumé fidèle des commentaires de la carte, y compris ce que
+     montrent les images ;
+   - la branche à utiliser ;
+   - les règles du dépôt : développer et commiter au fur et à mesure sur cette branche, valider dans un worktree
+     `/tmp` (typecheck, lint, build), et faire la vérification visuelle (2c.2) si l'interface change ;
+   - les interdits : ne pas pousser, ne pas ouvrir de PR, ne pas changer de branche, ne toucher ni Trello ni Discord ;
+   - la sortie attendue : finir par un compte rendu court (fait, vérifié, questions ouvertes). En cas de blocage, la
+     dernière ligne commence par `BLOCAGE:`.
+2. Lancer le développeur détaché, sa sortie dans un journal :
+   ```bash
+   setsid nohup claude -p "$(cat /tmp/claude-dev-prompt.md)" --model <sonnet|opus> --effort <niveau> \
+     --dangerously-skip-permissions --output-format stream-json --verbose \
+     > /tmp/claude-dev.log 2>&1 < /dev/null &
+   echo $! > /tmp/claude-dev.pid
+   ```
+   Omettre `--model` ou `--effort` s'il n'est pas demandé : le modèle par défaut est alors `$CLAUDE_MODEL`, et
+   l'effort celui par défaut du CLI.
+3. Surveiller toutes les 30 s (`kill -0 $(cat /tmp/claude-dev.pid)`, `tail` du journal), dans des appels Bash de
+   moins de 10 min mis bout à bout. C'est une attente active dans la même exécution, comme pour la CI : jamais de
+   sous-agent ni de notification.
+4. **Arrêt après 90 min** : `kill -TERM -- -<pid>` (tout le groupe de processus). Commiter l'éventuel travail
+   restant en `wip:`, puis traiter le ticket comme un blocage (2c.3) en expliquant où en est le développement.
+5. À la fin, lire le journal :
+   - modèle réellement utilisé : `jq -r 'select(.type=="system" and .subtype=="init") | .model'` ;
+   - compte rendu : `jq -r 'select(.type=="result") | .result'`.
+
+   Ensuite, selon le cas :
+   - **limite d'usage atteinte** : le journal contient « hit your … limit » → voir « Limite d'usage atteinte » ;
+   - **échec au démarrage**, sans aucun commit (ex. `result` avec `is_error: true` et « Failed to authenticate ») :
+     développer dans la session courante, et dire dans le commentaire et le Discord que la délégation a échoué
+     (erreur exacte, modèle réellement utilisé) ;
+   - **ligne `BLOCAGE:`** : appliquer 2c.3 ;
+   - **sinon** : relire le diff (`git log` / `git diff origin/main...`), refaire au besoin les contrôles, puis
+     reprendre à 2c.4 (PR, preview, carte en `A valider`).
+
+6. Indiquer le modèle (id complet lu dans le journal) et l'effort utilisés dans le commentaire de fin de ticket
+   (2c.4.4) et dans le résumé Discord.
+
+## Limite d'usage atteinte
+
+Quand le développeur délégué s'arrête sur la limite d'usage Claude, la limite vaut pour tout le compte : inutile de
+continuer le board dans cette exécution.
+
+1. Commiter tout le travail en cours sur la branche du ticket avec un message `wip: …`, sans le pousser. Au prochain
+   lancement, `bobine-claude-run` le signale dans la note « REPRISE ».
+2. Laisser la carte en `En cours`, sans label, et y poster un commentaire `🤖 [Claude]` : limite atteinte, heure de
+   reset lue dans le journal, état d'avancement, reprise automatique prévue.
+3. Envoyer le résumé Discord de fin d'exécution, préfixé ⏸️, avec l'heure de reset.
+4. Terminer la réponse finale par une ligne `USAGE_LIMIT_REACHED <texte de reset tel qu'affiché, ex. resets 5:10pm
+(UTC)>`, puis s'arrêter proprement.
+
+Le listener détecte ce marqueur, ou le message du CLI si c'est la session principale qui atteint la limite. Il
+programme alors une relance à l'heure de reset + 2 min (30 min si l'heure est illisible). Le prompt de la relance
+contient une note « RELANCE AUTOMATIQUE » : reprendre le ticket là où il s'est arrêté (règle d'or de reprise, commits
+`wip:`, note « REPRISE »), puis continuer le board normalement.
 
 ## Notes
 
@@ -273,6 +346,7 @@ Ce résumé doit être posté **même si** :
 - une erreur API a interrompu l'exécution (voir note ci-dessus sur les échecs Trello/GitHub).
 
 Contenu attendu : ce qui a été mergé, démarré, ou bloqué pendant l'exécution, avec les liens PR/preview disponibles ; le
+modèle et l'effort utilisés pour chaque ticket dont le développement a été délégué ; le
 résultat de la vérification post-merge (étape 1.6) pour chaque ticket mergé ; et si rien n'a bougé, une phrase explicite
 en ce sens plutôt qu'un silence. Exemples :
 
@@ -302,6 +376,7 @@ Si un check CI est `queued` ou `in_progress` :
    - terminer seulement après l'envoi confirmé de ce message Discord.
 
 Ne jamais utiliser de sous-agent, de tâche de fond, de callback asynchrone ou de mécanisme de notification pour attendre la CI.
+Le seul processus détaché autorisé est le développeur délégué de « Modèle et effort par ticket » : il développe, il n'attend jamais la CI, et la session courante le surveille activement jusqu'à sa fin.
 
 Avant de produire la réponse finale, exécuter obligatoirement cette checklist, dans cet ordre :
 
