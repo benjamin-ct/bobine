@@ -73,7 +73,9 @@ interface LibraryContextValue {
   watched: LibraryItem[];
   watchlist: LibraryItem[];
   watchedIds: Set<string>;
-  toggleWatched: (item: LibraryItemInput) => void;
+  /** `watchedAt` optionnel (ms epoch) : date réelle de visionnage si différente
+   * d'aujourd'hui — voir DetailPage, sélecteur de date de visionnage. */
+  toggleWatched: (item: LibraryItemInput, watchedAt?: number) => void;
   toggleWatchlist: (item: LibraryItemInput) => void;
   isWatched: (mediaType: MediaType, id: number | string) => boolean;
   isInWatchlist: (mediaType: MediaType, id: number | string) => boolean;
@@ -91,8 +93,9 @@ interface LibraryContextValue {
   toggleEpisodeWatched: (item: LibraryItemInput, season: number, episode: number) => void;
   /** Coche/décoche plusieurs épisodes d'un coup (saison entière, « Vu jusqu'ici »). */
   setEpisodesWatched: (item: LibraryItemInput, episodes: EpisodeRef[], watched: boolean) => void;
-  /** « Marquer la série comme vue » : passe la série en "vu" et coche `episodes`. */
-  markSeriesWatched: (item: LibraryItemInput, episodes: EpisodeRef[]) => void;
+  /** « Marquer la série comme vue » : passe la série en "vu" et coche `episodes`.
+   * `watchedAt` optionnel : voir `toggleWatched`. */
+  markSeriesWatched: (item: LibraryItemInput, episodes: EpisodeRef[], watchedAt?: number) => void;
   /** Glisser-déposer dans "Envie de voir" (tri manuel) — voir modules/my-list. */
   reorderWatchlist: (fromKey: string, toKey: string, insertAfter: boolean) => void;
   customLists: CustomList[];
@@ -698,7 +701,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       .catch((err) => logWarn("Seancy : actualisation des listes personnalisées impossible.", err));
   });
 
-  const toggleWatched = useCallback((item: LibraryItemInput) => {
+  const toggleWatched = useCallback((item: LibraryItemInput, watchedAt?: number) => {
     const key = makeKey(item.mediaType, item.id);
     setState((prev) => {
       const next = { ...prev, watched: { ...prev.watched } };
@@ -720,6 +723,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           ...item,
           addedAt: existing?.addedAt ?? Date.now(),
           updatedAt: Date.now(),
+          // Par défaut "vu aujourd'hui" (comportement inchangé) ; l'appelant peut
+          // préciser une date passée (cf. DetailPage, sélecteur de date de visionnage).
+          watchedAt: watchedAt ?? Date.now(),
         };
         next.watched[key] = newItem;
         // Un film vu n'a plus besoin d'être dans la liste à voir.
@@ -972,37 +978,41 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   // « Marquer la série comme vue » : comme toggleWatched (passage en "vu",
   // retrait de la liste à voir), en cochant en plus tous les épisodes
   // diffusés — la série disparaît ainsi aussi de « Séries en cours ».
-  const markSeriesWatched = useCallback((item: LibraryItemInput, episodes: EpisodeRef[]) => {
-    const key = makeKey(item.mediaType, item.id);
-    setState((prev) => {
-      const existing = prev.watched[key] || prev.watchlist[key];
-      const nextEpisodes = new Set(existing?.watchedEpisodes || []);
-      for (const { seasonNumber, episodeNumber } of episodes) {
-        nextEpisodes.add(makeEpisodeKey(seasonNumber, episodeNumber));
-      }
-      const newItem: LibraryItem = {
-        ...existing,
-        ...item,
-        watchedEpisodes: Array.from(nextEpisodes),
-        addedAt: existing?.addedAt ?? Date.now(),
-        updatedAt: Date.now(),
-      };
-      const next = { ...prev, watched: { ...prev.watched, [key]: newItem } };
-      if (next.watchlist[key]) {
-        next.watchlist = { ...next.watchlist };
-        delete next.watchlist[key];
-      }
-      pendingOpsRef.current.set(key, {
-        action: "upsert",
-        mediaType: item.mediaType,
-        id: item.id,
-        status: "watched",
-        item: newItem,
+  const markSeriesWatched = useCallback(
+    (item: LibraryItemInput, episodes: EpisodeRef[], watchedAt?: number) => {
+      const key = makeKey(item.mediaType, item.id);
+      setState((prev) => {
+        const existing = prev.watched[key] || prev.watchlist[key];
+        const nextEpisodes = new Set(existing?.watchedEpisodes || []);
+        for (const { seasonNumber, episodeNumber } of episodes) {
+          nextEpisodes.add(makeEpisodeKey(seasonNumber, episodeNumber));
+        }
+        const newItem: LibraryItem = {
+          ...existing,
+          ...item,
+          watchedEpisodes: Array.from(nextEpisodes),
+          addedAt: existing?.addedAt ?? Date.now(),
+          updatedAt: Date.now(),
+          watchedAt: watchedAt ?? Date.now(),
+        };
+        const next = { ...prev, watched: { ...prev.watched, [key]: newItem } };
+        if (next.watchlist[key]) {
+          next.watchlist = { ...next.watchlist };
+          delete next.watchlist[key];
+        }
+        pendingOpsRef.current.set(key, {
+          action: "upsert",
+          mediaType: item.mediaType,
+          id: item.id,
+          status: "watched",
+          item: newItem,
+        });
+        return next;
       });
-      return next;
-    });
-    setWatchlistOrder((prev) => prev.filter((k) => k !== key));
-  }, []);
+      setWatchlistOrder((prev) => prev.filter((k) => k !== key));
+    },
+    []
+  );
 
   // Glisser-déposer dans "Envie de voir" : déplace `fromKey` juste avant ou
   // après `toKey` dans l'ordre manuel affiché.

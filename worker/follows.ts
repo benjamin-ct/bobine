@@ -207,7 +207,10 @@ export async function getFeed(db: D1Database, userId: number): Promise<FeedEntry
        JOIN users ON users.id = follows.followed_id AND users.share_slug IS NOT NULL
        JOIN library_items ON library_items.user_id = users.id
        WHERE follows.follower_id = ?
-       ORDER BY library_items.updated_at DESC LIMIT ${FEED_LIMIT}`
+       ORDER BY CASE WHEN library_items.status = 'watched'
+                  THEN COALESCE(json_extract(library_items.data, '$.watchedAt'), library_items.updated_at)
+                  ELSE library_items.updated_at END DESC
+       LIMIT ${FEED_LIMIT}`
     )
     .bind(userId)
     .all<{
@@ -219,13 +222,21 @@ export async function getFeed(db: D1Database, userId: number): Promise<FeedEntry
     }>();
   return results.map((row) => {
     const { watchedEpisodes: _watchedEpisodes, ...item } = JSON.parse(row.data) as LibraryItem;
+    // Un titre "vu" daté dans le passé (voir LibraryContext, toggleWatched) doit
+    // apparaître comme tel dans le fil — pas comme "à l'instant" sous prétexte
+    // que c'est maintenant qu'il a été coché (cf. ticket "ne pas spammer mes
+    // contacts de récemment vu par").
+    const effectiveDate =
+      row.status === "watched" && typeof item.watchedAt === "number"
+        ? item.watchedAt
+        : row.updated_at;
     return {
       profile: { slug: row.share_slug, displayName: row.display_name },
       status: row.status,
       item: {
         ...item,
         title: typeof item.title === "string" ? decodeHtmlEntities(item.title) : item.title,
-        updatedAt: row.updated_at,
+        updatedAt: effectiveDate,
       },
     };
   });
@@ -272,7 +283,10 @@ export async function getTitleActivity(
          JOIN library_items ON library_items.user_id = users.id
            AND library_items.media_type = ? AND library_items.tmdb_id = ?
          WHERE follows.follower_id = ?
-         ORDER BY library_items.status = 'watched' DESC, library_items.updated_at DESC
+         ORDER BY library_items.status = 'watched' DESC,
+                  CASE WHEN library_items.status = 'watched'
+                    THEN COALESCE(json_extract(library_items.data, '$.watchedAt'), library_items.updated_at)
+                    ELSE library_items.updated_at END DESC
          LIMIT ${LIST_LIMIT}`
       )
       .bind(mediaType, tmdbId, userId)
@@ -287,12 +301,14 @@ export async function getTitleActivity(
   return {
     following: counts.following,
     entries: results.map((row) => {
-      const { rating, watchedEpisodes } = JSON.parse(row.data) as LibraryItem;
+      const { rating, watchedEpisodes, watchedAt } = JSON.parse(row.data) as LibraryItem;
+      const effectiveDate =
+        row.status === "watched" && typeof watchedAt === "number" ? watchedAt : row.updated_at;
       return {
         profile: { slug: row.share_slug, displayName: row.display_name },
         status: row.status,
         rating: row.status === "watched" && typeof rating === "number" ? rating : null,
-        updatedAt: row.updated_at,
+        updatedAt: effectiveDate,
         progress: row.status === "watchlist" ? lastWatchedEpisode(watchedEpisodes) : null,
       };
     }),

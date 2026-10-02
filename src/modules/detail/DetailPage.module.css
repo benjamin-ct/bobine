@@ -331,6 +331,29 @@
   flex: none;
 }
 
+/* Bouton "choisir une date de visionnage" : icône seule, carrée, à côté du
+   bouton "Vu". L'input date réel est invisible mais toujours dans le DOM
+   (nécessaire pour showPicker()) — pas imbriqué dans le <button> (un
+   <input> interactif dans un <button> est invalide en HTML). */
+.watchDateWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.watchDateBtn {
+  width: 40px;
+  padding: 0;
+}
+
+.watchDateInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Libellés tronqués (…) plutôt que débordant sur le bouton voisin quand la
    place manque (mobile). */
 .btnLabel {

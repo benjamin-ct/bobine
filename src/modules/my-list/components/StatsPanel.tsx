@@ -131,7 +131,9 @@ export default function StatsPanel({ watched }: { watched: LibraryItem[] }) {
 
   const yearCounts = new Map<string, number>();
   for (const item of watched) {
-    const year = new Date(item.addedAt).getFullYear().toString();
+    // watchedAt (date réelle de visionnage, choisie par l'utilisateur) prime sur
+    // addedAt (date d'ajout à la bibliothèque) quand elle est connue.
+    const year = new Date(item.watchedAt ?? item.addedAt).getFullYear().toString();
     yearCounts.set(year, (yearCounts.get(year) || 0) + 1);
   }
   const years = [...yearCounts.entries()]
