@@ -379,6 +379,30 @@ export function sanitizeIdList(rawIds: unknown): number[] {
   return [...out];
 }
 
+// Langues/pays favoris : mêmes limites qu'excluded_genre_prefs/
+// favorite_provider_prefs ci-dessus, pour des codes ISO (chaînes) plutôt que
+// des ids numériques TMDB. `pattern` distingue iso_639_1 ("fr", minuscules)
+// de iso_3166_1 ("FR", majuscules) — voir isValidRegionCode côté client pour
+// le même format de code pays.
+export function sanitizeIsoCodeList(rawCodes: unknown, pattern: RegExp): string[] {
+  if (!Array.isArray(rawCodes)) {
+    return [];
+  }
+  const out = new Set<string>();
+  for (const raw of rawCodes) {
+    if (out.size >= MAX_ID_LIST) {
+      break;
+    }
+    if (typeof raw === "string" && pattern.test(raw)) {
+      out.add(raw);
+    }
+  }
+  return [...out];
+}
+
+export const LANGUAGE_CODE_PATTERN = /^[a-z]{2}$/;
+export const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
+
 const MAX_CUSTOM_LISTS = 200; // large marge au-dessus d'un usage réel
 
 export interface CleanCustomList {

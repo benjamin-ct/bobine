@@ -11,6 +11,8 @@ import PublicProfileSettings from "./components/PublicProfileSettings.tsx";
 import CommunityPanel from "./components/CommunityPanel.tsx";
 import NotificationSettings from "./components/NotificationSettings.tsx";
 import FavoriteProvidersSettings from "./components/FavoriteProvidersSettings.tsx";
+import FavoriteLanguagesSettings from "./components/FavoriteLanguagesSettings.tsx";
+import FavoriteCountriesSettings from "./components/FavoriteCountriesSettings.tsx";
 import ExcludedGenresSettings from "./components/ExcludedGenresSettings.tsx";
 import ExcludedTitlesSettings from "./components/ExcludedTitlesSettings.tsx";
 import RegionSettings from "./components/RegionSettings.tsx";
@@ -107,6 +109,8 @@ export default function ProfilePage() {
               description={t("profile.recommendationsLead")}
             >
               <FavoriteProvidersSettings />
+              <FavoriteLanguagesSettings />
+              <FavoriteCountriesSettings />
               <ExcludedGenresSettings />
               <ExcludedTitlesSettings />
             </SettingsGroup>

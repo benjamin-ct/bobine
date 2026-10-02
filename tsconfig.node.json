@@ -35,6 +35,7 @@
     "worker/rate-limit-memory.ts",
     "worker/tmdb-proxy-policy.ts",
     "worker/tmdb-edge-cache.ts",
-    "worker/security-headers.ts"
+    "worker/security-headers.ts",
+    "worker/validate.ts"
   ]
 }

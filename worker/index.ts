@@ -30,6 +30,10 @@ import {
   replaceExcludedGenresForUser,
   getFavoriteProvidersForUser,
   replaceFavoriteProvidersForUser,
+  getFavoriteLanguagesForUser,
+  replaceFavoriteLanguagesForUser,
+  getFavoriteCountriesForUser,
+  replaceFavoriteCountriesForUser,
   getLocaleForUser,
   setLocaleForUser,
   getRegionForUser,
@@ -80,6 +84,9 @@ import {
   sanitizeCustomListsPayload,
   sanitizeDisplayName,
   sanitizeIdList,
+  sanitizeIsoCodeList,
+  LANGUAGE_CODE_PATTERN,
+  COUNTRY_CODE_PATTERN,
   sanitizeReminder,
 } from "./validate.ts";
 import { verifyRecaptcha } from "./recaptcha.ts";
@@ -622,18 +629,21 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
   }
 
   const { token, code } = await createMagicLink(env.DB, email);
-  const link = `${new URL(request.url).origin}/auth/verify?token=${token}`;
+  const requestUrl = new URL(request.url);
+  const link = `${requestUrl.origin}/auth/verify?token=${token}`;
 
   try {
     const { skipped } = await sendMagicLinkEmail(env, email, link, code, locale);
-    // Uniquement quand RESEND_API_KEY n'est pas configurée (dev local) : pas
-    // de vraie boîte mail à disposition, donc on renvoie le lien et le code
-    // directement pour pouvoir tester le flux. Ne se produit jamais en
-    // production.
+    // Sans RESEND_API_KEY (dev local) ou hors prod (previews PR incluses) :
+    // pas de vraie boîte mail de test à disposition, donc on renvoie le lien
+    // et le code directement pour pouvoir tester le flux de connexion.
+    // isProductionHostname ne peut jamais matcher un hostname de preview, ce
+    // qui garantit que ce cas ne se produit jamais en production.
+    const showDevCredentials = skipped || !isProductionHostname(requestUrl.hostname);
     return json({
       ok: true,
-      devLink: skipped ? link : undefined,
-      devCode: skipped ? code : undefined,
+      devLink: showDevCredentials ? link : undefined,
+      devCode: showDevCredentials ? code : undefined,
     });
   } catch (err) {
     // L'erreur brute d'un service tiers (Resend) ne doit jamais atteindre le
@@ -874,8 +884,9 @@ async function handleRequestEmailChange(request: Request, env: Env): Promise<Res
   try {
     const { skipped } = await sendEmailChangeCode(env, newEmail, code, locale);
     // Même logique que handleRequestLink : le code n'est renvoyé que sans
-    // RESEND_API_KEY (dev local), jamais en production.
-    return json({ ok: true, email: newEmail, devCode: skipped ? code : undefined });
+    // RESEND_API_KEY (dev local) ou hors prod (previews PR incluses).
+    const showDevCode = skipped || !isProductionHostname(new URL(request.url).hostname);
+    return json({ ok: true, email: newEmail, devCode: showDevCode ? code : undefined });
   } catch (err) {
     logError("Échec de l'envoi du code de changement d'adresse :", err);
     return json(
@@ -1595,6 +1606,74 @@ async function handlePutFavoriteProviders(request: Request, env: Env): Promise<R
   return json({ ok: true });
 }
 
+// Langues favorites synchronisées -----------------------------------------
+//
+// Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête.
+async function handleGetFavoriteLanguages(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const languageCodes = await getFavoriteLanguagesForUser(env.DB, user.id);
+  return json({ languageCodes });
+}
+
+async function handlePutFavoriteLanguages(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const languageCodes = sanitizeIsoCodeList(
+    (body as { languageCodes?: unknown })?.languageCodes,
+    LANGUAGE_CODE_PATTERN
+  );
+  const merge = (body as { merge?: unknown })?.merge === true;
+  await replaceFavoriteLanguagesForUser(env.DB, user.id, languageCodes, merge);
+  publishToUser(request, user.id, { type: "favorite-languages" });
+  return json({ ok: true });
+}
+
+// Pays favoris synchronisés -------------------------------------------------
+//
+// Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
+// uniquement du cookie de session, jamais du corps de la requête.
+async function handleGetFavoriteCountries(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const countryCodes = await getFavoriteCountriesForUser(env.DB, user.id);
+  return json({ countryCodes });
+}
+
+async function handlePutFavoriteCountries(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON invalide." }, 400);
+  }
+  const countryCodes = sanitizeIsoCodeList(
+    (body as { countryCodes?: unknown })?.countryCodes,
+    COUNTRY_CODE_PATTERN
+  );
+  const merge = (body as { merge?: unknown })?.merge === true;
+  await replaceFavoriteCountriesForUser(env.DB, user.id, countryCodes, merge);
+  publishToUser(request, user.id, { type: "favorite-countries" });
+  return json({ ok: true });
+}
+
 // Langue d'interface synchronisée par compte -------------------------------
 //
 // Même garde IDOR que les autres réglages de compte : user.id vient
@@ -2278,6 +2357,22 @@ async function routeRequest(
 
   if (url.pathname === "/api/favorite-providers" && request.method === "PUT") {
     return handlePutFavoriteProviders(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-languages" && request.method === "GET") {
+    return handleGetFavoriteLanguages(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-languages" && request.method === "PUT") {
+    return handlePutFavoriteLanguages(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-countries" && request.method === "GET") {
+    return handleGetFavoriteCountries(request, env);
+  }
+
+  if (url.pathname === "/api/favorite-countries" && request.method === "PUT") {
+    return handlePutFavoriteCountries(request, env);
   }
 
   if (url.pathname === "/api/locale" && request.method === "GET") {

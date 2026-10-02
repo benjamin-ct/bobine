@@ -22,6 +22,7 @@
     "verify:tmdb-concurrency-cap": "node scripts/verify-tmdb-concurrency-cap.ts",
     "verify:numeric-range-filter": "node scripts/verify-numeric-range-filter.ts",
     "verify:global-providers": "node scripts/verify-global-providers.ts",
+    "verify:favorite-iso-codes": "node scripts/verify-favorite-iso-codes.ts",
     "verify:bot-detection": "node scripts/verify-bot-detection.ts",
     "verify:bot-detection-client": "node scripts/verify-bot-detection-client.ts",
     "verify:rate-limit-memory": "node scripts/verify-rate-limit-memory.ts",
