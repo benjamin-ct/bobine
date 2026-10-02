@@ -14,7 +14,7 @@ WORKSPACE="${BOBINE_WORKSPACE:-/workspace}"
 STACK_REPO="${BOBINE_STACK_REPO:-/srv/bobine}"
 LOCK_FILE="${BOBINE_CLAUDE_LOCK:-/tmp/bobine-claude-run.lock}"
 CLAUDE_MODEL="${CLAUDE_MODEL:-claude-sonnet-5}"
-CLAUDE_EFFORT="${CLAUDE_EFFORT-medium}"
+CLAUDE_EFFORT="${CLAUDE_EFFORT:-medium}"
 TOKEN_FILE="${BOBINE_CLAUDE_TOKEN_FILE:-$HOME/.bobine-claude-token}"
 
 if [ $# -ne 1 ] || [ -z "$1" ]; then
@@ -101,11 +101,7 @@ fi
 # Pas d'`exec` et `9>&-` : le verrou reste tenu par ce script seul, pas par les processus que
 # Claude laisserait tourner (ex. un `wrangler dev` orphelin), qui le bloqueraient indéfiniment.
 status=0
-claude_args=(--model "$CLAUDE_MODEL")
-if [ -n "$CLAUDE_EFFORT" ]; then
-  claude_args+=(--effort "$CLAUDE_EFFORT")
-fi
-claude "${claude_args[@]}" -p "$prompt" \
+claude --model "$CLAUDE_MODEL" --effort "$CLAUDE_EFFORT" -p "$prompt" \
   --dangerously-skip-permissions \
   --allowedTools 'Bash(git *)' 'Bash(curl *)' Read Write \
   9>&- || status=$?

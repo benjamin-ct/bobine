@@ -8,7 +8,7 @@ const LOCK_FILE = "/tmp/claude-trello.lock";
 const TRELLO_API_KEY = process.env.TRELLO_API_KEY;
 const TRELLO_TOKEN = process.env.TRELLO_TOKEN;
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5";
-const CLAUDE_EFFORT = process.env.CLAUDE_EFFORT ?? "medium";
+const CLAUDE_EFFORT = process.env.CLAUDE_EFFORT || "medium";
 // Code de sortie de bobine-claude-run quand une exécution tourne déjà dans bobine-repo.
 const EXIT_BUSY = 75;
 
