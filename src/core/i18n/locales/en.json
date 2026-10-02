@@ -441,6 +441,7 @@
     "seriesCount_other": "{{count}} series",
     "watchTime": "Watch time",
     "hours": "hours",
+    "hoursShort": "h",
     "daysUnit": "days",
     "episodesCount_one": "{{count}} series episode",
     "episodesCount_other": "{{count}} series episodes",
@@ -450,8 +451,12 @@
     "ratedCount_other": "out of {{count}} rated titles",
     "watchedByYear": "Watched by year",
     "noDataYet": "No data yet.",
-    "topGenres": "Favorite genres",
+    "topGenres": "Favorite genres (watch time)",
     "noGenreYet": "No genre yet.",
+    "titlesCount_one": "{{count}} title",
+    "titlesCount_other": "{{count}} titles",
+    "watchTimeByDecade": "Watch time by decade",
+    "decadeLabel": "{{decade}}s",
     "recentlyWatched": "Recently watched"
   },
   "customListPanel": {
