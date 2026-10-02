@@ -629,18 +629,21 @@ async function handleRequestLink(request: Request, env: Env): Promise<Response> 
   }
 
   const { token, code } = await createMagicLink(env.DB, email);
-  const link = `${new URL(request.url).origin}/auth/verify?token=${token}`;
+  const requestUrl = new URL(request.url);
+  const link = `${requestUrl.origin}/auth/verify?token=${token}`;
 
   try {
     const { skipped } = await sendMagicLinkEmail(env, email, link, code, locale);
-    // Uniquement quand RESEND_API_KEY n'est pas configurée (dev local) : pas
-    // de vraie boîte mail à disposition, donc on renvoie le lien et le code
-    // directement pour pouvoir tester le flux. Ne se produit jamais en
-    // production.
+    // Sans RESEND_API_KEY (dev local) ou hors prod (previews PR incluses) :
+    // pas de vraie boîte mail de test à disposition, donc on renvoie le lien
+    // et le code directement pour pouvoir tester le flux de connexion.
+    // isProductionHostname ne peut jamais matcher un hostname de preview, ce
+    // qui garantit que ce cas ne se produit jamais en production.
+    const showDevCredentials = skipped || !isProductionHostname(requestUrl.hostname);
     return json({
       ok: true,
-      devLink: skipped ? link : undefined,
-      devCode: skipped ? code : undefined,
+      devLink: showDevCredentials ? link : undefined,
+      devCode: showDevCredentials ? code : undefined,
     });
   } catch (err) {
     // L'erreur brute d'un service tiers (Resend) ne doit jamais atteindre le
@@ -881,8 +884,9 @@ async function handleRequestEmailChange(request: Request, env: Env): Promise<Res
   try {
     const { skipped } = await sendEmailChangeCode(env, newEmail, code, locale);
     // Même logique que handleRequestLink : le code n'est renvoyé que sans
-    // RESEND_API_KEY (dev local), jamais en production.
-    return json({ ok: true, email: newEmail, devCode: skipped ? code : undefined });
+    // RESEND_API_KEY (dev local) ou hors prod (previews PR incluses).
+    const showDevCode = skipped || !isProductionHostname(new URL(request.url).hostname);
+    return json({ ok: true, email: newEmail, devCode: showDevCode ? code : undefined });
   } catch (err) {
     logError("Échec de l'envoi du code de changement d'adresse :", err);
     return json(
