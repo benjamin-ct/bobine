@@ -255,14 +255,17 @@ garde tout le reste : branche (2c.1), lecture de la carte, PR, attente CI, previ
      dernière ligne commence par `BLOCAGE:`.
 2. Lancer le développeur détaché, sa sortie dans un journal :
    ```bash
-   setsid nohup claude -p "$(cat /tmp/claude-dev-prompt.md)" --model <sonnet|opus> --effort <niveau> \
+   setsid nohup bobine-claude-dev -p "$(cat /tmp/claude-dev-prompt.md)" --model <sonnet|opus> --effort <niveau> \
      --dangerously-skip-permissions --output-format stream-json --verbose \
      > /tmp/claude-dev.log 2>&1 < /dev/null &
    echo $! > /tmp/claude-dev.pid
    ```
    Omettre `--model` ou `--effort` s'il n'est pas demandé : le modèle par défaut est alors `$CLAUDE_MODEL`, et
-   l'effort celui par défaut du CLI.
-3. Surveiller toutes les 30 s (`kill -0 $(cat /tmp/claude-dev.pid)`, `tail` du journal), dans des appels Bash de
+   l'effort celui par défaut du CLI. Toujours passer par `bobine-claude-dev`, jamais `claude` directement : Claude
+   Code retire `CLAUDE_CODE_OAUTH_TOKEN` de l'environnement de ses commandes, et le wrapper le relit dans le fichier
+   écrit par `bobine-claude-run` (sinon « OAuth session expired »). Code de sortie 78 si ce fichier manque.
+3. Surveiller toutes les 30 s (`ps -o stat= -p $(cat /tmp/claude-dev.pid)` : terminé si vide ou `Z`, car `kill -0`
+   reste vrai sur un zombie ; ou dès qu'une ligne `result` apparaît ; `tail` du journal), dans des appels Bash de
    moins de 10 min mis bout à bout. C'est une attente active dans la même exécution, comme pour la CI : jamais de
    sous-agent ni de notification.
 4. **Arrêt après 90 min** : `kill -TERM -- -<pid>` (tout le groupe de processus). Commiter l'éventuel travail
