@@ -45,6 +45,7 @@ import {
 } from "./db.ts";
 import { notifyUser } from "./notify.ts";
 import { runDailyCheck } from "./scheduled.ts";
+import { searchLocalIndex, syncPopularTitles } from "./search-index.ts";
 import { sendPush, ExpiredSubscriptionError } from "./push.ts";
 import {
   isValidEmail,
@@ -229,6 +230,9 @@ async function cachedStaticJson(
   ctx.waitUntil(cache.put(cacheKey, response.clone()));
   return response;
 }
+
+// Doit rester identique à la seconde entrée de "crons" dans wrangler.jsonc.
+const SEARCH_INDEX_SYNC_CRON = "30 7 * * *";
 
 const RATE_LIMIT_RESPONSE = (): Response =>
   json({ error: "Trop de requêtes. Réessayez dans quelques minutes." }, 429);
@@ -531,6 +535,36 @@ async function handleManualRun(request: Request, env: Env): Promise<Response> {
   }
   await runDailyCheck(env);
   return json({ ok: true });
+}
+
+// Déclenche la synchro de l'index local de recherche (voir search-index.ts)
+// sans attendre le prochain passage du cron dédié. Même protection que
+// /api/run-check.
+async function handleManualSyncSearchIndex(request: Request, env: Env): Promise<Response> {
+  const expected = env.DEBUG_TRIGGER_KEY;
+  if (!expected || request.headers.get("x-debug-key") !== expected) {
+    return json({ error: "Non autorisé." }, 401);
+  }
+  await syncPopularTitles(env);
+  return json({ ok: true });
+}
+
+// Filtre "commence par" sur l'index local des titres populaires (voir
+// search-index.ts) : complète searchMultiRanked côté client pour les
+// requêtes courtes, que TMDB ne fait pas remonter par préfixe. Rate-limité
+// comme le proxy TMDB (même raison : endpoint public, pas d'auth).
+async function handleSearchIndex(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const q = (url.searchParams.get("q") || "").trim();
+  if (!q) {
+    return json({ results: [] });
+  }
+  const ip = getClientIp(request);
+  if (!checkRateLimitInMemory(`search-index:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+    return json({ error: "Trop de requêtes." }, 429);
+  }
+  const results = await searchLocalIndex(env, q);
+  return json({ results });
 }
 
 // Déclenche un envoi de test vers Sentry, pour vérifier la chaîne de
@@ -2116,7 +2150,15 @@ export default withSentry({
     }
   },
 
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  // Deux expressions cron (voir wrangler.jsonc), distinguées par event.cron :
+  // la sync de l'index de recherche (search-index.ts) tourne dans sa propre
+  // invocation plutôt que dans celle de runDailyCheck, pour ne pas partager
+  // son budget de sous-requêtes TMDB avec les notifications quotidiennes.
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (event.cron === SEARCH_INDEX_SYNC_CRON) {
+      ctx.waitUntil(syncPopularTitles(env));
+      return;
+    }
     ctx.waitUntil(runDailyCheck(env));
   },
 });
@@ -2198,6 +2240,14 @@ async function routeRequest(
 
   if (url.pathname === "/api/run-check" && request.method === "POST") {
     return handleManualRun(request, env);
+  }
+
+  if (url.pathname === "/api/search-index" && request.method === "GET") {
+    return handleSearchIndex(request, env);
+  }
+
+  if (url.pathname === "/api/sync-search-index" && request.method === "POST") {
+    return handleManualSyncSearchIndex(request, env);
   }
 
   if (url.pathname === "/api/test-error" && request.method === "POST") {

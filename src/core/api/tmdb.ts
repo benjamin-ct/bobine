@@ -277,6 +277,67 @@ export function searchMulti(
   });
 }
 
+// TMDB classe chaque page de /search/multi par pertinence texte, pas par
+// popularité : pour une requête courte ("Bat"), un titre bien plus populaire
+// ("Batman") peut se retrouver au-delà de la page 1 et donc hors du tri par
+// popularité fait côté client, qui ne reclasse que ce que TMDB a renvoyé.
+// On agrège plusieurs pages avant de trier pour éviter de le manquer.
+const SEARCH_MULTI_PAGES_TO_MERGE = 3;
+
+// En dessous de ce nombre de caractères, agréger plus de pages ne suffit
+// plus : TMDB ne fait pas de recherche par préfixe sur les requêtes courtes
+// et peut ne renvoyer un titre pourtant très populaire dans AUCUNE page
+// (vérifié pour "Bat" → jamais "Batman", même en page 500 de /search/multi,
+// /search/movie et /search/tv — carte Trello "Ajuster les recherches"). On
+// complète avec l'index local des titres populaires, synchronisé
+// quotidiennement depuis TMDB (voir worker/search-index.ts).
+const SHORT_QUERY_LOCAL_INDEX_THRESHOLD = 3;
+
+async function searchLocalIndex(query: string): Promise<SearchMultiResult[]> {
+  try {
+    const res = await fetch(`/api/search-index?q=${encodeURIComponent(query)}`);
+    if (!res.ok) {
+      return [];
+    }
+    const data = (await res.json()) as { results?: SearchMultiResult[] };
+    return data.results || [];
+  } catch {
+    // Best effort : l'index local n'est qu'un complément, les résultats TMDB
+    // seuls restent utilisables si cet appel échoue.
+    return [];
+  }
+}
+
+export async function searchMultiRanked(
+  query: string,
+  region: string = DEFAULT_REGION
+): Promise<SearchMultiResult[]> {
+  const trimmed = query.trim();
+  const [first, localMatches] = await Promise.all([
+    searchMulti(query, 1, region),
+    trimmed.length > 0 && trimmed.length <= SHORT_QUERY_LOCAL_INDEX_THRESHOLD
+      ? searchLocalIndex(trimmed)
+      : Promise.resolve<SearchMultiResult[]>([]),
+  ]);
+  const pagesToFetch = Math.min(SEARCH_MULTI_PAGES_TO_MERGE, first.total_pages);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pagesToFetch - 1) }, (_, i) =>
+      searchMulti(query, i + 2, region)
+    )
+  );
+  const merged = [first, ...rest].flatMap((p) => p.results || []).concat(localMatches);
+  const seen = new Set<string>();
+  const deduped = merged.filter((item) => {
+    const key = `${item.media_type}:${item.id}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+  return deduped.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
+}
+
 // Personnes (acteurs, réalisateurs) --------------------------------------
 
 export function searchPerson(query: string, page = 1) {

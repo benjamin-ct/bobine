@@ -1,7 +1,7 @@
 import { NavLink, Link, matchPath, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { searchMulti, posterUrl } from "../../../core/api/tmdb.ts";
+import { searchMultiRanked, posterUrl } from "../../../core/api/tmdb.ts";
 import { useAuth } from "../../../core/context/AuthContext.tsx";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { setMediaPreview } from "../../lib/mediaPreviewCache.ts";
@@ -219,12 +219,12 @@ export default function NavBar() {
     // elle écraserait les bons résultats ou rouvrirait la liste.
     let cancelled = false;
     const timeoutId = setTimeout(() => {
-      searchMulti(trimmed, 1, region)
-        .then((data) => {
+      searchMultiRanked(trimmed, region)
+        .then((results) => {
           if (cancelled) {
             return;
           }
-          const filtered = (data.results || [])
+          const filtered = results
             .filter(
               (item) =>
                 item.media_type === "movie" ||

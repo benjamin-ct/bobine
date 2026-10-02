@@ -81,9 +81,13 @@
   // (`env.ANALYTICS?.writeDataPoint`), donc aucun autre changement de code
   // n'est nécessaire pour activer le tracking une fois ce préalable fait.
   //
-  // Une fois par jour à 7h UTC : vérifie les nouveautés et envoie les
-  // notifications push (voir worker/scheduled.ts).
+  // Deux passages quotidiens, dispatchés par event.cron dans le handler
+  // scheduled() de worker/index.ts : 7h UTC vérifie les nouveautés et envoie
+  // les notifications push (voir worker/scheduled.ts) ; 7h30 UTC resynchronise
+  // l'index local des titres populaires utilisé par la recherche (voir
+  // worker/search-index.ts). Décalé de 30 min pour ne pas partager son
+  // budget de sous-requêtes TMDB avec le premier.
   "triggers": {
-    "crons": ["0 7 * * *"]
+    "crons": ["0 7 * * *", "30 7 * * *"]
   }
 }
