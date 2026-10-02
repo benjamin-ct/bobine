@@ -231,6 +231,7 @@ export default function NavBar() {
                 item.media_type === "tv" ||
                 item.media_type === "person"
             )
+            .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
             .slice(0, MAX_LIVE_RESULTS);
           setResults(filtered);
           setStatus("success");

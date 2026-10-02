@@ -40,7 +40,9 @@ export default function SearchPage() {
         if (cancelled) {
           return;
         }
-        const results: SearchMultiResult[] = data.results || [];
+        const results: SearchMultiResult[] = (data.results || []).sort(
+          (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)
+        );
         setTitles(
           results
             .filter((item) => item.media_type === "movie" || item.media_type === "tv")
