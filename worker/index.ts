@@ -9,6 +9,7 @@ import {
   getSubscriptionIdByEndpoint,
   getAllSubscriptions,
   getLibraryForUser,
+  getWatchedKeys,
   replaceLibraryForUser,
   applyLibraryChanges,
   getCustomListsForUser,
@@ -712,6 +713,26 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
   if (!token && !code) {
     return json({ error: "Jeton ou code manquant." }, 400);
   }
+  // Code court : lié à l'adresse qui l'a demandé, avec une limite de
+  // tentatives par adresse en plus de celle par IP, qu'un bruteforce
+  // distribué contourne (audit M2). Le jeton du lien (256 bits) n'en a pas
+  // besoin.
+  const codeEmail = String(body.email || "")
+    .trim()
+    .toLowerCase();
+  if (!token) {
+    if (!isValidEmail(codeEmail)) {
+      return json({ error: "Adresse email invalide." }, 400);
+    }
+    if (
+      !(await checkRateLimit(env.DB, `verify:email:${codeEmail}`, {
+        limit: 10,
+        windowMs: 15 * 60_000,
+      }))
+    ) {
+      return RATE_LIMIT_RESPONSE();
+    }
+  }
 
   const recaptcha = await verifyRecaptcha(env, optionalString(body.recaptchaToken), "verify");
   if (!recaptcha.ok) {
@@ -720,7 +741,7 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
 
   const email = token
     ? await consumeMagicLink(env.DB, token)
-    : await consumeMagicLinkByCode(env.DB, code);
+    : await consumeMagicLinkByCode(env.DB, codeEmail, code);
   if (!email) {
     return json(
       {
@@ -1088,8 +1109,9 @@ async function handlePutTopPicks(request: Request, env: Env): Promise<Response> 
   const keys = [
     ...new Set(sanitizeKeyList(body.topPicks, TOP_PICKS_MAX).map((k) => `${k.mediaType}:${k.id}`)),
   ];
-  const library = await getLibraryForUser(env.DB, user.id);
-  const topPicks = keys.filter((key) => library.watched[key]);
+  // Seules les clés proposées sont vérifiées, pas toute la bibliothèque (audit M6).
+  const watched = await getWatchedKeys(env.DB, user.id, keys);
+  const topPicks = keys.filter((key) => watched.has(key));
   await setTopPicks(env.DB, user.id, topPicks);
   return json({ ok: true, topPicks });
 }

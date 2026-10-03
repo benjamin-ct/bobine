@@ -45,6 +45,7 @@ export interface CleanLibraryItem {
   genreIds: number[];
   addedAt: number;
   updatedAt: number;
+  watchedAt?: number;
   rating?: number;
   runtimeMinutes?: number;
   watchedEpisodes: string[];
@@ -139,6 +140,12 @@ function sanitizeItem(mediaType: string, tmdbId: unknown, raw: unknown): CleanLi
     : [];
   const addedAt = cleanNumber(r.addedAt) ?? Date.now();
   const updatedAt = cleanNumber(r.updatedAt) ?? addedAt;
+  // Date de visionnage choisie par l'utilisateur (peut être passée) — distincte
+  // d'updatedAt (date de l'action de cocher, toujours "maintenant"). Clampée pour
+  // qu'un client malveillant ne puisse pas injecter une date future lointaine.
+  const rawWatchedAt = cleanNumber(r.watchedAt);
+  const watchedAt =
+    rawWatchedAt === null ? undefined : Math.min(rawWatchedAt, Date.now() + 86400000);
   const rating =
     r.rating == null ? undefined : Math.min(10, Math.max(0, cleanNumber(r.rating) ?? 0));
   const runtimeMinutes =
@@ -172,6 +179,7 @@ function sanitizeItem(mediaType: string, tmdbId: unknown, raw: unknown): CleanLi
     genreIds,
     addedAt,
     updatedAt,
+    watchedAt,
     rating,
     runtimeMinutes,
     watchedEpisodes,
