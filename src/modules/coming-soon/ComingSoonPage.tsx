@@ -353,11 +353,20 @@ export default function ComingSoonPage() {
     if (loadingMore) {
       return;
     }
-    if (revealCount < allResults.length) {
+    // Tant qu'il reste plus d'un lot de réserve non révélé, se contenter de révéler :
+    // le lot suivant n'est fetché qu'une fois cette réserve entamée, pour que le tri
+    // par date du nouveau lot puisse encore se fusionner avec la portion pas encore
+    // affichée (tailToMerge, ci-dessous) avant qu'elle ne devienne visible à l'écran —
+    // sinon un titre du nouveau lot daté avant la fin du lot déjà figé (frozenHead)
+    // atterrit après lui au lieu de sa place chronologique (cause du ticket).
+    if (allResults.length - revealCount > REVEAL_SIZE) {
       setRevealCount((c) => Math.min(c + REVEAL_SIZE, allResults.length));
       return;
     }
     if (fetchedPages >= tmdbTotalPages) {
+      if (revealCount < allResults.length) {
+        setRevealCount((c) => Math.min(c + REVEAL_SIZE, allResults.length));
+      }
       return;
     }
     setLoadingMore(true);
