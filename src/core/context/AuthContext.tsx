@@ -75,6 +75,11 @@ interface AuthContextValue {
   // Remplace ou supprime la photo de profil personnelle.
   uploadAvatar: (image: Blob) => Promise<void>;
   removeAvatar: () => Promise<void>;
+  // Suppression définitive du compte et de toutes ses données (audit M14,
+  // ticket RGPD). La confirmation forte (saisie de l'adresse e-mail) se
+  // fait côté appelant (voir AccountSettings) ; cet appel exécute la
+  // suppression sans autre garde que la session déjà ouverte.
+  deleteAccount: () => Promise<void>;
 }
 
 export interface UsernameCheck {
@@ -424,6 +429,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [t]
   );
 
+  // Si l'appel échoue, rien n'est effacé : l'erreur remonte au bouton, comme
+  // logoutAll ci-dessus.
+  const deleteAccount = useCallback(async () => {
+    const res = await fetch("/api/account", { method: "DELETE", headers: syncClientHeaders() });
+    if (!res.ok) {
+      throw new Error(t("accountCard.deleteAccountError"));
+    }
+    pinnedRef.current = false;
+    leaveAccount();
+  }, [t]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -446,6 +462,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         checkUsername,
         uploadAvatar,
         removeAvatar,
+        deleteAccount,
       }}
     >
       {children}
