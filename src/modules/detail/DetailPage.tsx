@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
@@ -387,7 +387,9 @@ export default function DetailPage() {
 
   // « Marquer la série comme vue » coche tous les épisodes diffusés (listes
   // chargées saison par saison) ; « Série vue » la retire comme un film.
-  async function toggleSeriesWatched() {
+  // `watchedAt` optionnel : date de visionnage choisie via le sélecteur de
+  // date plutôt que "maintenant" (voir le bouton calendrier dans .actions).
+  async function toggleSeriesWatched(watchedAt?: number) {
     if (watched || !details?.seasons) {
       toggleWatched(libItem);
       return;
@@ -397,9 +399,31 @@ export default function DetailPage() {
     }
     setMarkingSeries(true);
     try {
-      markSeriesWatched(libItem, await airedEpisodesUpTo(details.seasons, loadSeason));
+      markSeriesWatched(libItem, await airedEpisodesUpTo(details.seasons, loadSeason), watchedAt);
     } finally {
       setMarkingSeries(false);
+    }
+  }
+
+  // Déclenché par le sélecteur de date natif (bouton calendrier à côté de
+  // "Vu") : marque directement le titre comme vu à la date choisie, plutôt
+  // que de nécessiter un clic "Vu" séparé puis un changement de date.
+  function handleWatchDateChange(e: ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value;
+    // Repart d'un champ vide : permet de resélectionner la même date plus
+    // tard (un <input type="date"> ne redéclenche pas onChange sinon).
+    e.target.value = "";
+    if (!value) {
+      return;
+    }
+    const watchedAt = new Date(`${value}T12:00:00`).getTime();
+    if (Number.isNaN(watchedAt) || watchedAt > Date.now()) {
+      return;
+    }
+    if (mediaType === "tv") {
+      toggleSeriesWatched(watchedAt);
+    } else {
+      toggleWatched(libItem, watchedAt);
     }
   }
 
@@ -641,6 +665,22 @@ export default function DetailPage() {
                       : t("detailPage.watchedOff")}
                 </span>
               </button>
+              {!watched && (
+                <span className={styles.watchDateWrap}>
+                  <span className={`${styles.actionBtn} ${styles.watchDateBtn}`} aria-hidden="true">
+                    <Icon name="calendar" />
+                  </span>
+                  <input
+                    type="date"
+                    className={styles.watchDateInput}
+                    max={new Date().toISOString().slice(0, 10)}
+                    aria-label={t("detailPage.watchDateAriaLabel")}
+                    title={t("detailPage.watchDateAriaLabel")}
+                    disabled={markingSeries}
+                    onChange={handleWatchDateChange}
+                  />
+                </span>
+              )}
               <Dropdown
                 label={
                   <>

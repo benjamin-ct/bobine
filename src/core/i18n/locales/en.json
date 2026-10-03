@@ -772,6 +772,8 @@
     "noOverview": "No synopsis available.",
     "watchedOn": "Watched",
     "watchedOff": "Mark as watched",
+    "watchDateAriaLabel": "Choose a watch date",
+    "watchDateFutureError": "The watch date can't be in the future.",
     "wantToWatchOn": "In your watchlist",
     "wantToWatchOff": "Want to watch",
     "addToListHeading": "Add to a list",
@@ -916,7 +918,8 @@
     "unmarkEpisode": "Remove {{episode}} from watched episodes",
     "watchedUpToHere": "Watched up to here",
     "markSeason": "Mark season {{number}} as watched",
-    "unmarkSeason": "Unmark season"
+    "unmarkSeason": "Unmark season",
+    "watchDateAriaLabel": "Choose a watch date for season {{number}}"
   },
   "profileShare": {
     "title": "Public link",
