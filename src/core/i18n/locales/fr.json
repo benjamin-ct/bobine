@@ -441,6 +441,7 @@
     "seriesCount_other": "{{count}} séries",
     "watchTime": "Temps de visionnage",
     "hours": "heures",
+    "hoursShort": "h",
     "daysUnit": "jours",
     "episodesCount_one": "{{count}} épisode de série",
     "episodesCount_other": "{{count}} épisodes de série",
@@ -450,8 +451,12 @@
     "ratedCount_other": "sur {{count}} titres notés",
     "watchedByYear": "Vus par année",
     "noDataYet": "Aucune donnée pour l'instant.",
-    "topGenres": "Genres préférés",
+    "topGenres": "Genres préférés (temps de visionnage)",
     "noGenreYet": "Aucun genre pour l'instant.",
+    "titlesCount_one": "{{count}} titre",
+    "titlesCount_other": "{{count}} titres",
+    "watchTimeByDecade": "Temps de visionnage par décennie",
+    "decadeLabel": "Années {{decade}}",
     "recentlyWatched": "Vus récemment"
   },
   "customListPanel": {
