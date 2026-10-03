@@ -33,6 +33,7 @@ import WhereToWatch from "./components/WhereToWatch.tsx";
 import FollowingActivity from "./components/FollowingActivity.tsx";
 import { airedEpisodesUpTo, useSeasonEpisodes } from "./useSeasonEpisodes.ts";
 import { useLibrary } from "../../core/context/LibraryContext.tsx";
+import { useReminders } from "../../core/context/RemindersContext.tsx";
 import { regionName as countryDisplayName, useRegion } from "../../core/context/RegionContext.tsx";
 import { useLocale } from "../../core/context/LocaleContext.tsx";
 import { useExcludedGenres } from "../../core/context/ExcludedGenresContext.tsx";
@@ -155,6 +156,7 @@ export default function DetailPage() {
     removeFromList,
     createList,
   } = useLibrary();
+  const { hasReminder, toggleReminder } = useReminders();
   const { region, regionName } = useRegion();
   const { locale } = useLocale();
   const { excludedGenreIds } = useExcludedGenres();
@@ -281,6 +283,9 @@ export default function DetailPage() {
   const watched = isWatched(mediaType, id);
   const inWatchlist = isInWatchlist(mediaType, id);
   const excluded = isExcludedTitle(mediaType, id);
+  const notifying = hasReminder(mediaType, Number(id));
+  // Pas de sens de proposer un rappel de sortie pour un titre déjà sorti.
+  const isUpcoming = Boolean(date && new Date(date) > new Date());
   const accentKey = posterAccentFromGenres(
     details.genres?.map((g) => g.id),
     `${mediaType}:${id}`
@@ -622,6 +627,20 @@ export default function DetailPage() {
             <p className={styles.overview}>{details.overview || t("detailPage.noOverview")}</p>
 
             <div className={styles.actions}>
+              {isUpcoming && (
+                <button
+                  type="button"
+                  className={`${styles.actionBtn} ${notifying ? styles.wantOn : ""}`}
+                  onClick={() => toggleReminder(libItem)}
+                  aria-pressed={notifying}
+                  title={t("detailPage.notifyTitle")}
+                >
+                  <Icon name="bell" />
+                  <span className={styles.btnLabel}>
+                    {notifying ? t("detailPage.notified") : t("detailPage.notifyMe")}
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 className={`${styles.actionBtn} ${inWatchlist ? styles.wantOn : ""}`}
