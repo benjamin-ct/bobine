@@ -42,6 +42,8 @@ import {
   updateSubscriptionLocale,
   linkSubscriptionToAccount,
   getSubscriptionsForUser,
+  deleteUserAccount,
+  exportUserAccountData,
   type SubscriptionAccount,
 } from "./db.ts";
 import { notifyUser } from "./notify.ts";
@@ -1425,6 +1427,49 @@ async function handleLogoutAll(request: Request, env: Env): Promise<Response> {
   });
 }
 
+// Suppression de compte en libre-service (audit M14) : confirmation forte
+// déjà faite côté client (saisie de l'adresse e-mail dans AccountSettings),
+// ce endpoint ne la revérifie pas — la seule preuve d'identité qui compte
+// ici est la session (cookie httpOnly), comme pour tout autre endpoint
+// authentifié de ce fichier. Supprime toutes les tables liées en un seul
+// batch atomique (voir deleteUserAccount), puis ferme les WebSockets du
+// compte et efface le cookie de session, exactement comme une déconnexion.
+async function handleDeleteAccount(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  await deleteUserAccount(env.DB, user.id);
+  await revokeUserSockets(request, user.id, "all");
+  return json({ ok: true }, 200, {
+    "set-cookie": sessionCookieHeaders(request, null),
+  });
+}
+
+// Export de compte en libre-service (audit M14, droit à la portabilité) :
+// un seul fichier JSON téléchargeable regroupant toutes les données
+// connues du compte. `content-disposition: attachment` déclenche le
+// téléchargement direct depuis un clic de lien côté client (pas besoin de
+// passer par un Blob/URL.createObjectURL).
+async function handleExportAccount(request: Request, env: Env): Promise<Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  const data = await exportUserAccountData(env.DB, user.id);
+  if (!data) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  return new Response(JSON.stringify(data, null, 2), {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": 'attachment; filename="seancy-export.json"',
+      "cache-control": "no-store",
+    },
+  });
+}
+
 // Bibliothèque synchronisée ------------------------------------------------
 //
 // Isolation entre comptes (IDOR) : `user.id` vient UNIQUEMENT de
@@ -2298,6 +2343,14 @@ async function routeRequest(
 
   if (url.pathname === "/api/auth/logout-all" && request.method === "POST") {
     return handleLogoutAll(request, env);
+  }
+
+  if (url.pathname === "/api/account" && request.method === "DELETE") {
+    return handleDeleteAccount(request, env);
+  }
+
+  if (url.pathname === "/api/account/export" && request.method === "GET") {
+    return handleExportAccount(request, env);
   }
 
   if (url.pathname === "/api/account/display-name" && request.method === "PATCH") {

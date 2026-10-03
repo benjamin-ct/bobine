@@ -391,6 +391,22 @@
   font-size: 14px;
 }
 
+.confirm input {
+  width: 100%;
+  height: 44px;
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  padding: 0 14px;
+  color: var(--fg);
+  font-size: 15px;
+}
+
+.confirm input:focus-visible {
+  outline: none;
+  border-color: var(--control);
+}
+
 .linkField {
   display: flex;
   align-items: center;

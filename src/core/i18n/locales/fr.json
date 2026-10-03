@@ -243,7 +243,19 @@
     "avatarCropPreview": "Aperçu du recadrage. Flèches pour déplacer, + et − pour zoomer.",
     "avatarCropZoom": "Zoom",
     "avatarCropCancel": "Annuler",
-    "avatarCropConfirm": "Valider"
+    "avatarCropConfirm": "Valider",
+    "exportData": "Exporter mes données",
+    "exportDataHint": "Téléchargez une copie de toutes les données de votre compte au format JSON (droit à la portabilité).",
+    "exportDataButton": "Télécharger mes données",
+    "deleteAccount": "Supprimer le compte",
+    "deleteAccountHint": "Supprime définitivement votre compte et toutes les données associées : bibliothèque, listes, préférences, rappels, abonnements aux notifications et photo de profil. Action irréversible.",
+    "deleteAccountButton": "Supprimer mon compte",
+    "deleteAccountConfirmTitle": "Cette action est définitive.",
+    "deleteAccountConfirmText": "Toutes vos données seront supprimées immédiatement et ne pourront pas être récupérées. Pour confirmer, saisissez votre adresse e-mail ({{email}}) ci-dessous.",
+    "deleteAccountConfirmPlaceholder": "Votre adresse e-mail",
+    "deleteAccountConfirmButton": "Supprimer définitivement",
+    "deleteAccountError": "Impossible de supprimer le compte pour le moment. Réessayez.",
+    "deleting": "Suppression…"
   },
   "excludedGenres": {
     "summary": "Genres à exclure",
@@ -639,7 +651,7 @@
   "privacyPolicyPage": {
     "title": "Politique de confidentialité",
     "lastUpdated": "Dernière mise à jour : {{date}}",
-    "lastUpdatedValue": "27 septembre 2026",
+    "lastUpdatedValue": "3 octobre 2026",
     "controller": {
       "title": "Responsable du traitement",
       "textBefore": "Seancy est un projet personnel, sans structure commerciale, opéré depuis la France. Le traitement des données décrit ci-dessous relève donc du droit français et du RGPD. Il n'y a pas encore d'adresse de contact publique dédiée : en attendant, vous pouvez nous joindre "
@@ -726,12 +738,12 @@
     },
     "retention": {
       "title": "Durée de conservation",
-      "textBefore": "Vos données sont conservées tant que votre compte existe. La suppression de compte à la demande n'est pas encore automatisée dans l'application : en attendant, vous pouvez demander la suppression de votre compte et de vos données ",
+      "textBefore": "Vos données sont conservées tant que votre compte existe. Vous pouvez le supprimer vous-même à tout moment, ainsi que toutes les données associées, depuis Profil → Compte (bouton « Supprimer mon compte ») : la suppression est immédiate et définitive. Vous pouvez aussi en demander la suppression ",
       "textAfter": "."
     },
     "rights": {
       "title": "Vos droits",
-      "textBefore": "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, de portabilité et d'opposition sur vos données. Vous pouvez exercer ces droits ",
+      "textBefore": "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, de portabilité et d'opposition sur vos données. Vous pouvez exporter une copie de vos données à tout moment depuis Profil → Compte (bouton « Exporter mes données »), ou exercer l'ensemble de ces droits ",
       "textAfter": ", et introduire une réclamation auprès de la CNIL si vous estimez que vos droits ne sont pas respectés."
     },
     "changes": {
