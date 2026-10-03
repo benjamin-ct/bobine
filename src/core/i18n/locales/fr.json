@@ -441,6 +441,7 @@
     "seriesCount_other": "{{count}} séries",
     "watchTime": "Temps de visionnage",
     "hours": "heures",
+    "hoursShort": "h",
     "daysUnit": "jours",
     "episodesCount_one": "{{count}} épisode de série",
     "episodesCount_other": "{{count}} épisodes de série",
@@ -450,8 +451,12 @@
     "ratedCount_other": "sur {{count}} titres notés",
     "watchedByYear": "Vus par année",
     "noDataYet": "Aucune donnée pour l'instant.",
-    "topGenres": "Genres préférés",
+    "topGenres": "Genres préférés (temps de visionnage)",
     "noGenreYet": "Aucun genre pour l'instant.",
+    "titlesCount_one": "{{count}} titre",
+    "titlesCount_other": "{{count}} titres",
+    "watchTimeByDecade": "Temps de visionnage par décennie",
+    "decadeLabel": "Années {{decade}}",
     "recentlyWatched": "Vus récemment"
   },
   "customListPanel": {
@@ -767,8 +772,13 @@
     "noOverview": "Pas de synopsis disponible.",
     "watchedOn": "Déjà vu",
     "watchedOff": "Marquer comme vu",
+    "watchDateAriaLabel": "Choisir une date de visionnage",
+    "watchDateFutureError": "La date de visionnage ne peut pas être dans le futur.",
     "wantToWatchOn": "Dans vos envies",
     "wantToWatchOff": "Envie de voir",
+    "notifyTitle": "Être prévenu·e le jour de la sortie et à l'arrivée sur une plateforme",
+    "notified": "Prévenu·e",
+    "notifyMe": "Me prévenir",
     "addToListHeading": "Ajouter à une liste",
     "noListsYet": "Aucune liste pour l'instant.",
     "createListPlaceholder": "Créer une liste…",
@@ -911,7 +921,8 @@
     "unmarkEpisode": "Retirer {{episode}} des épisodes vus",
     "watchedUpToHere": "Vu jusqu'ici",
     "markSeason": "Marquer la saison {{number}} comme vue",
-    "unmarkSeason": "Retirer la saison"
+    "unmarkSeason": "Retirer la saison",
+    "watchDateAriaLabel": "Choisir une date de visionnage pour la saison {{number}}"
   },
   "profileShare": {
     "title": "Lien public",

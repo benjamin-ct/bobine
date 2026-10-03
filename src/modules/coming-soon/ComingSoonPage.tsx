@@ -46,12 +46,6 @@ const WINDOWS = [
   { value: 90, key: "next3Months" },
 ];
 
-// Nombre de cartes révélées par "page" de scroll infini, et nombre de pages
-// TMDB regroupées par lot de fetch (voir plus bas pourquoi un lot plutôt
-// qu'une page à la fois).
-const REVEAL_SIZE = 20;
-const TMDB_PAGES_PER_BATCH = 5;
-
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
@@ -67,15 +61,13 @@ function dateRangeFor(windowDays: number) {
   return { dateFrom: toIsoDate(from), dateTo: toIsoDate(to) };
 }
 
-function releaseDateOf(item: MediaItem): string {
-  return item.release_date || item.first_air_date || "";
-}
-
 // "En salle" : garde les films pour lesquels le Worker a trouvé une date de
 // sortie ciné régionale (voir includeRegionReleaseDate, même indicateur que
 // le badge "Salles" ci-dessus). Le paramètre natif TMDB with_release_type
 // n'a aucun effet observé en pratique (vérifié : résultats strictement
 // identiques avec/sans sur discover/movie), d'où ce filtre côté client.
+// Sans impact sur le tri : TMDB trie déjà chronologiquement (sortField ci-
+// dessous), et retirer des éléments d'une liste triée la laisse triée.
 function keepTheatricalOnly<T extends { region_release_date?: string | null }>(
   items: T[],
   active: boolean,
@@ -85,10 +77,6 @@ function keepTheatricalOnly<T extends { region_release_date?: string | null }>(
     return items;
   }
   return items.filter((item) => item.region_release_date != null);
-}
-
-function sortByDate(items: MediaItem[]): MediaItem[] {
-  return [...items].sort((a, b) => releaseDateOf(a).localeCompare(releaseDateOf(b)));
 }
 
 function dedupe(items: MediaItem[]): MediaItem[] {
@@ -106,18 +94,6 @@ function monthLabel(dateStr: string, locale: DateLocale): string {
   const d = new Date(dateStr);
   const label = d.toLocaleDateString(dateLocaleTag(locale), { month: "long", year: "numeric" });
   return label.charAt(0).toUpperCase() + label.slice(1);
-}
-
-async function fetchPages(
-  mediaType: MediaType,
-  params: DiscoverParams,
-  fromPage: number,
-  count: number
-) {
-  const pages = await Promise.all(
-    Array.from({ length: count }, (_, i) => discover(mediaType, { ...params, page: fromPage + i }))
-  );
-  return pages.flatMap((p) => p.results || []) as MediaItem[];
 }
 
 // « Cinéma » (libellé de releaseBadge.ts) devient « Salles » ; les autres
@@ -275,9 +251,8 @@ export default function ComingSoonPage() {
       : undefined;
 
   const [allResults, setAllResults] = useState<MediaItem[]>([]);
-  const [revealCount, setRevealCount] = useState(REVEAL_SIZE);
-  const [fetchedPages, setFetchedPages] = useState(0);
-  const [tmdbTotalPages, setTmdbTotalPages] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Les genres d'un type ne valent pas pour l'autre : on les vide dans le
   // même rendu que le changement de type (et pas dans un effet), sinon le
@@ -309,40 +284,22 @@ export default function ComingSoonPage() {
     region,
     originCountry: activeCountries[0] || undefined,
     originalLanguage: activeLanguages[0] || undefined,
-    sortField: "popularity",
-    sortDirection: "desc",
+    // Tri chronologique côté TMDB (et pas par popularité, qui ne garantit
+    // l'ordre qu'au sein d'une page) : chaque page suivante ne peut alors
+    // contenir que des dates >= celles déjà affichées, donc la simple
+    // concaténation des pages reste toujours triée, sans retri client — un
+    // tri par popularité laissait resurgir, des pages plus tard, un titre
+    // moins populaire mais daté avant des titres déjà affichés (cause du
+    // ticket : « je passe de décembre à octobre » en coming-soon).
+    sortField: "year",
+    sortDirection: "asc",
     ...dateRangeFor(windowDays),
     includeRegionReleaseDate: inTheatersOnly,
   };
   const discoverParamsKey = JSON.stringify(discoverParams);
 
-  // Récupère un lot de TMDB_PAGES_PER_BATCH pages TMDB (triées par
-  // popularité), les fusionne avec ce qu'on a déjà, trie l'ensemble par
-  // date UNE SEULE FOIS, puis les stocke — un lot partiel affiché à l'écran
-  // n'est jamais retrié : les cartes déjà visibles ne sautent jamais de
-  // position pendant le scroll.
-  const fetchBatch = useCallback(
-    async (fromPage: number, frozenHead: MediaItem[], tailToMerge: MediaItem[]) => {
-      const first = await discover(mediaType, { ...discoverParams, page: fromPage });
-      const totalPages = Math.min(first.total_pages || 1, 500);
-      const pagesToFetch = Math.min(TMDB_PAGES_PER_BATCH, totalPages - fromPage + 1);
-      const rest =
-        pagesToFetch > 1
-          ? await fetchPages(mediaType, discoverParams, fromPage + 1, pagesToFetch - 1)
-          : [];
-      const newTail = dedupe(
-        keepTheatricalOnly(
-          filterExcluded([...tailToMerge, ...(first.results as MediaItem[]), ...rest], mediaType),
-          inTheatersOnly,
-          mediaType
-        )
-      );
-      return {
-        merged: [...frozenHead, ...sortByDate(newTail)].map((r) => ({ ...r, mediaType })),
-        totalPages,
-        newFetchedPages: fromPage - 1 + pagesToFetch,
-      };
-    },
+  const fetchPage = useCallback(
+    (pageNumber: number) => discover(mediaType, { ...discoverParams, page: pageNumber }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [mediaType, discoverParamsKey]
   );
@@ -350,17 +307,19 @@ export default function ComingSoonPage() {
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
-    fetchBatch(1, [], [])
-      .then(({ merged, totalPages, newFetchedPages }) => {
+    fetchPage(1)
+      .then((data) => {
         if (cancelled) {
           return;
         }
-        // Remis à zéro ici et pas au lancement : la chronologie précédente
-        // reste affichée en entier pendant le rechargement (voir refreshing).
-        setRevealCount(REVEAL_SIZE);
-        setAllResults(merged);
-        setTmdbTotalPages(totalPages);
-        setFetchedPages(newFetchedPages);
+        const items = keepTheatricalOnly(
+          filterExcluded(data.results, mediaType),
+          inTheatersOnly,
+          mediaType
+        ).map((r) => ({ ...r, mediaType }));
+        setAllResults(dedupe(items));
+        setTotalPages(Math.min(data.total_pages || 1, 500));
+        setPage(1);
         setStatus("success");
       })
       .catch((err) => {
@@ -374,35 +333,31 @@ export default function ComingSoonPage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchBatch]);
+  }, [fetchPage]);
 
   const loadMore = useCallback(() => {
-    if (loadingMore) {
+    if (loadingMore || page >= totalPages) {
       return;
     }
-    if (revealCount < allResults.length) {
-      setRevealCount((c) => Math.min(c + REVEAL_SIZE, allResults.length));
-      return;
-    }
-    if (fetchedPages >= tmdbTotalPages) {
-      return;
-    }
+    const nextPage = page + 1;
     setLoadingMore(true);
-    const frozenHead = allResults.slice(0, revealCount);
-    const tailToMerge = allResults.slice(revealCount);
-    fetchBatch(fetchedPages + 1, frozenHead, tailToMerge)
-      .then(({ merged, totalPages, newFetchedPages }) => {
-        setAllResults(merged);
-        setTmdbTotalPages(totalPages);
-        setFetchedPages(newFetchedPages);
-        setRevealCount((c) => Math.min(c + REVEAL_SIZE, merged.length));
+    fetchPage(nextPage)
+      .then((data) => {
+        const fresh = keepTheatricalOnly(
+          filterExcluded(data.results, mediaType),
+          inTheatersOnly,
+          mediaType
+        ).map((r) => ({ ...r, mediaType }));
+        setAllResults((prev) => dedupe([...prev, ...fresh]));
+        setTotalPages(Math.min(data.total_pages || 1, 500));
+        setPage(nextPage);
       })
       .catch((err) => setError(err))
       .finally(() => setLoadingMore(false));
-  }, [loadingMore, revealCount, allResults, fetchedPages, tmdbTotalPages, fetchBatch]);
+  }, [loadingMore, page, totalPages, mediaType, fetchPage, filterExcluded, inTheatersOnly]);
 
-  const hasMore = revealCount < allResults.length || fetchedPages < tmdbTotalPages;
-  const visibleResults = allResults.slice(0, revealCount);
+  const hasMore = page < totalPages;
+  const visibleResults = allResults;
   // Rechargement après un changement de filtre : on garde la chronologie
   // précédente à l'écran (atténuée) plutôt que de la remplacer par le
   // squelette, qui fait sauter toute la page le temps de la requête.
@@ -433,8 +388,8 @@ export default function ComingSoonPage() {
 
   // Regroupement par mois pour l'affichage calendrier, un bloc par mois pour
   // que son en-tête reste collé en haut tant qu'on défile dans ce mois — pas
-  // de tri supplémentaire (visibleResults est déjà trié par date, voir
-  // fetchBatch).
+  // de tri supplémentaire (visibleResults est déjà trié par date, TMDB
+  // triant chronologiquement, voir discoverParams.sortField).
   const months: { label: string; items: MediaItem[] }[] = [];
   for (const item of visibleResults) {
     const date = item.release_date || item.first_air_date;

@@ -441,6 +441,7 @@
     "seriesCount_other": "{{count}} series",
     "watchTime": "Watch time",
     "hours": "hours",
+    "hoursShort": "h",
     "daysUnit": "days",
     "episodesCount_one": "{{count}} series episode",
     "episodesCount_other": "{{count}} series episodes",
@@ -450,8 +451,12 @@
     "ratedCount_other": "out of {{count}} rated titles",
     "watchedByYear": "Watched by year",
     "noDataYet": "No data yet.",
-    "topGenres": "Favorite genres",
+    "topGenres": "Favorite genres (watch time)",
     "noGenreYet": "No genre yet.",
+    "titlesCount_one": "{{count}} title",
+    "titlesCount_other": "{{count}} titles",
+    "watchTimeByDecade": "Watch time by decade",
+    "decadeLabel": "{{decade}}s",
     "recentlyWatched": "Recently watched"
   },
   "customListPanel": {
@@ -767,8 +772,13 @@
     "noOverview": "No synopsis available.",
     "watchedOn": "Watched",
     "watchedOff": "Mark as watched",
+    "watchDateAriaLabel": "Choose a watch date",
+    "watchDateFutureError": "The watch date can't be in the future.",
     "wantToWatchOn": "In your watchlist",
     "wantToWatchOff": "Want to watch",
+    "notifyTitle": "Get notified on release day and when it arrives on a streaming service",
+    "notified": "Notified",
+    "notifyMe": "Notify me",
     "addToListHeading": "Add to a list",
     "noListsYet": "No lists yet.",
     "createListPlaceholder": "Create a list…",
@@ -911,7 +921,8 @@
     "unmarkEpisode": "Remove {{episode}} from watched episodes",
     "watchedUpToHere": "Watched up to here",
     "markSeason": "Mark season {{number}} as watched",
-    "unmarkSeason": "Unmark season"
+    "unmarkSeason": "Unmark season",
+    "watchDateAriaLabel": "Choose a watch date for season {{number}}"
   },
   "profileShare": {
     "title": "Public link",
