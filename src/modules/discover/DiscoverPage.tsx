@@ -2,12 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
-import {
-  discover,
-  getGenres,
-  getWatchProvidersList,
-  THEATRICAL_WINDOW_DAYS,
-} from "../../core/api/tmdb.ts";
+import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
 import { useFeaturedSeries } from "../../shared/hooks/useFeaturedSeries.ts";
@@ -29,7 +24,7 @@ import {
   Icon,
 } from "../../shared/components/index.ts";
 import type { AdvancedFiltersState } from "../../shared/components/index.ts";
-import type { Genre, MediaItem } from "../../core/types/tmdb.ts";
+import type { Genre, MediaItem, MediaType } from "../../core/types/tmdb.ts";
 import type { WatchProviderOption } from "../../core/api/tmdb.ts";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import TonightPick from "./TonightPick.tsx";
@@ -64,15 +59,21 @@ function toDiscoverParams(advanced: AdvancedFiltersState) {
   };
 }
 
-// Fenêtre "en salle" : films sortis au cours des THEATRICAL_WINDOW_DAYS
-// derniers jours, même définition que le badge "au cinéma" (movieMeta.ts).
-// Recalculée à chaque appel (jour courant), pas de sens pour les séries.
-function inTheatersDateRange(): { dateFrom: string; dateTo: string } {
-  const toIso = (d: Date) => d.toISOString().slice(0, 10);
-  const now = new Date();
-  const from = new Date(now);
-  from.setDate(from.getDate() - THEATRICAL_WINDOW_DAYS);
-  return { dateFrom: toIso(from), dateTo: toIso(now) };
+// "En salle" : garde les films pour lesquels le Worker a trouvé une date de
+// sortie ciné régionale (voir includeRegionReleaseDate, même indicateur que
+// le badge "Salles" affiché par MediaCard). Le paramètre natif TMDB
+// with_release_type n'a aucun effet observé en pratique (vérifié : résultats
+// strictement identiques avec/sans sur discover/movie), d'où ce filtre côté
+// client — même pattern que NewReleasesPage/ComingSoonPage.
+function keepTheatricalOnly<T extends { region_release_date?: string | null }>(
+  items: T[],
+  active: boolean,
+  mediaType: MediaType
+): T[] {
+  if (!active || mediaType !== "movie") {
+    return items;
+  }
+  return items.filter((item) => item.region_release_date != null);
 }
 
 export default function DiscoverPage() {
@@ -225,13 +226,17 @@ export default function DiscoverPage() {
       excludeUpcoming: true,
       includeRegionReleaseDate: true,
       ...toDiscoverParams(advanced),
-      ...(inTheatersOnly && mediaType === "movie" ? inTheatersDateRange() : {}),
     })
       .then((data) => {
         if (cancelled) {
           return;
         }
-        setResults(filterExcluded(data.results, mediaType).map((r) => ({ ...r, mediaType })));
+        const kept = keepTheatricalOnly(
+          filterExcluded(data.results, mediaType),
+          inTheatersOnly,
+          mediaType
+        );
+        setResults(kept.map((r) => ({ ...r, mediaType })));
         setTotalPages(Math.min(data.total_pages || 1, 500));
         setStatus("success");
       })
@@ -284,16 +289,17 @@ export default function DiscoverPage() {
       excludeUpcoming: true,
       includeRegionReleaseDate: true,
       ...toDiscoverParams(advanced),
-      ...(inTheatersOnly && mediaType === "movie" ? inTheatersDateRange() : {}),
     })
       .then((data) => {
         // TMDB peut renvoyer un même titre sur deux pages consécutives : on
         // déduplique pour éviter les doublons à l'écran.
         setResults((prev) => {
           const seenIds = new Set(prev.map((item) => item.id));
-          const fresh = filterExcluded(data.results, mediaType)
-            .filter((item) => !seenIds.has(item.id))
-            .map((r) => ({ ...r, mediaType }));
+          const fresh = keepTheatricalOnly(
+            filterExcluded(data.results, mediaType).filter((item) => !seenIds.has(item.id)),
+            inTheatersOnly,
+            mediaType
+          ).map((r) => ({ ...r, mediaType }));
           return [...prev, ...fresh];
         });
         setPage(nextPage);

@@ -22,8 +22,9 @@ export interface DiscoverFilters {
   sortField: DiscoverSortField;
   sortDirection: SortDirection;
   advanced: AdvancedFiltersState;
-  /** Films sortis en salle récemment (voir THEATRICAL_WINDOW_DAYS) — sans
-   * effet pour les séries, qui n'ont pas de notion de sortie ciné. */
+  /** Films actuellement en salle (region_release_date résolu par le Worker,
+   * même indicateur que le badge "Salles" de MediaCard) — sans effet pour
+   * les séries, qui n'ont pas de notion de sortie ciné. */
   inTheatersOnly: boolean;
 }
 

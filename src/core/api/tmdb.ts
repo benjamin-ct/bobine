@@ -18,7 +18,6 @@ export {
   formatFullDate,
   dateLocaleTag,
   theatricalStatusFromDate,
-  THEATRICAL_WINDOW_DAYS,
 } from "./movieMeta.ts";
 export type { DateLocale } from "./movieMeta.ts";
 export { getSeriesEpisodeBadge } from "./seriesEpisodeBadge.ts";
