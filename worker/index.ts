@@ -180,9 +180,9 @@ function json(
 // `if (user instanceof Response) return user;` puis utilisent `user` typé
 // `AuthUser` pour le reste de la fonction.
 async function requireUser(request: Request, env: Env): Promise<AuthUser | Response> {
-  const user = await requireUser(request, env);
-  if (user instanceof Response) {
-    return user;
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
   }
   return user;
 }
