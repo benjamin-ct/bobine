@@ -6,13 +6,9 @@ import {
   posterSrcSet,
   logoUrl,
   getWatchProviders,
-  getTvStatus,
-  getSeriesEpisodeBadge,
   formatFullDate,
 } from "../../../core/api/tmdb.ts";
-import type { SeriesEpisodeBadge } from "../../../core/api/tmdb.ts";
 import { useNearViewport } from "../../hooks/useNearViewport.ts";
-import { useUpcomingRelease } from "../../hooks/useUpcomingRelease.ts";
 import { useLibrary } from "../../../core/context/LibraryContext.tsx";
 import { useRegion } from "../../../core/context/RegionContext.tsx";
 import { useLocale } from "../../../core/context/LocaleContext.tsx";
@@ -30,23 +26,12 @@ import styles from "./MediaCard.module.css";
 
 interface MediaCardProps {
   item: MediaItem;
-  /** Opt-in, seule Nouveautés l'active (contenus déjà sortis — voir
-   * showFutureReleaseBadge ci-dessous pour Prochainement). Contrairement à
-   * la pastille théâtrale (indexée une fois pour toute la grille, voir
+  /** Opt-in, seule Nouveautés l'active (contenus déjà sortis). Contrairement
+   * à la pastille théâtrale (indexée une fois pour toute la grille, voir
    * getTheatricalStatusIndex), TMDB n'a pas d'équivalent en masse pour
    * "quelles plateformes pour ces N titres" — un appel par carte est ici
    * incontournable. Le scope opt-in limite où ce coût est payé. */
   showProviderBadge?: boolean;
-  /** Opt-in, seule Prochainement l'active. Tout y est par définition pas
-   * encore sorti : le badge doit dire OÙ/COMMENT la sortie à venir est
-   * prévue, jamais déduit de /watch/providers. Réutilise le même badge
-   * (.theatrical, même position/style) que showProviderBadge. */
-  showFutureReleaseBadge?: boolean;
-  /** Opt-in, séries uniquement (voir seriesEpisodeBadge.ts) : "Vient de
-   * sortir"/"Prochainement" sur un épisode, indépendant des deux badges
-   * ci-dessus (sortie ciné/plateforme, propre aux films). Même emplacement
-   * visuel (.theatrical). */
-  showEpisodeBadge?: boolean;
   /** Opt-in, seul le Top 5 du profil partagé l'utilise : rang affiché en
    * médaillon en haut à gauche de l'affiche (le badge Film/Série se décale
    * à sa droite). */
@@ -78,8 +63,6 @@ const CARD_POSTER_SIZES = "(max-width: 720px) 50vw, (max-width: 1080px) 25vw, 17
 function MediaCard({
   item,
   showProviderBadge = false,
-  showFutureReleaseBadge = false,
-  showEpisodeBadge = false,
   rank,
   yearGenre = false,
   genreName,
@@ -132,10 +115,7 @@ function MediaCard({
   // partent tous en parallèle dès le montage, y compris pour les cartes
   // hors écran — pic qui épuise le quota de la clé TMDB partagée.
   const posterRef = useRef<HTMLDivElement>(null);
-  const isNearViewport = useNearViewport(
-    posterRef,
-    showProviderBadge || showFutureReleaseBadge || showEpisodeBadge
-  );
+  const isNearViewport = useNearViewport(posterRef, showProviderBadge);
 
   const [provider, setProvider] = useState<WatchProviderEntry | null>(null);
   // Distingue "pas encore vérifié" de "vérifié, rien trouvé".
@@ -185,64 +165,9 @@ function MediaCard({
   const showUnknownStatus =
     showProviderBadge && providerStatus === "done" && !provider && !hasTheatricalBadge;
 
-  // Prochainement : prochaine sortie/diffusion connue (label + date).
-  const { release: upcomingRelease, status: upcomingStatus } = useUpcomingRelease(
-    showFutureReleaseBadge && isNearViewport,
-    mediaType,
-    item.id,
-    region,
-    date
-  );
-
-  // Vient de sortir / Prochainement (séries) : indépendant de
-  // showFutureReleaseBadge (films uniquement), basé sur
-  // next_episode_to_air/last_episode_to_air (voir seriesEpisodeBadge.ts).
-  const [episodeBadge, setEpisodeBadge] = useState<SeriesEpisodeBadge | null>(null);
-  useEffect(() => {
-    if (!showEpisodeBadge || !isNearViewport || mediaType !== "tv") {
-      return;
-    }
-    let cancelled = false;
-    getTvStatus(item.id)
-      .then((details) => {
-        if (!cancelled) {
-          setEpisodeBadge(getSeriesEpisodeBadge(details));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setEpisodeBadge(null);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [showEpisodeBadge, isNearViewport, mediaType, item.id]);
-
-  // Le texte affiché vient toujours de t() (kind -> clé de traduction),
-  // jamais de episodeBadge.label (français en dur, présent uniquement pour
-  // que la logique pure reste testable indépendamment de react-i18next).
-  const episodeBadgeLabel = episodeBadge
-    ? episodeBadge.kind === "just_released"
-      ? t("mediaCard.episodeJustReleased")
-      : t("mediaCard.episodeUpcoming")
-    : null;
-  const episodeBadgeDateFormatted = episodeBadge
-    ? formatFullDate(episodeBadge.date, locale) || episodeBadge.date
-    : null;
-
-  // Film sans date exploitable dans release_dates : on retombe sur l'index
-  // théâtral déjà chargé pour toute la grille plutôt que de laisser le
-  // badge vide. Vocabulaire unifié : même ce repli affiche "Cinéma".
-  const futureReleaseLabel =
-    upcomingRelease?.label ||
-    (mediaType === "movie" && theatricalStatus === "upcoming" && upcomingStatus === "done"
-      ? t("mediaCard.upcomingFallback")
-      : null);
-  const effectiveDate = (showFutureReleaseBadge && upcomingRelease?.date) || date;
   const displayDate = yearGenre
-    ? [effectiveDate?.slice(0, 4), genreName].filter(Boolean).join(" · ") || "—"
-    : formatFullDate(effectiveDate, locale) || (effectiveDate ? effectiveDate.slice(0, 4) : "—");
+    ? [date?.slice(0, 4), genreName].filter(Boolean).join(" · ") || "—"
+    : formatFullDate(date, locale) || (date ? date.slice(0, 4) : "—");
 
   const libItem = {
     id: item.id,
@@ -299,46 +224,25 @@ function MediaCard({
               <Icon name="star" size={11} filled /> {ownerRating}
             </span>
           )}
-          {showEpisodeBadge ? (
-            episodeBadgeLabel && (
-              <span
-                className={styles.theatrical}
-                title={`${episodeBadgeLabel} (${episodeBadgeDateFormatted})`}
-              >
-                <Icon name={episodeBadge?.kind === "just_released" ? "sparkle" : "calendar"} />{" "}
-                {episodeBadgeLabel}
-              </span>
-            )
-          ) : showFutureReleaseBadge ? (
-            futureReleaseLabel && (
-              <span className={styles.theatrical} title={futureReleaseLabel}>
-                <Icon name="calendar" /> {futureReleaseLabel}
-              </span>
-            )
-          ) : (
-            <>
-              {hasTheatricalBadge && theatricalStatus && (
-                <span className={styles.theatrical}>
-                  <Icon name={theatricalIcons[theatricalStatus]} />{" "}
-                  {theatricalBadges[theatricalStatus]}
-                </span>
-              )}
-              {showUnknownStatus && (
-                <span className={`${styles.theatrical} ${styles.theatricalUnknown}`}>
-                  <Icon name="help" /> {t("mediaCard.unknownReleaseStatus")}
-                </span>
-              )}
-              {provider?.logo_path && (
-                <span className={styles.provider} title={provider.provider_name}>
-                  <img
-                    src={logoUrl(provider.logo_path, "w45") ?? undefined}
-                    alt={provider.provider_name}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </span>
-              )}
-            </>
+          {hasTheatricalBadge && theatricalStatus && (
+            <span className={styles.theatrical}>
+              <Icon name={theatricalIcons[theatricalStatus]} /> {theatricalBadges[theatricalStatus]}
+            </span>
+          )}
+          {showUnknownStatus && (
+            <span className={`${styles.theatrical} ${styles.theatricalUnknown}`}>
+              <Icon name="help" /> {t("mediaCard.unknownReleaseStatus")}
+            </span>
+          )}
+          {provider?.logo_path && (
+            <span className={styles.provider} title={provider.provider_name}>
+              <img
+                src={logoUrl(provider.logo_path, "w45") ?? undefined}
+                alt={provider.provider_name}
+                loading="lazy"
+                decoding="async"
+              />
+            </span>
           )}
         </div>
         <div className={styles.info}>
