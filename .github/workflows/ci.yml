@@ -73,6 +73,15 @@ jobs:
       - name: Typecheck (TypeScript strict, bloquant)
         run: npm run typecheck
 
+      # Limité aux fichiers/dépendances jamais importés (signal fiable, faux
+      # positifs quasi nuls) — pas aux exports/types inutilisés : le projet en
+      # a un stock existant (barrels, types miroir de l'API TMDB/du schéma
+      # D1...) qui demanderait un nettoyage à part, hors scope de ce ticket
+      # (audit F5). Voir knip.json pour les points d'entrée (scripts/*.ts,
+      # infra/, public/theme-init.js — jamais importés par le bundle Vite).
+      - name: Code mort (knip, bloquant sur fichiers/dépendances inutilisés)
+        run: npm run check:dead-code
+
       - name: Vérifications de logique pure
         run: |
           npm run verify:upcoming-badge
