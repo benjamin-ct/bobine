@@ -104,3 +104,21 @@
   font-weight: 700;
   margin-bottom: 16px;
 }
+
+/* Lien légal toujours accessible (audit M15), quel que soit l'onglet actif :
+   placé juste sous les onglets pour rester à portée sans défiler, y compris
+   sur mobile où la barre flottante LegalLinks est masquée. */
+.legalLine {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: right;
+}
+
+.legalLine a {
+  color: var(--muted);
+}
+
+.legalLine a:hover {
+  color: var(--fg);
+}
