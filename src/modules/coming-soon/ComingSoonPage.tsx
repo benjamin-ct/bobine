@@ -61,6 +61,16 @@ function dateRangeFor(windowDays: number) {
   return { dateFrom: toIsoDate(from), dateTo: toIsoDate(to) };
 }
 
+// item.region_release_date (résolu côté Worker, voir discover() avec
+// includeRegionReleaseDate) est la date de sortie ciné région-consciente ;
+// item.release_date est la date "primaire" globale de TMDB, pas fiable pour
+// la région active (même source que MediaCard, voir son commentaire) — sans
+// ça, la date affichée en frise pouvait différer de celle de la fiche
+// détail (qui calcule la vraie date régionale via getTheatricalDateFromDetails).
+function releaseDateOf(item: MediaItem): string {
+  return item.region_release_date || item.release_date || item.first_air_date || "";
+}
+
 function dedupe(items: MediaItem[]): MediaItem[] {
   const seen = new Set<number>();
   return items.filter((item) => {
@@ -107,7 +117,7 @@ function TimelineItem({ item }: { item: MediaItem }) {
       getTheatricalStatus(item.id) === "upcoming");
   const channel = isTheatrical ? t("comingSoonPage.theaters") : release?.label;
   const title = item.title || item.name || t("comingSoonPage.unknownTitle");
-  const date = item.release_date || item.first_air_date;
+  const date = releaseDateOf(item);
   // Rappel et envie de voir sont indépendants : l'un n'implique pas l'autre.
   const notifying = hasReminder(item.mediaType, item.id);
   const wanted = isInWatchlist(item.mediaType, item.id);
@@ -269,6 +279,7 @@ export default function ComingSoonPage() {
     // ticket : « je passe de décembre à octobre » en coming-soon).
     sortField: "year",
     sortDirection: "asc",
+    includeRegionReleaseDate: true,
     ...dateRangeFor(windowDays),
   };
   const discoverParamsKey = JSON.stringify(discoverParams);
@@ -359,7 +370,7 @@ export default function ComingSoonPage() {
   // triant chronologiquement, voir discoverParams.sortField).
   const months: { label: string; items: MediaItem[] }[] = [];
   for (const item of visibleResults) {
-    const date = item.release_date || item.first_air_date;
+    const date = releaseDateOf(item);
     const label = date ? monthLabel(date, locale) : t("comingSoonPage.dateTbd");
     const last = months[months.length - 1];
     if (last?.label === label) {

@@ -366,7 +366,11 @@ export default function DetailPage() {
     mediaType,
     title,
     posterPath: details.poster_path ?? null,
-    date,
+    // displayDate (sortie ciné régionale si connue) et pas `date` (date TMDB
+    // globale) : sinon un ajout aux favoris/listes/rappels depuis cette fiche
+    // stocke une date différente de celle affichée à l'écran juste au-dessus
+    // (cause du ticket Trello sur les dates erronées en Prochainement/Ma liste).
+    date: displayDate,
     genreIds: details.genres?.map((g) => g.id) || [],
     runtimeMinutes: estimateRuntimeMinutes(details, mediaType),
   };
