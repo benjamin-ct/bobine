@@ -91,8 +91,15 @@ interface LibraryContextValue {
     episode: number
   ) => boolean;
   toggleEpisodeWatched: (item: LibraryItemInput, season: number, episode: number) => void;
-  /** Coche/décoche plusieurs épisodes d'un coup (saison entière, « Vu jusqu'ici »). */
-  setEpisodesWatched: (item: LibraryItemInput, episodes: EpisodeRef[], watched: boolean) => void;
+  /** Coche/décoche plusieurs épisodes d'un coup (saison entière, « Vu jusqu'ici »).
+   * `watchedAt` optionnel (ms epoch, uniquement pris en compte quand `watched`
+   * est vrai) : voir `toggleWatched`. */
+  setEpisodesWatched: (
+    item: LibraryItemInput,
+    episodes: EpisodeRef[],
+    watched: boolean,
+    watchedAt?: number
+  ) => void;
   /** « Marquer la série comme vue » : passe la série en "vu" et coche `episodes`.
    * `watchedAt` optionnel : voir `toggleWatched`. */
   markSeriesWatched: (item: LibraryItemInput, episodes: EpisodeRef[], watchedAt?: number) => void;
@@ -939,7 +946,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   // Coche/décoche plusieurs épisodes d'un coup (saison entière, « Vu
   // jusqu'ici »), sans changer le statut de la série.
   const setEpisodesWatched = useCallback(
-    (item: LibraryItemInput, episodes: EpisodeRef[], watched: boolean) => {
+    (item: LibraryItemInput, episodes: EpisodeRef[], watched: boolean, watchedAt?: number) => {
       const key = makeKey(item.mediaType, item.id);
       setState((prev) => {
         const listName: "watched" | "watchlist" = prev.watched[key] ? "watched" : "watchlist";
@@ -961,6 +968,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           ...existing,
           watchedEpisodes: Array.from(nextEpisodes),
           updatedAt: Date.now(),
+          // Comme toggleWatched/markSeriesWatched : par défaut "maintenant",
+          // sauf date de visionnage passée choisie via le sélecteur (bouton
+          // calendrier de la saison). Inchangé quand on décoche.
+          ...(watched ? { watchedAt: watchedAt ?? Date.now() } : {}),
         };
         pendingOpsRef.current.set(key, {
           action: "upsert",

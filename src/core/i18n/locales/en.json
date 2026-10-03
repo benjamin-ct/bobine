@@ -913,7 +913,8 @@
     "unmarkEpisode": "Remove {{episode}} from watched episodes",
     "watchedUpToHere": "Watched up to here",
     "markSeason": "Mark season {{number}} as watched",
-    "unmarkSeason": "Unmark season"
+    "unmarkSeason": "Unmark season",
+    "watchDateAriaLabel": "Choose a watch date for season {{number}}"
   },
   "profileShare": {
     "title": "Public link",

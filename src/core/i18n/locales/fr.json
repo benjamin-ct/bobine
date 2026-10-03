@@ -913,7 +913,8 @@
     "unmarkEpisode": "Retirer {{episode}} des épisodes vus",
     "watchedUpToHere": "Vu jusqu'ici",
     "markSeason": "Marquer la saison {{number}} comme vue",
-    "unmarkSeason": "Retirer la saison"
+    "unmarkSeason": "Retirer la saison",
+    "watchDateAriaLabel": "Choisir une date de visionnage pour la saison {{number}}"
   },
   "profileShare": {
     "title": "Lien public",

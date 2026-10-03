@@ -326,6 +326,33 @@
   background: var(--surface-2);
 }
 
+/* Bouton "choisir une date de visionnage" pour la saison affichée — même
+   mécanisme que le bouton calendrier de la fiche détail (DetailPage) :
+   icône seule, décorative (pointer-events: none), avec un
+   <input type="date"> invisible superposé pour que le tap ouvre le
+   sélecteur natif sur mobile (showPicker() ne fonctionne pas sur Safari
+   iOS). */
+.watchDateWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.watchDateBtn {
+  width: 40px;
+  padding: 0;
+  pointer-events: none;
+}
+
+.watchDateInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .loading {
   color: var(--muted);
   font-size: 14px;
