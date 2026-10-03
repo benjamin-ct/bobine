@@ -71,6 +71,22 @@ function releaseDateOf(item: MediaItem): string {
   return item.release_date || item.first_air_date || "";
 }
 
+// "En salle" : garde les films pour lesquels le Worker a trouvé une date de
+// sortie ciné régionale (voir includeRegionReleaseDate, même indicateur que
+// le badge "Salles" ci-dessus). Le paramètre natif TMDB with_release_type
+// n'a aucun effet observé en pratique (vérifié : résultats strictement
+// identiques avec/sans sur discover/movie), d'où ce filtre côté client.
+function keepTheatricalOnly<T extends { region_release_date?: string | null }>(
+  items: T[],
+  active: boolean,
+  mediaType: MediaType
+): T[] {
+  if (!active || mediaType !== "movie") {
+    return items;
+  }
+  return items.filter((item) => item.region_release_date != null);
+}
+
 function sortByDate(items: MediaItem[]): MediaItem[] {
   return [...items].sort((a, b) => releaseDateOf(a).localeCompare(releaseDateOf(b)));
 }
@@ -237,6 +253,11 @@ export default function ComingSoonPage() {
   const activeCountries = useMyCountries ? favoriteCountryCodes : countries;
   const activeLanguages = useMyLanguages ? favoriteLanguageCodes : languages;
   const [windowDays, setWindowDays] = useState(30);
+  // "En salle" pour une sortie à venir = restreint aux films dont la sortie
+  // annoncée est une sortie ciné (voir keepTheatricalOnly), pas une mise en
+  // ligne numérique/TV directe. Sans effet pour les séries : repassé à faux
+  // via changeMediaType quand on quitte Films.
+  const [inTheatersOnly, setInTheatersOnly] = useState(false);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -265,6 +286,7 @@ export default function ComingSoonPage() {
   const changeMediaType = useCallback((next: MediaType) => {
     setMediaType(next);
     setGenreIds((prev) => (prev.length ? [] : prev));
+    setInTheatersOnly((prev) => (next === "movie" ? prev : false));
   }, []);
 
   useEffect(() => {
@@ -290,6 +312,7 @@ export default function ComingSoonPage() {
     sortField: "popularity",
     sortDirection: "desc",
     ...dateRangeFor(windowDays),
+    includeRegionReleaseDate: inTheatersOnly,
   };
   const discoverParamsKey = JSON.stringify(discoverParams);
 
@@ -308,7 +331,11 @@ export default function ComingSoonPage() {
           ? await fetchPages(mediaType, discoverParams, fromPage + 1, pagesToFetch - 1)
           : [];
       const newTail = dedupe(
-        filterExcluded([...tailToMerge, ...(first.results as MediaItem[]), ...rest], mediaType)
+        keepTheatricalOnly(
+          filterExcluded([...tailToMerge, ...(first.results as MediaItem[]), ...rest], mediaType),
+          inTheatersOnly,
+          mediaType
+        )
       );
       return {
         merged: [...frozenHead, ...sortByDate(newTail)].map((r) => ({ ...r, mediaType })),
@@ -461,6 +488,19 @@ export default function ComingSoonPage() {
           value: windowDays,
           onChange: setWindowDays,
         }}
+        switches={
+          mediaType === "movie"
+            ? [
+                {
+                  key: "in-theaters-only",
+                  label: t("filterPanel.inTheatersFilter"),
+                  text: t("filterPanel.inTheatersOnly"),
+                  checked: inTheatersOnly,
+                  onChange: setInTheatersOnly,
+                },
+              ]
+            : []
+        }
       />
 
       {status === "loading" && !refreshing && <ComingSoonSkeleton />}

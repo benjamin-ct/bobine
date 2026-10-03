@@ -79,6 +79,22 @@ function dateRangeFor(windowDays: number) {
   return { dateFrom: toIsoDate(from), dateTo: toIsoDate(today) };
 }
 
+// "En salle" : garde les films pour lesquels le Worker a trouvé une date de
+// sortie ciné régionale (voir includeRegionReleaseDate, même indicateur que
+// le badge affiché par MediaCard). Le paramètre natif TMDB with_release_type
+// n'a aucun effet observé en pratique (vérifié : résultats strictement
+// identiques avec/sans sur discover/movie), d'où ce filtre côté client.
+function keepTheatricalOnly<T extends { region_release_date?: string | null }>(
+  items: T[],
+  active: boolean,
+  mediaType: MediaType
+): T[] {
+  if (!active || mediaType !== "movie") {
+    return items;
+  }
+  return items.filter((item) => item.region_release_date != null);
+}
+
 export default function NewReleasesPage() {
   const { t, i18n } = useTranslation();
   useDocumentTitle(t("pageTitle.newReleases"));
@@ -100,6 +116,9 @@ export default function NewReleasesPage() {
   const activeCountries = useMyCountries ? favoriteCountryCodes : countries;
   const activeLanguages = useMyLanguages ? favoriteLanguageCodes : languages;
   const [windowDays, setWindowDays] = useState(30);
+  // Sans effet pour les séries (pas de notion de sortie ciné) : repassé à
+  // faux via changeMediaType quand on quitte Films.
+  const [inTheatersOnly, setInTheatersOnly] = useState(false);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
   const [page, setPage] = useState(1);
@@ -133,6 +152,7 @@ export default function NewReleasesPage() {
   const changeMediaType = useCallback((next: MediaType) => {
     setMediaType(next);
     setGenreIds((prev) => (prev.length ? [] : prev));
+    setInTheatersOnly((prev) => (next === "movie" ? prev : false));
   }, []);
 
   useEffect(() => {
@@ -145,6 +165,7 @@ export default function NewReleasesPage() {
     activeCountries,
     activeLanguages,
     windowDays,
+    inTheatersOnly,
   ]);
 
   useEffect(() => {
@@ -179,13 +200,19 @@ export default function NewReleasesPage() {
       sortField: "popularity",
       sortDirection: "desc",
       includeProviderBadge: true,
+      includeRegionReleaseDate: inTheatersOnly,
       ...dateRangeFor(windowDays),
     })
       .then((data) => {
         if (cancelled) {
           return;
         }
-        setResults(filterExcluded(data.results, mediaType).map((r) => ({ ...r, mediaType })));
+        const kept = keepTheatricalOnly(
+          filterExcluded(data.results, mediaType),
+          inTheatersOnly,
+          mediaType
+        );
+        setResults(kept.map((r) => ({ ...r, mediaType })));
         setTotalPages(Math.min(data.total_pages || 1, 500));
         setStatus("success");
       })
@@ -216,6 +243,7 @@ export default function NewReleasesPage() {
     activeCountries,
     activeLanguages,
     windowDays,
+    inTheatersOnly,
     i18n.language,
     reloadKey,
   ]);
@@ -237,14 +265,17 @@ export default function NewReleasesPage() {
       sortField: "popularity",
       sortDirection: "desc",
       includeProviderBadge: true,
+      includeRegionReleaseDate: inTheatersOnly,
       ...dateRangeFor(windowDays),
     })
       .then((data) => {
         setResults((prev) => {
           const seenIds = new Set(prev.map((item) => item.id));
-          const fresh = filterExcluded(data.results, mediaType)
-            .filter((item) => !seenIds.has(item.id))
-            .map((r) => ({ ...r, mediaType }));
+          const fresh = keepTheatricalOnly(
+            filterExcluded(data.results, mediaType).filter((item) => !seenIds.has(item.id)),
+            inTheatersOnly,
+            mediaType
+          ).map((r) => ({ ...r, mediaType }));
           return [...prev, ...fresh];
         });
         setPage(nextPage);
@@ -267,6 +298,7 @@ export default function NewReleasesPage() {
     activeCountries,
     activeLanguages,
     windowDays,
+    inTheatersOnly,
     i18n.language,
   ]);
 
@@ -341,6 +373,19 @@ export default function NewReleasesPage() {
           value: windowDays,
           onChange: setWindowDays,
         }}
+        switches={
+          mediaType === "movie"
+            ? [
+                {
+                  key: "in-theaters-only",
+                  label: t("filterPanel.inTheatersFilter"),
+                  text: t("filterPanel.inTheatersOnly"),
+                  checked: inTheatersOnly,
+                  onChange: setInTheatersOnly,
+                },
+              ]
+            : []
+        }
       />
 
       {status === "loading" && !refreshing && (

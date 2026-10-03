@@ -412,8 +412,8 @@ export default function DiscoverPage() {
             ? [
                 {
                   key: "in-theaters-only",
-                  label: t("discoverPage.inTheatersFilter"),
-                  text: t("discoverPage.inTheatersOnly"),
+                  label: t("filterPanel.inTheatersFilter"),
+                  text: t("filterPanel.inTheatersOnly"),
                   checked: inTheatersOnly,
                   onChange: setInTheatersOnly,
                 },
