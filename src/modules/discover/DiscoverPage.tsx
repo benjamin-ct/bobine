@@ -24,7 +24,7 @@ import {
   Icon,
 } from "../../shared/components/index.ts";
 import type { AdvancedFiltersState } from "../../shared/components/index.ts";
-import type { Genre, MediaItem } from "../../core/types/tmdb.ts";
+import type { Genre, MediaItem, MediaType } from "../../core/types/tmdb.ts";
 import type { WatchProviderOption } from "../../core/api/tmdb.ts";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
 import TonightPick from "./TonightPick.tsx";
@@ -59,6 +59,23 @@ function toDiscoverParams(advanced: AdvancedFiltersState) {
   };
 }
 
+// "En salle" : garde les films pour lesquels le Worker a trouvé une date de
+// sortie ciné régionale (voir includeRegionReleaseDate, même indicateur que
+// le badge "Salles" affiché par MediaCard). Le paramètre natif TMDB
+// with_release_type n'a aucun effet observé en pratique (vérifié : résultats
+// strictement identiques avec/sans sur discover/movie), d'où ce filtre côté
+// client — même pattern que NewReleasesPage/ComingSoonPage.
+function keepTheatricalOnly<T extends { region_release_date?: string | null }>(
+  items: T[],
+  active: boolean,
+  mediaType: MediaType
+): T[] {
+  if (!active || mediaType !== "movie") {
+    return items;
+  }
+  return items.filter((item) => item.region_release_date != null);
+}
+
 export default function DiscoverPage() {
   const { t, i18n } = useTranslation();
   // Page d'accueil : titre par défaut de l'appli.
@@ -87,6 +104,8 @@ export default function DiscoverPage() {
     setSortDirection,
     advanced,
     setAdvanced,
+    inTheatersOnly,
+    setInTheatersOnly,
   } = useDiscoverFilters();
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
@@ -150,7 +169,16 @@ export default function DiscoverPage() {
       return;
     }
     setPage(1);
-  }, [mediaType, genreIds, providerIds, useMyPlatforms, sortField, sortDirection, advancedKey]);
+  }, [
+    mediaType,
+    genreIds,
+    providerIds,
+    useMyPlatforms,
+    sortField,
+    sortDirection,
+    advancedKey,
+    inTheatersOnly,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,7 +231,12 @@ export default function DiscoverPage() {
         if (cancelled) {
           return;
         }
-        setResults(filterExcluded(data.results, mediaType).map((r) => ({ ...r, mediaType })));
+        const kept = keepTheatricalOnly(
+          filterExcluded(data.results, mediaType),
+          inTheatersOnly,
+          mediaType
+        );
+        setResults(kept.map((r) => ({ ...r, mediaType })));
         setTotalPages(Math.min(data.total_pages || 1, 500));
         setStatus("success");
       })
@@ -234,6 +267,7 @@ export default function DiscoverPage() {
     sortField,
     sortDirection,
     advancedKey,
+    inTheatersOnly,
     i18n.language,
     reloadKey,
   ]);
@@ -261,9 +295,11 @@ export default function DiscoverPage() {
         // déduplique pour éviter les doublons à l'écran.
         setResults((prev) => {
           const seenIds = new Set(prev.map((item) => item.id));
-          const fresh = filterExcluded(data.results, mediaType)
-            .filter((item) => !seenIds.has(item.id))
-            .map((r) => ({ ...r, mediaType }));
+          const fresh = keepTheatricalOnly(
+            filterExcluded(data.results, mediaType).filter((item) => !seenIds.has(item.id)),
+            inTheatersOnly,
+            mediaType
+          ).map((r) => ({ ...r, mediaType }));
           return [...prev, ...fresh];
         });
         setPage(nextPage);
@@ -287,6 +323,7 @@ export default function DiscoverPage() {
     sortField,
     sortDirection,
     advancedKey,
+    inTheatersOnly,
     i18n.language,
   ]);
 
@@ -376,6 +413,19 @@ export default function DiscoverPage() {
         setSortDirection={setSortDirection}
         advanced={advanced}
         setAdvanced={setAdvanced}
+        switches={
+          mediaType === "movie"
+            ? [
+                {
+                  key: "in-theaters-only",
+                  label: t("filterPanel.inTheatersFilter"),
+                  text: t("filterPanel.inTheatersOnly"),
+                  checked: inTheatersOnly,
+                  onChange: setInTheatersOnly,
+                },
+              ]
+            : []
+        }
       />
 
       {status === "loading" && (
