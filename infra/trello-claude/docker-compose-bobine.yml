@@ -18,6 +18,21 @@ services:
       - SENTRY_WEBHOOK_SECRET=${SENTRY_WEBHOOK_SECRET}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-5}
       - CLAUDE_EFFORT=${CLAUDE_EFFORT:-medium}
+      - DASHBOARD_TOKEN=${DASHBOARD_TOKEN:-}
+    restart: unless-stopped
+
+  # Tunnel Cloudflare vers webhook-listener (profil optionnel, voir README
+  # « Exposition externe via Cloudflare Tunnel ») : expose /trello-webhook, /sentry-webhook et
+  # /dashboard sans redirection de port sur le routeur/NAS. Non démarré par `bobine-rebuild all` ;
+  # utiliser `bobine-rebuild tunnel` une fois CLOUDFLARE_TUNNEL_TOKEN renseigné.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: bobine-cloudflared
+    command: tunnel run
+    profiles:
+      - tunnel
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     restart: unless-stopped
 
   bobine-repo:
