@@ -129,6 +129,8 @@ const VIEWER_FOLLOWS = `EXISTS (SELECT 1 FROM follows v WHERE v.follower_id = ?2
 
 // « N vus · N en commun avec vous » (modale « Réseau de X ») : titres vus du
 // profil, et ceux que le visiteur (id -1 s'il n'est pas connecté) a vus aussi.
+// Comptés sur l'index library_items(user_id, status, media_type, tmdb_id)
+// (migration 0017) sans lire les lignes elles-mêmes (audit M6).
 const WATCHED_COUNTS = `(SELECT COUNT(*) FROM library_items w
     WHERE w.user_id = users.id AND w.status = 'watched') AS watched_count,
   (SELECT COUNT(*) FROM library_items w
@@ -198,6 +200,10 @@ export async function searchProfiles(
 // Fil d'activité : dernières entrées "vu" / "envie de voir" des profils
 // suivis encore partagés, du plus récent au plus ancien. `updated_at` bouge
 // aussi quand un titre est noté : une note récente remonte donc le titre.
+// Les FEED_LIMIT plus récentes du fil sont forcément parmi les FEED_LIMIT
+// plus récentes de chaque profil : seules celles-là sont lues, via l'index
+// (user_id, updated_at), au lieu de toute la bibliothèque de chaque profil
+// suivi (audit M6). Aucune entrée ne peut donc manquer au fil.
 export async function getFeed(db: D1Database, userId: number): Promise<FeedEntry[]> {
   const { results } = await db
     .prepare(
@@ -205,7 +211,11 @@ export async function getFeed(db: D1Database, userId: number): Promise<FeedEntry
               library_items.data, library_items.updated_at
        FROM follows
        JOIN users ON users.id = follows.followed_id AND users.share_slug IS NOT NULL
-       JOIN library_items ON library_items.user_id = users.id
+       JOIN library_items ON library_items.rowid IN (
+         SELECT recent.rowid FROM library_items recent
+         WHERE recent.user_id = users.id
+         ORDER BY recent.updated_at DESC LIMIT ${FEED_LIMIT}
+       )
        WHERE follows.follower_id = ?
        ORDER BY library_items.updated_at DESC LIMIT ${FEED_LIMIT}`
     )

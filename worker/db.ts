@@ -1119,3 +1119,28 @@ export function knownProvidersUpdate(
     )
     .bind(JSON.stringify(providerIds), subscriptionId, mediaType, tmdbId);
 }
+
+// Parmi `keys` ("movie:123"…), celles que le compte a marquées vues : une
+// requête ciblée plutôt que toute la bibliothèque (validation du top 5,
+// audit M6).
+export async function getWatchedKeys(
+  db: D1Database,
+  userId: number,
+  keys: string[]
+): Promise<Set<string>> {
+  const pairs = keys
+    .map((key) => key.split(":"))
+    .filter(([mediaType, id]) => mediaType && Number.isInteger(Number(id)));
+  if (pairs.length === 0) {
+    return new Set();
+  }
+  const { results } = await db
+    .prepare(
+      `SELECT media_type, tmdb_id FROM library_items
+       WHERE user_id = ? AND status = 'watched'
+         AND (media_type, tmdb_id) IN (VALUES ${pairs.map(() => "(?, ?)").join(", ")})`
+    )
+    .bind(userId, ...pairs.flatMap(([mediaType, id]) => [mediaType, Number(id)]))
+    .all<{ media_type: string; tmdb_id: number }>();
+  return new Set(results.map((row) => `${row.media_type}:${row.tmdb_id}`));
+}
