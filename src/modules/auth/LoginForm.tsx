@@ -50,7 +50,7 @@ export default function LoginForm() {
     setVerifying(true);
     setCodeError(null);
     try {
-      await verifyCode(code.trim());
+      await verifyCode(email.trim(), code.trim());
     } catch (err) {
       setCodeError(err instanceof Error ? err.message : t("loginPage.unknownError"));
     } finally {
