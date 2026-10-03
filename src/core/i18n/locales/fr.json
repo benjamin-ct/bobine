@@ -328,7 +328,9 @@
     "featuredTitle": "Mise en avant",
     "featuredSubtitle": "· sorties à venir",
     "suggestionsEyebrow": "Suggestions pour vous",
-    "emptyState": "Aucun résultat pour ces filtres."
+    "emptyState": "Aucun résultat pour ces filtres.",
+    "inTheatersFilter": "Au cinéma",
+    "inTheatersOnly": "Seulement les films en salle"
   },
   "filterBar": {
     "typeAriaLabel": "Type",

@@ -328,7 +328,9 @@
     "featuredTitle": "Featured",
     "featuredSubtitle": "· upcoming releases",
     "suggestionsEyebrow": "Suggestions for you",
-    "emptyState": "No results for these filters."
+    "emptyState": "No results for these filters.",
+    "inTheatersFilter": "In theaters",
+    "inTheatersOnly": "Only movies currently in theaters"
   },
   "filterBar": {
     "typeAriaLabel": "Type",

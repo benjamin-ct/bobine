@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useDocumentTitle } from "../../shared/hooks/useDocumentTitle.ts";
-import { discover, getGenres, getWatchProvidersList } from "../../core/api/tmdb.ts";
+import {
+  discover,
+  getGenres,
+  getWatchProvidersList,
+  THEATRICAL_WINDOW_DAYS,
+} from "../../core/api/tmdb.ts";
 import { useScrollRestoration } from "../../shared/hooks/useScrollRestoration.ts";
 import { useResumableSeries } from "../../shared/hooks/useResumableSeries.ts";
 import { useFeaturedSeries } from "../../shared/hooks/useFeaturedSeries.ts";
@@ -59,6 +64,17 @@ function toDiscoverParams(advanced: AdvancedFiltersState) {
   };
 }
 
+// Fenêtre "en salle" : films sortis au cours des THEATRICAL_WINDOW_DAYS
+// derniers jours, même définition que le badge "au cinéma" (movieMeta.ts).
+// Recalculée à chaque appel (jour courant), pas de sens pour les séries.
+function inTheatersDateRange(): { dateFrom: string; dateTo: string } {
+  const toIso = (d: Date) => d.toISOString().slice(0, 10);
+  const now = new Date();
+  const from = new Date(now);
+  from.setDate(from.getDate() - THEATRICAL_WINDOW_DAYS);
+  return { dateFrom: toIso(from), dateTo: toIso(now) };
+}
+
 export default function DiscoverPage() {
   const { t, i18n } = useTranslation();
   // Page d'accueil : titre par défaut de l'appli.
@@ -87,6 +103,8 @@ export default function DiscoverPage() {
     setSortDirection,
     advanced,
     setAdvanced,
+    inTheatersOnly,
+    setInTheatersOnly,
   } = useDiscoverFilters();
   const [genres, setGenres] = useState<Genre[]>([]);
   const [providers, setProviders] = useState<WatchProviderOption[]>([]);
@@ -150,7 +168,16 @@ export default function DiscoverPage() {
       return;
     }
     setPage(1);
-  }, [mediaType, genreIds, providerIds, useMyPlatforms, sortField, sortDirection, advancedKey]);
+  }, [
+    mediaType,
+    genreIds,
+    providerIds,
+    useMyPlatforms,
+    sortField,
+    sortDirection,
+    advancedKey,
+    inTheatersOnly,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,6 +225,7 @@ export default function DiscoverPage() {
       excludeUpcoming: true,
       includeRegionReleaseDate: true,
       ...toDiscoverParams(advanced),
+      ...(inTheatersOnly && mediaType === "movie" ? inTheatersDateRange() : {}),
     })
       .then((data) => {
         if (cancelled) {
@@ -234,6 +262,7 @@ export default function DiscoverPage() {
     sortField,
     sortDirection,
     advancedKey,
+    inTheatersOnly,
     i18n.language,
     reloadKey,
   ]);
@@ -255,6 +284,7 @@ export default function DiscoverPage() {
       excludeUpcoming: true,
       includeRegionReleaseDate: true,
       ...toDiscoverParams(advanced),
+      ...(inTheatersOnly && mediaType === "movie" ? inTheatersDateRange() : {}),
     })
       .then((data) => {
         // TMDB peut renvoyer un même titre sur deux pages consécutives : on
@@ -287,6 +317,7 @@ export default function DiscoverPage() {
     sortField,
     sortDirection,
     advancedKey,
+    inTheatersOnly,
     i18n.language,
   ]);
 
@@ -376,6 +407,19 @@ export default function DiscoverPage() {
         setSortDirection={setSortDirection}
         advanced={advanced}
         setAdvanced={setAdvanced}
+        switches={
+          mediaType === "movie"
+            ? [
+                {
+                  key: "in-theaters-only",
+                  label: t("discoverPage.inTheatersFilter"),
+                  text: t("discoverPage.inTheatersOnly"),
+                  checked: inTheatersOnly,
+                  onChange: setInTheatersOnly,
+                },
+              ]
+            : []
+        }
       />
 
       {status === "loading" && (
