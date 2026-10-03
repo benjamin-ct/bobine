@@ -68,6 +68,7 @@ import {
   sendEmailChangeCode,
   sendEmailChangedNotice,
   type EmailLocale,
+  type AuthUser,
 } from "./auth.ts";
 
 const EMAIL_LOCALES: EmailLocale[] = ["fr", "en"];
@@ -174,6 +175,18 @@ function json(
     }
   }
   return new Response(JSON.stringify(data), { status, headers });
+}
+
+// Factorise le contrôle « connecté ou 401 » répété dans la plupart des
+// routes authentifiées (audit M16) : les appelants font
+// `if (user instanceof Response) return user;` puis utilisent `user` typé
+// `AuthUser` pour le reste de la fonction.
+async function requireUser(request: Request, env: Env): Promise<AuthUser | Response> {
+  const user = await getUserFromRequest(env.DB, request);
+  if (!user) {
+    return json({ error: "Non connecté." }, 401);
+  }
+  return user;
 }
 
 // Corps JSON attendu sous forme d'objet : `null` pour un JSON invalide, mais
@@ -477,9 +490,9 @@ async function handleTestAccountNotification(
   if (isProductionHostname(new URL(request.url).hostname)) {
     return json({ error: "Introuvable." }, 404);
   }
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   if (
     !(await checkRateLimit(env.DB, `test-notification:user:${user.id}`, {
@@ -773,9 +786,9 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleMe(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   return json(
     {
@@ -800,9 +813,9 @@ async function handleMe(request: Request, env: Env): Promise<Response> {
 // client ajoute la version à l'URL (?v=<updated_at>), d'où un cache long :
 // une nouvelle photo change l'URL.
 async function handleGetOwnAvatar(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const avatar = await getAvatar(env.DB, user.id);
   if (!avatar) {
@@ -820,9 +833,9 @@ async function handleGetOwnAvatar(request: Request, env: Env): Promise<Response>
 // Corps = l'image elle-même (déjà recadrée en 256 px par le navigateur), pas
 // du JSON. Le format réel est vérifié sur les octets (voir worker/avatars.ts).
 async function handlePutAvatar(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   if (!checkRateLimitInMemory(`avatar:user:${user.id}`, { limit: 20, windowMs: 60_000 })) {
     return RATE_LIMIT_RESPONSE();
@@ -845,9 +858,9 @@ async function handlePutAvatar(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleDeleteAvatar(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   await deleteAvatar(env.DB, user.id);
   publishToUser(request, user.id, { type: "display-name" });
@@ -859,9 +872,9 @@ async function handleDeleteAvatar(request: Request, env: Env): Promise<Response>
 // Même garde IDOR que les autres endpoints authentifiés ci-dessous :
 // user.id vient uniquement du cookie de session.
 async function handleUpdateDisplayName(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const body = await readJsonObject(request);
   if (!body) {
@@ -885,9 +898,9 @@ async function handleUpdateDisplayName(request: Request, env: Env): Promise<Resp
 // garde IDOR que les autres endpoints authentifiés : user.id vient
 // uniquement du cookie de session.
 async function handleRequestEmailChange(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const body = await readJsonObject(request);
   if (!body) {
@@ -954,9 +967,9 @@ async function handleRequestEmailChange(request: Request, env: Env): Promise<Res
 }
 
 async function handleConfirmEmailChange(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   // Seule vraie protection contre un bruteforce du code à 6 caractères,
   // comme pour /api/auth/verify.
@@ -1014,9 +1027,9 @@ async function handleConfirmEmailChange(request: Request, env: Env): Promise<Res
 // les pseudos existants), puis de nouveau à l'enregistrement (PUT), où
 // l'index unique fait foi.
 async function handleUsernameAvailability(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   if (!checkRateLimitInMemory(`username-check:user:${user.id}`, { limit: 60, windowMs: 60_000 })) {
     return RATE_LIMIT_RESPONSE();
@@ -1030,9 +1043,9 @@ async function handleUsernameAvailability(request: Request, env: Env): Promise<R
 }
 
 async function handleUpdateUsername(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const body = await readJsonObject(request);
   if (!body) {
@@ -1066,9 +1079,9 @@ async function handleUpdateUsername(request: Request, env: Env): Promise<Respons
 // IDOR que les autres endpoints authentifiés : user.id vient uniquement du
 // cookie de session.
 async function handleUpdateProfileShare(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const body = await readJsonObject(request);
   if (!body) {
@@ -1089,17 +1102,17 @@ async function handleUpdateProfileShare(request: Request, env: Env): Promise<Res
 // Letterboxd. Seuls des titres « vus » du compte sont acceptés ; l'ordre du
 // tableau est l'ordre d'affichage.
 async function handleGetTopPicks(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   return json({ topPicks: await getTopPicks(env.DB, user.id) });
 }
 
 async function handlePutTopPicks(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const body = await readJsonObject(request);
   if (!body) {
@@ -1120,17 +1133,17 @@ async function handlePutTopPicks(request: Request, env: Env): Promise<Response> 
 
 // Rappels « Me prévenir » (migration 0014, worker/reminders.ts) ----------
 async function handleGetReminders(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   return json({ reminders: await getRemindersForUser(env.DB, user.id) });
 }
 
 async function handlePutReminder(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   if (
     !(await checkRateLimit(env.DB, `reminders:user:${user.id}`, {
@@ -1158,9 +1171,9 @@ async function handlePutReminder(request: Request, env: Env): Promise<Response> 
 }
 
 async function handleDeleteReminder(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const body = await readJsonObject(request);
   if (!body) {
@@ -1200,9 +1213,9 @@ async function handleFollow(
   slug: string,
   ctx: ExecutionContext
 ): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   if (
     !(await checkRateLimit(env.DB, `follow:user:${user.id}`, { limit: 120, windowMs: 60 * 60_000 }))
@@ -1291,9 +1304,9 @@ async function handleGetAccountFollowList(
   env: Env,
   kind: "followers" | "following"
 ): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const profiles =
     kind === "followers"
@@ -1303,9 +1316,9 @@ async function handleGetAccountFollowList(
 }
 
 async function handleGetFeed(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   return json({ entries: await getFeed(env.DB, user.id) });
 }
@@ -1313,9 +1326,9 @@ async function handleGetFeed(request: Request, env: Env): Promise<Response> {
 // Bloc « Vos abonnements » de la fiche détail : qui, parmi les profils
 // suivis, a vu (et noté) ou veut voir ce titre.
 async function handleGetTitleActivity(request: Request, env: Env, url: URL): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const mediaType = url.searchParams.get("mediaType");
   const tmdbId = Number(url.searchParams.get("id"));
@@ -1336,9 +1349,9 @@ const PROFILE_SEARCH_MIN_LENGTH = 2;
 const PROFILE_SEARCH_MAX_LENGTH = 50;
 
 async function handleSearchProfiles(request: Request, env: Env, url: URL): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   if (!checkRateLimitInMemory(`profile-search:user:${user.id}`, { limit: 30, windowMs: 60_000 })) {
     return RATE_LIMIT_RESPONSE();
@@ -1416,9 +1429,9 @@ async function handleLogout(request: Request, env: Env): Promise<Response> {
 // autres appareils s'en aperçoivent aussitôt (fermeture 4001, voir
 // liveSync.ts) ou à leur prochaine requête.
 async function handleLogoutAll(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   await deleteUserSessions(env.DB, user.id);
   await revokeUserSockets(request, user.id, "all");
@@ -1484,18 +1497,18 @@ async function handleExportAccount(request: Request, env: Env): Promise<Response
 // vue admin), il doit être validé contre `user.id` et jamais faire
 // confiance à une valeur fournie par le client sans ce contrôle.
 async function handleGetLibrary(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const library = await getLibraryForUser(env.DB, user.id);
   return json(library);
 }
 
 async function handlePutLibrary(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   let body: unknown;
   try {
@@ -1525,9 +1538,9 @@ async function handlePutLibrary(request: Request, env: Env): Promise<Response> {
 // savoir quoi écrire. Même garde IDOR que handleGetLibrary/handlePutLibrary
 // ci-dessus : user.id vient uniquement du cookie de session.
 async function handleLibrarySync(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   let body: unknown;
   try {
@@ -1554,9 +1567,9 @@ async function handleLibrarySync(request: Request, env: Env): Promise<Response> 
 // Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
 // uniquement du cookie de session, jamais du corps de la requête.
 async function handleGetCustomLists(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const customLists = await getCustomListsForUser(env.DB, user.id);
   return json(customLists);
@@ -1568,9 +1581,9 @@ async function handleGetCustomLists(request: Request, env: Env): Promise<Respons
 // change par opérations multi-lignes (création, renommage, glisser-déposer)
 // qu'un diff incrémental compliquerait pour un gain nul à cette échelle.
 async function handlePutCustomLists(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   let body: unknown;
   try {
@@ -1590,17 +1603,17 @@ async function handlePutCustomLists(request: Request, env: Env): Promise<Respons
 // endpoints authentifiés : user.id vient uniquement du cookie de session,
 // et une liste n'est partageable que si elle appartient à ce compte.
 async function handleGetListShares(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   return json(await getListSharesForUser(env.DB, user.id));
 }
 
 async function handlePutListShare(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const body = await readJsonObject(request);
   if (!body) {
@@ -1650,18 +1663,18 @@ async function handleGetPublicList(request: Request, env: Env, slug: string): Pr
 // Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
 // uniquement du cookie de session, jamais du corps de la requête.
 async function handleGetExcludedGenres(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const genreIds = await getExcludedGenresForUser(env.DB, user.id);
   return json({ genreIds });
 }
 
 async function handlePutExcludedGenres(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   let body: unknown;
   try {
@@ -1681,18 +1694,18 @@ async function handlePutExcludedGenres(request: Request, env: Env): Promise<Resp
 // Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
 // uniquement du cookie de session, jamais du corps de la requête.
 async function handleGetFavoriteProviders(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const providerIds = await getFavoriteProvidersForUser(env.DB, user.id);
   return json({ providerIds });
 }
 
 async function handlePutFavoriteProviders(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   let body: unknown;
   try {
@@ -1712,18 +1725,18 @@ async function handlePutFavoriteProviders(request: Request, env: Env): Promise<R
 // Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
 // uniquement du cookie de session, jamais du corps de la requête.
 async function handleGetFavoriteLanguages(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const languageCodes = await getFavoriteLanguagesForUser(env.DB, user.id);
   return json({ languageCodes });
 }
 
 async function handlePutFavoriteLanguages(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   let body: unknown;
   try {
@@ -1746,18 +1759,18 @@ async function handlePutFavoriteLanguages(request: Request, env: Env): Promise<R
 // Même garde IDOR que handleGetLibrary/handlePutLibrary : user.id vient
 // uniquement du cookie de session, jamais du corps de la requête.
 async function handleGetFavoriteCountries(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const countryCodes = await getFavoriteCountriesForUser(env.DB, user.id);
   return json({ countryCodes });
 }
 
 async function handlePutFavoriteCountries(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   let body: unknown;
   try {
@@ -1785,18 +1798,18 @@ async function handlePutFavoriteCountries(request: Request, env: Env): Promise<R
 const SUPPORTED_LOCALES = ["fr", "en"];
 
 async function handleGetLocale(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const locale = await getLocaleForUser(env.DB, user.id);
   return json({ locale });
 }
 
 async function handlePutLocale(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   let body: unknown;
   try {
@@ -1823,18 +1836,18 @@ async function handlePutLocale(request: Request, env: Env): Promise<Response> {
 const ISO_3166_1_ALPHA_2 = /^[A-Z]{2}$/;
 
 async function handleGetRegion(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   const region = await getRegionForUser(env.DB, user.id);
   return json({ region });
 }
 
 async function handlePutRegion(request: Request, env: Env): Promise<Response> {
-  const user = await getUserFromRequest(env.DB, request);
-  if (!user) {
-    return json({ error: "Non connecté." }, 401);
+  const user = await requireUser(request, env);
+  if (user instanceof Response) {
+    return user;
   }
   let body: unknown;
   try {
