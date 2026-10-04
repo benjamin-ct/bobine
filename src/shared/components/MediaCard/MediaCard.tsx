@@ -108,6 +108,10 @@ function MediaCard({
   const todayIso = new Date().toISOString().slice(0, 10);
   const theatricalStatus =
     inTheatricalIndex && date ? (date <= todayIso ? "in_theaters" : "upcoming") : inTheatricalIndex;
+  // Pas encore sorti (ciné ou plateforme) : le bouton "Vu" porterait à
+  // confusion, donc masqué tant que rien n'a déjà été marqué vu (voir
+  // DetailPage.tsx, même logique sur la fiche).
+  const isUpcoming = Boolean(date && date > todayIso);
 
   // Charger le badge (plateforme ou prochaine sortie) seulement quand la
   // carte approche du viewport : une grille de Nouveautés/Prochainement
@@ -270,21 +274,23 @@ function MediaCard({
         >
           <Icon name="star" size={16} strokeWidth={inWatchlist ? 2 : 1.5} filled={inWatchlist} />
         </button>
-        <button
-          type="button"
-          className={`${styles.pastille} ${watched ? styles.pastilleWatched : ""}`}
-          onClick={(e) => {
-            if (!watched) {
-              pop(e.currentTarget.firstElementChild);
-            }
-            toggleWatched(libItem);
-          }}
-          aria-pressed={watched}
-          aria-label={t("mediaCard.markAsWatchedNamed", { title })}
-          title={t("mediaCard.markAsWatched")}
-        >
-          <Icon name="check" size={16} strokeWidth={watched ? 3 : 1.5} />
-        </button>
+        {(watched || !isUpcoming) && (
+          <button
+            type="button"
+            className={`${styles.pastille} ${watched ? styles.pastilleWatched : ""}`}
+            onClick={(e) => {
+              if (!watched) {
+                pop(e.currentTarget.firstElementChild);
+              }
+              toggleWatched(libItem);
+            }}
+            aria-pressed={watched}
+            aria-label={t("mediaCard.markAsWatchedNamed", { title })}
+            title={t("mediaCard.markAsWatched")}
+          >
+            <Icon name="check" size={16} strokeWidth={watched ? 3 : 1.5} />
+          </button>
+        )}
       </div>
     </div>
   );
