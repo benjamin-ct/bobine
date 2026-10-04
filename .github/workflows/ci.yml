@@ -194,9 +194,14 @@ jobs:
           --name "${{ steps.branch-slug.outputs.slug }}"
           --message "PR #${{ github.event.pull_request.number }}"
 
-      # Seule l'URL réellement renvoyée par Cloudflare est publiée : sans
-      # URL (Preview Deployments désactivés sur workers.dev...), le job
-      # échoue explicitement plutôt que d'annoncer une preview inutilisable.
+      # Seule l'URL de déploiement (deployment_urls, le vrai worker *.workers.dev)
+      # est publiée : le domaine custom de la Preview (preview_urls,
+      # *.dev.seancy.com) passe par un cache d'edge qui sert trop souvent une
+      # version obsolète (ticket Trello "URL de preview"). deployment_urls
+      # change à chaque push mais pointe toujours sur le code réellement
+      # déployé. Sans URL (Preview Deployments désactivés sur workers.dev...),
+      # le job échoue explicitement plutôt que d'annoncer une preview
+      # inutilisable.
       - name: Read preview URL
         id: preview-url
         env:
@@ -205,10 +210,10 @@ jobs:
           URL=$(node -e '
             const lines = require("node:fs").readFileSync(process.env.WRANGLER_OUTPUT_FILE_PATH, "utf8").split("\n");
             const entry = lines.filter(Boolean).map((line) => JSON.parse(line)).findLast((e) => e.type === "preview");
-            console.log(entry?.preview_urls?.[0] ?? entry?.deployment_urls?.[0] ?? "");
+            console.log(entry?.deployment_urls?.[0] ?? "");
           ')
           if [ -z "$URL" ]; then
-            echo "::error::Cloudflare n'a renvoyé aucune URL pour cette preview (Preview Deployments activés sur workers.dev ?)."
+            echo "::error::Cloudflare n'a renvoyé aucune URL de déploiement pour cette preview (Preview Deployments désactivés sur workers.dev ?)."
             exit 1
           fi
           echo "url=$URL" >> "$GITHUB_OUTPUT"
@@ -222,7 +227,7 @@ jobs:
 
             👉 ${{ steps.preview-url.outputs.url }}
 
-            <sub>This url stays stable for the duration of the PR (Cloudflare Preview : `${{ steps.branch-slug.outputs.slug }}`)</sub>
+            <sub>Worker deployment URL (Cloudflare Preview : `${{ steps.branch-slug.outputs.slug }}`) — change à chaque push, pas de cache comme sur `*.dev.seancy.com`</sub>
 
   cleanup-preview-d1:
     name: Cleanup D1 preview database
