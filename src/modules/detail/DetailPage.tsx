@@ -290,8 +290,6 @@ export default function DetailPage() {
   const inWatchlist = isInWatchlist(mediaType, id);
   const excluded = isExcludedTitle(mediaType, id);
   const notifying = hasReminder(mediaType, Number(id));
-  // Pas de sens de proposer un rappel de sortie pour un titre déjà sorti.
-  const isUpcoming = Boolean(date && new Date(date) > new Date());
   const accentKey = posterAccentFromGenres(
     details.genres?.map((g) => g.id),
     `${mediaType}:${id}`
@@ -305,6 +303,11 @@ export default function DetailPage() {
   // globale TMDB indépendante de la région, alors que `theatricalDate` est
   // la sortie ciné réelle dans la région active.
   const displayDate = theatricalDate || date;
+  // Pas de sens de proposer un rappel de sortie, ni de marquer "vu", pour un
+  // titre déjà sorti : `displayDate` (et non `date`) pour rester cohérent
+  // avec la date affichée à l'écran (ciné régional prioritaire sur la date
+  // primaire TMDB, qui peut déjà être passée dans un autre pays).
+  const isUpcoming = Boolean(displayDate && new Date(displayDate) > new Date());
   const theatricalStatus = theatricalStatusFromDate(theatricalDate);
   const theatricalDateFormatted = theatricalDate ? formatFullDate(theatricalDate, locale) : null;
   const theatricalMessage = theatricalStatus
@@ -667,34 +670,38 @@ export default function DetailPage() {
                   {inWatchlist ? t("detailPage.wantToWatchOn") : t("detailPage.wantToWatchOff")}
                 </span>
               </button>
-              <button
-                type="button"
-                className={`${styles.actionBtn} ${styles.watchedBtn} ${watched ? styles.watchedOn : ""}`}
-                onClick={(e) => {
-                  if (!watched) {
-                    pop(e.currentTarget.firstElementChild);
-                  }
-                  if (mediaType === "tv") {
-                    toggleSeriesWatched();
-                  } else {
-                    toggleWatched(libItem);
-                  }
-                }}
-                aria-pressed={watched}
-                disabled={markingSeries}
-              >
-                <Icon name="check" strokeWidth={watched ? 3 : 2} />
-                <span className={styles.btnLabel}>
-                  {mediaType === "tv"
-                    ? watched
-                      ? t("detailPage.seriesWatchedOn")
-                      : t("detailPage.seriesWatchedOff")
-                    : watched
-                      ? t("detailPage.watchedOn")
-                      : t("detailPage.watchedOff")}
-                </span>
-              </button>
-              {!watched && (
+              {/* Pas encore sorti (ciné ou plateforme) : le bouton "Vu" porterait à
+                  confusion, donc masqué tant que rien n'a déjà été marqué vu. */}
+              {(watched || !isUpcoming) && (
+                <button
+                  type="button"
+                  className={`${styles.actionBtn} ${styles.watchedBtn} ${watched ? styles.watchedOn : ""}`}
+                  onClick={(e) => {
+                    if (!watched) {
+                      pop(e.currentTarget.firstElementChild);
+                    }
+                    if (mediaType === "tv") {
+                      toggleSeriesWatched();
+                    } else {
+                      toggleWatched(libItem);
+                    }
+                  }}
+                  aria-pressed={watched}
+                  disabled={markingSeries}
+                >
+                  <Icon name="check" strokeWidth={watched ? 3 : 2} />
+                  <span className={styles.btnLabel}>
+                    {mediaType === "tv"
+                      ? watched
+                        ? t("detailPage.seriesWatchedOn")
+                        : t("detailPage.seriesWatchedOff")
+                      : watched
+                        ? t("detailPage.watchedOn")
+                        : t("detailPage.watchedOff")}
+                  </span>
+                </button>
+              )}
+              {!watched && !isUpcoming && (
                 <span className={styles.watchDateWrap}>
                   <span className={`${styles.actionBtn} ${styles.watchDateBtn}`} aria-hidden="true">
                     <Icon name="calendar" />

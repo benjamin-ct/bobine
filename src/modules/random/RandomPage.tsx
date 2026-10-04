@@ -505,6 +505,10 @@ export default function RandomPage() {
   const pickType = pick?.mediaType ?? drawTypes[0];
   const watched = pick ? isWatched(pickType, pick.id) : false;
   const inWatchlist = pick ? isInWatchlist(pickType, pick.id) : false;
+  // Pas encore sorti (ciné ou plateforme) : le bouton "Vu" porterait à
+  // confusion, donc masqué tant que rien n'a déjà été marqué vu (voir
+  // MediaCard.tsx, même logique sur les cartes).
+  const isUpcoming = Boolean(date && new Date(date) > new Date());
   const accentKey = pick
     ? posterAccentFromGenres(pick.genre_ids, `${pickType}:${pick.id}`)
     : "drama";
@@ -755,20 +759,22 @@ export default function RandomPage() {
                 <Icon name="star" filled={inWatchlist} />
                 {inWatchlist ? t("randomPage.wantToWatchOn") : t("randomPage.wantToWatchOff")}
               </button>
-              <button
-                type="button"
-                className={`${styles.secondaryBtn} ${watched ? styles.onWatched : ""}`}
-                aria-pressed={watched}
-                onClick={() => {
-                  const item = buildLibItem();
-                  if (item) {
-                    toggleWatched(item);
-                  }
-                }}
-              >
-                <Icon name="check" strokeWidth={watched ? 3 : 2} />
-                {watched ? t("randomPage.watchedOn") : t("randomPage.watchedOff")}
-              </button>
+              {(watched || !isUpcoming) && (
+                <button
+                  type="button"
+                  className={`${styles.secondaryBtn} ${watched ? styles.onWatched : ""}`}
+                  aria-pressed={watched}
+                  onClick={() => {
+                    const item = buildLibItem();
+                    if (item) {
+                      toggleWatched(item);
+                    }
+                  }}
+                >
+                  <Icon name="check" strokeWidth={watched ? 3 : 2} />
+                  {watched ? t("randomPage.watchedOn") : t("randomPage.watchedOff")}
+                </button>
+              )}
               <TrailerButton videos={pickDetails?.videos?.results} />
               <Link
                 to={`/media/${pickType}/${pick.id}#recommendations`}
