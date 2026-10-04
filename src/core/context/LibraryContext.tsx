@@ -12,8 +12,14 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext.tsx";
 import { useMembersOnly } from "./MembersOnlyContext.tsx";
 import { getDetails } from "../api/tmdb.ts";
-import { logError, logWarn } from "../logger.ts";
+import { logWarn } from "../logger.ts";
 import { syncClientHeaders, useLiveSyncEvent } from "../sync/liveSync.ts";
+import {
+  storageGet,
+  storageGetJSON,
+  storageSet,
+  storageSetJSON,
+} from "../../shared/lib/storage.ts";
 import type {
   CustomList,
   CustomListMap,
@@ -121,7 +127,7 @@ const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 function loadInitialState(): LibraryState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = storageGet(STORAGE_KEY);
     if (!raw) {
       return { watched: {}, watchlist: {} };
     }
@@ -160,7 +166,7 @@ interface LegacyCustomListShape {
 
 function loadInitialCustomLists(): CustomListMap {
   try {
-    const raw = localStorage.getItem(CUSTOM_LISTS_STORAGE_KEY);
+    const raw = storageGet(CUSTOM_LISTS_STORAGE_KEY);
     if (!raw) {
       return {};
     }
@@ -190,13 +196,8 @@ function loadInitialCustomLists(): CustomListMap {
 }
 
 function loadInitialWatchlistOrder(): string[] {
-  try {
-    const raw = localStorage.getItem(WATCHLIST_ORDER_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((k): k is string => typeof k === "string") : [];
-  } catch {
-    return [];
-  }
+  const parsed = storageGetJSON<unknown>(WATCHLIST_ORDER_STORAGE_KEY, []);
+  return Array.isArray(parsed) ? parsed.filter((k): k is string => typeof k === "string") : [];
 }
 
 function makeListId(): string {
@@ -297,11 +298,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       isFirstRender.current = false;
       return;
     }
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (err) {
-      logError("Seancy : impossible de sauvegarder la bibliothèque locale.", err);
-    }
+    storageSetJSON(STORAGE_KEY, state);
   }, [state]);
 
   useEffect(() => {
@@ -309,11 +306,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       isFirstCustomListsRender.current = false;
       return;
     }
-    try {
-      localStorage.setItem(CUSTOM_LISTS_STORAGE_KEY, JSON.stringify(customLists));
-    } catch (err) {
-      logError("Seancy : impossible de sauvegarder les listes personnalisées.", err);
-    }
+    storageSetJSON(CUSTOM_LISTS_STORAGE_KEY, customLists);
   }, [customLists]);
 
   useEffect(() => {
@@ -321,11 +314,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       isFirstWatchlistOrderRender.current = false;
       return;
     }
-    try {
-      localStorage.setItem(WATCHLIST_ORDER_STORAGE_KEY, JSON.stringify(watchlistOrder));
-    } catch (err) {
-      logError("Seancy : impossible de sauvegarder l'ordre de la liste d'envies.", err);
-    }
+    storageSetJSON(WATCHLIST_ORDER_STORAGE_KEY, watchlistOrder);
   }, [watchlistOrder]);
 
   // Migration one-shot des listes perso créées avant la correction du bug
@@ -431,7 +420,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         if (cancelled) {
           return;
         }
-        const alreadySyncedFor = localStorage.getItem(SYNCED_FOR_KEY);
+        const alreadySyncedFor = storageGet(SYNCED_FOR_KEY);
         if (alreadySyncedFor === email) {
           setState({ watched: remote.watched || {}, watchlist: remote.watchlist || {} });
           pendingOpsRef.current.clear();
@@ -444,7 +433,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         };
         setState(merged);
         pendingOpsRef.current.clear(); // le PUT complet ci-dessous couvre déjà tout `merged`
-        localStorage.setItem(SYNCED_FOR_KEY, email);
+        storageSet(SYNCED_FOR_KEY, email);
         return fetch("/api/library", {
           method: "PUT",
           headers: { "content-type": "application/json", ...syncClientHeaders() },
@@ -540,7 +529,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         if (cancelled) {
           return;
         }
-        const alreadySyncedFor = localStorage.getItem(CUSTOM_LISTS_SYNCED_FOR_KEY);
+        const alreadySyncedFor = storageGet(CUSTOM_LISTS_SYNCED_FOR_KEY);
         if (alreadySyncedFor === email) {
           // Le serveur fait autorité : on remplace l'état local. Mémorisé
           // AVANT setCustomLists pour que l'effet de push ci-dessous (qui
@@ -554,7 +543,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         const merged = mergeCustomLists(customLists, remote || {});
         lastSyncedCustomListsJsonRef.current = JSON.stringify(merged);
         setCustomLists(merged);
-        localStorage.setItem(CUSTOM_LISTS_SYNCED_FOR_KEY, email);
+        storageSet(CUSTOM_LISTS_SYNCED_FOR_KEY, email);
         return fetch("/api/custom-lists", {
           method: "PUT",
           headers: { "content-type": "application/json", ...syncClientHeaders() },
@@ -645,7 +634,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   useLiveSyncEvent("library", (event) => {
     // Tant que la fusion initiale de cet appareil n'a pas eu lieu, le pull
     // d'authentification ci-dessus s'en charge déjà.
-    if (!email || localStorage.getItem(SYNCED_FOR_KEY) !== email || syncingRef.current) {
+    if (!email || storageGet(SYNCED_FOR_KEY) !== email || syncingRef.current) {
       return;
     }
     const delta = event?.payload as RemoteLibraryDelta | undefined;
