@@ -46,7 +46,8 @@ import { getMediaPreview, type MediaPreview } from "../../shared/lib/mediaPrevie
 import posterStyles from "../../shared/styles/posterAccents.module.css";
 import dropdownStyles from "../../shared/components/Dropdown/Dropdown.module.css";
 import gridStyles from "../../shared/styles/mediaGrid.module.css";
-import type { CastMember, MediaDetails, MediaType } from "../../core/types/tmdb.ts";
+import type { CastMember, MediaDetails } from "../../core/types/tmdb.ts";
+import { isMediaType } from "../../core/validation/mediaType.ts";
 import styles from "./DetailPage.module.css";
 import { TmdbHttpError } from "../../core/api/tmdbClient.ts";
 import NotFoundPage from "../not-found/NotFoundPage.tsx";
@@ -116,7 +117,12 @@ export default function DetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
+  // `useParams` ne garantit rien sur la forme de `mediaType` : une URL
+  // `/media/foo/1` le laisserait passer tel quel vers TMDB sans ce garde
+  // (audit F6). `isMediaType` restreint ensuite le type du reste du
+  // composant à `MediaType | undefined`, comme avant ce correctif.
+  const { mediaType: rawMediaType, id } = useParams<{ mediaType: string; id: string }>();
+  const mediaType = isMediaType(rawMediaType) ? rawMediaType : undefined;
   // Fiche déjà chargée pendant la session (déjà vue) : affichée dès le
   // premier rendu, sans passer par le squelette.
   const [details, setDetails] = useState<MediaDetails | null>(() =>
@@ -221,7 +227,7 @@ export default function DetailPage() {
   }, [linkCopied]);
 
   if (!mediaType || !id) {
-    return null;
+    return <NotFoundPage />;
   }
 
   function backLink(className: string) {

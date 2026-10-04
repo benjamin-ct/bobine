@@ -4,9 +4,10 @@
 // silencieusement supprimée (whitelist), tout item structurellement invalide
 // est écarté plutôt que de faire échouer toute la requête.
 
+import { isMediaType } from "../src/core/validation/mediaType.ts";
+
 const MAX_STRING_LENGTH = 300;
 const MAX_ITEMS_PER_LIST = 5000; // large marge au-dessus d'un usage réel, évite un abus qui gonflerait la base indéfiniment
-const VALID_MEDIA_TYPES = new Set(["movie", "tv"]);
 // "saison-épisode" (ex. "1-5") : suivi épisode par épisode pour les séries.
 // Aucune série connue ne dépasse quelques centaines d'épisodes, 5000 laisse
 // une large marge sans permettre un payload disproportionné.
@@ -114,7 +115,7 @@ function cleanDirector(raw: unknown): CleanDirector | null {
 // ou null si l'item n'est pas exploitable (id/mediaType manquants ou
 // invalides — le reste a des valeurs de repli raisonnables).
 function sanitizeItem(mediaType: string, tmdbId: unknown, raw: unknown): CleanLibraryItem | null {
-  if (!VALID_MEDIA_TYPES.has(mediaType)) {
+  if (!isMediaType(mediaType)) {
     return null;
   }
   const id = cleanNumber(tmdbId);
@@ -251,7 +252,7 @@ function sanitizeSyncUpsert(raw: unknown): SyncUpsert | null {
     return null;
   }
   const r = raw as Record<string, unknown>;
-  if (!VALID_MEDIA_TYPES.has(r.mediaType as string)) {
+  if (!isMediaType(r.mediaType)) {
     return null;
   }
   if (r.status !== "watched" && r.status !== "watchlist") {
@@ -269,7 +270,7 @@ function sanitizeSyncDelete(raw: unknown): SyncDelete | null {
     return null;
   }
   const r = raw as Record<string, unknown>;
-  if (!VALID_MEDIA_TYPES.has(r.mediaType as string)) {
+  if (!isMediaType(r.mediaType)) {
     return null;
   }
   const id = cleanNumber(r.id);
@@ -321,7 +322,7 @@ export function sanitizeWatchlistItems(rawItems: unknown, maxItems: number): Cle
         return null;
       }
       const r = item as Record<string, unknown>;
-      if (!VALID_MEDIA_TYPES.has(r.mediaType as string)) {
+      if (!isMediaType(r.mediaType)) {
         return null;
       }
       const tmdbId = cleanNumber(r.tmdbId);
@@ -351,7 +352,7 @@ export function sanitizeGenrePrefs(rawGenres: unknown, maxItems: number): CleanG
         return null;
       }
       const r = g as Record<string, unknown>;
-      if (!VALID_MEDIA_TYPES.has(r.mediaType as string)) {
+      if (!isMediaType(r.mediaType)) {
         return null;
       }
       const genreId = cleanNumber(r.genreId);
@@ -513,7 +514,7 @@ export function sanitizeKeyList(rawKeys: unknown, maxItems: number): CleanKey[] 
     .slice(0, maxItems)
     .map((key): CleanKey | null => {
       const [mediaType, idStr] = String(key).split(":");
-      if (!VALID_MEDIA_TYPES.has(mediaType)) {
+      if (!isMediaType(mediaType)) {
         return null;
       }
       const id = cleanNumber(idStr);
