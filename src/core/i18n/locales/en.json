@@ -141,6 +141,7 @@
   "ratingStars": {
     "yourRating": "Your rating:",
     "notRatedYet": "Not rated yet",
+    "groupAriaLabel": "Rating out of 10",
     "starAriaLabel": "{{n}}/10 — {{label}}",
     "clear": "Clear"
   },

@@ -417,6 +417,14 @@
   border-radius: 14px;
 }
 
+/* Voir ListShareDialog.module.css, même raison (champ en lecture seule dont
+   l'input masque son propre focus) : le ring suit la forme du champ plutôt
+   que de disparaître (audit F8). */
+.linkField:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .linkField input {
   flex: 1;
   min-width: 0;
