@@ -863,7 +863,7 @@ async function handlePutAvatar(request: Request, env: Env): Promise<Response> {
   if (user instanceof Response) {
     return user;
   }
-  if (!checkRateLimitInMemory(`avatar:user:${user.id}`, { limit: 20, windowMs: 60_000 })) {
+  if (!(await env.AVATAR_RATE_LIMITER.limit({ key: `avatar:user:${user.id}` })).success) {
     return RATE_LIMIT_RESPONSE();
   }
   if (Number(request.headers.get("content-length") ?? 0) > AVATAR_MAX_BYTES) {
@@ -1217,7 +1217,7 @@ async function handleDeleteReminder(request: Request, env: Env): Promise<Respons
 // plafonné par IP pour qu'on ne puisse pas balayer l'espace des slugs.
 async function handleGetPublicProfile(request: Request, env: Env, slug: string): Promise<Response> {
   const ip = getClientIp(request);
-  if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+  if (!(await env.PUBLIC_SLUG_RATE_LIMITER.limit({ key: `public-profile:ip:${ip}` })).success) {
     return RATE_LIMIT_RESPONSE();
   }
   const viewer = await getUserFromRequest(env.DB, request);
@@ -1308,7 +1308,7 @@ async function handleGetPublicFollowList(
   kind: "followers" | "following"
 ): Promise<Response> {
   const ip = getClientIp(request);
-  if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+  if (!(await env.PUBLIC_SLUG_RATE_LIMITER.limit({ key: `public-profile:ip:${ip}` })).success) {
     return RATE_LIMIT_RESPONSE();
   }
   const targetId = SHARE_SLUG_PATTERN.test(slug) ? await getUserIdBySlug(env.DB, slug) : null;
@@ -1402,7 +1402,7 @@ async function handleGetPublicProfileAvatar(
   slug: string
 ): Promise<Response> {
   const ip = getClientIp(request);
-  if (!checkRateLimitInMemory(`public-profile:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+  if (!(await env.PUBLIC_SLUG_RATE_LIMITER.limit({ key: `public-profile:ip:${ip}` })).success) {
     return RATE_LIMIT_RESPONSE();
   }
   if (!SHARE_SLUG_PATTERN.test(slug)) {
@@ -1670,7 +1670,7 @@ async function handlePutListShare(request: Request, env: Env): Promise<Response>
 // sa vue éditable côté client).
 async function handleGetPublicList(request: Request, env: Env, slug: string): Promise<Response> {
   const ip = getClientIp(request);
-  if (!checkRateLimitInMemory(`public-list:ip:${ip}`, { limit: 60, windowMs: 60_000 })) {
+  if (!(await env.PUBLIC_SLUG_RATE_LIMITER.limit({ key: `public-list:ip:${ip}` })).success) {
     return RATE_LIMIT_RESPONSE();
   }
   if (!SHARE_SLUG_PATTERN.test(slug)) {
