@@ -194,9 +194,15 @@ jobs:
           --name "${{ steps.branch-slug.outputs.slug }}"
           --message "PR #${{ github.event.pull_request.number }}"
 
-      # Seule l'URL réellement renvoyée par Cloudflare est publiée : sans
-      # URL (Preview Deployments désactivés sur workers.dev...), le job
-      # échoue explicitement plutôt que d'annoncer une preview inutilisable.
+      # Seule l'URL de déploiement (deployment_urls) est publiée, pas celle de
+      # la Preview elle-même (preview_urls) : cette dernière est un alias
+      # stable sur toute la durée de la PR (même sous-domaine à chaque push),
+      # ce qui la rend sujette à un cache d'edge qui sert trop souvent une
+      # version obsolète (ticket Trello "URL de preview"). deployment_urls a
+      # un sous-domaine différent à chaque déploiement, donc jamais de cache
+      # périmé, au prix de changer à chaque push. Sans URL (Preview
+      # Deployments désactivés sur workers.dev...), le job échoue
+      # explicitement plutôt que d'annoncer une preview inutilisable.
       - name: Read preview URL
         id: preview-url
         env:
@@ -205,10 +211,10 @@ jobs:
           URL=$(node -e '
             const lines = require("node:fs").readFileSync(process.env.WRANGLER_OUTPUT_FILE_PATH, "utf8").split("\n");
             const entry = lines.filter(Boolean).map((line) => JSON.parse(line)).findLast((e) => e.type === "preview");
-            console.log(entry?.preview_urls?.[0] ?? entry?.deployment_urls?.[0] ?? "");
+            console.log(entry?.deployment_urls?.[0] ?? "");
           ')
           if [ -z "$URL" ]; then
-            echo "::error::Cloudflare n'a renvoyé aucune URL pour cette preview (Preview Deployments activés sur workers.dev ?)."
+            echo "::error::Cloudflare n'a renvoyé aucune URL de déploiement pour cette preview (Preview Deployments désactivés sur workers.dev ?)."
             exit 1
           fi
           echo "url=$URL" >> "$GITHUB_OUTPUT"
@@ -222,7 +228,7 @@ jobs:
 
             👉 ${{ steps.preview-url.outputs.url }}
 
-            <sub>This url stays stable for the duration of the PR (Cloudflare Preview : `${{ steps.branch-slug.outputs.slug }}`)</sub>
+            <sub>Worker deployment URL (Cloudflare Preview : `${{ steps.branch-slug.outputs.slug }}`) — change à chaque push, mais jamais de cache périmé contrairement à l'ancienne URL stable</sub>
 
   cleanup-preview-d1:
     name: Cleanup D1 preview database
