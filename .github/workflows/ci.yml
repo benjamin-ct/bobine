@@ -194,14 +194,15 @@ jobs:
           --name "${{ steps.branch-slug.outputs.slug }}"
           --message "PR #${{ github.event.pull_request.number }}"
 
-      # Seule l'URL de déploiement (deployment_urls, le vrai worker *.workers.dev)
-      # est publiée : le domaine custom de la Preview (preview_urls,
-      # *.dev.seancy.com) passe par un cache d'edge qui sert trop souvent une
-      # version obsolète (ticket Trello "URL de preview"). deployment_urls
-      # change à chaque push mais pointe toujours sur le code réellement
-      # déployé. Sans URL (Preview Deployments désactivés sur workers.dev...),
-      # le job échoue explicitement plutôt que d'annoncer une preview
-      # inutilisable.
+      # Seule l'URL de déploiement (deployment_urls) est publiée, pas celle de
+      # la Preview elle-même (preview_urls) : cette dernière est un alias
+      # stable sur toute la durée de la PR (même sous-domaine à chaque push),
+      # ce qui la rend sujette à un cache d'edge qui sert trop souvent une
+      # version obsolète (ticket Trello "URL de preview"). deployment_urls a
+      # un sous-domaine différent à chaque déploiement, donc jamais de cache
+      # périmé, au prix de changer à chaque push. Sans URL (Preview
+      # Deployments désactivés sur workers.dev...), le job échoue
+      # explicitement plutôt que d'annoncer une preview inutilisable.
       - name: Read preview URL
         id: preview-url
         env:
@@ -227,7 +228,7 @@ jobs:
 
             👉 ${{ steps.preview-url.outputs.url }}
 
-            <sub>Worker deployment URL (Cloudflare Preview : `${{ steps.branch-slug.outputs.slug }}`) — change à chaque push, pas de cache comme sur `*.dev.seancy.com`</sub>
+            <sub>Worker deployment URL (Cloudflare Preview : `${{ steps.branch-slug.outputs.slug }}`) — change à chaque push, mais jamais de cache périmé contrairement à l'ancienne URL stable</sub>
 
   cleanup-preview-d1:
     name: Cleanup D1 preview database
