@@ -290,8 +290,6 @@ export default function DetailPage() {
   const inWatchlist = isInWatchlist(mediaType, id);
   const excluded = isExcludedTitle(mediaType, id);
   const notifying = hasReminder(mediaType, Number(id));
-  // Pas de sens de proposer un rappel de sortie pour un titre déjà sorti.
-  const isUpcoming = Boolean(date && new Date(date) > new Date());
   const accentKey = posterAccentFromGenres(
     details.genres?.map((g) => g.id),
     `${mediaType}:${id}`
@@ -305,6 +303,11 @@ export default function DetailPage() {
   // globale TMDB indépendante de la région, alors que `theatricalDate` est
   // la sortie ciné réelle dans la région active.
   const displayDate = theatricalDate || date;
+  // Pas de sens de proposer un rappel de sortie, ni de marquer "vu", pour un
+  // titre déjà sorti : `displayDate` (et non `date`) pour rester cohérent
+  // avec la date affichée à l'écran (ciné régional prioritaire sur la date
+  // primaire TMDB, qui peut déjà être passée dans un autre pays).
+  const isUpcoming = Boolean(displayDate && new Date(displayDate) > new Date());
   const theatricalStatus = theatricalStatusFromDate(theatricalDate);
   const theatricalDateFormatted = theatricalDate ? formatFullDate(theatricalDate, locale) : null;
   const theatricalMessage = theatricalStatus
