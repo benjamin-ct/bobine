@@ -2225,7 +2225,7 @@ export default withSentry({
         return withSecurityHeaders(serveRobots(url));
       }
       if (url.pathname === "/sitemap.xml") {
-        return withSecurityHeaders(serveSitemap(url));
+        return withSecurityHeaders(await serveSitemap(url, env));
       }
       if (
         PAGE_META_ROUTE.test(url.pathname) &&
